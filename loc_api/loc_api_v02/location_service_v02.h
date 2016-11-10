@@ -7432,8 +7432,8 @@ typedef uint64_t qmiLocLppeUpAuxTechMaskT_v02;
 typedef uint64_t qmiLocLppeCpAuxTechMaskT_v02;
 #define QMI_LOC_LPPE_MASK_CP_DBH_V02 ((qmiLocLppeCpAuxTechMaskT_v02)0x00000001ull) /**<  Enable Device-Based Hybrid (3D High Accuracy Position) mode on LPPe control plane.  */
 #define QMI_LOC_LPPE_MASK_CP_AP_WIFI_MEASUREMENT_V02 ((qmiLocLppeCpAuxTechMaskT_v02)0x00000002ull) /**<  Enable WLAN AP Measurements mode on LPPe control plane.  */
-#define QMI_LOC_LPPE_MASK_CP_AP_SRN_BTLE_MEASUREMENT_V02 ((qmiLocLppeCpAuxTechMaskT_v02)0x00000004ull) /**<  Enable SRN BTLE Measurement mode on LPPe user plane.  */
-#define QMI_LOC_LPPE_MASK_CP_UBP_V02 ((qmiLocLppeCpAuxTechMaskT_v02)0x00000008ull) /**<  Enable Un-Compromised Barometer Pressure measurement mode on LPPe user plane.  */
+#define QMI_LOC_LPPE_MASK_CP_AP_SRN_BTLE_MEASUREMENT_V02 ((qmiLocLppeCpAuxTechMaskT_v02)0x00000004ull) /**<  Enable SRN BTLE Measurement mode on LPPe control plane.  */
+#define QMI_LOC_LPPE_MASK_CP_UBP_V02 ((qmiLocLppeCpAuxTechMaskT_v02)0x00000008ull) /**<  Enable Un-Compromised Barometer Pressure measurement mode on LPPe control plane.  */
 /** @addtogroup loc_qmi_messages
     @{
   */
@@ -7577,8 +7577,8 @@ typedef struct {
  Valid bitmasks: \n
       - QMI_LOC_LPPE_MASK_CP_DBH (0x00000001) --  Enable Device-Based Hybrid (3D High Accuracy Position) mode on LPPe control plane.
       - QMI_LOC_LPPE_MASK_CP_AP_WIFI_MEASUREMENT (0x00000002) --  Enable WLAN AP Measurements mode on LPPe control plane.
-      - QMI_LOC_LPPE_MASK_CP_AP_SRN_BTLE_MEASUREMENT (0x00000004) --  Enable SRN BTLE Measurement mode on LPPe user plane.
-      - QMI_LOC_LPPE_MASK_CP_UBP (0x00000008) --  Enable Un-Compromised Barometer Pressure measurement mode on LPPe user plane.
+      - QMI_LOC_LPPE_MASK_CP_AP_SRN_BTLE_MEASUREMENT (0x00000004) --  Enable SRN BTLE Measurement mode on LPPe control plane.
+      - QMI_LOC_LPPE_MASK_CP_UBP (0x00000008) --  Enable Un-Compromised Barometer Pressure measurement mode on LPPe control plane.
  */
 }qmiLocSetProtocolConfigParametersReqMsgT_v02;  /* Message */
 /**
@@ -7832,8 +7832,8 @@ typedef struct {
  Valid bitmasks: \n
       - QMI_LOC_LPPE_MASK_CP_DBH (0x00000001) --  Enable Device-Based Hybrid (3D High Accuracy Position) mode on LPPe control plane.
       - QMI_LOC_LPPE_MASK_CP_AP_WIFI_MEASUREMENT (0x00000002) --  Enable WLAN AP Measurements mode on LPPe control plane.
-      - QMI_LOC_LPPE_MASK_CP_AP_SRN_BTLE_MEASUREMENT (0x00000004) --  Enable SRN BTLE Measurement mode on LPPe user plane.
-      - QMI_LOC_LPPE_MASK_CP_UBP (0x00000008) --  Enable Un-Compromised Barometer Pressure measurement mode on LPPe user plane.
+      - QMI_LOC_LPPE_MASK_CP_AP_SRN_BTLE_MEASUREMENT (0x00000004) --  Enable SRN BTLE Measurement mode on LPPe control plane.
+      - QMI_LOC_LPPE_MASK_CP_UBP (0x00000008) --  Enable Un-Compromised Barometer Pressure measurement mode on LPPe control plane.
  */
 }qmiLocGetProtocolConfigParametersIndMsgT_v02;  /* Message */
 /**
@@ -11885,7 +11885,7 @@ typedef struct {
 
   char ssid[QMI_LOC_MAX_WIFI_AP_SSID_STR_LENGTH_V02 + 1];
   /**<   The NULL-terminated SSID of the Wi-Fi AP.
-       Its maximum length according to the ASCII standard is 32 octets.    \n
+       Its maximum length according to the ASCII standard is 32 octets.	\n
        Type: string */
 
   int32_t apHighResolutionRssi;
@@ -17348,4 +17348,3 @@ qmi_idl_service_object_type loc_get_service_object_internal_v02
 }
 #endif
 #endif
-
