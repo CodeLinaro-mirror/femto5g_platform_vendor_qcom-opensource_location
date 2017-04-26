@@ -63,7 +63,7 @@
  *====*====*====*====*====*====*====*====*====*====*====*====*====*====*====*/
 
 /* This file was generated with Tool version 6.14.7
-   It was generated on: Fri Oct 21 2016 (Spin 0)
+   It was generated on: Tue Apr 25 2017 (Spin 0)
    From IDL File: location_service_v02.idl */
 
 /** @defgroup loc_qmi_consts Constant values defined in the IDL */
@@ -89,11 +89,11 @@ extern "C" {
 /** Major Version Number of the IDL used to generate this file */
 #define LOC_V02_IDL_MAJOR_VERS 0x02
 /** Revision Number of the IDL used to generate this file */
-#define LOC_V02_IDL_MINOR_VERS 0x3B
+#define LOC_V02_IDL_MINOR_VERS 0x42
 /** Major Version Number of the qmi_idl_compiler used to generate this file */
 #define LOC_V02_IDL_TOOL_VERS 0x06
 /** Maximum Defined Message ID */
-#define LOC_V02_MAX_MESSAGE_ID 0x00A9
+#define LOC_V02_MAX_MESSAGE_ID 0x00AF
 /**
     @}
   */
@@ -124,6 +124,9 @@ extern "C" {
 
 /**  Maximum NMEA string length.  */
 #define QMI_LOC_NMEA_STRING_MAX_LENGTH_V02 200
+
+/**  Maximum Expanded NMEA string length.  */
+#define QMI_LOC_EXPANDED_NMEA_STRING_MAX_LENGTH_V02 4095
 
 /**  Maximum length of the requestor ID string.  */
 #define QMI_LOC_NI_MAX_REQUESTOR_ID_LENGTH_V02 200
@@ -324,6 +327,20 @@ extern "C" {
      request indication and pick the minimum of the two.  */
 #define QMI_LOC_MAX_XTRA_PART_LEN_V02 1024
 #define QMI_LOC_SUPPORTED_FEATURE_LENGTH_V02 100
+
+/**  The location service internal status report data length in byte  */
+#define QMI_LOC_INTERNAL_STATUS_REPORT_DATA_LENGTH_V02 56
+
+/**  The max size of the internal status report list  */
+#define QMI_LOC_INTERNAL_STATUS_MAX_LIST_SIZE_V02 67
+
+/**  Maximum number of APs that the sender can report.  */
+#define QMI_LOC_SRN_MAX_REPORTED_APS_PER_MSG_V02 64
+
+/**  MAC address length in bytes.  */
+#define QMI_LOC_SRN_MAC_ADDR_LENGTH_V02 6
+#define QMI_LOC_MAX_WIFI_CROWDSOURCING_SERVER_CONFIG_LEN_V02 512
+#define QMI_LOC_MAX_CROWDSOURCING_MODEM_CLIENT_INFO_LEN_V02 512
 /**
     @}
   */
@@ -451,6 +468,9 @@ typedef uint64_t qmiLocEventRegMaskT_v02;
        service.  */
 #define QMI_LOC_EVENT_MASK_BATCHING_STATUS_V02 ((qmiLocEventRegMaskT_v02)0x80000000ull) /**<  The control point must enable this mask to receive asynchronous events related
        to batching.  */
+#define QMI_LOC_EVENT_MASK_INTERNAL_STATUS_REPORT_V02 ((qmiLocEventRegMaskT_v02)0x100000000ull) /**<  The location service internal status report mask.  */
+#define QMI_LOC_EVENT_MASK_INJECT_SRN_AP_DATA_REQ_V02 ((qmiLocEventRegMaskT_v02)0x200000000ull) /**<  The control point must enable this mask to receive asynchronous event for
+       Short Range Node (SRN) Rssi scans. ex: BT,BTLE,NFC etc.  */
 /** @addtogroup loc_qmi_messages
     @{
   */
@@ -553,6 +573,9 @@ typedef struct {
        service.
       - QMI_LOC_EVENT_MASK_BATCHING_STATUS (0x80000000) --  The control point must enable this mask to receive asynchronous events related
        to batching.
+      - QMI_LOC_EVENT_MASK_INTERNAL_STATUS_REPORT (0x100000000) --  The location service internal status report mask.
+      - QMI_LOC_EVENT_MASK_INJECT_SRN_AP_DATA_REQ (0x200000000) --  The control point must enable this mask to receive asynchronous event for
+       Short Range Node (SRN) Rssi scans. ex: BT,BTLE,NFC etc.
 
  Multiple events can be registered by ORing the individual masks and
  sending them in this TLV. All unused bits in this mask must be set to 0.
@@ -946,6 +969,11 @@ typedef enum {
     @}
   */
 
+typedef uint64_t qmiLocNavSolutionMaskT_v02;
+#define QMI_LOC_NAV_MASK_SBAS_CORRECTION_IONO_V02 ((qmiLocNavSolutionMaskT_v02)0x00000001ull) /**<  Bitmask to specify whether SBAS ionospheric correction is used  */
+#define QMI_LOC_NAV_MASK_SBAS_CORRECTION_FAST_V02 ((qmiLocNavSolutionMaskT_v02)0x00000002ull) /**<  Bitmask to specify whether SBAS fast correction is used  */
+#define QMI_LOC_NAV_MASK_SBAS_CORRECTION_LONG_V02 ((qmiLocNavSolutionMaskT_v02)0x00000004ull) /**<  Bitmask to specify whether SBAS long-tem correction is used  */
+#define QMI_LOC_NAV_MASK_SBAS_INTEGRITY_V02 ((qmiLocNavSolutionMaskT_v02)0x00000008ull) /**<  Bitmask to specify whether SBAS integrity information is used  */
 /** @addtogroup loc_qmi_messages
     @{
   */
@@ -1279,6 +1307,19 @@ typedef struct {
   float velUncEnu[QMI_LOC_ENU_ARRAY_LENGTH_V02];
   /**<   East, North, Up velocity uncertainty.\n
        - Units: Meters/second */
+
+  /* Optional */
+  /*  Navigation solution */
+  uint8_t navSolutionMask_valid;  /**< Must be set to true if navSolutionMask is being passed */
+  qmiLocNavSolutionMaskT_v02 navSolutionMask;
+  /**<   Navigation solutions which are used to calculate
+ the GNSS position report.
+ Valid bitmasks: \n
+      - QMI_LOC_NAV_MASK_SBAS_CORRECTION_IONO (0x00000001) --  Bitmask to specify whether SBAS ionospheric correction is used
+      - QMI_LOC_NAV_MASK_SBAS_CORRECTION_FAST (0x00000002) --  Bitmask to specify whether SBAS fast correction is used
+      - QMI_LOC_NAV_MASK_SBAS_CORRECTION_LONG (0x00000004) --  Bitmask to specify whether SBAS long-tem correction is used
+      - QMI_LOC_NAV_MASK_SBAS_INTEGRITY (0x00000008) --  Bitmask to specify whether SBAS integrity information is used
+ */
 }qmiLocEventPositionReportIndMsgT_v02;  /* Message */
 /**
     @}
@@ -1454,6 +1495,17 @@ typedef struct {
        \begin{itemize1}
        \item    Type: NULL-terminated string
        \item    Maximum string length (including NULL terminator): 201
+       \vspace{-0.18in} \end{itemize1}*/
+
+  /* Optional */
+  /*  Expanded NMEA String */
+  uint8_t expandedNmea_valid;  /**< Must be set to true if expandedNmea is being passed */
+  char expandedNmea[QMI_LOC_EXPANDED_NMEA_STRING_MAX_LENGTH_V02 + 1];
+  /**<   Expanded NMEA string. If the service reports expandedNmea, then the
+       mandatory nmea string will be empty.
+       \begin{itemize1}
+       \item    Type: NULL-terminated string
+       \item    Expanded Maximum string length (including NULL terminator): 4096
        \vspace{-0.18in} \end{itemize1}*/
 }qmiLocEventNmeaIndMsgT_v02;  /* Message */
 /**
@@ -2176,6 +2228,7 @@ typedef uint16_t qmiLocNiSuplVer2ExtGnssTypeMaskT_v02;
 #define QMI_LOC_SUPL_VER_2_EXT_MASK_GNSS_SBAS_V02 ((qmiLocNiSuplVer2ExtGnssTypeMaskT_v02)0x0008) /**<  SBAS is allowed to be used as the positioning technology  */
 #define QMI_LOC_SUPL_VER_2_EXT_MASK_GNSS_QZSS_V02 ((qmiLocNiSuplVer2ExtGnssTypeMaskT_v02)0x0010) /**<  QZSS is allowed to be used as the positioning technology  */
 #define QMI_LOC_SUPL_VER_2_EXT_MASK_GNSS_MODERN_GPS_V02 ((qmiLocNiSuplVer2ExtGnssTypeMaskT_v02)0x0020) /**<  Modern GPS is allowed to be used as the positioning technology  */
+#define QMI_LOC_SUPL_VER_2_EXT_MASK_GNSS_BDS_V02 ((qmiLocNiSuplVer2ExtGnssTypeMaskT_v02)0x0040) /**<  BDS is allowed to be used as the positioning technology  */
 /** @addtogroup loc_qmi_aggregates
     @{
   */
@@ -2223,7 +2276,8 @@ typedef struct {
         - 0x0004 -- GNSS_GALILEO \n
         - 0x0008 -- GNSS_SBAS \n
         - 0x0010 -- GNSS_QZSS \n
-        - 0x0020 -- GNSS_MODERN_GPS
+        - 0x0020 -- GNSS_MODERN_GPS \n
+        - 0x0040 -- GNSS_BDS
   */
 }qmiLocNiSuplVer2ExtStructT_v02;  /* Type */
 /**
@@ -3499,6 +3553,7 @@ typedef enum {
   QMILOCGDTSERVICEIDENUMT_MIN_ENUM_VAL_V02 = -2147483647, /**< To force a 32 bit signed enum.  Do not change or use*/
   eQMI_LOC_GDT_SERVICE_WWAN_V02 = 1, /**<  GDT service for WWAN UL \n  */
   eQMI_LOC_GDT_SERVICE_WWAN_DL_V02 = 2, /**<  GDT service for WWAN DL  */
+  eQMI_LOC_GDT_SERVICE_CSM_UL_V02 = 3, /**< GDT service for Crowd Source Manager UL */
   QMILOCGDTSERVICEIDENUMT_MAX_ENUM_VAL_V02 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
 }qmiLocGdtServiceIdEnumT_v02;
 /**
@@ -3531,7 +3586,8 @@ typedef struct {
   /**<   Values: \n
 
       - eQMI_LOC_GDT_SERVICE_WWAN (1) --  GDT service for WWAN UL \n
-      - eQMI_LOC_GDT_SERVICE_WWAN_DL (2) --  GDT service for WWAN DL  */
+      - eQMI_LOC_GDT_SERVICE_WWAN_DL (2) --  GDT service for WWAN DL
+      - eQMI_LOC_GDT_SERVICE_CSM_UL (3) -- GDT service for Crowd Source Manager UL */
 
   /* Mandatory */
   /*  Session ID */
@@ -3578,7 +3634,8 @@ typedef struct {
   /**<   Values: \n
 
       - eQMI_LOC_GDT_SERVICE_WWAN (1) --  GDT service for WWAN UL \n
-      - eQMI_LOC_GDT_SERVICE_WWAN_DL (2) --  GDT service for WWAN DL  */
+      - eQMI_LOC_GDT_SERVICE_WWAN_DL (2) --  GDT service for WWAN DL
+      - eQMI_LOC_GDT_SERVICE_CSM_UL (3) -- GDT service for Crowd Source Manager UL */
 
   /* Mandatory */
   /*  Session ID */
@@ -3611,7 +3668,8 @@ typedef struct {
   /**<   Values: \n
 
       - eQMI_LOC_GDT_SERVICE_WWAN (1) --  GDT service for WWAN UL \n
-      - eQMI_LOC_GDT_SERVICE_WWAN_DL (2) --  GDT service for WWAN DL  */
+      - eQMI_LOC_GDT_SERVICE_WWAN_DL (2) --  GDT service for WWAN DL
+      - eQMI_LOC_GDT_SERVICE_CSM_UL (3) -- GDT service for Crowd Source Manager UL */
 
   /* Mandatory */
   /*  Session ID */
@@ -3697,7 +3755,8 @@ typedef struct {
   /**<   Values: \n
 
       - eQMI_LOC_GDT_SERVICE_WWAN (1) --  GDT service for WWAN UL \n
-      - eQMI_LOC_GDT_SERVICE_WWAN_DL (2) --  GDT service for WWAN DL  */
+      - eQMI_LOC_GDT_SERVICE_WWAN_DL (2) --  GDT service for WWAN DL
+      - eQMI_LOC_GDT_SERVICE_CSM_UL (3) -- GDT service for Crowd Source Manager UL */
 
   /* Mandatory */
   /*  Session ID */
@@ -3751,7 +3810,8 @@ typedef struct {
   /**<   Values: \n
 
       - eQMI_LOC_GDT_SERVICE_WWAN (1) --  GDT service for WWAN UL \n
-      - eQMI_LOC_GDT_SERVICE_WWAN_DL (2) --  GDT service for WWAN DL  */
+      - eQMI_LOC_GDT_SERVICE_WWAN_DL (2) --  GDT service for WWAN DL
+      - eQMI_LOC_GDT_SERVICE_CSM_UL (3) -- GDT service for Crowd Source Manager UL */
 
   /* Mandatory */
   /*  Session ID */
@@ -4999,6 +5059,7 @@ typedef uint32_t qmiLocNmeaSentenceMaskT_v02;
 #define QMI_LOC_NMEA_MASK_GAGGA_V02 ((qmiLocNmeaSentenceMaskT_v02)0x00004000) /**<  Enable GAGGA type  */
 #define QMI_LOC_NMEA_MASK_PQGSA_V02 ((qmiLocNmeaSentenceMaskT_v02)0x00008000) /**<  Enable PQGSA type  */
 #define QMI_LOC_NMEA_MASK_PQGSV_V02 ((qmiLocNmeaSentenceMaskT_v02)0x00010000) /**<  Enable PQGSV type  */
+#define QMI_LOC_NMEA_MASK_DEBUG_V02 ((qmiLocNmeaSentenceMaskT_v02)0x00020000) /**<  Enable debug NMEA indication  */
 /** @addtogroup loc_qmi_messages
     @{
   */
@@ -5028,6 +5089,7 @@ typedef struct {
       - QMI_LOC_NMEA_MASK_GAGGA (0x00004000) --  Enable GAGGA type
       - QMI_LOC_NMEA_MASK_PQGSA (0x00008000) --  Enable PQGSA type
       - QMI_LOC_NMEA_MASK_PQGSV (0x00010000) --  Enable PQGSV type
+      - QMI_LOC_NMEA_MASK_DEBUG (0x00020000) --  Enable debug NMEA indication
  */
 }qmiLocSetNmeaTypesReqMsgT_v02;  /* Message */
 /**
@@ -5127,6 +5189,7 @@ typedef struct {
       - QMI_LOC_NMEA_MASK_GAGGA (0x00004000) --  Enable GAGGA type
       - QMI_LOC_NMEA_MASK_PQGSA (0x00008000) --  Enable PQGSA type
       - QMI_LOC_NMEA_MASK_PQGSV (0x00010000) --  Enable PQGSV type
+      - QMI_LOC_NMEA_MASK_DEBUG (0x00020000) --  Enable debug NMEA indication
  */
 }qmiLocGetNmeaTypesIndMsgT_v02;  /* Message */
 /**
@@ -6275,6 +6338,9 @@ typedef struct {
        service.
       - QMI_LOC_EVENT_MASK_BATCHING_STATUS (0x80000000) --  The control point must enable this mask to receive asynchronous events related
        to batching.
+      - QMI_LOC_EVENT_MASK_INTERNAL_STATUS_REPORT (0x100000000) --  The location service internal status report mask.
+      - QMI_LOC_EVENT_MASK_INJECT_SRN_AP_DATA_REQ (0x200000000) --  The control point must enable this mask to receive asynchronous event for
+       Short Range Node (SRN) Rssi scans. ex: BT,BTLE,NFC etc.
  */
 }qmiLocGetRegisteredEventsIndMsgT_v02;  /* Message */
 /**
@@ -7064,6 +7130,22 @@ typedef struct {
     @}
   */
 
+/** @addtogroup loc_qmi_enums
+    @{
+  */
+typedef enum {
+  QMILOCBATTERYLEVELENUMT_MIN_ENUM_VAL_V02 = -2147483647, /**< To force a 32 bit signed enum.  Do not change or use*/
+  eQMI_LOC_BATTERY_LEVEL_UNKNOWN_V02 = 0, /**<  Device battery level is UNKNOWN  */
+  eQMI_LOC_BATTERY_LEVEL_VERY_HIGH_V02 = 1, /**<  Device battery level is >75% and <=100%  */
+  eQMI_LOC_BATTERY_LEVEL_HIGH_V02 = 2, /**<  Device battery level is >50% and <=75%  */
+  eQMI_LOC_BATTERY_LEVEL_MEDIUM_V02 = 3, /**<  Device battery level is >25% and <=50%  */
+  eQMI_LOC_BATTERY_LEVEL_LOW_V02 = 4, /**<  Device battery level is >0% and <= 25%  */
+  QMILOCBATTERYLEVELENUMT_MAX_ENUM_VAL_V02 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
+}qmiLocBatteryLevelEnumT_v02;
+/**
+    @}
+  */
+
 /** @addtogroup loc_qmi_messages
     @{
   */
@@ -7080,6 +7162,20 @@ typedef struct {
       - eQMI_LOC_EXTERNAL_POWER_NOT_CONNECTED (0) --  Device is not connected to an external power source
       - eQMI_LOC_EXTERNAL_POWER_CONNECTED (1) --  Device is connected to an external power source
       - eQMI_LOC_EXTERNAL_POWER_UNKNOWN (2) --  Unknown external power state
+ */
+
+  /* Optional */
+  /*  Battery level percent */
+  uint8_t batteryLevel_valid;  /**< Must be set to true if batteryLevel is being passed */
+  qmiLocBatteryLevelEnumT_v02 batteryLevel;
+  /**<   Battery level as injected by the control point.
+
+ Valid values: \n
+      - eQMI_LOC_BATTERY_LEVEL_UNKNOWN (0) --  Device battery level is UNKNOWN
+      - eQMI_LOC_BATTERY_LEVEL_VERY_HIGH (1) --  Device battery level is >75% and <=100%
+      - eQMI_LOC_BATTERY_LEVEL_HIGH (2) --  Device battery level is >50% and <=75%
+      - eQMI_LOC_BATTERY_LEVEL_MEDIUM (3) --  Device battery level is >25% and <=50%
+      - eQMI_LOC_BATTERY_LEVEL_LOW (4) --  Device battery level is >0% and <= 25%
  */
 }qmiLocSetExternalPowerConfigReqMsgT_v02;  /* Message */
 /**
@@ -7331,9 +7427,13 @@ typedef enum {
 typedef uint64_t qmiLocLppeUpAuxTechMaskT_v02;
 #define QMI_LOC_LPPE_MASK_UP_DBH_V02 ((qmiLocLppeUpAuxTechMaskT_v02)0x00000001ull) /**<  Enable Device-Based Hybrid (3D High Accuracy Position) mode on LPPe user plane.  */
 #define QMI_LOC_LPPE_MASK_UP_AP_WIFI_MEASUREMENT_V02 ((qmiLocLppeUpAuxTechMaskT_v02)0x00000002ull) /**<  Enable WLAN AP Measurements mode on LPPe user plane.  */
+#define QMI_LOC_LPPE_MASK_UP_AP_SRN_BTLE_MEASUREMENT_V02 ((qmiLocLppeUpAuxTechMaskT_v02)0x00000004ull) /**<  Enable SRN BTLE Measurement mode on LPPe user plane.  */
+#define QMI_LOC_LPPE_MASK_UP_UBP_V02 ((qmiLocLppeUpAuxTechMaskT_v02)0x00000008ull) /**<  Enable Un-Compromised Barometer pressure measurement mode on LPPe user plane.  */
 typedef uint64_t qmiLocLppeCpAuxTechMaskT_v02;
 #define QMI_LOC_LPPE_MASK_CP_DBH_V02 ((qmiLocLppeCpAuxTechMaskT_v02)0x00000001ull) /**<  Enable Device-Based Hybrid (3D High Accuracy Position) mode on LPPe control plane.  */
 #define QMI_LOC_LPPE_MASK_CP_AP_WIFI_MEASUREMENT_V02 ((qmiLocLppeCpAuxTechMaskT_v02)0x00000002ull) /**<  Enable WLAN AP Measurements mode on LPPe control plane.  */
+#define QMI_LOC_LPPE_MASK_CP_AP_SRN_BTLE_MEASUREMENT_V02 ((qmiLocLppeCpAuxTechMaskT_v02)0x00000004ull) /**<  Enable SRN BTLE Measurement mode on LPPe user plane.  */
+#define QMI_LOC_LPPE_MASK_CP_UBP_V02 ((qmiLocLppeCpAuxTechMaskT_v02)0x00000008ull) /**<  Enable Un-Compromised Barometer Pressure measurement mode on LPPe user plane.  */
 /** @addtogroup loc_qmi_messages
     @{
   */
@@ -7464,6 +7564,8 @@ typedef struct {
  Valid bitmasks: \n
       - QMI_LOC_LPPE_MASK_UP_DBH (0x00000001) --  Enable Device-Based Hybrid (3D High Accuracy Position) mode on LPPe user plane.
       - QMI_LOC_LPPE_MASK_UP_AP_WIFI_MEASUREMENT (0x00000002) --  Enable WLAN AP Measurements mode on LPPe user plane.
+      - QMI_LOC_LPPE_MASK_UP_AP_SRN_BTLE_MEASUREMENT (0x00000004) --  Enable SRN BTLE Measurement mode on LPPe user plane.
+      - QMI_LOC_LPPE_MASK_UP_UBP (0x00000008) --  Enable Un-Compromised Barometer pressure measurement mode on LPPe user plane.
  */
 
   /* Optional */
@@ -7475,6 +7577,8 @@ typedef struct {
  Valid bitmasks: \n
       - QMI_LOC_LPPE_MASK_CP_DBH (0x00000001) --  Enable Device-Based Hybrid (3D High Accuracy Position) mode on LPPe control plane.
       - QMI_LOC_LPPE_MASK_CP_AP_WIFI_MEASUREMENT (0x00000002) --  Enable WLAN AP Measurements mode on LPPe control plane.
+      - QMI_LOC_LPPE_MASK_CP_AP_SRN_BTLE_MEASUREMENT (0x00000004) --  Enable SRN BTLE Measurement mode on LPPe user plane.
+      - QMI_LOC_LPPE_MASK_CP_UBP (0x00000008) --  Enable Un-Compromised Barometer Pressure measurement mode on LPPe user plane.
  */
 }qmiLocSetProtocolConfigParametersReqMsgT_v02;  /* Message */
 /**
@@ -7715,6 +7819,8 @@ typedef struct {
  Valid bitmasks: \n
       - QMI_LOC_LPPE_MASK_UP_DBH (0x00000001) --  Enable Device-Based Hybrid (3D High Accuracy Position) mode on LPPe user plane.
       - QMI_LOC_LPPE_MASK_UP_AP_WIFI_MEASUREMENT (0x00000002) --  Enable WLAN AP Measurements mode on LPPe user plane.
+      - QMI_LOC_LPPE_MASK_UP_AP_SRN_BTLE_MEASUREMENT (0x00000004) --  Enable SRN BTLE Measurement mode on LPPe user plane.
+      - QMI_LOC_LPPE_MASK_UP_UBP (0x00000008) --  Enable Un-Compromised Barometer pressure measurement mode on LPPe user plane.
  */
 
   /* Optional */
@@ -7726,6 +7832,8 @@ typedef struct {
  Valid bitmasks: \n
       - QMI_LOC_LPPE_MASK_CP_DBH (0x00000001) --  Enable Device-Based Hybrid (3D High Accuracy Position) mode on LPPe control plane.
       - QMI_LOC_LPPE_MASK_CP_AP_WIFI_MEASUREMENT (0x00000002) --  Enable WLAN AP Measurements mode on LPPe control plane.
+      - QMI_LOC_LPPE_MASK_CP_AP_SRN_BTLE_MEASUREMENT (0x00000004) --  Enable SRN BTLE Measurement mode on LPPe user plane.
+      - QMI_LOC_LPPE_MASK_CP_UBP (0x00000008) --  Enable Un-Compromised Barometer Pressure measurement mode on LPPe user plane.
  */
 }qmiLocGetProtocolConfigParametersIndMsgT_v02;  /* Message */
 /**
@@ -11848,7 +11956,8 @@ typedef struct {
   /*  Free Scan or On-Demand Scan */
   uint8_t onDemandScan_valid;  /**< Must be set to true if onDemandScan is being passed */
   uint8_t onDemandScan;
-  /**<   Indicates whether this scan was requested by the modem.    \begin{itemize1}
+  /**<   Indicates whether this scan was requested by the modem.
+        \begin{itemize1}
         \item 0x00 (FALSE) -- The Wi-Fi AP data injection was not requested by the modem (Free Scan).
         \item 0x01 (TRUE) -- The Wi-Fi AP data injection was requested by the modem (On-Demand Scan).*/
 
@@ -13030,8 +13139,11 @@ typedef uint64_t qmiLocSvMeasStatusValidMaskT_v02;
 #define QMI_LOC_MASK_MEAS_STATUS_BE_CONFIRM_STAT_BIT_VALID_V02 ((qmiLocSvMeasStatusValidMaskT_v02)0x00000008ull) /**<  Signal bit edge is confirmed  */
 #define QMI_LOC_MASK_MEAS_STATUS_VEL_STAT_BIT_VALID_V02 ((qmiLocSvMeasStatusValidMaskT_v02)0x00000010ull) /**<  Satellite Doppler is measured  */
 #define QMI_LOC_MASK_MEAS_STATUS_VEL_FINE_STAT_BIT_VALID_V02 ((qmiLocSvMeasStatusValidMaskT_v02)0x00000020ull) /**<  Fine/coarse Doppler measurement indicator  */
+#define QMI_LOC_MASK_MEAS_STATUS_LP_STAT_BIT_VALID_V02 ((qmiLocSvMeasStatusValidMaskT_v02)0x00000040ull) /**<  TRUE/FALSE : Lock Point is valid/invalid  */
+#define QMI_LOC_MASK_MEAS_STATUS_LP_POS_STAT_BIT_VALID_V02 ((qmiLocSvMeasStatusValidMaskT_v02)0x00000080ull) /**<  TRUE/FALSE : Lock Point is positive/negative   */
 #define QMI_LOC_MASK_MEAS_STATUS_FROM_RNG_DIFF_STAT_BIT_VALID_V02 ((qmiLocSvMeasStatusValidMaskT_v02)0x00000200ull) /**<  Range update from satellite differences  */
 #define QMI_LOC_MASK_MEAS_STATUS_FROM_VE_DIFF_STAT_BIT_VALID_V02 ((qmiLocSvMeasStatusValidMaskT_v02)0x00000400ull) /**<  Doppler update from satellite differences  */
+#define QMI_LOC_MASK_MEAS_STATUS_GNSS_FRESH_MEAS_STAT_BIT_VALID_V02 ((qmiLocSvMeasStatusValidMaskT_v02)0x08000000ull) /**< TRUE - Fresh GNSS measurement observed in last second  >  */
 typedef uint64_t qmiLocSvMeasStatusMaskT_v02;
 #define QMI_LOC_MASK_MEAS_STATUS_SM_VALID_V02 ((qmiLocSvMeasStatusMaskT_v02)0x00000001ull) /**<  Satellite time in submilliseconds (code phase) is known  */
 #define QMI_LOC_MASK_MEAS_STATUS_SB_VALID_V02 ((qmiLocSvMeasStatusMaskT_v02)0x00000002ull) /**<  Satellite sub-bit time is known  */
@@ -13039,8 +13151,11 @@ typedef uint64_t qmiLocSvMeasStatusMaskT_v02;
 #define QMI_LOC_MASK_MEAS_STATUS_BE_CONFIRM_V02 ((qmiLocSvMeasStatusMaskT_v02)0x00000008ull) /**<  Signal bit edge is confirmed   */
 #define QMI_LOC_MASK_MEAS_STATUS_VELOCITY_VALID_V02 ((qmiLocSvMeasStatusMaskT_v02)0x00000010ull) /**<  Satellite Doppler is measured  */
 #define QMI_LOC_MASK_MEAS_STATUS_VELOCITY_FINE_V02 ((qmiLocSvMeasStatusMaskT_v02)0x00000020ull) /**<  TRUE: Fine Doppler is measured, FALSE: Coarse Doppler is measured  */
+#define QMI_LOC_MASK_MEAS_STATUS_LP_VALID_V02 ((qmiLocSvMeasStatusMaskT_v02)0x00000040ull) /**<  TRUE/FALSE : Lock Point is valid/invalid. */
+#define QMI_LOC_MASK_MEAS_STATUS_LP_POS_VALID_V02 ((qmiLocSvMeasStatusMaskT_v02)0x00000080ull) /**<  TRUE/FALSE : Lock Point is positive/negative */
 #define QMI_LOC_MASK_MEAS_STATUS_FROM_RNG_DIFF_V02 ((qmiLocSvMeasStatusMaskT_v02)0x00000200ull) /**<  Range update from satellite differences is measured  */
 #define QMI_LOC_MASK_MEAS_STATUS_FROM_VE_DIFF_V02 ((qmiLocSvMeasStatusMaskT_v02)0x00000400ull) /**<  Doppler update from satellite differences is measured}  */
+#define QMI_LOC_MASK_MEAS_STATUS_GNSS_FRESH_MEAS_VALID_V02 ((qmiLocSvMeasStatusMaskT_v02)0x08000000ull) /**< TRUE - Fresh GNSS measurement observed in last second  >  */
 /** @addtogroup loc_qmi_aggregates
     @{
   */
@@ -13171,8 +13286,11 @@ typedef struct {
       - QMI_LOC_MASK_MEAS_STATUS_BE_CONFIRM_STAT_BIT_VALID (0x00000008) --  Signal bit edge is confirmed
       - QMI_LOC_MASK_MEAS_STATUS_VEL_STAT_BIT_VALID (0x00000010) --  Satellite Doppler is measured
       - QMI_LOC_MASK_MEAS_STATUS_VEL_FINE_STAT_BIT_VALID (0x00000020) --  Fine/coarse Doppler measurement indicator
+      - QMI_LOC_MASK_MEAS_STATUS_LP_STAT_BIT_VALID (0x00000040) --  TRUE/FALSE : Lock Point is valid/invalid
+      - QMI_LOC_MASK_MEAS_STATUS_LP_POS_STAT_BIT_VALID (0x00000080) --  TRUE/FALSE : Lock Point is positive/negative
       - QMI_LOC_MASK_MEAS_STATUS_FROM_RNG_DIFF_STAT_BIT_VALID (0x00000200) --  Range update from satellite differences
       - QMI_LOC_MASK_MEAS_STATUS_FROM_VE_DIFF_STAT_BIT_VALID (0x00000400) --  Doppler update from satellite differences
+      - QMI_LOC_MASK_MEAS_STATUS_GNSS_FRESH_MEAS_STAT_BIT_VALID (0x08000000) -- TRUE - Fresh GNSS measurement observed in last second  >
 \vspace{4pt}
  Additionally, MSB 0xFFC0000000000000 bits indicate the validity of DONT_USE bits. \n
 
@@ -13188,8 +13306,11 @@ typedef struct {
       - QMI_LOC_MASK_MEAS_STATUS_BE_CONFIRM (0x00000008) --  Signal bit edge is confirmed
       - QMI_LOC_MASK_MEAS_STATUS_VELOCITY_VALID (0x00000010) --  Satellite Doppler is measured
       - QMI_LOC_MASK_MEAS_STATUS_VELOCITY_FINE (0x00000020) --  TRUE: Fine Doppler is measured, FALSE: Coarse Doppler is measured
+      - QMI_LOC_MASK_MEAS_STATUS_LP_VALID (0x00000040) --  TRUE/FALSE : Lock Point is valid/invalid.
+      - QMI_LOC_MASK_MEAS_STATUS_LP_POS_VALID (0x00000080) --  TRUE/FALSE : Lock Point is positive/negative
       - QMI_LOC_MASK_MEAS_STATUS_FROM_RNG_DIFF (0x00000200) --  Range update from satellite differences is measured
       - QMI_LOC_MASK_MEAS_STATUS_FROM_VE_DIFF (0x00000400) --  Doppler update from satellite differences is measured}
+      - QMI_LOC_MASK_MEAS_STATUS_GNSS_FRESH_MEAS_VALID (0x08000000) -- TRUE - Fresh GNSS measurement observed in last second  >
 
  If any MSB bit in 0xFFC0000000000000 DONT_USE is set, the measurement
  must not be used by the client.
@@ -13955,7 +14076,8 @@ typedef struct {
   qmiLocGdtServiceIdEnumT_v02 serviceId;
   /**<   Values: \n
       - eQMI_LOC_GDT_SERVICE_WWAN (1) --  GDT service for WWAN UL \n
-      - eQMI_LOC_GDT_SERVICE_WWAN_DL (2) --  GDT service for WWAN DL  */
+      - eQMI_LOC_GDT_SERVICE_WWAN_DL (2) --  GDT service for WWAN DL
+      - eQMI_LOC_GDT_SERVICE_CSM_UL (3) -- GDT service for Crowd Source Manager UL */
 
   /* Mandatory */
   /*  Session ID */
@@ -14031,7 +14153,8 @@ typedef struct {
   /**<   Values: \n
 
       - eQMI_LOC_GDT_SERVICE_WWAN (1) --  GDT service for WWAN UL \n
-      - eQMI_LOC_GDT_SERVICE_WWAN_DL (2) --  GDT service for WWAN DL */
+      - eQMI_LOC_GDT_SERVICE_WWAN_DL (2) --  GDT service for WWAN DL
+      - eQMI_LOC_GDT_SERVICE_CSM_UL (3) -- GDT service for Crowd Source Manager UL*/
 
   /* Mandatory */
   /*  Session ID */
@@ -14234,7 +14357,8 @@ typedef struct {
   /**<   Values: \n
 
       - eQMI_LOC_GDT_SERVICE_WWAN (1) --  GDT service for WWAN UL \n
-      - eQMI_LOC_GDT_SERVICE_WWAN_DL (2) --  GDT service for WWAN DL  */
+      - eQMI_LOC_GDT_SERVICE_WWAN_DL (2) --  GDT service for WWAN DL
+      - eQMI_LOC_GDT_SERVICE_CSM_UL (3) -- GDT service for Crowd Source Manager UL */
 
   /* Mandatory */
   /*  Session ID */
@@ -14326,7 +14450,8 @@ typedef struct {
   /**<   Values: \n
 
       - eQMI_LOC_GDT_SERVICE_WWAN (1) --  GDT service for WWAN UL \n
-      - eQMI_LOC_GDT_SERVICE_WWAN_DL (2) --  GDT service for WWAN DL  */
+      - eQMI_LOC_GDT_SERVICE_WWAN_DL (2) --  GDT service for WWAN DL
+      - eQMI_LOC_GDT_SERVICE_CSM_UL (3) -- GDT service for Crowd Source Manager UL */
 
   /* Mandatory */
   /*  Session ID */
@@ -14404,7 +14529,8 @@ typedef struct {
   /**<   Values: \n
 
       - eQMI_LOC_GDT_SERVICE_WWAN (1) --  GDT service for WWAN UL \n
-      - eQMI_LOC_GDT_SERVICE_WWAN_DL (2) --  GDT service for WWAN DL  */
+      - eQMI_LOC_GDT_SERVICE_WWAN_DL (2) --  GDT service for WWAN DL
+      - eQMI_LOC_GDT_SERVICE_CSM_UL (3) -- GDT service for Crowd Source Manager UL */
 
   /* Mandatory */
   /*  Session ID */
@@ -14472,7 +14598,8 @@ typedef struct {
   /**<   Values: \n
 
       - eQMI_LOC_GDT_SERVICE_WWAN (1) --  GDT service for WWAN UL \n
-      - eQMI_LOC_GDT_SERVICE_WWAN_DL (2) --  GDT service for WWAN DL  */
+      - eQMI_LOC_GDT_SERVICE_WWAN_DL (2) --  GDT service for WWAN DL
+      - eQMI_LOC_GDT_SERVICE_CSM_UL (3) -- GDT service for Crowd Source Manager UL */
 
   /* Mandatory */
   /*  Session ID */
@@ -16173,9 +16300,527 @@ typedef struct {
     @}
   */
 
+/** @addtogroup loc_qmi_messages
+    @{
+  */
+/** Request Message; Location service internal status configure message. */
+typedef struct {
+
+  /* Mandatory */
+  /*  Location service internal status configure */
+  uint8_t config;
+  /**<   Request to turn on/off location service internal status report.
+       \begin{itemize1}
+       \item    0x01 (TRUE) -- Turn the report on
+       \item    0x00 (FALSE) -- Turn the report off
+       \vspace{-0.18in} \end{itemize1}*/
+}qmiLocSetInternalStatusConfigReqMsgT_v02;  /* Message */
+/**
+    @}
+  */
+
+/** @addtogroup loc_qmi_messages
+    @{
+  */
+/** Indication Message; Location service internal status configure message. */
+typedef struct {
+
+  /* Mandatory */
+  /*  Set Location Service Internal Status Configure Status */
+  qmiLocStatusEnumT_v02 status;
+  /**<   Status of the set location service internal status configuration request.
+
+ Valid values: \n
+      - eQMI_LOC_SUCCESS (0) --  Request was completed successfully \n
+      - eQMI_LOC_GENERAL_FAILURE (1) --  Request failed because of a general failure \n
+      - eQMI_LOC_UNSUPPORTED (2) --  Request failed because it is not supported \n
+      - eQMI_LOC_INVALID_PARAMETER (3) --  Request failed because it contained invalid parameters \n
+      - eQMI_LOC_ENGINE_BUSY (4) --  Request failed because the engine is busy \n
+      - eQMI_LOC_PHONE_OFFLINE (5) --  Request failed because the phone is offline \n
+      - eQMI_LOC_TIMEOUT (6) --  Request failed because it timed out \n
+      - eQMI_LOC_CONFIG_NOT_SUPPORTED (7) --  Request failed because an undefined configuration was requested \n
+      - eQMI_LOC_INSUFFICIENT_MEMORY (8) --  Request failed because the engine could not allocate sufficient memory for the request \n
+      - eQMI_LOC_MAX_GEOFENCE_PROGRAMMED (9) --  Request failed because the maximum number of Geofences are already programmed \n
+      - eQMI_LOC_XTRA_VERSION_CHECK_FAILURE (10) --  Location service failed because of an XTRA version-based file format check failure
+ */
+}qmiLocSetInternalStatusConfigIndMsgT_v02;  /* Message */
+/**
+    @}
+  */
+
+/** @addtogroup loc_qmi_aggregates
+    @{
+  */
+typedef struct {
+
+  uint8_t data[QMI_LOC_INTERNAL_STATUS_REPORT_DATA_LENGTH_V02];
+  /**<   The data of the reported GPS message. */
+}qmiLocInternalStatusReportDataStructT_v02;  /* Type */
+/**
+    @}
+  */
+
+/** @addtogroup loc_qmi_messages
+    @{
+  */
+/** Indication Message; Sends the location service internal status report to the control point. */
+typedef struct {
+
+  /* Mandatory */
+  /*  Internal Status Report Data */
+  uint32_t reportData_len;  /**< Must be set to # of elements in reportData */
+  qmiLocInternalStatusReportDataStructT_v02 reportData[QMI_LOC_INTERNAL_STATUS_MAX_LIST_SIZE_V02];
+}qmiLocEventInternalStatusReportIndMsgT_v02;  /* Message */
+/**
+    @}
+  */
+
+typedef uint32_t qmiLocSrnApDataDeviceTypeMaskT_v02;
+#define QMI_LOC_SRN_AP_DATA_TECH_TYPE_BT_V02 ((qmiLocSrnApDataDeviceTypeMaskT_v02)0x00000001) /**<  SRN AP Technology BlueTooth  */
+#define QMI_LOC_SRN_AP_DATA_TECH_TYPE_BTLE_V02 ((qmiLocSrnApDataDeviceTypeMaskT_v02)0x00000002) /**<  SRN AP Technology BlueTooth Low Energy  */
+#define QMI_LOC_SRN_AP_DATA_TECH_TYPE_NFC_V02 ((qmiLocSrnApDataDeviceTypeMaskT_v02)0x00000004) /**<  SRN AP Technology NFC  */
+#define QMI_LOC_SRN_AP_DATA_TECH_TYPE_MOBILE_CODE_V02 ((qmiLocSrnApDataDeviceTypeMaskT_v02)0x00000008) /**<  SRN AP Technology Mobile Code  */
+#define QMI_LOC_SRN_AP_DATA_TECH_TYPE_OTHER_V02 ((qmiLocSrnApDataDeviceTypeMaskT_v02)0x00000010) /**<  SRN AP Technology Other */
+/** @addtogroup loc_qmi_enums
+    @{
+  */
+typedef enum {
+  QMILOCSRNAPDATAMACADDRTYPEENUMT_MIN_ENUM_VAL_V02 = -2147483647, /**< To force a 32 bit signed enum.  Do not change or use*/
+  eQMI_LOC_SRN_AP_DATA_PUBLIC_MAC_ADDR_V02 = 0, /**<  SRN AP MAC Address type PUBLIC  */
+  eQMI_LOC_SRN_AP_DATA_PRIVATE_MAC_ADDR_V02 = 1, /**<  SRN AP MAC Address type PRIVATE  */
+  eQMI_LOC_SRN_AP_DATA_OTHER_MAC_ADDR_V02 = 2, /**<  SRN AP MAC Address type OTHER */
+  QMILOCSRNAPDATAMACADDRTYPEENUMT_MAX_ENUM_VAL_V02 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
+}qmiLocSrnApDataMacAddrTypeEnumT_v02;
+/**
+    @}
+  */
+
+/** @addtogroup loc_qmi_messages
+    @{
+  */
+/** Indication Message; Requests the control point to inject SRN [BT,BLE,NFC etc] AP data. */
+typedef struct {
+
+  /* Mandatory */
+  /*  SRN request Tech Mask */
+  qmiLocSrnApDataDeviceTypeMaskT_v02 srnTechMask;
+  /**<   Specifies which Srn technologies AP mesurement data
+ is being requested from client.
+
+ Valid values: \n
+      - QMI_LOC_SRN_AP_DATA_TECH_TYPE_BT (0x00000001) --  SRN AP Technology BlueTooth
+      - QMI_LOC_SRN_AP_DATA_TECH_TYPE_BTLE (0x00000002) --  SRN AP Technology BlueTooth Low Energy
+      - QMI_LOC_SRN_AP_DATA_TECH_TYPE_NFC (0x00000004) --  SRN AP Technology NFC
+      - QMI_LOC_SRN_AP_DATA_TECH_TYPE_MOBILE_CODE (0x00000008) --  SRN AP Technology Mobile Code
+      - QMI_LOC_SRN_AP_DATA_TECH_TYPE_OTHER (0x00000010) --  SRN AP Technology Other */
+
+  /* Mandatory */
+  /*  SRN request  */
+  uint8_t srnRequest;
+  /**<   Specifies whether the GPS engine is requesting a start / stop
+       for Srn measurement.
+
+       Valid values: \begin{itemize1}
+       \item    0x01 (TRUE) -- Requesting Client to start Srn Data injection.
+       \item    0x00 (FALSE) -- Requesting Client to stop Srn Data injection.
+       \end{itemize1}
+  */
+
+  /* Optional */
+  /*  E911 Mode  */
+  uint8_t e911Mode_valid;  /**< Must be set to true if e911Mode is being passed */
+  uint8_t e911Mode;
+  /**<   Specifies whether the GPS engine is in E911 mode when this
+       indication is sent to the client.
+
+       Valid values: \begin{itemize1}
+       \item    0x01 (TRUE) -- GPS engine is in E911 mode
+       \item    0x00 (FALSE) -- GPS engine is not in E911 mode
+       \end{itemize1}
+  */
+
+  /* Optional */
+  /*  SRN MAC address type  */
+  uint8_t srnApMacAddrType_valid;  /**< Must be set to true if srnApMacAddrType is being passed */
+  qmiLocSrnApDataMacAddrTypeEnumT_v02 srnApMacAddrType;
+  /**<   Specifies the Mac Address type requested.
+
+ Valid values:
+      - eQMI_LOC_SRN_AP_DATA_PUBLIC_MAC_ADDR (0) --  SRN AP MAC Address type PUBLIC
+      - eQMI_LOC_SRN_AP_DATA_PRIVATE_MAC_ADDR (1) --  SRN AP MAC Address type PRIVATE
+      - eQMI_LOC_SRN_AP_DATA_OTHER_MAC_ADDR (2) --  SRN AP MAC Address type OTHER */
+}qmiLocEventInjectSrnApDataReqIndMsgT_v02;  /* Message */
+/**
+    @}
+  */
+
+/** @addtogroup loc_qmi_enums
+    @{
+  */
+typedef enum {
+  QMILOCSRNAPDATATECHTYPEENUMT_MIN_ENUM_VAL_V02 = -2147483647, /**< To force a 32 bit signed enum.  Do not change or use*/
+  eQMI_LOC_SRN_AP_DATA_TECH_TYPE_BT_V02 = 0, /**<  SRN AP Technology BlueTooth  */
+  eQMI_LOC_SRN_AP_DATA_TECH_TYPE_BTLE_V02 = 1, /**<  SRN AP Technology BlueTooth Low Energy  */
+  eQMI_LOC_SRN_AP_DATA_TECH_TYPE_NFC_V02 = 2, /**<  SRN AP Technology NFC  */
+  eQMI_LOC_SRN_AP_DATA_TECH_TYPE_MOBILE_CODE_V02 = 3, /**<  SRN AP Technology Mobile Code  */
+  eQMI_LOC_SRN_AP_DATA_TECH_TYPE_OTHER_V02 = 4, /**<  SRN AP Technology Other */
+  QMILOCSRNAPDATATECHTYPEENUMT_MAX_ENUM_VAL_V02 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
+}qmiLocSrnApDataTechTypeEnumT_v02;
+/**
+    @}
+  */
+
+typedef uint32_t qmiLocSrnApDataMaskT_v02;
+#define QMI_LOC_SRN_APDATA_MASK_AP_MAC_V02 ((qmiLocSrnApDataMaskT_v02)0x00000001) /**<  SRN AP MAC address is valid  */
+#define QMI_LOC_SRN_APDATA_MASK_AP_RSSI_V02 ((qmiLocSrnApDataMaskT_v02)0x00000002) /**<  SRN AP RSSI is valid  */
+#define QMI_LOC_SRN_APDATA_MASK_RSSI_TIMESTAMP_V02 ((qmiLocSrnApDataMaskT_v02)0x00000004) /**<  SRN AP RSSI timestamp is valid  */
+/** @addtogroup loc_qmi_enums
+    @{
+  */
+typedef enum {
+  QMILOCSRNAPERRENUMT_MIN_ENUM_VAL_V02 = -2147483647, /**< To force a 32 bit signed enum.  Do not change or use*/
+  eQMI_LOC_SRN_AP_ERR_UNKNOWN_V02 = 0, /**<  Error is unknown  */
+  eQMI_LOC_SRN_AP_ERR_NO_REQ_MEAS_AVAILABLE_V02 = 1, /**<  None of the requested measurements could be provided  */
+  eQMI_LOC_SRN_AP_ERR_SENSOR_OFF_V02 = 2, /**<  Sensor is off  */
+  QMILOCSRNAPERRENUMT_MAX_ENUM_VAL_V02 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
+}qmiLocSrnApErrEnumT_v02;
+/**
+    @}
+  */
+
+/** @addtogroup loc_qmi_aggregates
+    @{
+  */
+typedef struct {
+
+  qmiLocSrnApDataMaskT_v02 srnApDataMask;
+  /**<   Specifies which SRN AP information types are being used.
+
+ Valid values:
+      - QMI_LOC_SRN_APDATA_MASK_AP_MAC (0x00000001) --  SRN AP MAC address is valid
+      - QMI_LOC_SRN_APDATA_MASK_AP_RSSI (0x00000002) --  SRN AP RSSI is valid
+      - QMI_LOC_SRN_APDATA_MASK_RSSI_TIMESTAMP (0x00000004) --  SRN AP RSSI timestamp is valid  */
+
+  uint8_t macAddress[QMI_LOC_SRN_MAC_ADDR_LENGTH_V02];
+  /**<   MAC address.
+       Each address is of length QMI_LOC_SRN_MAC_ADDR_LENGTH.*/
+
+  int32_t apSrnRssi;
+  /**<   AP signal strength indicator in dBm. */
+
+  int64_t apSrnTimestamp;
+  /**<   UTC timestamp at which the scan was requested.
+       Units: Milliseconds
+       Type: int64 */
+}qmiLocSrnBtleApDeviceDataStructT_v02;  /* Type */
+/**
+    @}
+  */
+
+/** @addtogroup loc_qmi_messages
+    @{
+  */
+/** Request Message; Injects BT,BLE,NFC etc AP data. */
+typedef struct {
+
+  /* Mandatory */
+  /*  Scan Receive Timestamp */
+  qmiLocSrnApDataTechTypeEnumT_v02 apDeviceTechType;
+  /**<   List of AP device types.
+
+ Valid values:
+      - eQMI_LOC_SRN_AP_DATA_TECH_TYPE_BT (0) --  SRN AP Technology BlueTooth
+      - eQMI_LOC_SRN_AP_DATA_TECH_TYPE_BTLE (1) --  SRN AP Technology BlueTooth Low Energy
+      - eQMI_LOC_SRN_AP_DATA_TECH_TYPE_NFC (2) --  SRN AP Technology NFC
+      - eQMI_LOC_SRN_AP_DATA_TECH_TYPE_MOBILE_CODE (3) --  SRN AP Technology Mobile Code
+      - eQMI_LOC_SRN_AP_DATA_TECH_TYPE_OTHER (4) --  SRN AP Technology Other */
+
+  /* Optional */
+  /*  SRN AP Scan Data */
+  uint8_t srnBtleApInfo_valid;  /**< Must be set to true if srnBtleApInfo is being passed */
+  uint32_t srnBtleApInfo_len;  /**< Must be set to # of elements in srnBtleApInfo */
+  qmiLocSrnBtleApDeviceDataStructT_v02 srnBtleApInfo[QMI_LOC_SRN_MAX_REPORTED_APS_PER_MSG_V02];
+  /**<   List of Wi-Fi AP scan information entered by the control point. */
+
+  /* Optional */
+  /*  Scan Request Timestamp */
+  uint8_t requestTimestamp_valid;  /**< Must be set to true if requestTimestamp is being passed */
+  int64_t requestTimestamp;
+  /**<   UTC timestamp at which the scan was started.
+       Units: Milliseconds
+       Type: int64 */
+
+  /* Optional */
+  /*  Scan Receive Timestamp */
+  uint8_t receiveTimestamp_valid;  /**< Must be set to true if receiveTimestamp is being passed */
+  int64_t receiveTimestamp;
+  /**<   UTC timestamp at which the scan was received.
+       Units: Milliseconds
+       Type: int64 */
+
+  /* Optional */
+  /*  Failure Reason for SRN Measurements Not Available  */
+  uint8_t errorCause_valid;  /**< Must be set to true if errorCause is being passed */
+  qmiLocSrnApErrEnumT_v02 errorCause;
+  /**<   If SRN measurements are not available,
+ the reason for the error/failure should be indicated.
+ This field is not present when SRN measurements are available.
+
+ Valid values:
+      - eQMI_LOC_SRN_AP_ERR_UNKNOWN (0) --  Error is unknown
+      - eQMI_LOC_SRN_AP_ERR_NO_REQ_MEAS_AVAILABLE (1) --  None of the requested measurements could be provided
+      - eQMI_LOC_SRN_AP_ERR_SENSOR_OFF (2) --  Sensor is off  */
+}qmiLocInjectSrnApDataReqMsgT_v02;  /* Message */
+/**
+    @}
+  */
+
+/** @addtogroup loc_qmi_messages
+    @{
+  */
+/** Indication Message; Injects BT,BLE,NFC etc AP data. */
+typedef struct {
+
+  /* Mandatory */
+  /*  BlueTooth,BluetoothLE, NFC AP Scan Information Injection Status */
+  qmiLocStatusEnumT_v02 status;
+  /**<   Status of the Inject BlueTooth AP Scan Information request.
+
+ Valid values: \n
+      - eQMI_LOC_SUCCESS (0) --  Request was completed successfully \n
+      - eQMI_LOC_GENERAL_FAILURE (1) --  Request failed because of a general failure \n
+      - eQMI_LOC_UNSUPPORTED (2) --  Request failed because it is not supported \n
+      - eQMI_LOC_INVALID_PARAMETER (3) --  Request failed because it contained invalid parameters \n
+      - eQMI_LOC_ENGINE_BUSY (4) --  Request failed because the engine is busy \n
+      - eQMI_LOC_PHONE_OFFLINE (5) --  Request failed because the phone is offline \n
+      - eQMI_LOC_TIMEOUT (6) --  Request failed because it timed out \n
+      - eQMI_LOC_CONFIG_NOT_SUPPORTED (7) --  Request failed because an undefined configuration was requested \n
+      - eQMI_LOC_INSUFFICIENT_MEMORY (8) --  Request failed because the engine could not allocate sufficient memory for the request \n
+      - eQMI_LOC_MAX_GEOFENCE_PROGRAMMED (9) --  Request failed because the maximum number of Geofences are already programmed \n
+      - eQMI_LOC_XTRA_VERSION_CHECK_FAILURE (10) --  Location service failed because of an XTRA version-based file format check failure  */
+}qmiLocInjectSrnApDataIndMsgT_v02;  /* Message */
+/**
+    @}
+  */
+
+typedef uint32_t qmiLocCrowdSourcingTechnologyMaskT_v02;
+#define QMI_LOC_CROWDSOURCING_MASK_WIFI_V02 ((qmiLocCrowdSourcingTechnologyMaskT_v02)0x00000001) /**<  Wifi Crowd Sourcing */
+/** @addtogroup loc_qmi_aggregates
+    @{
+  */
+typedef struct {
+
+  uint8_t enableCrowdSourcingOnDemand;
+  /**<   Indicates whether On Demand Crowd Sourcing is enabled by OEM.
+           If enabled, Gnss, Sensors and Wifi measurements are requested
+           on demand. This has direct impact to power.
+           Note: When OEM enabled, Location engine shall do onDemand crowd sourcing
+           only when enabled by the server via the server configuration.
+           When OEM disabled, Location engine shall never do onDeamd crowd sourcing.
+       Values:
+       0x01 (TRUE)  -- Enable On Demand Crowd Sourcing.
+       0x00 (FALSE) -- Disable On Demand Crowd Sourcing.
+       Default: TRUE
+  */
+
+  uint8_t enableCrowdSourcingOnUnsolicitedGnss;
+  /**<   Indicates whether crowd sourcing on unsolicited GNSS is enabed by OEM.
+           If enabled, Wifi crowd sourcing may be done on receving a GNSS fix.
+           No power will be spent on requesting GNSS fix but power may be spent
+           on requesting a wifi scan or any other meansurement sources.
+          Note: When OEM enabled, Location engine shall do crowd sourcing on unsolicited GNSS
+           only when enabled by the server via the server configuration.
+               When OEM disabled, Location engine shall never do crowd sourcing on unsolicited GNSS.
+       Values:
+       0x01 (TRUE)  -- Enable Crowd Sourcing on unsolicited GNSS fixes.
+       0x00 (FALSE) -- Disable Crowd Sourcing on unsolicited GNSS fixes.
+       Default: TRUE
+  */
+
+  uint8_t enableBatteryLevelBasedThrottling;
+  /**<   Indicates whether to throttle crowd sourcing based on battery level.
+           If enabled, no power will be spent for crowd sourcing if battery is running below
+           25% charge unless a charger is connected.
+       Values:
+       0x01 (TRUE)  -- Enable throttling on battery level.
+       0x00 (FALSE) -- Disable throttling on battery level.
+       Default: TRUE
+  */
+
+  uint8_t enableRttCrowdSourcing;
+
+  /*  < Enable Round-Trip Time (RTT) for crowd soucing:
+       0x01 (TRUE)  -- Enable RTT for crowd sourcing
+       0x00 (FALSE) -- Disable RTT for crowd sourcing
+       Default: TRUE
+     */
+  uint8_t enableRtt3CrowdSourcing;
+
+  /*  < Indicates whether RTT3 (a.k.a, 2 sided RTT) is enabled for crowd sourcing.
+       Values:
+       0x01 (TRUE)  -- Enable RTT3 for crowd sourcing
+       0x00 (FALSE) -- Disable RTT3 for crowd sourcing
+       Default: TRUE
+   */
+  int32_t rttSignalDbmThresh;
+  /**<   Indicates signal strength threshold in dbM below which
+         AP measurements will be filtered out.
+          Default:-90 dbM
+          Units: dbM
+     */
+
+  uint16_t maxDataTransferFormatVersionSupported;
+}qmiLocWifiCrowdSourcingLocalConfigStructT_v02;  /* Type */
+/**
+    @}
+  */
+
+/** @addtogroup loc_qmi_messages
+    @{
+  */
+/** Request Message; Used by the control point to send Crowd Source Manager Controls to Location engine */
+typedef struct {
+
+  /* Optional */
+  /*  Crowd Sourcing Technology Mask */
+  uint8_t enableCrowdSourcingMask_valid;  /**< Must be set to true if enableCrowdSourcingMask is being passed */
+  qmiLocCrowdSourcingTechnologyMaskT_v02 enableCrowdSourcingMask;
+
+  /* Optional */
+  /*  < Bitmask of technologies to be enabled for crowd sourcing.
+       Valid values: \n
+ Wifi Crowd Sourcing Local Configuration */
+  uint8_t wifiCrowdSourcingLocalConfig_valid;  /**< Must be set to true if wifiCrowdSourcingLocalConfig is being passed */
+  qmiLocWifiCrowdSourcingLocalConfigStructT_v02 wifiCrowdSourcingLocalConfig;
+
+  /* Optional */
+  /*  <Local Configuration for Wifi crowd sourcing: \n
+
+ Wifi Crowd Sourcing Server Configuration */
+  uint8_t wifiCrowdSourcingServerConfig_valid;  /**< Must be set to true if wifiCrowdSourcingServerConfig is being passed */
+  uint32_t wifiCrowdSourcingServerConfig_len;  /**< Must be set to # of elements in wifiCrowdSourcingServerConfig */
+  char wifiCrowdSourcingServerConfig[QMI_LOC_MAX_WIFI_CROWDSOURCING_SERVER_CONFIG_LEN_V02];
+}qmiLocCrowdSourceManagerControlReqMsgT_v02;  /* Message */
+/**
+    @}
+  */
+
+/** @addtogroup loc_qmi_aggregates
+    @{
+  */
+typedef struct {
+
+  uint8_t onDemandCrowdSourcingSupported;
+  /**<   Indicates whether On Demand Crowd Sourcing is supported.
+           If supported, Gnss, Sensors and Wifi measurements are requested
+           on demand. This has direct impact to power.
+       Values:
+       0x01 (TRUE)  -- On Demand Crowd Sourcing Supported.
+       0x00 (FALSE) -- On Demand Crowd Sourcing Unsupported.
+       Default:FALSE
+  */
+
+  uint8_t UnsolicitedGnssCrowdSourcingSupported;
+  /**<   Indicates whether crowd sourcing on unsolicted GNSS fixes is supported.
+           If supported, Wifi crowd sourcing may be done on receving a GNSS fix.
+           No power will be spent on requesing GNSS fix but power may be spent
+           on requesting a wifi scan.
+       Values:
+       0x01 (TRUE)  -- Crowd Sourcing on unsolicted GNSS fixes Supported.
+       0x00 (FALSE) -- Crowd Sourcing on unsolicted GNSS fixes Unsupported.
+       Default:FALSE
+  */
+
+  uint8_t majorVersionSupported;
+
+  /*  < Major version of crowd sourcing supported
+    */
+  uint8_t minorVersionSupported;
+
+  /*  < Minor version of crowd sourcing supported
+    */
+  uint16_t maxDataTransferFormatVersionSupported;
+}qmiLocWifiCrowdSourcingCapabilityStructT_v02;  /* Type */
+/**
+    @}
+  */
+
+/** @addtogroup loc_qmi_messages
+    @{
+  */
+/** Indication Message; Used by the control point to send Crowd Source Manager Controls to Location engine */
+typedef struct {
+
+  /* Mandatory */
+  /*  Crowd Source Control Status */
+  qmiLocStatusEnumT_v02 status;
+  /**<   Status of the Crowd source control request.
+ Valid values: \n
+      - eQMI_LOC_SUCCESS (0) --  Request was completed successfully \n
+      - eQMI_LOC_GENERAL_FAILURE (1) --  Request failed because of a general failure \n
+      - eQMI_LOC_UNSUPPORTED (2) --  Request failed because it is not supported \n
+      - eQMI_LOC_INVALID_PARAMETER (3) --  Request failed because it contained invalid parameters \n
+      - eQMI_LOC_ENGINE_BUSY (4) --  Request failed because the engine is busy \n
+      - eQMI_LOC_PHONE_OFFLINE (5) --  Request failed because the phone is offline \n
+      - eQMI_LOC_TIMEOUT (6) --  Request failed because it timed out \n
+      - eQMI_LOC_CONFIG_NOT_SUPPORTED (7) --  Request failed because an undefined configuration was requested \n
+      - eQMI_LOC_INSUFFICIENT_MEMORY (8) --  Request failed because the engine could not allocate sufficient memory for the request \n
+      - eQMI_LOC_MAX_GEOFENCE_PROGRAMMED (9) --  Request failed because the maximum number of Geofences are already programmed \n
+      - eQMI_LOC_XTRA_VERSION_CHECK_FAILURE (10) --  Location service failed because of an XTRA version-based file format check failure
+
+ status as eQMI_LOC_GENERAL_FAILURE indicates that the
+ control point does not support Fusion Crowd Sourcing.
+ */
+
+  /* Optional */
+  /*  Crowd Source Technologies supported mask. */
+  uint8_t supportedCrowdSourcingMask_valid;  /**< Must be set to true if supportedCrowdSourcingMask is being passed */
+  qmiLocCrowdSourcingTechnologyMaskT_v02 supportedCrowdSourcingMask;
+
+  /* Optional */
+  /*  < Bitmask of technologies supported for crowd sourcing.
+       Valid values: \n
+ Wifi crowd sourcing capability */
+  uint8_t wifiCrowdSourcingCapabaility_valid;  /**< Must be set to true if wifiCrowdSourcingCapabaility is being passed */
+  qmiLocWifiCrowdSourcingCapabilityStructT_v02 wifiCrowdSourcingCapabaility;
+
+  /* Optional */
+  /*  <Capabilities for Wifi crowd sourcing supported: \n
+
+ Encoded Client Information */
+  uint8_t modemClientInfo_valid;  /**< Must be set to true if modemClientInfo is being passed */
+  uint32_t modemClientInfo_len;  /**< Must be set to # of elements in modemClientInfo */
+  uint8_t modemClientInfo[QMI_LOC_MAX_CROWDSOURCING_MODEM_CLIENT_INFO_LEN_V02];
+  /**<   modem client information from control point encoded in asn.1 format. \n
+         - Type: Array of bytes \n
+         - Maximum length of the array: 256
+    */
+}qmiLocCrowdSourceManagerControlIndMsgT_v02;  /* Message */
+/**
+    @}
+  */
+
+/** @addtogroup loc_qmi_messages
+    @{
+  */
+/** Request Message; Used by the control point to request Location engine to send Crowd Sourced Data
+                    to control point */
+typedef struct {
+
+  /* Optional */
+  /*  Crowd Sourcing Technology Mask */
+  uint8_t crowdSourcingTechMask_valid;  /**< Must be set to true if crowdSourcingTechMask is being passed */
+  qmiLocCrowdSourcingTechnologyMaskT_v02 crowdSourcingTechMask;
+}qmiLocCrowdSourceManagerReadDataReqMsgT_v02;  /* Message */
+/**
+    @}
+  */
+
 /* Conditional compilation tags for message removal */
 //#define REMOVE_QMI_LOC_ADD_CIRCULAR_GEOFENCE_V02
 //#define REMOVE_QMI_LOC_ADD_GEOFENCE_CONTEXT_V02
+//#define REMOVE_QMI_LOC_CROWDSOURCE_MANAGER_CONTROL_V02
+//#define REMOVE_QMI_LOC_CROWDSOURCE_MANAGER_READ_DATA_V02
 //#define REMOVE_QMI_LOC_DELETE_ASSIST_DATA_V02
 //#define REMOVE_QMI_LOC_DELETE_GEOFENCE_V02
 //#define REMOVE_QMI_LOC_DELETE_GEOFENCE_CONTEXT_V02
@@ -16203,8 +16848,10 @@ typedef struct {
 //#define REMOVE_QMI_LOC_EVENT_GNSS_SV_INFO_V02
 //#define REMOVE_QMI_LOC_EVENT_INJECT_POSITION_REQ_V02
 //#define REMOVE_QMI_LOC_EVENT_INJECT_PREDICTED_ORBITS_REQ_V02
+//#define REMOVE_QMI_LOC_EVENT_INJECT_SRN_AP_DATA_REQ_V02
 //#define REMOVE_QMI_LOC_EVENT_INJECT_TIME_REQ_V02
 //#define REMOVE_QMI_LOC_EVENT_INJECT_WIFI_AP_DATA_REQ_V02
+//#define REMOVE_QMI_LOC_EVENT_INTERNAL_STATUS_REPORT_IND_V02
 //#define REMOVE_QMI_LOC_EVENT_LIVE_BATCHED_POSITION_REPORT_V02
 //#define REMOVE_QMI_LOC_EVENT_LOCATION_SERVER_CONNECTION_REQ_V02
 //#define REMOVE_QMI_LOC_EVENT_MOTION_DATA_CONTROL_V02
@@ -16265,6 +16912,7 @@ typedef struct {
 //#define REMOVE_QMI_LOC_INJECT_POSITION_V02
 //#define REMOVE_QMI_LOC_INJECT_PREDICTED_ORBITS_DATA_V02
 //#define REMOVE_QMI_LOC_INJECT_SENSOR_DATA_V02
+//#define REMOVE_QMI_LOC_INJECT_SRN_AP_DATA_V02
 //#define REMOVE_QMI_LOC_INJECT_SUBSCRIBER_ID_V02
 //#define REMOVE_QMI_LOC_INJECT_SUPL_CERTIFICATE_V02
 //#define REMOVE_QMI_LOC_INJECT_TDSCDMA_CELL_INFO_V02
@@ -16293,6 +16941,7 @@ typedef struct {
 //#define REMOVE_QMI_LOC_SET_GEOFENCE_ENGINE_CONFIG_V02
 //#define REMOVE_QMI_LOC_SET_GEOFENCE_ENGINE_CONTEXT_V02
 //#define REMOVE_QMI_LOC_SET_GNSS_CONSTELL_REPORT_CONFIG_V02
+//#define REMOVE_QMI_LOC_SET_INTERNAL_STATUS_CONFIG_V02
 //#define REMOVE_QMI_LOC_SET_LOW_POWER_MODE_V02
 //#define REMOVE_QMI_LOC_SET_NMEA_TYPES_V02
 //#define REMOVE_QMI_LOC_SET_OPERATION_MODE_V02
@@ -16659,6 +17308,19 @@ typedef struct {
 #define QMI_LOC_GET_SUPPORTED_FEATURE_REQ_V02 0x00A9
 #define QMI_LOC_GET_SUPPORTED_FEATURE_RESP_V02 0x00A9
 #define QMI_LOC_GET_SUPPORTED_FEATURE_IND_V02 0x00A9
+#define QMI_LOC_SET_INTERNAL_STATUS_CONFIG_REQ_V02 0x00AA
+#define QMI_LOC_SET_INTERNAL_STATUS_CONFIG_RESP_V02 0x00AA
+#define QMI_LOC_SET_INTERNAL_STATUS_CONFIG_IND_V02 0x00AA
+#define QMI_LOC_EVENT_INTERNAL_STATUS_REPORT_IND_V02 0x00AB
+#define QMI_LOC_EVENT_INJECT_SRN_AP_DATA_REQ_IND_V02 0x00AC
+#define QMI_LOC_INJECT_SRN_AP_DATA_REQ_V02 0x00AD
+#define QMI_LOC_INJECT_SRN_AP_DATA_RESP_V02 0x00AD
+#define QMI_LOC_INJECT_SRN_AP_DATA_IND_V02 0x00AD
+#define QMI_LOC_CROWDSOURCE_MANAGER_CONTROL_REQ_V02 0x00AE
+#define QMI_LOC_CROWDSOURCE_MANAGER_CONTROL_RESP_V02 0x00AE
+#define QMI_LOC_CROWDSOURCE_MANAGER_CONTROL_IND_V02 0x00AE
+#define QMI_LOC_CROWDSOURCE_MANAGER_READ_DATA_REQ_V02 0x00AF
+#define QMI_LOC_CROWDSOURCE_MANAGER_READ_DATA_RESP_V02 0x00AF
 /**
     @}
   */
