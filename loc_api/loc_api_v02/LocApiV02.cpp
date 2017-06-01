@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2017, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2018, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -223,7 +223,8 @@ LocApiV02 :: LocApiV02(const MsgTask* msgTask,
     dsClientHandle(NULL),
     mGnssMeasurementSupported(sup_unknown),
     mQmiMask(0), mInSession(false),
-    mEngineOn(false), mMeasurementsStarted(false)
+    mEngineOn(false), mMeasurementsStarted(false),
+    mIsMasterRegistered(false)
 {
   // initialize loc_sync_req interface
   loc_sync_req_init();
@@ -252,7 +253,6 @@ LocApiBase* LocApiV02::createLocApiV02(const MsgTask *msgTask,
         LOC_LOGE("%s:%d]: msgTask can not be NULL", __func__, __LINE__);
         return NULL;
     }
-    LOC_LOGD("%s:%d]: Creating new LocApiV02", __func__, __LINE__);
     return new LocApiV02(msgTask, exMask, context);
 }
 
@@ -263,10 +263,13 @@ LocApiV02 :: open(LOC_API_ADAPTER_EVENT_MASK_T mask)
 {
   enum loc_api_adapter_err rtv = LOC_API_ADAPTER_ERR_SUCCESS;
   LOC_API_ADAPTER_EVENT_MASK_T newMask = mask & ~mExcludedMask;
+  bool bNeedToSetEventMask = false;
+
   locClientEventMaskType qmiMask = convertMask(newMask);
-  LOC_LOGD("%s:%d]: %p Enter mMask: %" PRIu64 "; mask: %" PRIu64 "; newMask: %" PRIu64 " \
-          mQmiMask: %" PRIu64 " qmiMask: %" PRIu64,
-           __func__, __LINE__, clientHandle, mMask, mask, newMask, mQmiMask, qmiMask);
+  LOC_LOGD("%s:%d]: %p Enter mMask: %x; mask: %x; newMask: %x \
+          mQmiMask: %" PRIx64 " qmiMask: %" PRIx64,
+           __func__, __LINE__, clientHandle, mMask, mask, newMask,
+           mQmiMask, qmiMask);
   /* If the client is already open close it first */
   if(LOC_CLIENT_INVALID_HANDLE_VALUE == clientHandle)
   {
@@ -279,7 +282,7 @@ LocApiV02 :: open(LOC_API_ADAPTER_EVENT_MASK_T mask)
        service is unavailable for a fixed time out */
 
     // it is important to cap the mask here, because not all LocApi's
-    // can enable the same bits, e.g. foreground and bckground.
+    // can enable the same bits, e.g. foreground and background.
     status = locClientOpen(adjustMaskForNoSession(qmiMask), &globalCallbacks,
                            &clientHandle, (void *)this);
     mMask = newMask;
@@ -306,6 +309,7 @@ LocApiV02 :: open(LOC_API_ADAPTER_EVENT_MASK_T mask)
             QMI_LOC_START_DBT_REQ_V02
         };
 
+        bNeedToSetEventMask = checkRegisterMaster();
         // check the modem
         status = locClientSupportMsgCheck(clientHandle,
                                           msgArray,
@@ -428,6 +432,7 @@ LocApiV02 :: open(LOC_API_ADAPTER_EVENT_MASK_T mask)
   } else if (newMask != mMask) {
     // it is important to cap the mask here, because not all LocApi's
     // can enable the same bits, e.g. foreground and background.
+    bNeedToSetEventMask = checkRegisterMaster();
     if (!registerEventMask(qmiMask)) {
       // we do not update mMask here, because it did not change
       // as the mask update has failed.
@@ -438,22 +443,24 @@ LocApiV02 :: open(LOC_API_ADAPTER_EVENT_MASK_T mask)
         mQmiMask = qmiMask;
     }
   }
-  /*Set the SV Measurement Constellation when Measurement Report or Polynomial report is set*/
-  if( (qmiMask & QMI_LOC_EVENT_MASK_GNSS_MEASUREMENT_REPORT_V02) ||
-      (qmiMask & QMI_LOC_EVENT_MASK_GNSS_SV_POLYNOMIAL_REPORT_V02) )
-  {
-     setSvMeasurementConstellation( eQMI_SYSTEM_GPS_V02 |
-                                    eQMI_SYSTEM_GLO_V02 |
-                                    eQMI_SYSTEM_BDS_V02 |
-                                    eQMI_SYSTEM_GAL_V02 |
-                                    eQMI_SYSTEM_QZSS_V02);
-  }
-  LOC_LOGD("%s:%d]: Exit mMask: %" PRIu64 "; mask: %" PRIu64 " mQmiMask: %" PRIu64 " \
-           qmiMask: %" PRIu64, __func__, __LINE__, mMask, mask, mQmiMask, qmiMask);
 
-  if (LOC_API_ADAPTER_ERR_SUCCESS == rtv) {
-      cacheGnssMeasurementSupport();
+  if (bNeedToSetEventMask) {
+      /*Set the SV Measurement Constellation when Measurement Report or Polynomial report is set*/
+      if ((qmiMask & QMI_LOC_EVENT_MASK_GNSS_MEASUREMENT_REPORT_V02) ||
+          (qmiMask & QMI_LOC_EVENT_MASK_GNSS_SV_POLYNOMIAL_REPORT_V02)) {
+          setSvMeasurementConstellation(eQMI_SYSTEM_GPS_V02 |
+                                        eQMI_SYSTEM_GLO_V02 |
+                                        eQMI_SYSTEM_BDS_V02 |
+                                        eQMI_SYSTEM_GAL_V02 |
+                                        eQMI_SYSTEM_QZSS_V02);
+      }
+      if (LOC_API_ADAPTER_ERR_SUCCESS == rtv) {
+          cacheGnssMeasurementSupport();
+      }
   }
+
+  LOC_LOGD("%s:%d]: Exit mMask: %x; mask: %x mQmiMask: %" PRIu64 " qmiMask: %" PRIu64,
+           __func__, __LINE__, mMask, mask, mQmiMask, qmiMask);
 
   return rtv;
 }
@@ -466,7 +473,7 @@ bool LocApiV02 :: registerEventMask(locClientEventMaskType qmiMask)
     }
     LOC_LOGD("%s:%d]: mQmiMask=%" PRIu64 " qmiMask=%" PRIu64,
              __func__, __LINE__, mQmiMask, qmiMask);
-    return locClientRegisterEventMask(clientHandle, qmiMask);
+    return locClientRegisterEventMask(clientHandle, qmiMask, isMaster());
 }
 
 locClientEventMaskType LocApiV02 :: adjustMaskForNoSession(locClientEventMaskType qmiMask)
@@ -496,6 +503,7 @@ enum loc_api_adapter_err LocApiV02 :: close()
 
   mMask = 0;
   clientHandle = LOC_CLIENT_INVALID_HANDLE_VALUE;
+  mIsMasterRegistered = false;
 
   return rtv;
 }
@@ -1198,6 +1206,36 @@ LocApiV02::informNiResponse(GnssNiResponse userResponse,
   }
 
   return err;
+}
+
+void
+LocApiV02::registerMasterClient()
+{
+  LocationError err = LOCATION_ERROR_SUCCESS;
+  locClientReqUnionType req_union;
+  locClientStatusEnumType status;
+  qmiLocRegisterMasterClientReqMsgT_v02 reg_master_client_req;
+  qmiLocRegisterMasterClientIndMsgT_v02 reg_master_client_ind;
+
+  memset(&reg_master_client_req, 0, sizeof(reg_master_client_req));
+  memset(&reg_master_client_ind, 0, sizeof(reg_master_client_ind));
+
+  reg_master_client_req.key = 0xBAABCDEF;
+
+  req_union.pRegisterMasterClientReq = &reg_master_client_req;
+
+  status = locSyncSendReq(QMI_LOC_REGISTER_MASTER_CLIENT_REQ_V02,
+                          req_union, LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
+                          QMI_LOC_REGISTER_MASTER_CLIENT_IND_V02,
+                          &reg_master_client_ind);
+
+  if (eLOC_CLIENT_SUCCESS != status ||
+         eQMI_LOC_SUCCESS_V02 != reg_master_client_ind.status) {
+    LOC_LOGe ("error status = %s, reg_master_client_ind.status = %s",
+              loc_get_v02_client_status_name(status),
+              loc_get_v02_qmi_reg_mk_status_name(reg_master_client_ind.status));
+    err = LOCATION_ERROR_GENERAL_FAILURE;
+  }
 }
 
 /* Set UMTs SLP server URL */
@@ -2136,7 +2174,7 @@ locClientEventMaskType LocApiV02 :: convertMask(
   return eventMask;
 }
 
-qmiLocLockEnumT_v02 LocApiV02 :: convertGpsLockMask(GnssConfigGpsLock lock)
+qmiLocLockEnumT_v02 LocApiV02 ::convertGpsLockFromAPItoQMI(GnssConfigGpsLock lock)
 {
     switch (lock)
     {
@@ -2146,8 +2184,24 @@ qmiLocLockEnumT_v02 LocApiV02 :: convertGpsLockMask(GnssConfigGpsLock lock)
         return eQMI_LOC_LOCK_MI_V02;
       case GNSS_CONFIG_GPS_LOCK_NI:
         return eQMI_LOC_LOCK_MT_V02;
+      case GNSS_CONFIG_GPS_LOCK_NONE:
       default:
         return eQMI_LOC_LOCK_NONE_V02;
+    }
+}
+
+GnssConfigGpsLock LocApiV02::convertGpsLockFromQMItoAPI(qmiLocLockEnumT_v02 lock)
+{
+    switch (lock) {
+      case eQMI_LOC_LOCK_MI_V02:
+        return GNSS_CONFIG_GPS_LOCK_MO;
+      case eQMI_LOC_LOCK_MT_V02:
+        return GNSS_CONFIG_GPS_LOCK_NI;
+      case eQMI_LOC_LOCK_ALL_V02:
+        return GNSS_CONFIG_GPS_LOCK_MO_AND_NI;
+      case eQMI_LOC_LOCK_NONE_V02:
+      default:
+        return GNSS_CONFIG_GPS_LOCK_NONE;
     }
 }
 
@@ -4355,29 +4409,28 @@ getBestAvailableZppFix(LocGpsLocation &zppLoc, GpsLocationExtended & location_ex
 LocationError
 LocApiV02 :: setGpsLock(GnssConfigGpsLock lock)
 {
+    LocationError err = LOCATION_ERROR_SUCCESS;
     qmiLocSetEngineLockReqMsgT_v02 setEngineLockReq;
     qmiLocSetEngineLockIndMsgT_v02 setEngineLockInd;
     locClientStatusEnumType status;
     locClientReqUnionType req_union;
-    LocationError err = LOCATION_ERROR_SUCCESS;
 
-    LOC_LOGD("%s:%d]: Set Gps Lock: %x\n", __func__, __LINE__, lock);
-    setEngineLockReq.lockType = convertGpsLockMask(lock);
+    setEngineLockReq.lockType = convertGpsLockFromAPItoQMI((GnssConfigGpsLock)lock);;
+    setEngineLockReq.subType_valid = true;
+    setEngineLockReq.subType = eQMI_LOC_LOCK_ALL_SUB_V02;
     req_union.pSetEngineLockReq = &setEngineLockReq;
     memset(&setEngineLockInd, 0, sizeof(setEngineLockInd));
     status = locSyncSendReq(QMI_LOC_SET_ENGINE_LOCK_REQ_V02,
                             req_union, LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
                             QMI_LOC_SET_ENGINE_LOCK_IND_V02,
                             &setEngineLockInd);
-
-    if(status != eLOC_CLIENT_SUCCESS || setEngineLockInd.status != eQMI_LOC_SUCCESS_V02) {
+    if (eLOC_CLIENT_SUCCESS != status || eQMI_LOC_SUCCESS_V02 != setEngineLockInd.status) {
         LOC_LOGE("%s:%d]: Set engine lock failed. status: %s, ind status:%s\n",
-                 __func__, __LINE__,
-                 loc_get_v02_client_status_name(status),
-                 loc_get_v02_qmi_status_name(setEngineLockInd.status));
+            __func__, __LINE__,
+            loc_get_v02_client_status_name(status),
+            loc_get_v02_qmi_status_name(setEngineLockInd.status));
         err = LOCATION_ERROR_GENERAL_FAILURE;
     }
-    LOC_LOGD("%s:%d]: exit\n", __func__, __LINE__);
     return err;
 }
 /*
@@ -4385,18 +4438,20 @@ LocApiV02 :: setGpsLock(GnssConfigGpsLock lock)
   Current value of GPS Lock on success
   -1 on failure
 */
-int LocApiV02 :: getGpsLock()
+int LocApiV02 :: getGpsLock(uint8_t subType)
 {
     qmiLocGetEngineLockReqMsgT_v02 getEngineLockReq;
     qmiLocGetEngineLockIndMsgT_v02 getEngineLockInd;
     locClientStatusEnumType status;
     locClientReqUnionType req_union;
     int ret=0;
-    LOC_LOGD("%s:%d]: Enter\n", __func__, __LINE__);
     memset(&getEngineLockInd, 0, sizeof(getEngineLockInd));
 
     //Passing req_union as a parameter even though this request has no payload
     //since NULL or 0 gives an error during compilation
+    getEngineLockReq.subType_valid = true;
+    getEngineLockReq.subType = (qmiLocLockSubInfoEnumT_v02)subType;
+    req_union.pGetEngineLockReq = &getEngineLockReq;
     status = locSyncSendReq(QMI_LOC_GET_ENGINE_LOCK_REQ_V02,
                             req_union, LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
                             QMI_LOC_GET_ENGINE_LOCK_IND_V02,
@@ -4411,14 +4466,12 @@ int LocApiV02 :: getGpsLock()
     else {
         if(getEngineLockInd.lockType_valid) {
             ret = (int)getEngineLockInd.lockType;
-            LOC_LOGD("%s:%d]: Lock Type: %d\n", __func__, __LINE__, ret);
         }
         else {
             LOC_LOGE("%s:%d]: Lock Type not valid\n", __func__, __LINE__);
             ret = -1;
         }
     }
-    LOC_LOGD("%s:%d]: Exit\n", __func__, __LINE__);
     return ret;
 }
 
