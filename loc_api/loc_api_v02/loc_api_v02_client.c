@@ -791,6 +791,12 @@ static locClientStatusEnumType convertQmiResponseToLocStatus(
         break;
 
       case QMI_ERR_DEVICE_IN_USE_V01:
+        // misleading, but this is only when batchign or gf
+        // fail as results of resource already allocated
+        status = eLOC_CLIENT_FAILURE_NOT_INITIALIZED;
+        break;
+
+      case QMI_ERR_SESSION_OWNERSHIP_V01:
         status = eLOC_CLIENT_FAILURE_ENGINE_BUSY;
         break;
 
