@@ -462,6 +462,7 @@ static int loc_sync_wait_for_ind(
   } while (0);
 
    pthread_mutex_unlock(&slot->sync_req_lock);
+   loc_free_slot(select_id);
 
    return ret_val;
 }
@@ -496,7 +497,7 @@ locClientStatusEnumType loc_sync_send_req
    locClientStatusEnumType status = eLOC_CLIENT_SUCCESS ;
    int select_id;
    int rc = 0;
-   int sendReqRetryRem = 20; // Number of retries remaining
+   int sendReqRetryRem = 5; // Number of retries remaining
 
    // Select the callback we are waiting for
    select_id = loc_sync_select_ind(client_handle, ind_id, req_id,
@@ -507,62 +508,44 @@ locClientStatusEnumType loc_sync_send_req
       // Loop to retry few times in case of failures
       do
       {
-         status = locClientSendReq(client_handle, req_id, req_payload);
-         LOC_LOGv("select_id = %d,locClientSendReq returned %d\n", select_id, status);
+         status =  locClientSendReq (client_handle, req_id, req_payload);
+         LOC_LOGV("%s:%d]: select_id = %d,locClientSendReq returned %d\n",
+                       __func__, __LINE__, select_id, status);
 
-         if (status == eLOC_CLIENT_SUCCESS)
+         if (status == eLOC_CLIENT_SUCCESS )
          {
             // Wait for the indication callback
-            if (( rc = loc_sync_wait_for_ind(select_id,
-                                             timeout_msec / 1000,
-                                             ind_id) ) < 0)
+            if (( rc = loc_sync_wait_for_ind( select_id,
+                                              timeout_msec / 1000,
+                                              ind_id) ) < 0)
             {
-               if (rc == -ETIMEDOUT)
+               if ( rc == -ETIMEDOUT)
                   status = eLOC_CLIENT_FAILURE_TIMEOUT;
                else
                   status = eLOC_CLIENT_FAILURE_INTERNAL;
 
                // Callback waiting failed
-               LOC_LOGe("loc_api_wait_for_ind failed, err %d, select id %d, status %s",
-                        rc, select_id, loc_get_v02_client_status_name(status));
-            } else if (NULL != ind_payload_ptr) {
-                qmiLocStatusEnumT_v02* indStatus = (qmiLocStatusEnumT_v02*)ind_payload_ptr;
-                switch (*indStatus) {
-                case eQMI_LOC_ENGINE_BUSY_V02:
-                    status = eLOC_CLIENT_FAILURE_ENGINE_BUSY;
-                    break;
-                case eQMI_LOC_PHONE_OFFLINE_V02:
-                    status = eLOC_CLIENT_FAILURE_PHONE_OFFLINE;
-                    break;
-                case eQMI_LOC_GENERAL_FAILURE_V02:
-                case eQMI_LOC_INVALID_PARAMETER_V02:
-                    status = eLOC_CLIENT_FAILURE_INTERNAL;
-                    break;
-                default:
-                    status =  eLOC_CLIENT_SUCCESS;
-                }
+               LOC_LOGE("%s:%d]: loc_api_wait_for_ind failed, err %d, "
+                        "select id %d, status %s", __func__, __LINE__, rc ,
+                        select_id, loc_get_v02_client_status_name(status));
+            }
+            else
+            {
+               status =  eLOC_CLIENT_SUCCESS;
+               LOC_LOGV("%s:%d]: success (select id %d)\n",
+                             __func__, __LINE__, select_id);
             }
          }
 
-         switch (status) {
-         case eLOC_CLIENT_FAILURE_ENGINE_BUSY:
-             sleep(2);
-             sendReqRetryRem -= 1;
-             break;
-         case eLOC_CLIENT_FAILURE_PHONE_OFFLINE:
-         case eLOC_CLIENT_FAILURE_INTERNAL:
-             sendReqRetryRem -= 4;
-             break;
-         default:
-             sendReqRetryRem = 0;
-             break;
-         }
-      } while ((status == eLOC_CLIENT_FAILURE_ENGINE_BUSY ||
-                status == eLOC_CLIENT_FAILURE_PHONE_OFFLINE ||
-                status == eLOC_CLIENT_FAILURE_INTERNAL) &&
-               sendReqRetryRem > 0);
+      } while(( status == eLOC_CLIENT_FAILURE_ENGINE_BUSY ||
+                    status == eLOC_CLIENT_FAILURE_PHONE_OFFLINE ||
+                    status == eLOC_CLIENT_FAILURE_INTERNAL ) &&
+                sendReqRetryRem-- > 0);
 
-      loc_free_slot(select_id);
+      if (status != eLOC_CLIENT_SUCCESS )
+      {
+         loc_free_slot(select_id);
+      }
 
    } /* select id */
 

@@ -1242,7 +1242,7 @@ LocApiV02::setServer(const char* url, int len)
 
   status = loc_sync_send_req(clientHandle,
                              QMI_LOC_SET_SERVER_REQ_V02,
-                             req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
+                             req_union, LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
                              QMI_LOC_SET_SERVER_IND_V02,
                              &set_server_ind);
 
@@ -1295,7 +1295,7 @@ LocApiV02::setServer(unsigned int ip, int port, LocServerType type)
 
   status = loc_sync_send_req(clientHandle,
                              QMI_LOC_SET_SERVER_REQ_V02,
-                             req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
+                             req_union, LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
                              QMI_LOC_SET_SERVER_IND_V02,
                              &set_server_ind);
 
@@ -1697,7 +1697,7 @@ LocApiV02::setLPPConfig(GnssConfigLppProfile profile)
 
   result = loc_sync_send_req(clientHandle,
                              QMI_LOC_SET_PROTOCOL_CONFIG_PARAMETERS_REQ_V02,
-                             req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
+                             req_union, LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
                              QMI_LOC_SET_PROTOCOL_CONFIG_PARAMETERS_IND_V02,
                              &lpp_config_ind);
 
@@ -1925,7 +1925,7 @@ LocApiV02::setAGLONASSProtocol(GnssConfigAGlonassPositionProtocolMask aGlonassPr
 
   result = loc_sync_send_req(clientHandle,
                              QMI_LOC_SET_PROTOCOL_CONFIG_PARAMETERS_REQ_V02,
-                             req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
+                             req_union, LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
                              QMI_LOC_SET_PROTOCOL_CONFIG_PARAMETERS_IND_V02,
                              &aGlonassProtocol_ind);
 
@@ -1975,7 +1975,7 @@ LocApiV02::setLPPeProtocolCp(GnssConfigLppeControlPlaneMask lppeCP)
 
   result = loc_sync_send_req(clientHandle,
                              QMI_LOC_SET_PROTOCOL_CONFIG_PARAMETERS_REQ_V02,
-                             req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
+                             req_union, LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
                              QMI_LOC_SET_PROTOCOL_CONFIG_PARAMETERS_IND_V02,
                              &lppe_ind);
 
@@ -2026,7 +2026,7 @@ LocApiV02::setLPPeProtocolUp(GnssConfigLppeUserPlaneMask lppeUP)
 
   result = loc_sync_send_req(clientHandle,
                              QMI_LOC_SET_PROTOCOL_CONFIG_PARAMETERS_REQ_V02,
-                             req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
+                             req_union, LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
                              QMI_LOC_SET_PROTOCOL_CONFIG_PARAMETERS_IND_V02,
                              &lppe_ind);
 

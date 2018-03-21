@@ -37,13 +37,9 @@ extern "C"
 #include <stdint.h>
 #include "loc_api_v02_client.h"
 
-#define LOC_ENGINE_SYNC_REQUEST_TIMEOUT       (1000) // 1 second
-#define LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT  (4000) // 4 second
+#define LOC_ENGINE_SYNC_REQUEST_TIMEOUT  (1000) // 1 second
 
 #define LOC_SEND_SYNC_REQ(NAME, ID, REQ, HANDLE)  \
-    LOC_SEND_SYNC_REQ_W_TIMEOUT(NAME, ID, REQ, HANDLE, LOC_ENGINE_SYNC_REQUEST_TIMEOUT)
-
-#define LOC_SEND_SYNC_REQ_W_TIMEOUT(NAME, ID, REQ, HANDLE, TIMEOUT)  \
     int rv = true; \
     locClientStatusEnumType st; \
     locClientReqUnionType reqUnion; \
@@ -55,7 +51,7 @@ extern "C"
     st = loc_sync_send_req(HANDLE,                          \
                            QMI_LOC_##ID##_REQ_V02,          \
                            reqUnion,                        \
-                           TIMEOUT,                         \
+                           LOC_ENGINE_SYNC_REQUEST_TIMEOUT, \
                            QMI_LOC_##ID##_IND_V02,          \
                            &ind);                           \
 \
