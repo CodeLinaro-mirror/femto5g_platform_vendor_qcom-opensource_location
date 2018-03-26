@@ -113,6 +113,10 @@ private:
       const qmiLocEventGnssSvMeasInfoIndMsgT_v02& gnss_measurement_report_ptr,
       int index);
 
+  /* Convert APN Type mask */
+  static qmiLocApnTypeMaskT_v02 convertLocApnTypeMask(LocApnTypeMask mask);
+  static LocApnTypeMask convertQmiLocApnTypeMask(qmiLocApnTypeMaskT_v02 mask);
+
   /*convert LocGnssClock type from QMI LOC to loc eng format*/
   int convertGnssClock (GnssMeasurementsClock& clock,
       const qmiLocEventGnssSvMeasInfoIndMsgT_v02& gnss_measurement_info);
@@ -229,7 +233,7 @@ public:
     requestXtraServer();
   virtual enum loc_api_adapter_err
     atlOpenStatus(int handle, int is_succ, char* apn, AGpsBearerType bear,
-                   LocAGpsType agpsType);
+                   LocAGpsType agpsType, LocApnTypeMask mask);
   virtual enum loc_api_adapter_err atlCloseStatus(int handle, int is_succ);
   virtual LocationError setSUPLVersion(GnssConfigSuplVersion version);
 

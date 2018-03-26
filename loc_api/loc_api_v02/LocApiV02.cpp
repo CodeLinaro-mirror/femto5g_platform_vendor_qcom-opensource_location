@@ -25,7 +25,6 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
 #define LOG_NDEBUG 0
 #define LOG_TAG "LocSvc_ApiV02"
 
@@ -1422,7 +1421,7 @@ enum loc_api_adapter_err LocApiV02 :: requestXtraServer()
 
 enum loc_api_adapter_err LocApiV02 :: atlOpenStatus(
   int handle, int is_succ, char* apn, AGpsBearerType bear,
-  LocAGpsType /*agpsType*/)
+  LocAGpsType /*agpsType*/, LocApnTypeMask apnTypeMask)
 {
   locClientStatusEnumType result = eLOC_CLIENT_SUCCESS;
   locClientReqUnionType req_union;
@@ -1430,9 +1429,8 @@ enum loc_api_adapter_err LocApiV02 :: atlOpenStatus(
   qmiLocInformLocationServerConnStatusIndMsgT_v02 conn_status_ind;
 
 
-  LOC_LOGD("%s:%d]: ATL open handle = %d, is_succ = %d, "
-                "APN = [%s], bearer = %d \n",  __func__, __LINE__,
-                handle, is_succ, apn, bear);
+  LOC_LOGd("ATL open handle = %d, is_succ = %d, APN = [%s], bearer = %d, "
+           "apnTypeMask %" PRIx64, handle, is_succ, apn, bear, apnTypeMask);
 
   memset(&conn_status_req, 0, sizeof(conn_status_req));
   memset(&conn_status_ind, 0, sizeof(conn_status_ind));
@@ -1478,6 +1476,12 @@ enum loc_api_adapter_err LocApiV02 :: atlOpenStatus(
         LOC_LOGE("%s:%d]:invalid bearer type\n",__func__,__LINE__);
         conn_status_req.apnProfile_valid = 0;
         return LOC_API_ADAPTER_ERR_INVALID_HANDLE;
+    }
+
+    // Populate apnTypeMask
+    if (0 != apnTypeMask) {
+        conn_status_req.apnTypeMask_valid = true;
+        conn_status_req.apnTypeMask = convertLocApnTypeMask(apnTypeMask);
     }
 
   }
@@ -3139,27 +3143,51 @@ void LocApiV02 :: reportAtlRequest(
   const qmiLocEventLocationServerConnectionReqIndMsgT_v02 * server_request_ptr)
 {
   uint32_t connHandle = server_request_ptr->connHandle;
-  // service ATL open request; copy the WWAN type
+
   if(server_request_ptr->requestType == eQMI_LOC_SERVER_REQUEST_OPEN_V02 )
   {
-    LocAGpsType agpsType;
-    switch(server_request_ptr->wwanType)
-    {
-    case eQMI_LOC_WWAN_TYPE_INTERNET_V02:
-      agpsType = LOC_AGPS_TYPE_WWAN_ANY;
-      requestATL(connHandle, agpsType);
-      break;
-    case eQMI_LOC_WWAN_TYPE_AGNSS_V02:
-      agpsType = LOC_AGPS_TYPE_SUPL;
-      requestATL(connHandle, agpsType);
-      break;
-    case eQMI_LOC_WWAN_TYPE_AGNSS_EMERGENCY_V02:
-      requestSuplES(connHandle);
-      break;
-    default:
-      agpsType = LOC_AGPS_TYPE_WWAN_ANY;
-      requestATL(connHandle, agpsType);
-      break;
+    LocAGpsType agpsType = LOC_AGPS_TYPE_ANY;
+    LocApnTypeMask apnTypeMask = 0;
+
+    // Check if bearer type indicates WLAN
+    if (server_request_ptr->bearerType_valid) {
+        switch(server_request_ptr->bearerType) {
+        case eQMI_LOC_BEARER_TYPE_WLAN_V02:
+            agpsType = LOC_AGPS_TYPE_WIFI;
+            break;
+        default:
+            break;
+        }
+    }
+
+    // Check the WWAN Type
+    if (LOC_AGPS_TYPE_ANY == agpsType) {
+        switch(server_request_ptr->wwanType)
+        {
+        case eQMI_LOC_WWAN_TYPE_INTERNET_V02:
+          agpsType = LOC_AGPS_TYPE_WWAN_ANY;
+          break;
+        case eQMI_LOC_WWAN_TYPE_AGNSS_V02:
+          agpsType = LOC_AGPS_TYPE_SUPL;
+          break;
+        case eQMI_LOC_WWAN_TYPE_AGNSS_EMERGENCY_V02:
+          agpsType = LOC_AGPS_TYPE_SUPL_ES;
+          break;
+        default:
+          agpsType = LOC_AGPS_TYPE_WWAN_ANY;
+          break;
+        }
+    }
+
+    if (server_request_ptr->apnTypeMask_valid) {
+        apnTypeMask = convertQmiLocApnTypeMask(server_request_ptr->apnTypeMask);
+    }
+
+    // Now request call based on agps type
+    if (LOC_AGPS_TYPE_SUPL_ES == agpsType) {
+        requestSuplES(connHandle, apnTypeMask);
+    } else {
+        requestATL(connHandle, agpsType, apnTypeMask);
     }
   }
   // service the ATL close request
@@ -4779,4 +4807,80 @@ LocNavSolutionMask LocApiV02 :: convertNavSolutionMask(
       locNavMask |= LOC_NAV_MASK_SBAS_INTEGRITY;
 
    return locNavMask;
+}
+
+qmiLocApnTypeMaskT_v02 LocApiV02::convertLocApnTypeMask(LocApnTypeMask mask)
+{
+    qmiLocApnTypeMaskT_v02 qmiMask = 0;
+
+    if (mask & LOC_APN_TYPE_MASK_DEFAULT) {
+        qmiMask |= QMI_LOC_APN_TYPE_MASK_DEFAULT_V02;
+    }
+    if (mask & LOC_APN_TYPE_MASK_IMS) {
+        qmiMask |= QMI_LOC_APN_TYPE_MASK_IMS_V02;
+    }
+    if (mask & LOC_APN_TYPE_MASK_MMS) {
+        qmiMask |= QMI_LOC_APN_TYPE_MASK_MMS_V02;
+    }
+    if (mask & LOC_APN_TYPE_MASK_DUN) {
+        qmiMask |= QMI_LOC_APN_TYPE_MASK_DUN_V02;
+    }
+    if (mask & LOC_APN_TYPE_MASK_SUPL) {
+        qmiMask |= QMI_LOC_APN_TYPE_MASK_SUPL_V02;
+    }
+    if (mask & LOC_APN_TYPE_MASK_HIPRI) {
+        qmiMask |= QMI_LOC_APN_TYPE_MASK_HIPRI_V02;
+    }
+    if (mask & LOC_APN_TYPE_MASK_FOTA) {
+        qmiMask |= QMI_LOC_APN_TYPE_MASK_FOTA_V02;
+    }
+    if (mask & LOC_APN_TYPE_MASK_CBS) {
+        qmiMask |= QMI_LOC_APN_TYPE_MASK_CBS_V02;
+    }
+    if (mask & LOC_APN_TYPE_MASK_IA) {
+        qmiMask |= QMI_LOC_APN_TYPE_MASK_IA_V02;
+    }
+    if (mask & LOC_APN_TYPE_MASK_EMERGENCY) {
+        qmiMask |= QMI_LOC_APN_TYPE_MASK_EMERGENCY_V02;
+    }
+
+    return qmiMask;
+}
+
+LocApnTypeMask LocApiV02::convertQmiLocApnTypeMask(qmiLocApnTypeMaskT_v02 qmiMask)
+{
+    LocApnTypeMask mask = 0;
+
+    if (qmiMask & QMI_LOC_APN_TYPE_MASK_DEFAULT_V02) {
+        mask |= LOC_APN_TYPE_MASK_DEFAULT;
+    }
+    if (qmiMask & QMI_LOC_APN_TYPE_MASK_IMS_V02) {
+        mask |= LOC_APN_TYPE_MASK_IMS;
+    }
+    if (qmiMask & QMI_LOC_APN_TYPE_MASK_MMS_V02) {
+        mask |= LOC_APN_TYPE_MASK_MMS;
+    }
+    if (qmiMask & QMI_LOC_APN_TYPE_MASK_DUN_V02) {
+        mask |= LOC_APN_TYPE_MASK_DUN;
+    }
+    if (qmiMask & QMI_LOC_APN_TYPE_MASK_SUPL_V02) {
+        mask |= LOC_APN_TYPE_MASK_SUPL;
+    }
+    if (qmiMask & QMI_LOC_APN_TYPE_MASK_HIPRI_V02) {
+        mask |= LOC_APN_TYPE_MASK_HIPRI;
+    }
+    if (qmiMask & QMI_LOC_APN_TYPE_MASK_FOTA_V02) {
+        mask |= LOC_APN_TYPE_MASK_FOTA;
+    }
+    if (qmiMask & QMI_LOC_APN_TYPE_MASK_CBS_V02) {
+        mask |= LOC_APN_TYPE_MASK_CBS;
+    }
+    if (qmiMask & QMI_LOC_APN_TYPE_MASK_IA_V02) {
+        mask |= LOC_APN_TYPE_MASK_IA;
+    }
+    if (qmiMask & QMI_LOC_APN_TYPE_MASK_EMERGENCY_V02) {
+        mask |= LOC_APN_TYPE_MASK_EMERGENCY;
+    }
+
+    return mask;
 }
