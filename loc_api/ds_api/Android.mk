@@ -14,8 +14,7 @@ LOCAL_SHARED_LIBRARIES := \
     libqmi_common_so \
     libgps.utils \
     libdsi_netctrl \
-    libqmiservices \
-    libloc_pla
+    libqmiservices
 
 LOCAL_SRC_FILES += \
     ds_client.c
