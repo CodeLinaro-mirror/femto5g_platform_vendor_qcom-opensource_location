@@ -112,7 +112,10 @@ static void globalEventCb(locClientHandleType clientHandle,
                           const locClientEventIndUnionType eventPayload,
                           void*  pClientCookie)
 {
-  MODEM_LOG_CALLFLOW(%s, loc_get_v02_event_name(eventId));
+  if (eventId != QMI_LOC_EVENT_NMEA_IND_V02 &&
+      eventId != QMI_LOC_EVENT_GNSS_MEASUREMENT_REPORT_IND_V02) {
+      MODEM_LOG_CALLFLOW(%s, loc_get_v02_event_name(eventId));
+  }
   LocApiV02 *locApiV02Instance =
       (LocApiV02 *)pClientCookie;
 
@@ -2601,7 +2604,7 @@ void  LocApiV02 :: reportSvMeasurement (
             svMeasurementSet.timeStamp.apTimeStamp.tv_sec,
             svMeasurementSet.timeStamp.apTimeStamp.tv_nsec);
 
-  LOC_LOGI("[SvMeas] SeqNum: %d, MaxMsgNum: %d, MeasValid: %d, #of SV: %d\n",
+  LOC_LOGD("[SvMeas] SeqNum: %d, MaxMsgNum: %d, MeasValid: %d, #of SV: %d\n",
            gnss_raw_measurement_ptr->seqNum,
            gnss_raw_measurement_ptr->maxMessageNum,
            gnss_raw_measurement_ptr->svMeasurement_valid,
