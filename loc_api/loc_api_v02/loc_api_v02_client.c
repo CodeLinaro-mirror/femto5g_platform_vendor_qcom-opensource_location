@@ -32,6 +32,7 @@
 
 #include <stdbool.h>
 #include <inttypes.h>
+#include <unistd.h>
 
 #include "qmi_client.h"
 #include "qmi_idl_lib.h"
