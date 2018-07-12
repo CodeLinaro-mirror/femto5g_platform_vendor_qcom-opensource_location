@@ -231,7 +231,7 @@ LocApiV02 :: LocApiV02(const MsgTask* msgTask,
     dsClientIface(NULL),
     dsClientHandle(NULL),
     mGnssMeasurementSupported(sup_unknown),
-    mQmiMask(0), mInSession(false),
+    mQmiMask(0), mInSession(false), mPowerMode(GNSS_POWER_MODE_INVALID),
     mEngineOn(false), mMeasurementsStarted(false),
     mIsMasterRegistered(false)
 {
@@ -654,6 +654,7 @@ enum loc_api_adapter_err LocApiV02 :: startFix(const LocPosMode& fixCriteria)
       start_msg.configAltitudeAssumed = eQMI_LOC_ALTITUDE_ASSUMED_IN_GNSS_SV_INFO_DISABLED_V02;
 
       // set power mode details
+      mPowerMode = fixCriteria.powerMode;
       if (GNSS_POWER_MODE_INVALID != fixCriteria.powerMode) {
           start_msg.powerMode_valid = 1;
           start_msg.powerMode.powerMode = convertPowerMode(fixCriteria.powerMode);
@@ -699,6 +700,8 @@ enum loc_api_adapter_err LocApiV02 :: stopFix()
   status = locClientSendReq(QMI_LOC_STOP_REQ_V02, req_union);
 
   mInSession = false;
+  mPowerMode = GNSS_POWER_MODE_INVALID;
+
   // if engine on never happend, deregister events
   // without waiting for Engine Off
   if (!mEngineOn) {
@@ -3993,7 +3996,10 @@ int LocApiV02 :: convertGnssClock (GnssMeasurementsClock& clock,
             {
                 mMeasurementsStarted = false;
             }
-            localDiscCount++;
+            // do not increment in full power mode
+            if (GNSS_POWER_MODE_M1 != mPowerMode) {
+                localDiscCount++;
+            }
         }
         oldDiscCount = newDiscCount;
         oldRefFCount = newRefFCount;
