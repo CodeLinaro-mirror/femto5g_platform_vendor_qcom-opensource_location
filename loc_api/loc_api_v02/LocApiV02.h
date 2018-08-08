@@ -87,6 +87,7 @@ private:
   enum supported_status mGnssMeasurementSupported;
   locClientEventMaskType mQmiMask;
   bool mInSession;
+  GnssPowerMode mPowerMode;
   bool mEngineOn;
   bool mMeasurementsStarted;
   std::vector<Resender> mResenders;
