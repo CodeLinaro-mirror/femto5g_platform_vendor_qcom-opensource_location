@@ -183,7 +183,7 @@ static void globalRespCb(locClientHandleType clientHandle,
             locApiV02Instance->handleZppBestAvailableFixIndication(
                     *respPayload.pGetBestAvailablePositionInd);
         }
-        break;
+       // Call loc_sync_process_ind below also
     default:
       // process the sync call
       // use pDeleteAssistDataInd as a dummy pointer
@@ -2283,6 +2283,9 @@ locClientEventMaskType LocApiV02 :: convertMask(
 
   if (mask & LOC_API_ADAPTER_BIT_FDCL_SERVICE_REQ)
       eventMask |= QMI_LOC_EVENT_MASK_FDCL_SERVICE_REQ_V02;
+
+  if (mask & LOC_API_ADAPTER_BIT_BS_OBS_DATA_SERVICE_REQ)
+      eventMask |= QMI_LOC_EVENT_MASK_BS_OBS_DATA_SERVICE_REQ_V02;
 
   return eventMask;
 }
