@@ -171,8 +171,8 @@ private:
   void reportGnssMeasurementData(
     const qmiLocEventGnssSvMeasInfoIndMsgT_v02& gnss_measurement_report_ptr);
 
-  bool registerEventMask(locClientEventMaskType qmiMask);
-  locClientEventMaskType adjustMaskForNoSession(locClientEventMaskType qmiMask);
+  void registerEventMask(LOC_API_ADAPTER_EVENT_MASK_T adapterMask);
+  locClientEventMaskType adjustMaskIfNoSession(locClientEventMaskType qmiMask);
   bool cacheGnssMeasurementSupport();
 
 protected:
@@ -287,6 +287,12 @@ public:
   virtual void installAGpsCert(const LocDerEncodedCertificate* pData,
                                size_t length,
                                uint32_t slotBitMask);
+
+  inline virtual void setInSession(bool inSession) override {
+      mInSession = inSession;
+      registerEventMask(mMask);
+  }
+
   virtual LocPosTechMask convertPosTechMask(qmiLocPosTechMaskT_v02 mask);
   virtual LocNavSolutionMask convertNavSolutionMask(qmiLocNavSolutionMaskT_v02 mask);
   virtual GnssConfigSuplVersion convertSuplVersion(const uint32_t suplVersion);
