@@ -32,6 +32,7 @@
 #include <vector>
 #include <string>
 #include <functional>
+#include <memory>
 
 namespace location_client
 {
@@ -292,6 +293,13 @@ enum BatchingStatus {
     BATCHING_STATUS_INACTIVE    = 0,
     BATCHING_STATUS_ACTIVE      = 1,
     BATCHING_STATUS_DONE        = 2
+};
+
+enum GeofenceBreachTypeMask {
+    GEOFENCE_BREACH_ENTER_BIT     = (1<<0),
+    GEOFENCE_BREACH_EXIT_BIT      = (1<<1),
+    GEOFENCE_BREACH_DWELL_IN_BIT  = (1<<2),
+    GEOFENCE_BREACH_DWELL_OUT_BIT = (1<<3),
 };
 
 struct GnssLocationSvUsedInPosition {
@@ -572,6 +580,43 @@ struct GnssData {
     double        agc[GNSS_MAX_NUMBER_OF_SIGNAL_TYPES];           // Automatic gain control
 };
 
+class GeofenceImpl;
+class LocationClientApi;
+class Geofence {
+    friend class GeofenceImpl;
+    friend class LocationClientApi;
+    std::shared_ptr<GeofenceImpl> mGeofenceImpl;
+    double mLatitude;
+    double mLongitude;
+    double mRadius;
+    GeofenceBreachTypeMask mBreachType;
+    uint32_t mResponsiveness;
+    uint32_t mDwellTime;
+public:
+    virtual ~Geofence() {}
+    inline Geofence(double lat, double lon, double r, GeofenceBreachTypeMask type,
+            uint32_t responsiveness, uint32_t time) :
+            mGeofenceImpl(nullptr), mLatitude(lat), mLongitude(lon), mRadius(r),
+            mBreachType(type), mResponsiveness(responsiveness), mDwellTime(time) {}
+    inline Geofence(const Geofence& geofence): mGeofenceImpl(geofence.mGeofenceImpl),
+            mLatitude(geofence.mLatitude), mLongitude(geofence.mLongitude),
+            mRadius(geofence.mRadius), mBreachType(geofence.mBreachType),
+            mResponsiveness(geofence.mResponsiveness), mDwellTime(geofence.mDwellTime) {}
+    // clients who extends Geofence class should implement this clone method, so that its own
+    // data stashed in the object gets copied to the new object, if desired so.
+    virtual Geofence* clone() { return new Geofence(*this); }
+    bool operator==(Geofence& other);
+    inline double getLatitude() const { return mLatitude; }
+    inline double getLongitude() const { return mLongitude; }
+    inline double getRadius() const { return mRadius; }
+    inline GeofenceBreachTypeMask getBreachType() const { return mBreachType; }
+    inline uint32_t getResponsiveness() const { return mResponsiveness; }
+    inline uint32_t getDwellTime() const { return mDwellTime; }
+    inline void setBreachType(GeofenceBreachTypeMask type) { mBreachType = type; }
+    inline void setResponsiveness(uint32_t responsiveness) { mResponsiveness = responsiveness; }
+    inline void setDwellTime(uint32_t time) { mDwellTime = time; }
+};
+
 /** @fn
     @brief Provides the capabilities of the system,
 
@@ -589,6 +634,15 @@ typedef std::function<void(
 typedef std::function<void(
     LocationResponse response
 )> ResponseCb;
+
+/** @fn
+    @brief Used by geofence APIs
+
+    @param responses: include Geofence objects and correponding responses.
+*/
+typedef std::function<void(
+    std::vector<std::pair<Geofence, LocationResponse>>& responses
+)> CollectiveResponseCb;
 
 /** @fn
     @brief
@@ -649,6 +703,21 @@ typedef std::function<void(
     BatchingStatus batchStatus
 )> BatchingCb;
 
+/** @fn
+    @brief
+    GeofenceBreachCb is for receiving geofences that have a state change
+    @param geofences: array of geofence objects that have breached
+    @param location: location associated with breach
+    @param type: type of breach
+    @param timestamp: timestamp of breach
+*/
+typedef std::function<void(
+    const std::vector<Geofence>& geofences,
+    Location location,
+    GeofenceBreachTypeMask type,
+    uint64_t timestamp
+)> GeofenceBreachCb;
+
 struct GnssReportCbs {
     GnssLocationCb gnssLocationCallback;
     GnssSvCb gnssSvCallback;
@@ -663,8 +732,10 @@ struct GnssReportCbs {
 struct ClientCallbacks {
     CapabilitiesCb capabilitycb;
     ResponseCb responsecb;
+    CollectiveResponseCb collectivecb;
     LocationCb locationcb;
     BatchingCb batchingcb;
+    GeofenceBreachCb gfbreachcb;
     GnssReportCbs gnssreportcbs;
 };
 
@@ -874,6 +945,51 @@ public:
     /** @brief Stops the batching session.
     */
     void stopBatchingSession();
+
+    /* ================================== Geofence ================================== */
+    /** @brief Adds any number of geofences. The geofenceBreachCallback will
+        deliver the status of each geofence according to the Geofence parameter for each.
+        @param geofences
+        Geofence objects, Once addGeofences returns, each Geofence object in the vector would
+        be the identifier throughout the remaining communication of that geofence.
+        Such a Geofence object can be copied or cloned, but they would all reference
+        the same geofence.
+        @param gfBreachCb
+        callback to receive geofences state change. addGeofences is no op if gfBreachCb is null
+        @param responseCallback
+        callback to receive geofence ids and system responses; optional.
+    */
+    void addGeofences(std::vector<Geofence>& geofences, GeofenceBreachCb gfBreachCb,
+                      CollectiveResponseCb responseCallback);
+
+    /** @brief Removes any number of geofences.
+        @param geofences
+        Geofence objects, must be originally added to the system. Otherwise it would be no op.
+    */
+    void removeGeofences(std::vector<Geofence>& geofences);
+
+    /** @brief Modifies any number of geofences.
+        @param geofences
+        Geofence objects, must be originally added to the system. Otherwise it would be no op.
+        Modifiable fields include breachTypeMask, responsiveness and dwelltime.
+        A geofence that has been added to the system may have these fields modified.
+        But it is not going to take any effect until modifyGeofences is called with
+        the changed geofence passed in.
+    */
+    void modifyGeofences(std::vector<Geofence>& geofences);
+
+    /** @brief Pauses any number of geofences, which is similar to removeGeofences,
+        only that they can be resumed at any time.
+        @param geofences
+        Geofence objects, must be originally added to the system. Otherwise it would be no op.
+    */
+    void pauseGeofences(std::vector<Geofence>& geofences);
+
+    /** @brief Resumes any number of geofences that are currently paused.
+        @param geofences
+        Geofence objects, must be originally added to the system. Otherwise it would be no op.
+    */
+    void resumeGeofences(std::vector<Geofence>& geofences);
 
     /** @brief Updatee network availability.
         @param
