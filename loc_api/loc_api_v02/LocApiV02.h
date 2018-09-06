@@ -74,6 +74,7 @@ protected:
 private:
   locClientEventMaskType mQmiMask;
   bool mInSession;
+  GnssPowerMode mPowerMode;
   bool mEngineOn;
   bool mMeasurementsStarted;
   std::vector<Resender> mResenders;
@@ -273,8 +274,6 @@ public:
 
   virtual LocationError setLPPConfigSync(GnssConfigLppProfile profile);
 
-  virtual enum loc_api_adapter_err
-    setSensorControlConfigSync(int sensorUsage, int sensorProvider);
 
   virtual enum loc_api_adapter_err
     setSensorPropertiesSync(bool gyroBiasVarianceRandomWalk_valid, float gyroBiasVarianceRandomWalk,
