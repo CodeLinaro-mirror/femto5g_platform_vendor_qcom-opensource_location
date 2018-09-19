@@ -133,6 +133,10 @@ private:
   void  reportSvPolynomial (
   const qmiLocEventGnssSvPolyIndMsgT_v02 *gnss_sv_poly_ptr);
 
+  /* convert system info to location api format and dispatch to
+     the registered adapter */
+  void reportSystemInfo(const qmiLocSystemInfoIndMsgT_v02* system_info_ptr);
+
   /* convert engine state report to loc eng format and send the converted
      report to loc eng */
   void reportEngineState (

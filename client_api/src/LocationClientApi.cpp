@@ -168,5 +168,15 @@ void LocationClientApi::getGnssEnergyConsumed(
     }
 }
 
+void LocationClientApi::updateLocationSystemInfoListener(
+    LocationSystemInfoCb locSystemInfoCallback,
+    ResponseCb responseCallback) {
+
+    if (mApiImpl) {
+        mApiImpl->updateLocationSystemInfoListener(
+            locSystemInfoCallback, responseCallback);
+    }
+}
+
 } // namespace location_client
 

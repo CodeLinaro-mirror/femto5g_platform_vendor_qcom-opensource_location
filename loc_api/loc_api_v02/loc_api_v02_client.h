@@ -1032,6 +1032,8 @@ typedef union
   /**< Sent by the engine to request the client for FDCL data
     QMI_LOC_EVENT_FDCL_SERVICE_REQ_IND_V02. */
 
+   const qmiLocSystemInfoIndMsgT_v02 *pLocSystemInfoEvent;
+
 }locClientEventIndUnionType;
 
 
