@@ -3494,7 +3494,7 @@ void  LocApiV02 :: reportSystemInfo(
              system_info_ptr->nextLeapSecondInfo.leapSecondsNext_valid,
              system_info_ptr->nextLeapSecondInfo.leapSecondsNext);
 
-    LocationSystemInfo systemInfo = {0};
+    LocationSystemInfo systemInfo = {};
     if ((system_info_ptr->systemInfo == eQMI_LOC_NEXT_LEAP_SECOND_INFO_V02) &&
         (system_info_ptr->nextLeapSecondInfo_valid == 1)) {
 
