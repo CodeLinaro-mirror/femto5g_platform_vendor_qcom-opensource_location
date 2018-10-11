@@ -86,6 +86,8 @@ public:
     void updateNetworkAvailability(bool availability);
     void getGnssEnergyConsumed(const char* clientSocketName);
 
+    void pingTest(LocAPIPingTestReqMsg*);
+
     inline void gnssUpdateConfig(GnssConfig config) {
         mLocationControlApi->gnssUpdateConfig(config);
     }

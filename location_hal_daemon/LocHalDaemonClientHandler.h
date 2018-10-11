@@ -83,6 +83,7 @@ public:
     void onGnssEnergyConsumedInfoAvailable(LocAPIGnssEnergyConsumedIndMsg &msg);
     bool hasPendingEngineInfoRequest(uint32_t mask);
     void addEngineInfoRequst(uint32_t mask);
+    void pingTest();
 
     bool mTracking;
     std::queue<ELocMsgID> mPendingMessages;

@@ -333,6 +333,19 @@ void LocationApiService::getGnssEnergyConsumed(const char* clientSocketName) {
     }
 }
 
+void LocationApiService::pingTest(LocAPIPingTestReqMsg* pMsg) {
+
+    // test only - ignore this request when config is not enabled
+    std::lock_guard<std::mutex> lock(mMutex);
+    LocHalDaemonClientHandler* pClient = getClient(pMsg->mSocketName);
+    if (!pClient) {
+        LOC_LOGe(">-- pingTest invlalid client=%s", pMsg->mSocketName);
+        return;
+    }
+    pClient->pingTest();
+    LOC_LOGd(">-- pingTest");
+}
+
 /******************************************************************************
 LocationApiService - Location Control API callback functions
 ******************************************************************************/

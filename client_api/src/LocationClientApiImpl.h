@@ -59,6 +59,9 @@ struct ClientCallbacks {
 
 namespace location_client
 {
+typedef std::function<void(
+    uint32_t response
+)> PingTestCb;
 
 class LocationClientApiImpl : public LocIpc, public ILocationAPI,
                               public ILocationControlAPI {
@@ -117,6 +120,7 @@ public:
     void updateLocationSystemInfoListener(LocationSystemInfoCb locSystemInfoCallback,
                                           ResponseCb responseCallback);
 
+    void pingTest(PingTestCb pingTestCallback);
 
 private:
     void capabilitesCallback(ELocMsgID  msgId, const void* msgData);
@@ -134,6 +138,7 @@ private:
     ResponseCb              mResponseCb;
     LocationCb              mLocationCb;
     GnssReportCbs           mGnssReportCbs;
+    PingTestCb              mPingTestCb;
 
     LocationCallbacksMask   mCallbacksMask;
     LocationOptions         mLocationOptions;

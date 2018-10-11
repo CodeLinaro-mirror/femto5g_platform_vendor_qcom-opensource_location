@@ -166,6 +166,17 @@ void LocHalDaemonClientHandler::updateTrackingOptions(uint32_t minDistance, uint
     }
 }
 
+void LocHalDaemonClientHandler::pingTest() {
+    LocAPIPingTestIndMsg msg(SERVICE_NAME);
+    int rc = sendMessage(msg);
+
+    // purge this client if failed
+    if (!rc) {
+        LOC_LOGe("failed rc=%d purging client=%s", rc, mName.c_str());
+        mService->deleteClientbyName(mName);
+    }
+}
+
 /******************************************************************************
 LocHalDaemonClientHandler - Location API response callback functions
 ******************************************************************************/

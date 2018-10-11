@@ -77,6 +77,9 @@ enum ELocMsgID {
     E_LOCAPI_GET_GNSS_ENGERY_CONSUMED_MSG_ID = 17,
 
     E_LOCAPI_LOCATION_SYSTEM_INFO_MSG_ID = 18,
+
+    // ping
+    E_LOCAPI_PINGTEST_MSG_ID = 99
 };
 
 typedef uint32_t LocationCallbacksMask;
@@ -337,5 +340,25 @@ struct LocAPILocationSystemInfoIndMsg: LocAPIMsgHeader
         locationSystemInfo(systemInfo) { }
 };
 
+/******************************************************************************
+IPC message structure - ping
+******************************************************************************/
+#define LOCATION_REMOTE_API_PINGTEST_SIZE (1024)
+
+struct LocAPIPingTestReqMsg: LocAPIMsgHeader
+{
+    uint8_t data[LOCATION_REMOTE_API_PINGTEST_SIZE];
+
+    inline LocAPIPingTestReqMsg(const char* name) :
+        LocAPIMsgHeader(name, E_LOCAPI_PINGTEST_MSG_ID) { }
+};
+
+struct LocAPIPingTestIndMsg: LocAPIMsgHeader
+{
+    uint8_t data[LOCATION_REMOTE_API_PINGTEST_SIZE];
+
+    inline LocAPIPingTestIndMsg(const char* name) :
+        LocAPIMsgHeader(name, E_LOCAPI_PINGTEST_MSG_ID) { }
+};
 
 #endif /* LOCATIONAPIMSG_H */
