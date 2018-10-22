@@ -127,8 +127,55 @@ enum GnssLocationPosDataMask {
     /** Navigation data has Heading Rate */
     LOCATION_NAV_DATA_HAS_YAW_RATE_BIT    = (1<<3),
     /** Navigation data has Body pitch */
-    LOCATION_NAV_DATA_HAS_PITCH_BIT       = (1<<4)
+    LOCATION_NAV_DATA_HAS_PITCH_BIT       = (1<<4),
+    /** Navigation data has Forward Acceleration  */
+    LOCATION_NAV_DATA_HAS_LONG_ACCEL_UNC_BIT  = (1<<5),
+    /** Navigation data has Sideward Acceleration */
+    LOCATION_NAV_DATA_HAS_LAT_ACCEL_UNC_BIT   = (1<<6),
+    /** Navigation data has Vertical Acceleration */
+    LOCATION_NAV_DATA_HAS_VERT_ACCEL_UNC_BIT  = (1<<7),
+    /** Navigation data has Heading Rate */
+    LOCATION_NAV_DATA_HAS_YAW_RATE_UNC_BIT    = (1<<8),
+    /** Navigation data has Body pitch */
+    LOCATION_NAV_DATA_HAS_PITCH_UNC_BIT       = (1<<9)
 };
+
+/** GNSS Signal Type and RF Band */
+enum GnssSignalTypeMask {
+    /** GPS L1CA Signal */
+    GNSS_SIGNAL_GPS_L1CA_BIT            = (1<<0),
+    /** GPS L1C Signal */
+    GNSS_SIGNAL_GPS_L1C_BIT             = (1<<1),
+    /** GPS L2 RF Band */
+    GNSS_SIGNAL_GPS_L2_BIT              = (1<<2),
+    /** GPS L5 RF Band */
+    GNSS_SIGNAL_GPS_L5_BIT              = (1<<3),
+    /** GLONASS G1 (L1OF) RF Band */
+    GNSS_SIGNAL_GLONASS_G1_BIT          = (1<<4),
+    /** GLONASS G2 (L2OF) RF Band */
+    GNSS_SIGNAL_GLONASS_G2_BIT          = (1<<5),
+    /** GALILEO E1 RF Band */
+    GNSS_SIGNAL_GALILEO_E1_BIT          = (1<<6),
+    /** GALILEO E5A RF Band */
+    GNSS_SIGNAL_GALILEO_E5A_BIT         = (1<<7),
+    /** GALILEO E5B RF Band */
+    GNSS_SIGNAL_GALILIEO_E5B_BIT        = (1<<8),
+    /** BEIDOU B1 RF Band */
+    GNSS_SIGNAL_BEIDOU_B1_BIT           = (1<<9),
+    /** BEIDOU B2 RF Band */
+    GNSS_SIGNAL_BEIDOU_B2_BIT           = (1<<10),
+    /** QZSS L1CA RF Band */
+    GNSS_SIGNAL_QZSS_L1CA_BIT           = (1<<11),
+    /** QZSS L1S RF Band */
+    GNSS_SIGNAL_QZSS_L1S_BIT            = (1<<12),
+    /** QZSS L2 RF Band */
+    GNSS_SIGNAL_QZSS_L2_BIT             = (1<<13),
+    /** QZSS L5 RF Band */
+    GNSS_SIGNAL_QZSS_L5_BIT             = (1<<14),
+    /** SBAS L1 RF Band */
+    GNSS_SIGNAL_SBAS_L1_BIT             = (1<<15)
+};
+
 
 enum LocationResponse {
     LOCATION_RESPONSE_SUCCESS = 0,
@@ -173,10 +220,28 @@ enum GnssLocationInfoFlagMask {
     GNSS_LOCATION_INFO_SV_SOURCE_INFO_BIT               = (1<<11),
     /** valid position dynamics data */
     GNSS_LOCATION_INFO_POS_DYNAMICS_DATA_BIT            = (1<<12),
-    /** valid GPS Time */
-    GNSS_LOCATION_INFO_GPS_TIME_BIT                     = (1<<13),
     /** valid gdop, tdop */
-    GNSS_LOCATION_INFO_EXT_DOP_BIT                      = (1<<14)
+    GNSS_LOCATION_INFO_EXT_DOP_BIT                      = (1<<13),
+    /**valid North standard deviation */
+    GNSS_LOCATION_INFO_NORTH_STD_DEV_BIT                = (1<<14),
+    /** valid East standard deviation*/
+    GNSS_LOCATION_INFO_EAST_STD_DEV_BIT                 = (1<<15),
+    /** valid North Velocity */
+    GNSS_LOCATION_INFO_NORTH_VEL_BIT                    = (1<<16),
+    /** valid East Velocity */
+    GNSS_LOCATION_INFO_EAST_VEL_BIT                     = (1<<17),
+    /** valid Up Velocity */
+    GNSS_LOCATION_INFO_UP_VEL_BIT                       = (1<<18),
+    /** valid North Velocity Uncertainty */
+    GNSS_LOCATION_INFO_NORTH_VEL_UNC_BIT                = (1<<19),
+    /** valid East Velocity Uncertainty */
+    GNSS_LOCATION_INFO_EAST_VEL_UNC_BIT                 = (1<<20),
+    /** valid Up Velocity Uncertainty */
+    GNSS_LOCATION_INFO_UP_VEL_UNC_BIT                   = (1<<21),
+    /** valid leap_seconds */
+    GNSS_LOCATION_INFO_LEAP_SECONDS_BIT                 = (1<<22),
+    /** valid timeUncMs */
+    GNSS_LOCATION_INFO_TIME_UNC_BIT                     = (1<<23)
 };
 
 enum LocationReliability {
@@ -231,6 +296,21 @@ struct GnssLocationSvUsedInPosition {
     uint64_t qzssSvUsedIdsMask;
 };
 
+struct GnssMeasUsageInfo {
+    /** GnssSignalType mask */
+    GnssSignalTypeMask gnssSignalType;
+   /** Specifies GNSS Constellation Type */
+    Gnss_LocSvSystemEnumType gnssConstellation;
+    /**  GNSS SV ID.
+     For GPS:      1 to 32
+     For GLONASS:  65 to 96. When slot-number to SV ID mapping is unknown, set as 255.
+     For SBAS:     120 to 151
+     For QZSS-L1CA:193 to 197
+     For BDS:      201 to 237
+     For GAL:      301 to 336 */
+    uint16_t gnssSvId;
+};
+
 struct GnssLocationPositionDynamics {
     /** Contains Body frame LocPosDataMask bits. */
     GnssLocationPosDataMask  bodyFrameDataMask;
@@ -244,6 +324,16 @@ struct GnssLocationPositionDynamics {
     float           yawRate;
     /** Body pitch (Radians) */
     float           pitch;
+    /** Uncertainty of Forward Acceleration in body frame */
+    float           longAccelUnc;
+    /** Uncertainty of Side-ward Acceleration in body frame */
+    float           latAccelUnc;
+    /** Uncertainty of Vertical Acceleration in body frame */
+    float           vertAccelUnc;
+    /** Uncertainty of Heading Rate */
+    float           yawRateUnc;
+    /** Uncertainty of Body pitch */
+    float           pitchUnc;
 };
 
 struct GnssSystemTimeStructType {
@@ -345,9 +435,9 @@ struct Location {
     LocationFlagsMask flags;
     /** UTC timestamp for location fix, milliseconds since January 1, 1970 */
     uint64_t timestamp;
-    /** in degrees */
+    /** in degrees; range [-90.0, 90.0] */
     double latitude;
-    /** in degrees */
+    /** in degrees; range [-180.0, 180.0] */
     double longitude;
     /** in meters above the WGS 84 reference ellipsoid */
     double altitude;
@@ -393,10 +483,15 @@ struct GnssLocation : public Location {
     float horUncEllipseSemiMinor;
     /** horizontal elliptical accuracy azimuth */
     float horUncEllipseOrientAzimuth;
+    /** North standard deviation Unit: Meters */
+    float northStdDeviation;
+    /** East standard deviation. Unit: Meters */
+    float eastStdDeviation;
     /** North Velocity.Unit: Meters/sec */
     float northVelocity;
-    /** East Velocity */
+    /** East Velocity  Unit: Meters/sec */
     float eastVelocity;
+    /** Up Velocity  Unit: Meters/sec */
     float upVelocity;
     float northVelocityStdDeviation;
     float eastVelocityStdDeviation;
@@ -411,6 +506,12 @@ struct GnssLocation : public Location {
     GnssLocationPositionDynamics bodyFrameData;
     /**  GNSS System Time */
     GnssSystemTime               gnssSystemTime;
+    /** Gnss measurement usage info  */
+    std::vector<GnssMeasUsageInfo> measUsageInfo;
+    /** Leap Seconds */
+    uint8_t leapSeconds;
+    /** Time uncertainty in milliseconds   */
+    float timeUncMs;
 };
 
 struct GnssSv {
@@ -426,6 +527,43 @@ struct GnssSv {
     float azimuth;
     /** Bitwise OR of GnssSvOptionsBits */
     GnssSvOptionsMask gnssSvOptionsMask;
+};
+
+enum GnssSignalTypes {
+    GNSS_SIGNAL_TYPE_GPS_L1CA = 0,          /**<  GPS L1CA Signal  */
+    GNSS_SIGNAL_TYPE_GPS_L1C = 1,           /**<  GPS L1C Signal  */
+    GNSS_SIGNAL_TYPE_GPS_L2C_L = 2,         /**<  GPS L2C_L RF Band  */
+    GNSS_SIGNAL_TYPE_GPS_L5_Q = 3,          /**<  GPS L5_Q RF Band  */
+    GNSS_SIGNAL_TYPE_GLONASS_G1 = 4,        /**<  GLONASS G1 (L1OF) RF Band  */
+    GNSS_SIGNAL_TYPE_GLONASS_G2 = 5,        /**<  GLONASS G2 (L2OF) RF Band  */
+    GNSS_SIGNAL_TYPE_GALILEO_E1_C = 6,      /**<  GALILEO E1_C RF Band  */
+    GNSS_SIGNAL_TYPE_GALILEO_E5A_Q = 7,     /**<  GALILEO E5A_Q RF Band  */
+    GNSS_SIGNAL_TYPE_GALILEO_E5B_Q = 8,     /**<  GALILEO E5B_Q RF Band  */
+    GNSS_SIGNAL_TYPE_BEIDOU_B1_I = 9,       /**<  BEIDOU B1_I RF Band  */
+    GNSS_SIGNAL_TYPE_BEIDOU_B1C = 10,       /**<  BEIDOU B1C RF Band  */
+    GNSS_SIGNAL_TYPE_BEIDOU_B2_I = 11,      /**<  BEIDOU B2_I RF Band  */
+    GNSS_SIGNAL_TYPE_BEIDOU_B2A_I = 12,     /**<  BEIDOU B2A_I RF Band  */
+    GNSS_SIGNAL_TYPE_QZSS_L1CA = 13,        /**<  QZSS L1CA RF Band  */
+    GNSS_SIGNAL_TYPE_QZSS_L1S = 14,         /**<  QZSS L1S RF Band  */
+    GNSS_SIGNAL_TYPE_QZSS_L2C_L = 15,       /**<  QZSS L2C_L RF Band  */
+    GNSS_SIGNAL_TYPE_QZSS_L5_Q = 16,        /**<  QZSS L5_Q RF Band  */
+    GNSS_SIGNAL_TYPE_SBAS_L1_CA = 17,       /**<  SBAS L1_CA RF Band  */
+    GNSS_MAX_NUMBER_OF_SIGNAL_TYPES = 18    /**< Maximum number of signal types */
+};
+
+typedef uint64_t GnssDataMask;
+
+enum GnssDataBits {
+    // Jammer Indicator is available
+    GNSS_DATA_JAMMER_IND_BIT = (1ULL << 0),
+    // AGC is available
+    GNSS_DATA_AGC_BIT = (1ULL << 1)
+};
+
+struct GnssData {
+    GnssDataMask  gnssDataMask[GNSS_MAX_NUMBER_OF_SIGNAL_TYPES];  // bitwise OR of GnssDataBits
+    double        jammerInd[GNSS_MAX_NUMBER_OF_SIGNAL_TYPES];     // Jammer Indication
+    double        agc[GNSS_MAX_NUMBER_OF_SIGNAL_TYPES];           // Automatic gain control
 };
 
 /** @fn
@@ -478,10 +616,30 @@ typedef std::function<void(
     uint64_t timestamp, const std::string& nmea
 )> GnssNmeaCb;
 
+/** @fn
+    @brief
+    GnssDataCb is for receiving GnssData information
+*/
+typedef std::function<void(
+    const GnssData& gnssData
+)> GnssDataCb;
+
 struct GnssReportCbs {
     GnssLocationCb gnssLocationCallback;
     GnssSvCb gnssSvCallback;
     GnssNmeaCb gnssNmeaCallback;
+    GnssDataCb gnssDataCallback;
+};
+
+/** @fn
+    @brief
+    Structure of all client callbacks
+*/
+struct ClientCallbacks {
+    CapabilitiesCb capabilitycb;
+    ResponseCb responsecb;
+    LocationCb locationcb;
+    GnssReportCbs gnssreportcbs;
 };
 
 class LocationClientApiImpl;
@@ -603,17 +761,7 @@ public:
     void updateNetworkAvailability(bool available);
 
 private:
-    void locationClientApiImplCb(uint32_t  msgId, const void* msgData);
-
     LocationClientApiImpl* mApiImpl;
-    uint32_t               mSessionId;
-    // callbacks
-    CapabilitiesCb         mCapabilitiesCb;
-    LocationCb             mLocationCb;
-    GnssReportCbs          mGnssReportCbs;
-    ResponseCb             mResponseCb;
-
-    friend                 LocationClientApiImpl;
 };
 
 } // namespace location_client
