@@ -55,7 +55,7 @@ enum ELocMsgID {
     E_LOCAPI_CAPABILILTIES_MSG_ID = 3,
     E_LOCAPI_HAL_READY_MSG_ID = 4,
 
-    // tacking session
+    // tracking session
     E_LOCAPI_START_TRACKING_MSG_ID = 5,
     E_LOCAPI_STOP_TRACKING_MSG_ID = 6,
     E_LOCAPI_UPDATE_CALLBACKS_MSG_ID = 7,
@@ -71,7 +71,19 @@ enum ELocMsgID {
     E_LOCAPI_LOCATION_INFO_MSG_ID = 13,
     E_LOCAPI_SATELLITE_VEHICLE_MSG_ID = 14,
     E_LOCAPI_NMEA_MSG_ID = 15,
-    E_LOCAPI_DATA_MSG_ID = 16
+    E_LOCAPI_DATA_MSG_ID = 16,
+
+    // Get API to retrieve info from GNSS engine
+    E_LOCAPI_GET_GNSS_ENGERY_CONSUMED_MSG_ID = 17,
+
+    E_LOCAPI_LOCATION_SYSTEM_INFO_MSG_ID = 18,
+    // batching session
+    E_LOCAPI_START_BATCHING_MSG_ID = 20,
+    E_LOCAPI_STOP_BATCHING_MSG_ID = 21,
+    E_LOCAPI_UPDATE_BATCHING_OPTIONS_MSG_ID = 22,
+
+    //batching reports
+    E_LOCAPI_BATCHING_MSG_ID = 23,
 };
 
 typedef uint32_t LocationCallbacksMask;
@@ -80,7 +92,22 @@ enum ELocationCallbacksOption {
     E_LOC_CB_GNSS_LOCATION_INFO_BIT     = (1<<1), /**< Register for GNSS Location */
     E_LOC_CB_GNSS_SV_BIT                = (1<<2), /**< Register for GNSS SV */
     E_LOC_CB_GNSS_NMEA_BIT              = (1<<3), /**< Register for GNSS NMEA */
-    E_LOC_CB_GNSS_DATA_BIT              = (1<<4)  /**< Register for GNSS DATA */
+    E_LOC_CB_GNSS_DATA_BIT              = (1<<4), /**< Register for GNSS DATA */
+    E_LOC_CB_SYSTEM_INFO_BIT            = (1<<5),  /**< Register for Location system info */
+    E_LOC_CB_BATCHING_BIT               = (1<<6), /**< Register for Batching */
+    E_LOC_CB_BATCHING_STATUS_BIT        = (1<<7), /**< Register for Batching  Status*/
+};
+// Mask related to all info that are tied with a position session and need to be unsubscribed
+// when session is stopped
+#define LOCATION_SESSON_ALL_INFO_MASK (E_LOC_CB_TRACKING_BIT|E_LOC_CB_GNSS_LOCATION_INFO_BIT|\
+                                       E_LOC_CB_GNSS_SV_BIT|E_LOC_CB_GNSS_NMEA_BIT|\
+                                       E_LOC_CB_GNSS_DATA_BIT)
+
+typedef uint32_t EngineInfoCallbacksMask;
+enum EEngineInfoCallbacksMask {
+    // gnss energy consumed, once the info is delivered,
+    // this bit will be cleared
+    E_ENGINE_INFO_CB_GNSS_ENERGY_CONSUMED_BIT = (1<<0) /**< GNSS energy consumed */
 };
 
 /******************************************************************************
@@ -91,6 +118,13 @@ struct LocAPINmeaSerializedPayload {
     uint64_t timestamp;
     size_t length;
     char nmea[1];
+};
+
+struct LocAPIBatchNotification {
+    size_t size;
+    size_t count;
+    BatchingStatus status;
+    Location location[1];
 };
 
 /******************************************************************************
@@ -186,7 +220,7 @@ struct LocAPIUpdateCallbacksReqMsg: LocAPIMsgHeader
     LocationCallbacksMask    locationCallbacks;
 
     inline LocAPIUpdateCallbacksReqMsg(const char* name,
-                                     LocationCallbacksMask callBacksMask):
+                                       LocationCallbacksMask callBacksMask):
         LocAPIMsgHeader(name, E_LOCAPI_UPDATE_CALLBACKS_MSG_ID),
         locationCallbacks(callBacksMask) { }
 };
@@ -198,12 +232,57 @@ struct LocAPIUpdateTrackingOptionsReqMsg: LocAPIMsgHeader
     uint32_t distanceInMeters;
 
     inline LocAPIUpdateTrackingOptionsReqMsg(const char* name,
-                                     uint32_t sessionInterval,
-                                     uint32_t sessionDistance):
+                                             uint32_t sessionInterval,
+                                             uint32_t sessionDistance):
         LocAPIMsgHeader(name, E_LOCAPI_UPDATE_TRACKING_OPTIONS_MSG_ID),
         intervalInMs(sessionInterval),
         distanceInMeters(sessionDistance) { }
 };
+
+/******************************************************************************
+IPC message structure - batching
+******************************************************************************/
+// defintion for message with msg id of E_LOCAPI_START_BATCHING_MSG_ID
+struct LocAPIStartBatchingReqMsg: LocAPIMsgHeader
+{
+    uint32_t intervalInMs;
+    uint32_t distanceInMeters;
+    BatchingMode batchingMode;
+
+    inline LocAPIStartBatchingReqMsg(const char* name,
+                                     uint32_t minInterval,
+                                     uint32_t minDistance,
+                                     BatchingMode batchMode):
+        LocAPIMsgHeader(name, E_LOCAPI_START_BATCHING_MSG_ID),
+        intervalInMs(minInterval),
+        distanceInMeters(minDistance),
+        batchingMode(batchMode) { }
+};
+
+// defintion for message with msg id of E_LOCAPI_STOP_BATCHING_MSG_ID
+struct LocAPIStopBatchingReqMsg: LocAPIMsgHeader
+{
+    inline LocAPIStopBatchingReqMsg(const char* name) :
+        LocAPIMsgHeader(name, E_LOCAPI_STOP_BATCHING_MSG_ID) { }
+};
+
+// defintion for message with msg id of E_LOCAPI_UPDATE_BATCHING_OPTIONS_MSG_ID
+struct LocAPIUpdateBatchingOptionsReqMsg: LocAPIMsgHeader
+{
+    uint32_t intervalInMs;
+    uint32_t distanceInMeters;
+    BatchingMode batchingMode;
+
+    inline LocAPIUpdateBatchingOptionsReqMsg(const char* name,
+                                             uint32_t sessionInterval,
+                                             uint32_t sessionDistance,
+                                             BatchingMode batchMode):
+        LocAPIMsgHeader(name, E_LOCAPI_UPDATE_BATCHING_OPTIONS_MSG_ID),
+        intervalInMs(sessionInterval),
+        distanceInMeters(sessionDistance),
+        batchingMode(batchMode) { }
+};
+
 
 /******************************************************************************
 IPC message structure - control
@@ -237,6 +316,12 @@ struct LocAPIUpdateNetworkAvailabilityReqMsg: LocAPIMsgHeader
         mAvailability(availability) { }
 };
 
+struct LocAPIGetGnssEnergyConsumedReqMsg: LocAPIMsgHeader
+{
+    inline LocAPIGetGnssEnergyConsumedReqMsg(const char* name) :
+        LocAPIMsgHeader(name, E_LOCAPI_GET_GNSS_ENGERY_CONSUMED_MSG_ID) { }
+};
+
 /******************************************************************************
 IPC message structure - indications
 ******************************************************************************/
@@ -249,6 +334,16 @@ struct LocAPILocationIndMsg: LocAPIMsgHeader
         Location& location) :
         LocAPIMsgHeader(name, E_LOCAPI_LOCATION_MSG_ID),
         locationNotification(location) { }
+};
+
+// defintion for message with msg id of E_LOCAPI_BATCHING_MSG_ID
+struct LocAPIBatchingIndMsg: LocAPIMsgHeader
+{
+    LocAPIBatchNotification batchNotification;
+
+    inline LocAPIBatchingIndMsg(const char* name, LocAPIBatchNotification& batchNotif) :
+        LocAPIMsgHeader(name, E_LOCAPI_BATCHING_MSG_ID),
+        batchNotification(batchNotif) { }
 };
 
 // defintion for message with msg id of E_LOCAPI_LOCATION_INFO_MSG_ID
@@ -292,5 +387,26 @@ struct LocAPIDataIndMsg : LocAPIMsgHeader
         LocAPIMsgHeader(name, E_LOCAPI_DATA_MSG_ID),
         gnssDataNotification(dataNotification) { }
 };
+
+// defintion for message with msg id of E_LOCAPI_GET_TOTAL_ENGERY_CONSUMED_BY_GPS_ENGINE_MSG_ID
+struct LocAPIGnssEnergyConsumedIndMsg: LocAPIMsgHeader
+{
+    uint64_t totalGnssEnergyConsumedSinceFirstBoot;
+
+    inline LocAPIGnssEnergyConsumedIndMsg(const char* name, uint64_t energyConsumed) :
+        LocAPIMsgHeader(name, E_LOCAPI_GET_GNSS_ENGERY_CONSUMED_MSG_ID),
+        totalGnssEnergyConsumedSinceFirstBoot(energyConsumed) { }
+};
+
+// defintion for message with msg id of E_LOCAPI_LOCATION_SYSTEM_INFO_MSG_ID
+struct LocAPILocationSystemInfoIndMsg: LocAPIMsgHeader
+{
+    LocationSystemInfo locationSystemInfo;
+
+    inline LocAPILocationSystemInfoIndMsg(const char* name, const LocationSystemInfo & systemInfo) :
+        LocAPIMsgHeader(name, E_LOCAPI_LOCATION_SYSTEM_INFO_MSG_ID),
+        locationSystemInfo(systemInfo) { }
+};
+
 
 #endif /* LOCATIONAPIMSG_H */

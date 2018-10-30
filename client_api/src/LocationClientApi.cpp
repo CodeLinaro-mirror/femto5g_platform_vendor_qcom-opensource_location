@@ -53,7 +53,7 @@ LocationClientApi::LocationClientApi(CapabilitiesCb capabitiescb) :
 
     // read configuration file
     UTIL_READ_CONF(LOC_PATH_GPS_CONF, gConfigTable);
-    LOC_LOGd("gDebug=%u\n", gDebug);
+    LOC_LOGd("gDebug=%u", gDebug);
 }
 
 LocationClientApi::~LocationClientApi() {
@@ -70,12 +70,12 @@ bool LocationClientApi::startPositionSession(
 
     //Input parameter check
     if (!locationCallback) {
-        LOC_LOGe ("NULL locationCallback\n");
+        LOC_LOGe ("NULL locationCallback");
         return false;
     }
 
     if (!mApiImpl) {
-        LOC_LOGe ("NULL mApiImpl\n");
+        LOC_LOGe ("NULL mApiImpl");
         return false;
     }
 
@@ -108,12 +108,12 @@ bool LocationClientApi::startPositionSession(
 
     //Input parameter check
     if (!gnssReportCallbacks.gnssLocationCallback) {
-        LOC_LOGe ("gnssLocation Callbacks can't be NULL\n");
+        LOC_LOGe ("gnssLocation Callbacks can't be NULL");
         return false;
     }
 
     if (!mApiImpl) {
-        LOC_LOGe ("NULL mApiImpl\n");
+        LOC_LOGe ("NULL mApiImpl");
         return false;
     }
 
@@ -156,9 +156,116 @@ void LocationClientApi::stopPositionSession() {
     }
 }
 
+bool LocationClientApi::startTripBatchingSession(uint32_t minInterval, uint32_t tripDistance,
+        BatchingCb batchingCallback, ResponseCb responseCallback) {
+    //Input parameter check
+    if (!batchingCallback) {
+        LOC_LOGe ("NULL batchingCallback");
+        return false;
+    }
+
+    if (!mApiImpl) {
+        LOC_LOGe ("NULL mApiImpl");
+        return false;
+    }
+    // callback functions
+    ClientCallbacks cbs = {0};
+    cbs.responsecb = responseCallback;
+    cbs.batchingcb = batchingCallback;
+    mApiImpl->updateCallbackFunctions(cbs);
+
+    // callback masks
+    LocationCallbacks callbacksOption = {0};
+    callbacksOption.responseCb = [](::LocationError err, uint32_t id) {};
+    callbacksOption.batchingCb = [](size_t count, ::Location* location,
+            BatchingOptions batchingOptions) {};
+    callbacksOption.batchingStatusCb = [](BatchingStatusInfo batchingStatus,
+            std::list<uint32_t>& listOfcompletedTrips) {};
+    mApiImpl->updateCallbacks(callbacksOption);
+
+    LocationOptions locOption = {};
+    locOption.size = sizeof(locOption);
+    locOption.minInterval = minInterval;
+    locOption.minDistance = tripDistance;
+    locOption.mode = GNSS_SUPL_MODE_STANDALONE;
+
+    BatchingOptions     batchOption = {};
+    batchOption.size = sizeof(batchOption);
+    batchOption.batchingMode = BATCHING_MODE_TRIP;
+    batchOption.setLocationOptions(locOption);
+    mApiImpl->startBatching(batchOption);
+    return true;
+}
+
+bool LocationClientApi::startRoutineBatchingSession(uint32_t minInterval, uint32_t minDistance,
+        BatchingCb batchingCallback, ResponseCb responseCallback) {
+    //Input parameter check
+    if (!batchingCallback) {
+        LOC_LOGe ("NULL batchingCallback");
+        return false;
+    }
+
+    if (!mApiImpl) {
+        LOC_LOGe ("NULL mApiImpl");
+        return false;
+    }
+    // callback functions
+    ClientCallbacks cbs = {0};
+    cbs.responsecb = responseCallback;
+    cbs.batchingcb = batchingCallback;
+    mApiImpl->updateCallbackFunctions(cbs);
+
+    // callback masks
+    LocationCallbacks callbacksOption = {0};
+    callbacksOption.responseCb = [](::LocationError err, uint32_t id) {};
+    callbacksOption.batchingCb = [](size_t count, ::Location* location,
+            BatchingOptions batchingOptions) {};
+    mApiImpl->updateCallbacks(callbacksOption);
+
+    LocationOptions locOption = {};
+    locOption.size = sizeof(locOption);
+    locOption.minInterval = minInterval;
+    locOption.minDistance = minDistance;
+    locOption.mode = GNSS_SUPL_MODE_STANDALONE;
+
+    BatchingOptions     batchOption = {};
+    batchOption.size = sizeof(batchOption);
+    batchOption.batchingMode = BATCHING_MODE_ROUTINE;
+    batchOption.setLocationOptions(locOption);
+    mApiImpl->startBatching(batchOption);
+    return true;
+}
+
+void LocationClientApi::stopBatchingSession() {
+    if (mApiImpl) {
+        mApiImpl->stopBatching(0);
+    }
+}
+
+
 void LocationClientApi::updateNetworkAvailability(bool available) {
     if (mApiImpl) {
         mApiImpl->updateNetworkAvailability(available);
+    }
+}
+
+void LocationClientApi::getGnssEnergyConsumed(
+        GnssEnergyConsumedCb gnssEnergyConsumedCallback,
+        ResponseCb responseCallback) {
+
+    if (mApiImpl) {
+        mApiImpl->getGnssEnergyConsumed(gnssEnergyConsumedCallback,
+                                        responseCallback);
+    }
+}
+
+void LocationClientApi::updateLocationSystemInfoListener(
+    LocationSystemInfoCb locSystemInfoCallback,
+    ResponseCb responseCallback) {
+
+    if (mApiImpl) {
+        mApiImpl->updateLocationSystemInfoListener(
+            locSystemInfoCallback, responseCallback);
     }
 }
 

@@ -44,6 +44,19 @@ using namespace std;
 using loc_util::LocIpc;
 using loc_util::LocIpcSender;
 
+/** @fn
+    @brief
+    Structure of all client callbacks
+*/
+struct ClientCallbacks {
+    location_client::CapabilitiesCb capabilitycb;
+    location_client::ResponseCb responsecb;
+    location_client::LocationCb locationcb;
+    location_client::GnssReportCbs gnssreportcbs;
+    // used for rare system event
+    location_client::LocationSystemInfoCb systemInfoCb;
+};
+
 namespace location_client
 {
 
@@ -98,6 +111,11 @@ public:
     // other interface
     void updateNetworkAvailability(bool available);
     void updateCallbackFunctions(const ClientCallbacks&);
+    void getGnssEnergyConsumed(GnssEnergyConsumedCb gnssEnergyConsumedCallback,
+                               ResponseCb responseCallback);
+    void updateLocationSystemInfoListener(LocationSystemInfoCb locSystemInfoCallback,
+                                          ResponseCb responseCallback);
+
 
 private:
     void capabilitesCallback(ELocMsgID  msgId, const void* msgData);
@@ -107,6 +125,7 @@ private:
     static mutex            mMutex;
     uint32_t                mClientId;
     uint32_t                mSessionId;
+    uint32_t                mBatchingId;
     bool                    mHalRegistered;
     char                    mSocketName[MAX_SOCKET_PATHNAME_LENGTH];
 
@@ -115,9 +134,17 @@ private:
     ResponseCb              mResponseCb;
     LocationCb              mLocationCb;
     GnssReportCbs           mGnssReportCbs;
+    BatchingCb              mBatchingCb;
 
     LocationCallbacksMask   mCallbacksMask;
     LocationOptions         mLocationOptions;
+    BatchingOptions         mBatchingOptions;
+
+    GnssEnergyConsumedCb    mGnssEnergyConsumedInfoCb;
+    ResponseCb              mGnssEnergyConsumedResponseCb;
+
+    LocationSystemInfoCb    mLocationSysInfoCb;
+    ResponseCb              mLocationSysInfoResponseCb;
 
     MsgTask*                mMsgTask;
     LocIpcSender*           mIpcSender;

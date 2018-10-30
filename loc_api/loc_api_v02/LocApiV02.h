@@ -79,6 +79,7 @@ private:
   bool mMeasurementsStarted;
   std::vector<Resender> mResenders;
   bool mIsMasterRegistered;
+  bool mMasterRegisterNotSupported;
 
   /* Convert event mask from loc eng to loc_api_v02 format */
   static locClientEventMaskType convertMask(LOC_API_ADAPTER_EVENT_MASK_T mask);
@@ -148,6 +149,26 @@ private:
   void  reportSvPolynomial (
   const qmiLocEventGnssSvPolyIndMsgT_v02 *gnss_sv_poly_ptr);
 
+  void reportSvEphemeris (
+  uint32_t eventId, const locClientEventIndUnionType &eventPayload);
+
+  void populateGpsEphemeris(const qmiLocGpsEphemerisReportIndMsgT_v02 *,
+          GnssSvEphemerisReport &);
+  void populateGlonassEphemeris(const qmiLocGloEphemerisReportIndMsgT_v02 *,
+          GnssSvEphemerisReport &);
+  void populateBdsEphemeris(const qmiLocBdsEphemerisReportIndMsgT_v02 *,
+          GnssSvEphemerisReport &);
+  void populateGalEphemeris(const qmiLocGalEphemerisReportIndMsgT_v02 *,
+          GnssSvEphemerisReport &);
+  void populateQzssEphemeris(const qmiLocQzssEphemerisReportIndMsgT_v02 *,
+          GnssSvEphemerisReport &);
+  void populateCommonEphemeris(const qmiLocEphGnssDataStructT_v02 &, GnssEphCommon &);
+
+  void reportLocEvent(const qmiLocEventReportIndMsgT_v02 *event_report_ptr);
+  /* convert system info to location api format and dispatch to
+     the registered adapter */
+  void reportSystemInfo(const qmiLocSystemInfoIndMsgT_v02* system_info_ptr);
+
   /* convert engine state report to loc eng format and send the converted
      report to loc eng */
   void reportEngineState (
@@ -183,8 +204,9 @@ private:
   void requestOdcpi(
     const qmiLocEventWifiReqIndMsgT_v02& odcpiReq);
 
-  bool registerEventMask(locClientEventMaskType qmiMask);
-  locClientEventMaskType adjustMaskForNoSession(locClientEventMaskType qmiMask);
+  void registerEventMask(LOC_API_ADAPTER_EVENT_MASK_T adapterMask);
+  bool sendRequestForAidingData(locClientEventMaskType qmiMask);
+  locClientEventMaskType adjustMaskIfNoSession(locClientEventMaskType qmiMask);
   bool cacheGnssMeasurementSupport();
   void registerMasterClient();
   int getGpsLock(uint8_t subType);
@@ -251,6 +273,9 @@ public:
     injectPosition(const Location& location, bool onDemandCpi);
 
   virtual void
+    injectPosition(const GnssLocationInfoNotification &locationInfo, bool onDemandCpi);
+
+  virtual void
     deleteAidingData(const GnssAidingData& data, LocApiResponse *adapterResponse);
 
   virtual void
@@ -298,6 +323,10 @@ public:
       handleZppBestAvailableFixIndication(const qmiLocGetBestAvailablePositionIndMsgT_v02 &zpp_ind);
   virtual void getBestAvailableZppFix();
   virtual LocationError setGpsLockSync(GnssConfigGpsLock lock);
+  virtual LocationError setConstrainedTuncMode(bool enabled, float tuncConstraint, uint32_t powerBudget);
+  virtual LocationError setPositionAssistedClockEstimatorMode(bool enabled);
+  virtual LocationError getGnssEnergyConsumed();
+  virtual void requestForAidingData(GnssAidingDataSvMask svDataMask);
 
   /*
   Returns
@@ -309,6 +338,12 @@ public:
   virtual void installAGpsCert(const LocDerEncodedCertificate* pData,
                                size_t length,
                                uint32_t slotBitMask);
+
+  inline virtual void setInSession(bool inSession) override {
+      mInSession = inSession;
+      registerEventMask(mMask);
+  }
+
   virtual LocPosTechMask convertPosTechMask(qmiLocPosTechMaskT_v02 mask);
   virtual LocNavSolutionMask convertNavSolutionMask(qmiLocNavSolutionMaskT_v02 mask);
   virtual GnssConfigSuplVersion convertSuplVersion(const uint32_t suplVersion);

@@ -86,6 +86,11 @@ public:
     void updateSubscription(LocAPIUpdateCallbacksReqMsg*);
     void updateTrackingOptions(LocAPIUpdateTrackingOptionsReqMsg*);
     void updateNetworkAvailability(bool availability);
+    void getGnssEnergyConsumed(const char* clientSocketName);
+
+    void startBatching(LocAPIStartBatchingReqMsg*);
+    void stopBatching(LocAPIStopBatchingReqMsg*);
+    void updateBatchingOptions(LocAPIUpdateBatchingOptionsReqMsg*);
 
     inline void gnssUpdateConfig(GnssConfig config) {
         mLocationControlApi->gnssUpdateConfig(config);
@@ -114,6 +119,7 @@ private:
     // Location control API callback
     void onControlResponseCallback(LocationError err, uint32_t id);
     void onControlCollectiveResponseCallback(size_t count, LocationError *errs, uint32_t *ids);
+    void onGnssEnergyConsumedCb(uint64_t totalEnergyConsumedSinceFirstBoot);
 
     LocationApiService(uint32_t autostart, uint32_t sessiontbfms);
     virtual ~LocationApiService();
