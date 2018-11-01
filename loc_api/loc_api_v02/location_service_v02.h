@@ -63,7 +63,7 @@
  *====*====*====*====*====*====*====*====*====*====*====*====*====*====*====*/
 
 /* This file was generated with Tool version 6.14.7
-   It was generated on: Wed Sep 26 2018 (Spin 0)
+   It was generated on: Thu Nov  1 2018 (Spin 0)
    From IDL File: location_service_v02.idl */
 
 /** @defgroup loc_qmi_consts Constant values defined in the IDL */
@@ -89,7 +89,7 @@ extern "C" {
 /** Major Version Number of the IDL used to generate this file */
 #define LOC_V02_IDL_MAJOR_VERS 0x02
 /** Revision Number of the IDL used to generate this file */
-#define LOC_V02_IDL_MINOR_VERS 0x61
+#define LOC_V02_IDL_MINOR_VERS 0x63
 /** Major Version Number of the qmi_idl_compiler used to generate this file */
 #define LOC_V02_IDL_TOOL_VERS 0x06
 /** Maximum Defined Message ID */
@@ -1886,7 +1886,7 @@ typedef struct {
          - Range: 0 to 360 */
 
   float snr;
-  /**<   SV signal-to-noise ratio. \n
+  /**<   SV signal-to-noise ratio at antenna. \n
          - Units: dB-Hz */
 }qmiLocSvInfoStructT_v02;  /* Type */
 /**
@@ -5481,6 +5481,14 @@ typedef struct {
       - For BDS:     201 to 237 \n
       - For GAL:     301 to 336
       */
+
+  /* Optional */
+  /*  Number of SVs used to calculate the fix */
+  uint8_t numSvInFix_valid;  /**< Must be set to true if numSvInFix is being passed */
+  uint8_t numSvInFix;
+  /**<   Number of SVs used to calculate the fix. \n
+       - Type: uint8
+  */
 }qmiLocInjectPositionReqMsgT_v02;  /* Message */
 /**
     @}
@@ -14375,7 +14383,7 @@ typedef struct {
  */
 
   uint16_t CNo;
-  /**<   Carrier to noise ratio.  \n
+  /**<   Carrier to noise ratio at antenna.  \n
              - Units: dBHz \n
              - Scale: 0.1
     */
@@ -17085,6 +17093,7 @@ typedef uint32_t qmiLocDeleteSatelliteDataMaskT_v02;
 #define QMI_LOC_DELETE_DATA_MASK_IONO_V02 ((qmiLocDeleteSatelliteDataMaskT_v02)0x00000200) /**<  Ionosphere correction  */
 #define QMI_LOC_DELETE_DATA_MASK_TIME_V02 ((qmiLocDeleteSatelliteDataMaskT_v02)0x00000400) /**<  Reset satellite time  */
 #define QMI_LOC_DELETE_DATA_MASK_MB_DATA_V02 ((qmiLocDeleteSatelliteDataMaskT_v02)0x00000800) /**<  Delete Multiband data  */
+#define QMI_LOC_DELETE_DATA_MASK_TGD_DATA_V02 ((qmiLocDeleteSatelliteDataMaskT_v02)0x00001000) /**<  Reset Tgd (Group delay) data  */
 typedef uint32_t qmiLocGNSSConstellMaskT_v02;
 #define QMI_LOC_SYSTEM_GPS_V02 ((qmiLocGNSSConstellMaskT_v02)0x00000001) /**<  System GPS data  */
 #define QMI_LOC_SYSTEM_GLO_V02 ((qmiLocGNSSConstellMaskT_v02)0x00000002) /**<  System GLONASS data  */
@@ -17122,6 +17131,7 @@ typedef struct {
       - QMI_LOC_DELETE_DATA_MASK_IONO (0x00000200) --  Ionosphere correction
       - QMI_LOC_DELETE_DATA_MASK_TIME (0x00000400) --  Reset satellite time
       - QMI_LOC_DELETE_DATA_MASK_MB_DATA (0x00000800) --  Delete Multiband data
+      - QMI_LOC_DELETE_DATA_MASK_TGD_DATA (0x00001000) --  Reset Tgd (Group delay) data
  */
 }qmiLocDeleteSatelliteDataStructT_v02;  /* Type */
 /**
@@ -20506,11 +20516,25 @@ typedef uint64_t qmiLocEventReportMaskT_v02;
 #define QMI_LOC_DELETE_BDS_EPHEMERIS_ALL_V02 ((qmiLocEventReportMaskT_v02)0x00000004ull) /**<  BDS Ephemeris parameters have been deleted.  */
 #define QMI_LOC_DELETE_GAL_EPHEMERIS_ALL_V02 ((qmiLocEventReportMaskT_v02)0x00000008ull) /**<  GALILEO Ephemeris parameters have been deleted.  */
 #define QMI_LOC_DELETE_QZSS_EPHEMERIS_ALL_V02 ((qmiLocEventReportMaskT_v02)0x00000010ull) /**<  QZSS Ephemeris parameters have been deleted.  */
-#define QMI_LOC_DELETE_GPS_SV_POLY_ALL_V02 ((qmiLocEventReportMaskT_v02)0x00000020ull) /**<  GPS SV Polynomials have been deleted.  */
-#define QMI_LOC_DELETE_GLO_SV_POLY_ALL_V02 ((qmiLocEventReportMaskT_v02)0x00000040ull) /**<  GLONASS SV Polynomials have been deleted.  */
-#define QMI_LOC_DELETE_BDS_SV_POLY_ALL_V02 ((qmiLocEventReportMaskT_v02)0x00000080ull) /**<  BDS SV Polynomials have been deleted.  */
-#define QMI_LOC_DELETE_GAL_SV_POLY_ALL_V02 ((qmiLocEventReportMaskT_v02)0x00000100ull) /**<  GALILEO SV Polynomials have been deleted.  */
-#define QMI_LOC_DELETE_QZSS_SV_POLY_ALL_V02 ((qmiLocEventReportMaskT_v02)0x00000200ull) /**<  QZSS SV Polynomials have been deleted.  */
+#define QMI_LOC_DELETE_RESERVED_EPHEMERIS_1_ALL_V02 ((qmiLocEventReportMaskT_v02)0x00000020ull) /**<  Reserved Delete Ephemeris Bit 1.  */
+#define QMI_LOC_DELETE_RESERVED_EPHEMERIS_2_ALL_V02 ((qmiLocEventReportMaskT_v02)0x00000040ull) /**<  Reserved Delete Ephemeris Bit 2.  */
+#define QMI_LOC_DELETE_RESERVED_EPHEMERIS_3_ALL_V02 ((qmiLocEventReportMaskT_v02)0x00000080ull) /**<  Reserved Delete Ephemeris Bit 3.  */
+#define QMI_LOC_DELETE_RESERVED_EPHEMERIS_4_ALL_V02 ((qmiLocEventReportMaskT_v02)0x00000100ull) /**<  Reserved Delete Ephemeris Bit 4.  */
+#define QMI_LOC_DELETE_RESERVED_EPHEMERIS_5_ALL_V02 ((qmiLocEventReportMaskT_v02)0x00000200ull) /**<  Reserved Delete Ephemeris Bit 5.  */
+#define QMI_LOC_DELETE_RESERVED_EPHEMERIS_6_ALL_V02 ((qmiLocEventReportMaskT_v02)0x00000400ull) /**<  Reserved Delete Ephemeris Bit 6.  */
+#define QMI_LOC_DELETE_RESERVED_EPHEMERIS_7_ALL_V02 ((qmiLocEventReportMaskT_v02)0x00000800ull) /**<  Reserved Delete Ephemeris Bit 7.  */
+#define QMI_LOC_DELETE_GPS_SV_POLY_ALL_V02 ((qmiLocEventReportMaskT_v02)0x00001000ull) /**<  GPS SV Polynomials have been deleted.  */
+#define QMI_LOC_DELETE_GLO_SV_POLY_ALL_V02 ((qmiLocEventReportMaskT_v02)0x00002000ull) /**<  GLONASS SV Polynomials have been deleted.  */
+#define QMI_LOC_DELETE_BDS_SV_POLY_ALL_V02 ((qmiLocEventReportMaskT_v02)0x00004000ull) /**<  BDS SV Polynomials have been deleted.  */
+#define QMI_LOC_DELETE_GAL_SV_POLY_ALL_V02 ((qmiLocEventReportMaskT_v02)0x00008000ull) /**<  GALILEO SV Polynomials have been deleted.  */
+#define QMI_LOC_DELETE_QZSS_SV_POLY_ALL_V02 ((qmiLocEventReportMaskT_v02)0x00010000ull) /**<  QZSS SV Polynomials have been deleted.  */
+#define QMI_LOC_DELETE_RESERVED_SV_POLY_1_ALL_V02 ((qmiLocEventReportMaskT_v02)0x00020000ull) /**<  Reserved Delete SV Poly Bit 1.  */
+#define QMI_LOC_DELETE_RESERVED_SV_POLY_2_ALL_V02 ((qmiLocEventReportMaskT_v02)0x00040000ull) /**<  Reserved Delete SV Poly Bit 2.  */
+#define QMI_LOC_DELETE_RESERVED_SV_POLY_3_ALL_V02 ((qmiLocEventReportMaskT_v02)0x00080000ull) /**<  Reserved Delete SV Poly Bit 3.  */
+#define QMI_LOC_DELETE_RESERVED_SV_POLY_4_ALL_V02 ((qmiLocEventReportMaskT_v02)0x00100000ull) /**<  Reserved Delete SV Poly Bit 4.  */
+#define QMI_LOC_DELETE_RESERVED_SV_POLY_5_ALL_V02 ((qmiLocEventReportMaskT_v02)0x00200000ull) /**<  Reserved Delete SV Poly Bit 5.  */
+#define QMI_LOC_DELETE_RESERVED_SV_POLY_6_ALL_V02 ((qmiLocEventReportMaskT_v02)0x00400000ull) /**<  Reserved Delete SV Poly Bit 6.  */
+#define QMI_LOC_DELETE_RESERVED_SV_POLY_7_ALL_V02 ((qmiLocEventReportMaskT_v02)0x00800000ull) /**<  Reserved Delete SV Poly Bit 7.  */
 /** @addtogroup loc_qmi_messages
     @{
   */
@@ -20527,11 +20551,25 @@ typedef struct {
       - QMI_LOC_DELETE_BDS_EPHEMERIS_ALL (0x00000004) --  BDS Ephemeris parameters have been deleted.
       - QMI_LOC_DELETE_GAL_EPHEMERIS_ALL (0x00000008) --  GALILEO Ephemeris parameters have been deleted.
       - QMI_LOC_DELETE_QZSS_EPHEMERIS_ALL (0x00000010) --  QZSS Ephemeris parameters have been deleted.
-      - QMI_LOC_DELETE_GPS_SV_POLY_ALL (0x00000020) --  GPS SV Polynomials have been deleted.
-      - QMI_LOC_DELETE_GLO_SV_POLY_ALL (0x00000040) --  GLONASS SV Polynomials have been deleted.
-      - QMI_LOC_DELETE_BDS_SV_POLY_ALL (0x00000080) --  BDS SV Polynomials have been deleted.
-      - QMI_LOC_DELETE_GAL_SV_POLY_ALL (0x00000100) --  GALILEO SV Polynomials have been deleted.
-      - QMI_LOC_DELETE_QZSS_SV_POLY_ALL (0x00000200) --  QZSS SV Polynomials have been deleted.
+      - QMI_LOC_DELETE_RESERVED_EPHEMERIS_1_ALL (0x00000020) --  Reserved Delete Ephemeris Bit 1.
+      - QMI_LOC_DELETE_RESERVED_EPHEMERIS_2_ALL (0x00000040) --  Reserved Delete Ephemeris Bit 2.
+      - QMI_LOC_DELETE_RESERVED_EPHEMERIS_3_ALL (0x00000080) --  Reserved Delete Ephemeris Bit 3.
+      - QMI_LOC_DELETE_RESERVED_EPHEMERIS_4_ALL (0x00000100) --  Reserved Delete Ephemeris Bit 4.
+      - QMI_LOC_DELETE_RESERVED_EPHEMERIS_5_ALL (0x00000200) --  Reserved Delete Ephemeris Bit 5.
+      - QMI_LOC_DELETE_RESERVED_EPHEMERIS_6_ALL (0x00000400) --  Reserved Delete Ephemeris Bit 6.
+      - QMI_LOC_DELETE_RESERVED_EPHEMERIS_7_ALL (0x00000800) --  Reserved Delete Ephemeris Bit 7.
+      - QMI_LOC_DELETE_GPS_SV_POLY_ALL (0x00001000) --  GPS SV Polynomials have been deleted.
+      - QMI_LOC_DELETE_GLO_SV_POLY_ALL (0x00002000) --  GLONASS SV Polynomials have been deleted.
+      - QMI_LOC_DELETE_BDS_SV_POLY_ALL (0x00004000) --  BDS SV Polynomials have been deleted.
+      - QMI_LOC_DELETE_GAL_SV_POLY_ALL (0x00008000) --  GALILEO SV Polynomials have been deleted.
+      - QMI_LOC_DELETE_QZSS_SV_POLY_ALL (0x00010000) --  QZSS SV Polynomials have been deleted.
+      - QMI_LOC_DELETE_RESERVED_SV_POLY_1_ALL (0x00020000) --  Reserved Delete SV Poly Bit 1.
+      - QMI_LOC_DELETE_RESERVED_SV_POLY_2_ALL (0x00040000) --  Reserved Delete SV Poly Bit 2.
+      - QMI_LOC_DELETE_RESERVED_SV_POLY_3_ALL (0x00080000) --  Reserved Delete SV Poly Bit 3.
+      - QMI_LOC_DELETE_RESERVED_SV_POLY_4_ALL (0x00100000) --  Reserved Delete SV Poly Bit 4.
+      - QMI_LOC_DELETE_RESERVED_SV_POLY_5_ALL (0x00200000) --  Reserved Delete SV Poly Bit 5.
+      - QMI_LOC_DELETE_RESERVED_SV_POLY_6_ALL (0x00400000) --  Reserved Delete SV Poly Bit 6.
+      - QMI_LOC_DELETE_RESERVED_SV_POLY_7_ALL (0x00800000) --  Reserved Delete SV Poly Bit 7.
  */
 }qmiLocEventReportIndMsgT_v02;  /* Message */
 /**
