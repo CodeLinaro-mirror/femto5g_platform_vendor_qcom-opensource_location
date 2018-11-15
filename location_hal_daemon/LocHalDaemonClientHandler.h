@@ -62,14 +62,7 @@ public:
         mLocationApi = LocationAPI::createInstance(mCallbacks);
     }
 
-    inline ~LocHalDaemonClientHandler() {
-        if (mIpcSender) {
-            delete mIpcSender;
-        }
-        if (mLocationApi) {
-            mLocationApi->destroy();
-        }
-    }
+    void cleanup();
 
     // public APIs
     void updateSubscription(uint32_t mask);
@@ -89,6 +82,8 @@ public:
     std::queue<ELocMsgID> mPendingMessages;
 
 private:
+    inline ~LocHalDaemonClientHandler() {}
+
     // Location API callback functions
     void onCapabilitiesCallback(LocationCapabilitiesMask capabilitiesMask);
     void onResponseCb(LocationError err, uint32_t id);
@@ -103,6 +98,7 @@ private:
     void onGnssDataCb(GnssDataNotification gnssDataNotification);
     void onGnssMeasurementsCb(GnssMeasurementsNotification);
     void onLocationSystemInfoCb(LocationSystemInfo);
+    void onLocationApiDestroyCompleteCb();
 
     // send ipc message to this client for general use
     template <typename MESSAGE>
