@@ -4181,6 +4181,7 @@ void LocApiV02 :: eventCb(locClientHandleType /*clientHandle*/,
     case QMI_LOC_GET_CONSTELLATION_CONTROL_IND_V02:
       LOC_LOGd("GET constellation Ind");
       reportGnssSvTypeConfig(*eventPayload.pGetConstellationConfigEvent);
+      break;
 
     case  QMI_LOC_EVENT_WIFI_REQ_IND_V02:
       LOC_LOGd("WIFI Req Ind");
