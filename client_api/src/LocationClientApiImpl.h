@@ -124,6 +124,7 @@ public:
 
 private:
     void capabilitesCallback(ELocMsgID  msgId, const void* msgData);
+    void updateTrackingOptionsSync(LocationClientApiImpl* pImpl, LocationOptions& option);
 
     // internal session parameter
     static uint32_t         mClientIdGenerator;
