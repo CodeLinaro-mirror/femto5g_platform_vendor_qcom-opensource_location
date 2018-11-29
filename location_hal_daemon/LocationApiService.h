@@ -87,6 +87,15 @@ public:
     void updateTrackingOptions(LocAPIUpdateTrackingOptionsReqMsg*);
     void updateNetworkAvailability(bool availability);
 
+    void startBatching(LocAPIStartBatchingReqMsg*);
+    void stopBatching(LocAPIStopBatchingReqMsg*);
+    void updateBatchingOptions(LocAPIUpdateBatchingOptionsReqMsg*);
+
+    void addGeofences(LocAPIAddGeofencesReqMsg*);
+    void removeGeofences(LocAPIRemoveGeofencesReqMsg*);
+    void modifyGeofences(LocAPIModifyGeofencesReqMsg*);
+    void pauseGeofences(LocAPIPauseGeofencesReqMsg*);
+    void resumeGeofences(LocAPIResumeGeofencesReqMsg*);
     inline void gnssUpdateConfig(GnssConfig config) {
         mLocationControlApi->gnssUpdateConfig(config);
     }

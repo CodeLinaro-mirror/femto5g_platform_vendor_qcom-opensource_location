@@ -35,13 +35,25 @@
 
 namespace location_client {
 
+static uint32_t gfIdGenerator = LOCATION_CLIENT_SESSION_ID_INVALID;
+mutex GeofenceImpl::mGfMutex;
+uint32_t GeofenceImpl::nextId() {
+    lock_guard<mutex> lock(mGfMutex);
+    uint32_t id = ++gfIdGenerator;
+    if (0xFFFFFFFF == id) {
+        id = 0;
+        gfIdGenerator = 0;
+    }
+    return id;
+}
+
 /******************************************************************************
 Utilities
 ******************************************************************************/
 static LocationCapabilitiesMask parseCapabilitiesMask(::LocationCapabilitiesMask mask) {
     uint64_t capsMask = 0;
 
-    LOC_LOGd ("LocationCapabilitiesMask =0x%x \n", mask);
+    LOC_LOGd ("LocationCapabilitiesMask =0x%x ", mask);
 
     if (LOCATION_CAPABILITIES_TIME_BASED_TRACKING_BIT & mask) {
         capsMask |= LOCATION_CAPS_TIME_BASED_TRACKING_BIT;
@@ -667,17 +679,18 @@ mutex LocationClientApiImpl::mMutex;
 LocationClientApiImpl - constructors
 ******************************************************************************/
 LocationClientApiImpl::LocationClientApiImpl(CapabilitiesCb capabitiescb) :
-        mCapabilitiesCb(capabitiescb),
-        mHalRegistered(false),
-        mCallbacksMask(0), mLocationOptions({0}),
-        mSessionId(LOCATION_CLIENT_SESSION_ID_INVALID) {
+        mCapabilitiesCb(capabitiescb), mLastAddedClientIds({}),
+        mHalRegistered(false), mLocationCb(nullptr), mBatchingCb(nullptr),
+        mCallbacksMask(0), mLocationOptions({0}), mBatchingOptions({0}), mBatchLocOptions({0}),
+        mSessionId(LOCATION_CLIENT_SESSION_ID_INVALID),
+        mBatchingId(LOCATION_CLIENT_SESSION_ID_INVALID) {
 
     mMsgTask = new MsgTask("ClientApiImpl", false);
 
     // create socket to send
     mIpcSender = new LocIpcSender(SOCKET_TO_LOCATION_HAL_DAEMON);
     if (nullptr == mIpcSender) {
-        LOC_LOGe("create mIpcSender failed %s\n", SOCKET_TO_LOCATION_HAL_DAEMON);
+        LOC_LOGe("create mIpcSender failed %s", SOCKET_TO_LOCATION_HAL_DAEMON);
     }
 
     // get clientId
@@ -692,10 +705,10 @@ LocationClientApiImpl::LocationClientApiImpl(CapabilitiesCb capabitiescb) :
         snprintf(mSocketName+strCopied,
                  MAX_SOCKET_PATHNAME_LENGTH-strCopied,
                  ".%u.%u", pid, mClientId);
-        LOC_LOGd("scoketname=%s\n", mSocketName);
+        LOC_LOGd("scoketname=%s", mSocketName);
         startListeningNonBlocking(mSocketName);
     } else {
-        LOC_LOGe("strlcpy failed %d\n", strCopied);
+        LOC_LOGe("strlcpy failed %d", strCopied);
     }
 }
 
@@ -707,7 +720,7 @@ LocationClientApiImpl::~LocationClientApiImpl() {
         LocAPIClientDeregisterReqMsg msg(mSocketName);
         rc = mIpcSender->send(reinterpret_cast<uint8_t*>(&msg),
                                    sizeof(msg));
-        LOC_LOGd(">>> DeregisterReq rc=%d\n", rc);
+        LOC_LOGd(">>> DeregisterReq rc=%d", rc);
         delete mIpcSender;
     }
 
@@ -728,7 +741,10 @@ void LocationClientApiImpl::updateCallbackFunctions(const ClientCallbacks& cbs) 
         void proc() const {
             // update callback functions
             mApiImpl->mResponseCb = mCbs.responsecb;
+            mApiImpl->mCollectiveResCb = mCbs.collectivecb;
             mApiImpl->mLocationCb = mCbs.locationcb;
+            mApiImpl->mBatchingCb = mCbs.batchingcb;
+            mApiImpl->mGfBreachCb = mCbs.gfbreachcb;
             mApiImpl->mGnssReportCbs = mCbs.gnssreportcbs;
         }
         LocationClientApiImpl* mApiImpl;
@@ -762,6 +778,15 @@ void LocationClientApiImpl::updateCallbacks(LocationCallbacks& callbacks) {
             if (mCallBacks.gnssDataCb) {
                 callBacksMask |= E_LOC_CB_GNSS_DATA_BIT;
             }
+            if (mCallBacks.batchingCb) {
+                callBacksMask |= E_LOC_CB_BATCHING_BIT;
+            }
+            if (mCallBacks.batchingStatusCb) {
+                callBacksMask |= E_LOC_CB_BATCHING_STATUS_BIT;
+            }
+            if (mCallBacks.geofenceBreachCb) {
+                callBacksMask |= E_LOC_CB_GEOFENCE_BREACH_BIT;
+            }
 
             // update callback only when changed
             if (mApiImpl->mCallbacksMask != callBacksMask) {
@@ -771,11 +796,11 @@ void LocationClientApiImpl::updateCallbacks(LocationCallbacks& callbacks) {
                                                     mApiImpl->mCallbacksMask);
                     bool rc = mApiImpl->mIpcSender->send(reinterpret_cast<uint8_t*>(&msg),
                                                          sizeof(msg));
-                    LOC_LOGd(">>> UpdateCallbacksReq callBacksMask=0x%x rc=%d\n",
+                    LOC_LOGd(">>> UpdateCallbacksReq callBacksMask=0x%x rc=%d",
                              mApiImpl->mCallbacksMask, rc);
                 }
             } else {
-                LOC_LOGd("No updateCallbacks because same callBacksMask 0x%x\n", callBacksMask);
+                LOC_LOGd("No updateCallbacks because same callBacksMask 0x%x", callBacksMask);
             }
         }
         LocationClientApiImpl* mApiImpl;
@@ -805,7 +830,7 @@ uint32_t LocationClientApiImpl::startTracking(LocationOptions& option) {
                                               mApiImpl->mLocationOptions.minDistance);
                 bool rc = mApiImpl->mIpcSender->send(reinterpret_cast<uint8_t*>(&msg),
                                                      sizeof(msg));
-                LOC_LOGd(">>> StartTrackingReq Interval=%d Distance=%d\n",
+                LOC_LOGd(">>> StartTrackingReq Interval=%d Distance=%d",
                          mApiImpl->mLocationOptions.minInterval,
                          mApiImpl->mLocationOptions.minDistance);
             } else {
@@ -833,7 +858,7 @@ void LocationClientApiImpl::stopTracking(uint32_t) {
                 LocAPIStopTrackingReqMsg msg(mApiImpl->mSocketName);
                 bool rc = mApiImpl->mIpcSender->send(reinterpret_cast<uint8_t*>(&msg),
                                                     sizeof(msg));
-                LOC_LOGd(">>> StopTrackingReq rc=%d\n", rc);
+                LOC_LOGd(">>> StopTrackingReq rc=%d", rc);
             }
             mApiImpl->mSessionId = LOCATION_CLIENT_SESSION_ID_INVALID;
         }
@@ -855,11 +880,11 @@ void LocationClientApiImpl::updateTrackingOptions(uint32_t, LocationOptions& opt
                         msg(mApiImpl->mSocketName, mOption.minInterval, mOption.minDistance);
                 bool rc = mApiImpl->mIpcSender->send(reinterpret_cast<uint8_t*>(&msg),
                                                      sizeof(msg));
-                LOC_LOGd(">>> UpdateTrackingOptionsReq Interval=%d Distance=%d\n",
+                LOC_LOGd(">>> UpdateTrackingOptionsReq Interval=%d Distance=%d",
                         mOption.minInterval, mOption.minDistance);
                 mApiImpl->mLocationOptions = mOption;
             } else {
-                LOC_LOGd("No UpdateTrackingOptions because same Interval=%d Distance=%d\n",
+                LOC_LOGd("No UpdateTrackingOptions because same Interval=%d Distance=%d",
                         mOption.minInterval, mOption.minDistance);
             }
         }
@@ -867,6 +892,336 @@ void LocationClientApiImpl::updateTrackingOptions(uint32_t, LocationOptions& opt
         LocationOptions mOption;
     };
     mMsgTask->sendMsg(new (nothrow) UpdateTrackingOptionsReq(this, option));
+}
+
+//Batching
+uint32_t LocationClientApiImpl::startBatching(LocationOptions& locOptions,
+        BatchingOptions& batchOptions) {
+    struct StartBatchingReq : public LocMsg {
+        StartBatchingReq(LocationClientApiImpl *apiImpl, LocationOptions& locOptions,
+                BatchingOptions& batchOptions) :
+            mApiImpl(apiImpl), mLocOptions(locOptions), mBatchOptions(batchOptions) {}
+        virtual ~StartBatchingReq() {}
+        void proc() const {
+            mApiImpl->mBatchLocOptions = mLocOptions;
+            mApiImpl->mBatchingOptions = mBatchOptions;
+            if (!mApiImpl->mHalRegistered) {
+                LOC_LOGe(">>> startBatching - Not registered yet");
+                return;
+            }
+            if (LOCATION_CLIENT_SESSION_ID_INVALID == mApiImpl->mSessionId) {
+                //start a new batching session
+                mApiImpl->mBatchingId = mApiImpl->mClientId;
+                LocAPIStartBatchingReqMsg msg(mApiImpl->mSocketName,
+                        mApiImpl->mBatchLocOptions.minInterval,
+                        mApiImpl->mBatchLocOptions.minDistance,
+                        mApiImpl->mBatchingOptions.batchingMode);
+                bool rc = mApiImpl->mIpcSender->send(reinterpret_cast<uint8_t*>(&msg),
+                        sizeof(msg));
+                LOC_LOGd(">>> StartBatchingReq Interval=%d Distance=%d BatchingMode=%d",
+                        mApiImpl->mBatchLocOptions.minInterval,
+                        mApiImpl->mBatchLocOptions.minDistance,
+                        mApiImpl->mBatchingOptions.batchingMode);
+            } else {
+                mApiImpl->updateBatchingOptions(mApiImpl->mBatchingId,
+                        const_cast<LocationOptions&>(mLocOptions),
+                        const_cast<BatchingOptions&>(mBatchOptions));
+            }
+        }
+        LocationClientApiImpl *mApiImpl;
+        LocationOptions mLocOptions;
+        BatchingOptions mBatchOptions;
+    };
+    mMsgTask->sendMsg(new (nothrow) StartBatchingReq(this, locOptions, batchOptions));
+    return 0;
+}
+
+void LocationClientApiImpl::stopBatching(uint32_t id) {
+    struct StopBatchingReq : public LocMsg {
+        StopBatchingReq(LocationClientApiImpl *apiImpl) :
+            mApiImpl(apiImpl) {}
+        virtual ~StopBatchingReq() {}
+        void proc() const {
+            if (mApiImpl->mBatchingId == mApiImpl->mClientId) {
+                mApiImpl->mBatchLocOptions.minInterval = 0;
+                mApiImpl->mBatchLocOptions.minDistance = 0;
+                mApiImpl->mBatchingOptions = {0};
+                LocAPIStopBatchingReqMsg msg(mApiImpl->mSocketName);
+                bool rc = mApiImpl->mIpcSender->send(reinterpret_cast<uint8_t*>(&msg),
+                        sizeof(msg));
+                LOC_LOGd(">>> StopBatchingReq rc=%d", rc);
+            }
+            mApiImpl->mBatchingId = LOCATION_CLIENT_SESSION_ID_INVALID;
+        }
+        LocationClientApiImpl *mApiImpl;
+    };
+    mMsgTask->sendMsg(new (nothrow) StopBatchingReq(this));
+}
+
+void LocationClientApiImpl::updateBatchingOptions(uint32_t id, LocationOptions& locOptions,
+        BatchingOptions& batchOptions) {
+    struct UpdateBatchingOptionsReq : public LocMsg {
+        UpdateBatchingOptionsReq(LocationClientApiImpl* apiImpl, LocationOptions& locOptions,
+                BatchingOptions& batchOptions) :
+            mApiImpl(apiImpl), mLocOptions(locOptions), mBatchOptions(batchOptions) {}
+        virtual ~UpdateBatchingOptionsReq() {}
+        void proc() const {
+            mApiImpl->mBatchLocOptions = mLocOptions;
+            mApiImpl->mBatchingOptions = mBatchOptions;
+            LocAPIUpdateBatchingOptionsReqMsg msg(mApiImpl->mSocketName,
+                    mApiImpl->mBatchLocOptions.minInterval,
+                    mApiImpl->mBatchLocOptions.minDistance,
+                    mApiImpl->mBatchingOptions.batchingMode);
+            bool rc = mApiImpl->mIpcSender->send(reinterpret_cast<uint8_t*>(&msg),
+                    sizeof(msg));
+            LOC_LOGd(">>> StartBatchingReq Interval=%d Distance=%d BatchingMode=%d",
+                    mApiImpl->mBatchLocOptions.minInterval,
+                    mApiImpl->mBatchLocOptions.minDistance,
+                    mApiImpl->mBatchingOptions.batchingMode);
+        }
+        LocationClientApiImpl *mApiImpl;
+        LocationOptions mLocOptions;
+        BatchingOptions mBatchOptions;
+    };
+
+    if ((mBatchLocOptions.minInterval != locOptions.minInterval) ||
+            (mBatchLocOptions.minDistance != locOptions.minDistance) ||
+            mBatchingOptions.batchingMode != batchOptions.batchingMode) {
+        mMsgTask->sendMsg(new (nothrow) UpdateBatchingOptionsReq(this, locOptions, batchOptions));
+    } else {
+        LOC_LOGd("No UpdateBatchingOptions because same Interval=%d Distance=%d, BatchingMode=%d",
+                locOptions.minInterval, locOptions.minDistance, batchOptions.batchingMode);
+    }
+}
+
+void LocationClientApiImpl::getBatchedLocations(uint32_t id, size_t count) {}
+
+bool LocationClientApiImpl::checkGeofenceMap(size_t count, uint32_t* ids) {
+    for (int i=0; i<count; ++i) {
+        auto got = mGeofenceMap.find(ids[i]);
+        if (got == mGeofenceMap.end()) {
+            return false;
+        }
+    }
+    return true;
+}
+void LocationClientApiImpl::addGeofenceMap(uint32_t id, Geofence& geofence) {
+    lock_guard<mutex> lock(mMutex);
+    mGeofenceMap.insert(make_pair(id, geofence));
+}
+void LocationClientApiImpl::eraseGeofenceMap(size_t count, uint32_t* ids) {
+    lock_guard<mutex> lock(mMutex);
+    for (int i=0; i<count; ++i) {
+        mGeofenceMap.erase(ids[i]);
+    }
+}
+
+uint32_t* LocationClientApiImpl::addGeofences(size_t count, GeofenceOption* options,
+        GeofenceInfo* infos) {
+    struct AddGeofencesReq : public LocMsg {
+        AddGeofencesReq(LocationClientApiImpl* apiImpl, uint32_t count, GeofenceOption* gfOptions,
+                GeofenceInfo* gfInfos, std::vector<uint32_t> clientIds) :
+                mApiImpl(apiImpl), mGfCount(count), mGfOptions(gfOptions), mGfInfos(gfInfos),
+                mClientIds(clientIds) {}
+        virtual ~AddGeofencesReq() {}
+        void proc() const {
+            if (!mApiImpl->mHalRegistered) {
+                LOC_LOGe(">>> addGeofences - Not registered yet");
+                return;
+            }
+
+            if (mGfCount > 0) {
+                //Add geofences, serialize geofence msg payload into ipc message payload
+                size_t msglen = sizeof(LocAPIAddGeofencesReqMsg) +
+                        sizeof(GeofencePayload) * (mGfCount - 1);
+                uint8_t *msg = new(std::nothrow) uint8_t[msglen];
+                if (nullptr == msg) {
+                    return;
+                }
+                memset(msg, 0, msglen);
+                LocAPIAddGeofencesReqMsg *pMsg = reinterpret_cast<LocAPIAddGeofencesReqMsg*>(msg);
+                strlcpy(pMsg->mSocketName, mApiImpl->mSocketName, MAX_SOCKET_PATHNAME_LENGTH);
+                pMsg->msgId = E_LOCAPI_ADD_GEOFENCES_MSG_ID;
+                pMsg->geofences.count = mGfCount;
+                for (int i=0; i<mGfCount; ++i) {
+                    (*(pMsg->geofences.gfPayload + i)).gfClientId = mClientIds[i];
+                    (*(pMsg->geofences.gfPayload + i)).gfOption = mGfOptions[i];
+                    (*(pMsg->geofences.gfPayload + i)).gfInfo = mGfInfos[i];
+                }
+                bool rc = mApiImpl->mIpcSender->send(reinterpret_cast<uint8_t*>(msg),
+                        msglen);
+                LOC_LOGd(">>> AddGeofencesReq count=%zu", mGfCount);
+                delete[] msg;
+                free(mGfOptions);
+                free(mGfInfos);
+            }
+        }
+        LocationClientApiImpl *mApiImpl;
+        uint32_t mGfCount;
+        GeofenceOption* mGfOptions;
+        GeofenceInfo* mGfInfos;
+        std::vector<uint32_t>  mClientIds;
+    };
+    mMsgTask->sendMsg(new (nothrow) AddGeofencesReq(this, count, options, infos,
+            mLastAddedClientIds));
+    return nullptr;
+}
+
+void LocationClientApiImpl::removeGeofences(size_t count, uint32_t* ids) {
+    struct RemoveGeofencesReq : public LocMsg {
+        RemoveGeofencesReq(LocationClientApiImpl* apiImpl, uint32_t count, uint32_t* gfIds) :
+                mApiImpl(apiImpl), mGfCount(count), mGfIds(gfIds) {}
+        virtual ~RemoveGeofencesReq() {}
+        void proc() const {
+            if (!mApiImpl->mHalRegistered) {
+                LOC_LOGe(">>> removeGeofences - Not registered yet");
+                return;
+            }
+            if (mGfCount > 0) {
+                //Remove geofences
+                size_t msglen = sizeof(LocAPIRemoveGeofencesReqMsg) +
+                        sizeof(uint32_t) * (mGfCount - 1);
+                uint8_t* msg = new uint8_t[msglen];
+                if (nullptr == msg) {
+                    return;
+                }
+                LocAPIRemoveGeofencesReqMsg* pMsg = (LocAPIRemoveGeofencesReqMsg*)msg;
+                pMsg->gfClientIds.count = mGfCount;
+                memcpy(pMsg->gfClientIds.gfIds, mGfIds, sizeof(uint32_t) * mGfCount);
+                pMsg->msgId = E_LOCAPI_REMOVE_GEOFENCES_MSG_ID;
+                strlcpy(pMsg->mSocketName, mApiImpl->mSocketName, MAX_SOCKET_PATHNAME_LENGTH);
+                bool rc = mApiImpl->mIpcSender->send(reinterpret_cast<uint8_t*>(msg),
+                        msglen);
+                LOC_LOGd(">>> RemoveGeofencesReq count=%zu", mGfCount);
+                delete[] msg;
+                free(mGfIds);
+            }
+        }
+        LocationClientApiImpl *mApiImpl;
+        uint32_t mGfCount;
+        uint32_t* mGfIds;
+    };
+    mMsgTask->sendMsg(new (nothrow) RemoveGeofencesReq(this, count, ids));
+}
+
+void LocationClientApiImpl::modifyGeofences(
+        size_t count, uint32_t* ids, GeofenceOption* options) {
+    struct ModifyGeofencesReq : public LocMsg {
+        ModifyGeofencesReq(LocationClientApiImpl* apiImpl, uint32_t count, uint32_t* gfIds,
+                GeofenceOption* gfOptions) :
+                mApiImpl(apiImpl), mGfCount(count), mGfIds(gfIds), mGfOptions(gfOptions) {}
+        virtual ~ModifyGeofencesReq() {}
+        void proc() const {
+            if (!mApiImpl->mHalRegistered) {
+                LOC_LOGe(">>> modifyGeofences - Not registered yet");
+                return;
+            }
+            if (mGfCount > 0) {
+                //Modify geofences
+                size_t msglen = sizeof(LocAPIModifyGeofencesReqMsg) +
+                        sizeof(GeofencePayload) * (mGfCount-1);
+                uint8_t *msg = new(std::nothrow) uint8_t[msglen];
+                if (nullptr == msg) {
+                    return;
+                }
+                memset(msg, 0, msglen);
+                LocAPIModifyGeofencesReqMsg *pMsg =
+                        reinterpret_cast<LocAPIModifyGeofencesReqMsg*>(msg);
+                strlcpy(pMsg->mSocketName, mApiImpl->mSocketName, MAX_SOCKET_PATHNAME_LENGTH);
+                pMsg->msgId = E_LOCAPI_MODIFY_GEOFENCES_MSG_ID;
+                pMsg->geofences.count = mGfCount;
+                for (int i=0; i<mGfCount; ++i) {
+                    (*(pMsg->geofences.gfPayload + i)).gfClientId = mGfIds[i];
+                    (*(pMsg->geofences.gfPayload + i)).gfOption = mGfOptions[i];
+                }
+                bool rc = mApiImpl->mIpcSender->send(reinterpret_cast<uint8_t*>(msg),
+                        msglen);
+                LOC_LOGd(">>> ModifyGeofencesReq count=%zu", mGfCount);
+                delete[] msg;
+                free(mGfIds);
+                free(mGfOptions);
+            }
+        }
+        LocationClientApiImpl *mApiImpl;
+        uint32_t mGfCount;
+        uint32_t* mGfIds;
+        GeofenceOption* mGfOptions;
+    };
+    mMsgTask->sendMsg(new (nothrow) ModifyGeofencesReq(this, count, ids, options));
+}
+
+void LocationClientApiImpl::pauseGeofences(size_t count, uint32_t* ids) {
+    struct PauseGeofencesReq : public LocMsg {
+        PauseGeofencesReq(LocationClientApiImpl* apiImpl, uint32_t count, uint32_t* gfIds) :
+                mApiImpl(apiImpl), mGfCount(count), mGfIds(gfIds) {}
+        virtual ~PauseGeofencesReq() {}
+        void proc() const {
+            if (!mApiImpl->mHalRegistered) {
+                LOC_LOGe(">>> pauseGeofences - Not registered yet");
+                return;
+            }
+            if (mGfCount > 0) {
+                //Pause geofences
+                size_t msglen = sizeof(LocAPIPauseGeofencesReqMsg) +
+                        sizeof(uint32_t) * (mGfCount - 1);
+                uint8_t* msg = new uint8_t[msglen];
+                if (nullptr == msg) {
+                    return;
+                }
+                LocAPIPauseGeofencesReqMsg* pMsg = (LocAPIPauseGeofencesReqMsg*)msg;
+                pMsg->gfClientIds.count = mGfCount;
+                memcpy(&(pMsg->gfClientIds.gfIds[0]), mGfIds, sizeof(uint32_t) * mGfCount);
+                pMsg->msgId = E_LOCAPI_PAUSE_GEOFENCES_MSG_ID;
+                strlcpy(pMsg->mSocketName, mApiImpl->mSocketName, MAX_SOCKET_PATHNAME_LENGTH);
+                bool rc = mApiImpl->mIpcSender->send(reinterpret_cast<uint8_t*>(msg),
+                        msglen);
+                LOC_LOGd(">>> PauseGeofencesReq count=%zu", mGfCount);
+                delete[] msg;
+                free(mGfIds);
+            }
+        }
+        LocationClientApiImpl *mApiImpl;
+        uint32_t mGfCount;
+        uint32_t* mGfIds;
+    };
+    mMsgTask->sendMsg(new (nothrow) PauseGeofencesReq(this, count, ids));
+}
+
+void LocationClientApiImpl::resumeGeofences(size_t count, uint32_t* ids) {
+    struct ResumeGeofencesReq : public LocMsg {
+        ResumeGeofencesReq(LocationClientApiImpl* apiImpl, uint32_t count, uint32_t* gfIds) :
+                mApiImpl(apiImpl), mGfCount(count), mGfIds(gfIds) {}
+        virtual ~ResumeGeofencesReq() {}
+        void proc() const {
+            if (!mApiImpl->mHalRegistered) {
+                LOC_LOGe(">>> resumeGeofences - Not registered yet");
+                return;
+            }
+            if (mGfCount > 0) {
+                //Resume geofences
+                size_t msglen = sizeof(LocAPIResumeGeofencesReqMsg) +
+                    sizeof(uint32_t) * (mGfCount - 1);
+                uint8_t* msg = new uint8_t[msglen];
+                if (nullptr == msg) {
+                    return;
+                }
+                LocAPIResumeGeofencesReqMsg* pMsg = (LocAPIResumeGeofencesReqMsg*)msg;
+                pMsg->gfClientIds.count = mGfCount;
+                memcpy(pMsg->gfClientIds.gfIds, mGfIds, sizeof(uint32_t) * mGfCount);
+                pMsg->msgId = E_LOCAPI_RESUME_GEOFENCES_MSG_ID;
+                strlcpy(pMsg->mSocketName, mApiImpl->mSocketName, MAX_SOCKET_PATHNAME_LENGTH);
+                bool rc = mApiImpl->mIpcSender->send(reinterpret_cast<uint8_t*>(msg),
+                        msglen);
+                LOC_LOGd(">>> ResumeGeofencesReq count=%zu", mGfCount);
+                delete[] msg;
+                free(mGfIds);
+            }
+        }
+        LocationClientApiImpl *mApiImpl;
+        uint32_t mGfCount;
+        uint32_t* mGfIds;
+    };
+    mMsgTask->sendMsg(new (nothrow) ResumeGeofencesReq(this, count, ids));
 }
 
 uint32_t* LocationClientApiImpl::gnssUpdateConfig(GnssConfig config) {
@@ -898,7 +1253,7 @@ uint32_t LocationClientApiImpl::gnssDeleteAidingData(GnssAidingData& data) {
                                              const_cast<GnssAidingData&>(mAidingData));
             bool rc = mApiImpl->mIpcSender->send(reinterpret_cast<uint8_t*>(&msg),
                                                  sizeof(msg));
-            LOC_LOGd(">>> DeleteAidingDataReq rc=%d\n", rc);
+            LOC_LOGd(">>> DeleteAidingDataReq rc=%d", rc);
         }
         const LocationClientApiImpl* mApiImpl;
         GnssAidingData mAidingData;
@@ -918,7 +1273,7 @@ void LocationClientApiImpl::updateNetworkAvailability(bool available) {
                                                       mAvailable);
             bool rc = mApiImpl->mIpcSender->send(reinterpret_cast<uint8_t*>(&msg),
                                                  sizeof(msg));
-            LOC_LOGd(">>> UpdateNetworkAvailabilityReq available=%d \n", mAvailable);
+            LOC_LOGd(">>> UpdateNetworkAvailabilityReq available=%d ", mAvailable);
         }
         const LocationClientApiImpl* mApiImpl;
         const bool mAvailable;
@@ -943,7 +1298,7 @@ void LocationClientApiImpl::capabilitesCallback(ELocMsgID msgId, const void* msg
     if (0 != mCallbacksMask) {
         LocAPIUpdateCallbacksReqMsg msg(mSocketName, mCallbacksMask);
         bool rc = mIpcSender->send(reinterpret_cast<uint8_t*>(&msg), sizeof(msg));
-        LOC_LOGd(">>> UpdateCallbacksReq callBacksMask=0x%x rc=%d\n", mCallbacksMask, rc);
+        LOC_LOGd(">>> UpdateCallbacksReq callBacksMask=0x%x rc=%d", mCallbacksMask, rc);
     }
 
     if (0 != mLocationOptions.minInterval) {
@@ -962,7 +1317,7 @@ void LocationClientApiImpl::onListenerReady() {
         void proc() const {
             LocAPIClientRegisterReqMsg msg(mApiImpl->mSocketName);
             bool rc = mApiImpl->mIpcSender->send(reinterpret_cast<uint8_t *>(&msg), sizeof(msg));
-            LOC_LOGd(">>> onListenerReady::ClientRegisterReqMsg rc=%d\n", rc);
+            LOC_LOGd(">>> onListenerReady::ClientRegisterReqMsg rc=%d", rc);
         }
         LocationClientApiImpl *mApiImpl;
     };
@@ -988,7 +1343,7 @@ void LocationClientApiImpl::onReceive(const string& data) {
 
                 case E_LOCAPI_HAL_READY_MSG_ID:
                     {
-                        LOC_LOGd("<<< HAL ready \n");
+                        LOC_LOGd("<<< HAL ready ");
                         mApiImpl->onListenerReady();
                         break;
                     }
@@ -996,8 +1351,11 @@ void LocationClientApiImpl::onReceive(const string& data) {
                 case E_LOCAPI_START_TRACKING_MSG_ID:
                 case E_LOCAPI_UPDATE_TRACKING_OPTIONS_MSG_ID:
                 case E_LOCAPI_STOP_TRACKING_MSG_ID:
+                case E_LOCAPI_START_BATCHING_MSG_ID:
+                case E_LOCAPI_STOP_BATCHING_MSG_ID:
+                case E_LOCAPI_UPDATE_BATCHING_OPTIONS_MSG_ID:
                     {
-                        LOC_LOGd("<<< response message %d\n", pMsg->msgId);
+                        LOC_LOGd("<<< response message, msgId = %d", pMsg->msgId);
                         const LocAPIGenericRespMsg* pRespMsg = (LocAPIGenericRespMsg*)(pMsg);
                         LocationResponse response = parseLocationError(pRespMsg->err);
                         if (mApiImpl->mResponseCb) {
@@ -1005,11 +1363,38 @@ void LocationClientApiImpl::onReceive(const string& data) {
                         }
                         break;
                     }
+                case E_LOCAPI_ADD_GEOFENCES_MSG_ID:
+                case E_LOCAPI_REMOVE_GEOFENCES_MSG_ID:
+                case E_LOCAPI_MODIFY_GEOFENCES_MSG_ID:
+                case E_LOCAPI_PAUSE_GEOFENCES_MSG_ID:
+                case E_LOCAPI_RESUME_GEOFENCES_MSG_ID:
+                    {
+                        LOC_LOGd("<<< collective response message, msgId = %d", pMsg->msgId);
+                        const LocAPICollectiveRespMsg* pRespMsg = (LocAPICollectiveRespMsg*)(pMsg);
+                        std::vector<pair<Geofence, LocationResponse>> responses{};
+                        for (int i=0; i<pRespMsg->collectiveRes.count; ++i) {
+                            responses.push_back(make_pair(
+                                    mApiImpl->mGeofenceMap.at(
+                                    (*(pRespMsg->collectiveRes.resp + i)).clientId),
+                                    parseLocationError(
+                                    (*(pRespMsg->collectiveRes.resp + i)).error)));
+                            if (LOCATION_ERROR_SUCCESS !=
+                                    (*(pRespMsg->collectiveRes.resp + i)).error ||
+                                    E_LOCAPI_REMOVE_GEOFENCES_MSG_ID == pMsg->msgId) {
+                                mApiImpl->eraseGeofenceMap(1, const_cast<uint32_t*>(
+                                        &((*(pRespMsg->collectiveRes.resp + i)).clientId)));
+                            }
+                        }
+                        if (mApiImpl->mCollectiveResCb) {
+                            mApiImpl->mCollectiveResCb(responses);
+                        }
+                        break;
+                    }
 
                 // async indication messages
                 case E_LOCAPI_LOCATION_MSG_ID:
                     {
-                        LOC_LOGd("<<< message = location\n");
+                        LOC_LOGd("<<< message = location");
                         if (mApiImpl->mCallbacksMask & E_LOC_CB_TRACKING_BIT) {
                             const LocAPILocationIndMsg* pLocationIndMsg = (LocAPILocationIndMsg*)(pMsg);
                             Location location = parseLocation(pLocationIndMsg->locationNotification);
@@ -1019,10 +1404,63 @@ void LocationClientApiImpl::onReceive(const string& data) {
                         }
                         break;
                     }
+                case E_LOCAPI_BATCHING_MSG_ID:
+                    {
+                        LOC_LOGd("<<< message = batching");
+                        if (mApiImpl->mCallbacksMask & E_LOC_CB_BATCHING_BIT) {
+                            const LocAPIBatchingIndMsg* pBatchingIndMsg =
+                                    (LocAPIBatchingIndMsg*)(pMsg);
+                            std::vector<Location> locationVector;
+                            BatchingStatus status = BATCHING_STATUS_INACTIVE;
+                            if (BATCHING_STATUS_POSITION_AVAILABE ==
+                                    pBatchingIndMsg->batchNotification.status) {
+                                for (int i=0; i<pBatchingIndMsg->batchNotification.count; ++i) {
+                                    locationVector.push_back(parseLocation(
+                                                *(pBatchingIndMsg->batchNotification.location +
+                                                i)));
+                                }
+                                status = BATCHING_STATUS_ACTIVE;
+                            } else if (BATCHING_STATUS_TRIP_COMPLETED ==
+                                    pBatchingIndMsg->batchNotification.status) {
+                                mApiImpl->stopBatching(0);
+                                status = BATCHING_STATUS_DONE;
+                            } else {
+                                LOC_LOGe("invalid Batching Status!");
+                                break;
+                            }
 
+                            if (mApiImpl->mBatchingCb) {
+                                mApiImpl->mBatchingCb(locationVector, status);
+                            }
+                        }
+                        break;
+                    }
+                case E_LOCAPI_GEOFENCE_BREACH_MSG_ID:
+                    {
+                        LOC_LOGd("<<< message = geofence breach");
+                        if (mApiImpl->mCallbacksMask & E_LOCAPI_GEOFENCE_BREACH_MSG_ID) {
+                            const LocAPIGeofenceBreachIndMsg* pGfBreachIndMsg =
+                                (LocAPIGeofenceBreachIndMsg*)(pMsg);
+                            std::vector<Geofence> geofences;
+                            for (int i=0; i<pGfBreachIndMsg->gfBreachNotification.count;
+                                    ++i) {
+                                geofences.push_back(mApiImpl->mGeofenceMap.at(
+                                        *(pGfBreachIndMsg->gfBreachNotification.id + i)));
+                            }
+                            if (mApiImpl->mGfBreachCb) {
+                                mApiImpl->mGfBreachCb(geofences,
+                                        parseLocation(
+                                                pGfBreachIndMsg->gfBreachNotification.location),
+                                        GeofenceBreachTypeMask(
+                                                pGfBreachIndMsg->gfBreachNotification.type),
+                                        pGfBreachIndMsg->gfBreachNotification.timestamp);
+                            }
+                        }
+                        break;
+                    }
                 case E_LOCAPI_LOCATION_INFO_MSG_ID:
                     {
-                        LOC_LOGd("<<< message = location info\n");
+                        LOC_LOGd("<<< message = location info");
                         if (mApiImpl->mCallbacksMask & E_LOC_CB_GNSS_LOCATION_INFO_BIT) {
                             const LocAPILocationInfoIndMsg* pLocationInfoIndMsg =
                                     (LocAPILocationInfoIndMsg*)(pMsg);
@@ -1037,7 +1475,7 @@ void LocationClientApiImpl::onReceive(const string& data) {
 
                 case E_LOCAPI_SATELLITE_VEHICLE_MSG_ID:
                     {
-                        LOC_LOGd("<<< message = sv\n");
+                        LOC_LOGd("<<< message = sv");
                         if (mApiImpl->mCallbacksMask & E_LOC_CB_GNSS_SV_BIT) {
                             const LocAPISatelliteVehicleIndMsg* pSvIndMsg =
                                     (LocAPISatelliteVehicleIndMsg*)(pMsg);
@@ -1056,7 +1494,7 @@ void LocationClientApiImpl::onReceive(const string& data) {
 
                 case E_LOCAPI_NMEA_MSG_ID:
                     {
-                        LOC_LOGd("<<< message = nmea\n");
+                        LOC_LOGd("<<< message = nmea");
                         if (mApiImpl->mCallbacksMask & E_LOC_CB_GNSS_NMEA_BIT) {
                             const LocAPINmeaIndMsg* pNmeaIndMsg = (LocAPINmeaIndMsg*)(pMsg);
                             uint64_t timestamp = pNmeaIndMsg->gnssNmeaNotification.timestamp;
@@ -1085,7 +1523,7 @@ void LocationClientApiImpl::onReceive(const string& data) {
 
                 default:
                     {
-                        LOC_LOGe("<<< unknown message %d\n", pMsg->msgId);
+                        LOC_LOGe("<<< unknown message %d", pMsg->msgId);
                         break;
                     }
             }
@@ -1099,38 +1537,6 @@ void LocationClientApiImpl::onReceive(const string& data) {
 /******************************************************************************
 LocationClientApiImpl - Not implemented overrides
 ******************************************************************************/
-
-uint32_t LocationClientApiImpl::startBatching(LocationOptions&, BatchingOptions&) {
-    return 0;
-}
-
-void LocationClientApiImpl::stopBatching(uint32_t) {
-}
-
-void LocationClientApiImpl::updateBatchingOptions(
-        uint32_t id, LocationOptions&, BatchingOptions&) {
-}
-
-void LocationClientApiImpl::getBatchedLocations(uint32_t id, size_t count) {
-}
-
-uint32_t* LocationClientApiImpl::addGeofences(size_t count,
-                                              GeofenceOption*, GeofenceInfo*) {
-    return nullptr;
-}
-
-void LocationClientApiImpl::removeGeofences(size_t count, uint32_t* ids) {
-}
-
-void LocationClientApiImpl::modifyGeofences(
-        size_t count, uint32_t* ids, GeofenceOption* options) {
-}
-
-void LocationClientApiImpl::pauseGeofences(size_t count, uint32_t* ids) {
-}
-
-void LocationClientApiImpl::resumeGeofences(size_t count, uint32_t* ids) {
-}
 
 void LocationClientApiImpl::gnssNiResponse(uint32_t id, GnssNiResponse response) {
 }
