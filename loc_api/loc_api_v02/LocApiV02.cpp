@@ -2440,7 +2440,7 @@ void LocApiV02 :: reportPosition (
     memset(&location, 0, sizeof (UlpLocation));
     location.size = sizeof(location);
     location.unpropagatedPosition = unpropagatedPosition;
-    GnssDataNotification dataNotify = {};
+    GnssDataNotification dataNotify = {.size=sizeof(dataNotify), {}};
     int msInWeek = -1;
 
     GpsLocationExtended locationExtended;
@@ -2460,7 +2460,6 @@ void LocApiV02 :: reportPosition (
                  locationExtended.timeStamp.apTimeStamp.tv_sec,
                  locationExtended.timeStamp.apTimeStamp.tv_nsec);
     // Process the position from final and intermediate reports
-    memset(&dataNotify, 0, sizeof(dataNotify));
     msInWeek = (int)location_report_ptr->gpsTime.gpsTimeOfWeekMs;
 
     if (location_report_ptr->jammerIndicatorList_valid) {
