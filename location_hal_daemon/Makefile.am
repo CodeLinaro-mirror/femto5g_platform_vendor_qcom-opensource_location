@@ -4,12 +4,14 @@ AM_CFLAGS = \
     $(LOCCORE_CFLAGS) \
     $(PM_CFLAGS) \
     $(GPSUTILS_CFLAGS) \
+    $(LOCQSOCKET_CFLAGS) \
     -std=c++11
 
 requiredlibs = \
     $(LOCATIONAPI_LIBS) \
     $(PM_LIBS) \
-    $(GPSUTILS_LIBS)
+    $(GPSUTILS_LIBS) \
+    $(LOCQSOCKET_LIBS)
 
 h_sources = \
     LocationApiMsg.h \

@@ -43,6 +43,10 @@ Constants
 
 #define LOCATION_CLIENT_SESSION_ID_INVALID (0)
 
+#define LOCATION_CLIENT_API_QSOCKET_HALDAEMON_SERVICE_ID    (5001)
+#define LOCATION_CLIENT_API_QSOCKET_HALDAEMON_INSTANCE_ID   (1)
+#define LOCATION_CLIENT_API_QSOCKET_CLIENT_SERVICE_ID       (5002)
+
 /******************************************************************************
 List of message IDs supported by Location Remote API
 ******************************************************************************/
@@ -108,9 +112,11 @@ enum EEngineInfoCallbacksMask {
 Common data structure
 ******************************************************************************/
 struct LocAPINmeaSerializedPayload {
-    size_t size;
+    // do not use size_t as data type for size_t is architecture dependent
+    uint32_t size;
     uint64_t timestamp;
-    size_t length;
+    // do not use size_t as data type for size_t is architecture dependent
+    uint32_t length;
     char nmea[1];
 };
 
@@ -126,6 +132,7 @@ struct LocAPIMsgHeader
     inline LocAPIMsgHeader(const char* name, ELocMsgID msgId):
         msgId(msgId),
         msgVersion(LOCATION_REMOTE_API_MSG_VERSION) {
+            memset(mSocketName, 0, MAX_SOCKET_PATHNAME_LENGTH);
             strlcpy(mSocketName, name, MAX_SOCKET_PATHNAME_LENGTH);
         }
 };
