@@ -148,7 +148,7 @@ void LocationApiService::onListenerReady() {
     const std::string fnamebase = SOCKET_TO_LOCATION_CLIENT_BASE;
     while (nullptr != (dp = readdir(dirp))) {
         std::string fname = SOCKET_DIR_TO_CLIENT;
-        fname += dp->d_name;
+        fname += (const char*)(dp->d_name);
         if (-1 == lstat(fname.c_str(), &sbuf)) {
             continue;
         }
