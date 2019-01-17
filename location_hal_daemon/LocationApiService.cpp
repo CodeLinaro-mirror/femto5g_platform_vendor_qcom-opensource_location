@@ -370,7 +370,7 @@ void LocationApiService::onSuspend() {
 
     for (auto client : mClients) {
         // stop session if running
-        if (client.second) {
+        if (client.second && client.second->mTracking) {
             client.second->stopTracking();
             client.second->mPendingMessages.push(E_LOCAPI_STOP_TRACKING_MSG_ID);
             LOC_LOGi("--> suspended");
@@ -400,11 +400,8 @@ void LocationApiService::onResume() {
 }
 
 void LocationApiService::onShutdown() {
-
-    std::lock_guard<std::mutex> lock(mMutex);
-    LOC_LOGd("--< onShutdown");
-    // stop session if running
     onSuspend();
+    LOC_LOGd("--< onShutdown");
 }
 
 /******************************************************************************
