@@ -5124,8 +5124,8 @@ locClientStatusEnumType LocApiV02::locSyncSendReq(uint32_t req_id,
     if (eLOC_CLIENT_FAILURE_ENGINE_BUSY == status ||
             (eLOC_CLIENT_SUCCESS == status && nullptr != ind_payload_ptr &&
              eLOC_CLIENT_FAILURE_ENGINE_BUSY == *((locClientStatusEnumType*)ind_payload_ptr))) {
-        if (mResenders.empty()) {
-            registerEventMask(mQmiMask | QMI_LOC_EVENT_MASK_ENGINE_STATE_V02);
+        if (mResenders.empty() && ((mQmiMask & QMI_LOC_EVENT_MASK_ENGINE_STATE_V02) == 0)) {
+            locClientRegisterEventMask(clientHandle, mQmiMask | QMI_LOC_EVENT_MASK_ENGINE_STATE_V02);
         }
         LOC_LOGd("Engine busy, cache req: %d", req_id);
         uint32_t reqLen = 0;
