@@ -82,11 +82,11 @@ bool LocQsocket::startListeningBlocking(const std::string& name) {
     // should not exceed 65 bytes
     mService = atoi(name.c_str());
     const char* instance_ptr = strchr(name.c_str(), '.');
-    if (nullptr != instance_ptr) {
-        instance_ptr++;
+    if (nullptr == instance_ptr) {
+        return false;
     }
 
-    mInstance = atoi(instance_ptr);
+    mInstance = atoi(++instance_ptr);
 
     // bind
     memset(&mDestAddr, 0, sizeof(mDestAddr));
