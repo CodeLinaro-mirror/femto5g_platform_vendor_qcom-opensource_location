@@ -846,12 +846,15 @@ uint32_t LocationClientApiImpl::startTracking(LocationOptions& option) {
         void proc() const {
             // check if option is updated
             bool isOptionUpdated = false;
+
             if ((mApiImpl->mLocationOptions.minInterval != mOption.minInterval) ||
                 (mApiImpl->mLocationOptions.minDistance != mOption.minDistance)) {
                 isOptionUpdated = true;
             }
             mApiImpl->mLocationOptions = mOption;
             if (!mApiImpl->mHalRegistered) {
+                // need to set session id so when hal is ready, the session can be resumed
+                mApiImpl->mSessionId = mApiImpl->mClientId;
                 LOC_LOGe(">>> startTracking - Not registered yet");
                 return;
             }
@@ -896,10 +899,12 @@ void LocationClientApiImpl::stopTracking(uint32_t) {
                 if (mApiImpl->mLocationSysInfoCb) {
                     mApiImpl->mCallbacksMask |= E_LOC_CB_SYSTEM_INFO_BIT;
                 }
-                LocAPIStopTrackingReqMsg msg(mApiImpl->mSocketName);
-                bool rc = mApiImpl->mIpcSender->send(reinterpret_cast<uint8_t*>(&msg),
-                                                    sizeof(msg));
-                LOC_LOGd(">>> StopTrackingReq rc=%d\n", rc);
+                if (mApiImpl->mHalRegistered) {
+                    LocAPIStopTrackingReqMsg msg(mApiImpl->mSocketName);
+                    bool rc = mApiImpl->mIpcSender->send(reinterpret_cast<uint8_t*>(&msg),
+                                                        sizeof(msg));
+                    LOC_LOGd(">>> StopTrackingReq rc=%d\n", rc);
+                }
             }
             mApiImpl->mSessionId = LOCATION_CLIENT_SESSION_ID_INVALID;
         }
@@ -1111,7 +1116,11 @@ void LocationClientApiImpl::capabilitesCallback(ELocMsgID msgId, const void* msg
         LOC_LOGd(">>> UpdateCallbacksReq callBacksMask=0x%x rc=%d\n", mCallbacksMask, rc);
     }
 
-    if (0 != mLocationOptions.minInterval) {
+    LOC_LOGd(">>> session id %d", mSessionId);
+    if (mSessionId != LOCATION_CLIENT_SESSION_ID_INVALID)  {
+        // force mSessionId to invalid so startTracking will start the sesssion
+        // if hal deamon crashes and restarts in the middle of a session
+        mSessionId = LOCATION_CLIENT_SESSION_ID_INVALID;
         (void)startTracking(mLocationOptions);
     }
 }
@@ -1171,6 +1180,14 @@ void LocationClientApiImpl::onReceive(const string& data) {
                 case E_LOCAPI_HAL_READY_MSG_ID:
                     {
                         LOC_LOGd("<<< HAL ready \n");
+                        if (sizeof(LocAPIHalReadyIndMsg) != mMsgData.length()) {
+                            LOC_LOGe("invalid message");
+                            break;
+                        }
+                        // location hal deamon has restarted, need to set this
+                        // flag to false to prevent messages to be sent to hal
+                        // before registeration completes
+                        mApiImpl->mHalRegistered = false;
                         mApiImpl->onListenerReady();
                         break;
                     }
