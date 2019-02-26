@@ -33,6 +33,7 @@
 #include <SystemStatus.h>
 #include <LocationApiMsg.h>
 #include <gps_extended_c.h>
+#include <loc_misc_utils.h>
 
 #include <PowerEvtHandler.h>
 #include <LocHalDaemonIPCReceiver.h>
@@ -42,6 +43,7 @@
 #include <location_interface.h>
 
 typedef void* (getLocationInterface)();
+typedef void* (getDreFixInjectorInterface)();
 
 /******************************************************************************
 LocationApiService - static members
@@ -49,17 +51,62 @@ LocationApiService - static members
 LocationApiService* LocationApiService::mInstance = nullptr;
 std::mutex LocationApiService::mMutex;
 
+static uint32_t gAutoStartGnss = 0;
+static uint32_t gGnssSessionTbfMs = 100;
+static uint32_t gEnableDreFixInjector = 0;
+
+static const loc_param_s_type gConfigTable[] =
+{
+    {"AUTO_START_GNSS", &gAutoStartGnss, NULL, 'n'},
+    {"GNSS_SESSION_TBF_MS", &gGnssSessionTbfMs, NULL, 'n'},
+    {"ENABLE_DRE_FIX_INJECTOR", &gEnableDreFixInjector, NULL, 'n'}
+};
+
+inline void logDlError(const char* failedCall) {
+    const char * err = dlerror();
+    LOC_LOGe("%s error: %s", failedCall, (nullptr == err) ? "unknown" : err);
+}
+
+static void* dlGetSymFromLib(void*& libHandle, const char* libName, const char* symName)
+{
+    void* sym = nullptr;
+    if ((nullptr != libHandle || nullptr != libName) && nullptr != symName) {
+        if (nullptr == libHandle) {
+            libHandle = dlopen(libName, RTLD_NOW);
+            if (nullptr == libHandle) {
+                logDlError("dlopen");
+            }
+        }
+        // NOT else, as libHandle gets assigned 5 line above
+        if (nullptr != libHandle) {
+            sym = dlsym(libHandle, symName);
+            if (nullptr == sym) {
+                logDlError("dlsym");
+            }
+        }
+    } else {
+        LOC_LOGe("Either libHandle (%p) or libName (%p) must not be null; "
+                 "symName (%p) can not be null.", libHandle, libName, symName);
+    }
+
+    return sym;
+}
+
 /******************************************************************************
 LocationApiService - constructors
 ******************************************************************************/
-LocationApiService::LocationApiService(uint32_t autostart, uint32_t sessiontbfms) :
+LocationApiService::LocationApiService() :
 
     mLocationControlId(0),
-    mAutoStartGnss(autostart),
+    mAutoStartGnss(false),
     mPowerEventObserver(nullptr) {
 
+    // read configuration file
+    UTIL_READ_CONF(LOC_PATH_GPS_CONF, gConfigTable);
+    mAutoStartGnss = gAutoStartGnss;
+
     LOC_LOGd("AutoStartGnss=%u", mAutoStartGnss);
-    LOC_LOGd("GnssSessionTbfMs=%u", sessiontbfms);
+    LOC_LOGd("GnssSessionTbfMs=%u", gGnssSessionTbfMs);
 
     // create Location control API
     mControlCallabcks.size = sizeof(mControlCallabcks);
@@ -95,6 +142,22 @@ LocationApiService::LocationApiService(uint32_t autostart, uint32_t sessiontbfms
         return;
     }
 
+    // load dre fix receiver
+    if (1 == gEnableDreFixInjector) {
+        void * tempPtr = nullptr;
+        getDreFixInjectorInterface* getter = (getDreFixInjectorInterface*)
+                dlGetSymFromLib(tempPtr, "libdre_fix_injector.so", "getInterface");
+
+        DreFixInjectorInterface* dreFixInjectorInterface =
+            (DreFixInjectorInterface*)(*getter)();
+
+        GnssInterface* gnssInterface = getGnssInterface();
+        if (dreFixInjectorInterface && gnssInterface) {
+            bool inited = dreFixInjectorInterface->initialize(gnssInterface);
+            LOC_LOGd("--> DRE fix injector inited successfully: %d", inited);
+        }
+    }
+
     // create a default client if enabled by config
     if (mAutoStartGnss) {
         LOC_LOGd("--> Starting a default client...");
@@ -104,7 +167,7 @@ LocationApiService::LocationApiService(uint32_t autostart, uint32_t sessiontbfms
         pClient->updateSubscription(
                 E_LOC_CB_GNSS_LOCATION_INFO_BIT | E_LOC_CB_GNSS_SV_BIT);
 
-        pClient->startTracking(0, sessiontbfms);
+        pClient->startTracking(0, gGnssSessionTbfMs);
         pClient->mTracking = true;
         pClient->mPendingMessages.push(E_LOCAPI_START_TRACKING_MSG_ID);
     }
@@ -452,4 +515,3 @@ GnssInterface* LocationApiService::getGnssInterface() {
     }
     return gnssInterface;
 }
-
