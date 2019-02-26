@@ -38,6 +38,7 @@
 #include <LocIpc.h>
 #include <PowerEvtHandler.h>
 #include <location_interface.h>
+#include <DreFixInjectorInterface.h>
 #include <LocationAPI.h>
 #include <LocationApiMsg.h>
 
@@ -62,9 +63,9 @@ public:
     LocationApiService(const LocationApiService&) = delete;
     LocationApiService& operator = (const LocationApiService&) = delete;
 
-    static LocationApiService* getInstance(uint32_t autostart, uint32_t sessiontbfms) {
+    static LocationApiService* getInstance() {
         if (nullptr == mInstance) {
-            mInstance = new LocationApiService(autostart, sessiontbfms);
+            mInstance = new LocationApiService();
         }
         return mInstance;
     }
@@ -119,7 +120,7 @@ private:
     void onControlCollectiveResponseCallback(size_t count, LocationError *errs, uint32_t *ids);
     void onGnssEnergyConsumedCb(uint64_t totalEnergyConsumedSinceFirstBoot);
 
-    LocationApiService(uint32_t autostart, uint32_t sessiontbfms);
+    LocationApiService();
     virtual ~LocationApiService();
 
     // private utilities
@@ -139,6 +140,7 @@ private:
     }
 
     GnssInterface* getGnssInterface();
+    DreFixInjectorInterface* getDreFixInjectorInf();
 
     // power event observer
     PowerEvtHandler* mPowerEventObserver;
@@ -161,7 +163,7 @@ private:
     LocationControlAPI *mLocationControlApi;
 
     // Configration
-    const uint32_t mAutoStartGnss;
+    uint32_t mAutoStartGnss;
 };
 
 #endif //LOCATIONAPISERVICE_H

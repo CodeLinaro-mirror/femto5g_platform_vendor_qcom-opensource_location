@@ -43,20 +43,8 @@
 
 #define HAL_DAEMON_VERSION "1.1.0"
 
-static uint32_t gAutoStartGnss = 0;
-static uint32_t gGnssSessionTbfMs = 100;
-
-static const loc_param_s_type gConfigTable[] =
-{
-    {"AUTO_START_GNSS", &gAutoStartGnss, NULL, 'n'},
-    {"GNSS_SESSION_TBF_MS", &gGnssSessionTbfMs, NULL, 'n'}
-};
-
 int main(int argc, char *argv[])
 {
-    // read configuration file
-    UTIL_READ_CONF(LOC_PATH_GPS_CONF, gConfigTable);
-
     LOC_LOGi("location hal daemon - ver %s", HAL_DAEMON_VERSION);
 
     // wait for parent direcoty to be created...
@@ -101,7 +89,7 @@ int main(int argc, char *argv[])
         }
 
         // groups
-        char groupNames[LOC_MAX_PARAM_NAME] = "gps diag powermgr locclient";
+        char groupNames[LOC_MAX_PARAM_NAME] = "gps diag powermgr locclient inet";
         gid_t groupIds[LOC_PROCESS_MAX_NUM_GROUPS] = {};
         char *splitGrpString[LOC_PROCESS_MAX_NUM_GROUPS];
         int numGrps = loc_util_split_string(groupNames, splitGrpString,
@@ -145,7 +133,7 @@ int main(int argc, char *argv[])
     chdir("/");
 
     // start listening for client events - will not return
-    if (!LocationApiService::getInstance(gAutoStartGnss, gGnssSessionTbfMs)) {
+    if (!LocationApiService::getInstance()) {
         LOC_LOGd("Failed to start LocationApiService.");
     }
 
