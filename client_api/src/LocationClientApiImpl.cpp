@@ -851,8 +851,9 @@ uint32_t LocationClientApiImpl::startTracking(LocationOptions& option) {
                 (mApiImpl->mLocationOptions.minDistance != mOption.minDistance)) {
                 isOptionUpdated = true;
             }
-            mApiImpl->mLocationOptions = mOption;
+
             if (!mApiImpl->mHalRegistered) {
+                mApiImpl->mLocationOptions = mOption;
                 // need to set session id so when hal is ready, the session can be resumed
                 mApiImpl->mSessionId = mApiImpl->mClientId;
                 LOC_LOGe(">>> startTracking - Not registered yet");
@@ -860,18 +861,25 @@ uint32_t LocationClientApiImpl::startTracking(LocationOptions& option) {
             }
 
             if (LOCATION_CLIENT_SESSION_ID_INVALID == mApiImpl->mSessionId) {
+                mApiImpl->mLocationOptions = mOption;
                 //start a new tracking session
                 mApiImpl->mSessionId = mApiImpl->mClientId;
-                LocAPIStartTrackingReqMsg msg(mApiImpl->mSocketName,
-                                              mApiImpl->mLocationOptions.minInterval,
-                                              mApiImpl->mLocationOptions.minDistance);
-                bool rc = mApiImpl->mIpcSender->send(reinterpret_cast<uint8_t*>(&msg),
-                                                     sizeof(msg));
-                LOC_LOGd(">>> StartTrackingReq Interval=%d Distance=%d\n",
-                         mApiImpl->mLocationOptions.minInterval,
-                         mApiImpl->mLocationOptions.minDistance);
+
+                if ((0 != mApiImpl->mLocationOptions.minInterval) ||
+                    (0 != mApiImpl->mLocationOptions.minDistance)) {
+
+                    LocAPIStartTrackingReqMsg msg(mApiImpl->mSocketName,
+                                                  mApiImpl->mLocationOptions.minInterval,
+                                                  mApiImpl->mLocationOptions.minDistance);
+                    bool rc = mApiImpl->mIpcSender->send(reinterpret_cast<uint8_t*>(&msg),
+                                                         sizeof(msg));
+                    LOC_LOGd(">>> StartTrackingReq Interval=%d Distance=%d\n",
+                             mApiImpl->mLocationOptions.minInterval,
+                             mApiImpl->mLocationOptions.minDistance);
+                }
             } else if (isOptionUpdated) {
-                //update a tracking session
+                //update a tracking session, mApiImpl->mLocationOptions
+                //will be updated in updateTrackingOptionsSync
                 mApiImpl->updateTrackingOptionsSync(
                         mApiImpl, const_cast<LocationOptions&>(mOption));
             } else {
@@ -892,18 +900,21 @@ void LocationClientApiImpl::stopTracking(uint32_t) {
         virtual ~StopTrackingReq() {}
         void proc() const {
             if (mApiImpl->mSessionId == mApiImpl->mClientId) {
+                if (mApiImpl->mHalRegistered &&
+                        ((mApiImpl->mLocationOptions.minInterval != 0) ||
+                         (mApiImpl->mLocationOptions.minDistance != 0))) {
+                    LocAPIStopTrackingReqMsg msg(mApiImpl->mSocketName);
+                    bool rc = mApiImpl->mIpcSender->send(reinterpret_cast<uint8_t*>(&msg),
+                                                        sizeof(msg));
+                    LOC_LOGd(">>> StopTrackingReq rc=%d\n", rc);
+                }
+
                 mApiImpl->mLocationOptions.minInterval = 0;
                 mApiImpl->mLocationOptions.minDistance = 0;
                 mApiImpl->mCallbacksMask = 0;
                 // handle callback that are not tied with fix session
                 if (mApiImpl->mLocationSysInfoCb) {
                     mApiImpl->mCallbacksMask |= E_LOC_CB_SYSTEM_INFO_BIT;
-                }
-                if (mApiImpl->mHalRegistered) {
-                    LocAPIStopTrackingReqMsg msg(mApiImpl->mSocketName);
-                    bool rc = mApiImpl->mIpcSender->send(reinterpret_cast<uint8_t*>(&msg),
-                                                        sizeof(msg));
-                    LOC_LOGd(">>> StopTrackingReq rc=%d\n", rc);
                 }
             }
             mApiImpl->mSessionId = LOCATION_CLIENT_SESSION_ID_INVALID;
@@ -915,12 +926,43 @@ void LocationClientApiImpl::stopTracking(uint32_t) {
 
 void LocationClientApiImpl::updateTrackingOptionsSync(
         LocationClientApiImpl* pImpl, LocationOptions& option) {
+
+    LOC_LOGd(">>> updateTrackingOptionsSync,sessionId=%d, "
+             "new Interval=%d Distance=%d, current Interval=%d Distance=%d",
+             pImpl->mSessionId, option.minInterval,
+             option.minDistance, pImpl->mLocationOptions.minInterval,
+             pImpl->mLocationOptions.minDistance);
+
+    bool rc = true;
+    // update option to passive listening where previous option
+    // is not passive listening, in this case, we need to stop the session
+    if (((option.minInterval == 0) && (option.minDistance == 0)) &&
+            ((pImpl->mLocationOptions.minInterval != 0) ||
+             (pImpl->mLocationOptions.minDistance != 0))) {
+        LocAPIStopTrackingReqMsg msg(pImpl->mSocketName);
+        rc = pImpl->mIpcSender->send(reinterpret_cast<uint8_t*>(&msg),
+                                        sizeof(msg));
+    } else if (((option.minInterval != 0) || (option.minDistance != 0)) &&
+               ((pImpl->mLocationOptions.minInterval == 0) &&
+                (pImpl->mLocationOptions.minDistance == 0))) {
+        // update option from passive listening to none passive listening,
+        // we need to start the session
+        LocAPIStartTrackingReqMsg msg(pImpl->mSocketName,
+                                      option.minInterval,
+                                      option.minDistance);
+        rc = pImpl->mIpcSender->send(reinterpret_cast<uint8_t*>(&msg),
+                                        sizeof(msg));
+        LOC_LOGd(">>> start tracking Interval=%d Distance=%d",
+                 option.minInterval, option.minDistance);
+    } else {
         LocAPIUpdateTrackingOptionsReqMsg
                 msg(pImpl->mSocketName, option.minInterval, option.minDistance);
-        bool rc = pImpl->mIpcSender->send(reinterpret_cast<uint8_t*>(&msg), sizeof(msg));
+        rc = pImpl->mIpcSender->send(reinterpret_cast<uint8_t*>(&msg), sizeof(msg));
         LOC_LOGd(">>> updateTrackingOptionsSync Interval=%d Distance=%d",
                 option.minInterval, option.minDistance);
-        pImpl->mLocationOptions = option;
+    }
+
+    pImpl->mLocationOptions = option;
 }
 
 void LocationClientApiImpl::updateTrackingOptions(uint32_t, LocationOptions& option) {
@@ -1209,7 +1251,8 @@ void LocationClientApiImpl::onReceive(const string& data) {
                 case E_LOCAPI_LOCATION_MSG_ID:
                     {
                         LOC_LOGd("<<< message = location\n");
-                        if (mApiImpl->mCallbacksMask & E_LOC_CB_TRACKING_BIT) {
+                        if ((mApiImpl->mSessionId != LOCATION_CLIENT_SESSION_ID_INVALID) &&
+                                    (mApiImpl->mCallbacksMask & E_LOC_CB_TRACKING_BIT)) {
                             const LocAPILocationIndMsg* pLocationIndMsg = (LocAPILocationIndMsg*)(pMsg);
                             Location location = parseLocation(pLocationIndMsg->locationNotification);
                             if (mApiImpl->mLocationCb) {
@@ -1222,7 +1265,9 @@ void LocationClientApiImpl::onReceive(const string& data) {
                 case E_LOCAPI_LOCATION_INFO_MSG_ID:
                     {
                         LOC_LOGd("<<< message = location info\n");
-                        if (mApiImpl->mCallbacksMask & E_LOC_CB_GNSS_LOCATION_INFO_BIT) {
+
+                        if ((mApiImpl->mSessionId != LOCATION_CLIENT_SESSION_ID_INVALID) &&
+                                    (mApiImpl->mCallbacksMask & E_LOC_CB_GNSS_LOCATION_INFO_BIT)) {
                             const LocAPILocationInfoIndMsg* pLocationInfoIndMsg =
                                     (LocAPILocationInfoIndMsg*)(pMsg);
                             GnssLocation gnssLocation =
@@ -1255,8 +1300,10 @@ void LocationClientApiImpl::onReceive(const string& data) {
 
                 case E_LOCAPI_NMEA_MSG_ID:
                     {
-                        if ((mApiImpl->mCallbacksMask & E_LOC_CB_GNSS_NMEA_BIT) &&
-                                (mApiImpl->mGnssReportCbs.gnssNmeaCallback)) {
+                        if ((mApiImpl->mSessionId != LOCATION_CLIENT_SESSION_ID_INVALID) &&
+                                    ((mApiImpl->mCallbacksMask & E_LOC_CB_GNSS_NMEA_BIT) &&
+                                     (mApiImpl->mGnssReportCbs.gnssNmeaCallback))) {
+                            // nmea is variable length, can not be checked
                             const LocAPINmeaIndMsg* pNmeaIndMsg = (LocAPINmeaIndMsg*)(pMsg);
                             uint64_t timestamp = pNmeaIndMsg->gnssNmeaNotification.timestamp;
                             std::string nmea(pNmeaIndMsg->gnssNmeaNotification.nmea,
@@ -1275,7 +1322,8 @@ void LocationClientApiImpl::onReceive(const string& data) {
                 case E_LOCAPI_DATA_MSG_ID:
                     {
                         LOC_LOGd("<<< message = data");
-                        if (mApiImpl->mCallbacksMask & E_LOC_CB_GNSS_DATA_BIT) {
+                        if ((mApiImpl->mSessionId != LOCATION_CLIENT_SESSION_ID_INVALID) &&
+                                    (mApiImpl->mCallbacksMask & E_LOC_CB_GNSS_DATA_BIT)) {
                             const LocAPIDataIndMsg* pDataIndMsg = (LocAPIDataIndMsg*)(pMsg);
                             GnssData gnssData =
                                 parseGnssData(pDataIndMsg->gnssDataNotification);
