@@ -2527,6 +2527,10 @@ locClientEventMaskType LocApiV02 :: convertMask(
   if (mask & LOC_API_ADAPTER_BIT_EVENT_REPORT_INFO)
       eventMask |= QMI_LOC_EVENT_MASK_GNSS_EVENT_REPORT_V02;
 
+  if (mask & LOC_API_ADAPTER_BIT_GNSS_NHZ_MEASUREMENT) {
+      eventMask |= QMI_LOC_EVENT_MASK_GNSS_NHZ_MEASUREMENT_REPORT_V02;
+  }
+
   return eventMask;
 }
 
@@ -3374,10 +3378,11 @@ void  LocApiV02 :: reportSvMeasurement (
         return;
     }
 
-    LOC_LOGi("[SvMeas] nHz (%d, %d), SeqNum: %d, MaxMsgNum: %d, SvSystem: %d SignalType: %" PRIu64 " MeasValid: %d, #of SV: %d\n",
+    LOC_LOGi("[SvMeas] nHz (%d, %d), SeqNum: %d, MaxMsgNum: %d, SvSystem: %d SignalType: %" PRIu64 ", refFCnt: %d, MeasValid: %d, #of SV: %d\n",
              gnss_raw_measurement_ptr->nHzMeasurement_valid, gnss_raw_measurement_ptr->nHzMeasurement,
              gnss_raw_measurement_ptr->seqNum, gnss_raw_measurement_ptr->maxMessageNum,
              gnss_raw_measurement_ptr->system, gnss_raw_measurement_ptr->gnssSignalType,
+             gnss_raw_measurement_ptr->systemTimeExt.refFCount,
              gnss_raw_measurement_ptr->svMeasurement_valid,
              gnss_raw_measurement_ptr->svMeasurement_len);
 
@@ -3388,12 +3393,12 @@ void  LocApiV02 :: reportSvMeasurement (
 
     if (!mSvMeasurementSet) {
         mSvMeasurementSet = (GnssSvMeasurementSet*) malloc(sizeof(GnssSvMeasurementSet));
-        memset(mSvMeasurementSet, 0, sizeof(GnssSvMeasurementSet));
-        mSvMeasurementSet->size = sizeof(GnssSvMeasurementSet);
         if (!mSvMeasurementSet) {
-            LOC_LOGe ("malloc failed");
+            LOC_LOGe ("Malloc failed to allocate heap memory");
             return;
         }
+        memset(mSvMeasurementSet, 0, sizeof(GnssSvMeasurementSet));
+        mSvMeasurementSet->size = sizeof(GnssSvMeasurementSet);
     }
 
     // in case the measurement with seqNum of 1 is dropped, we will use ref count
@@ -3410,7 +3415,6 @@ void  LocApiV02 :: reportSvMeasurement (
                     gnss_raw_measurement_ptr->nHzMeasurement) {
             mSvMeasurementSet->isNhz = true;
         }
-        LOC_LOGV("size %d, isnHz %d", mSvMeasurementSet->size, mSvMeasurementSet->isNhz);
     }
 
     Gnss_LocSvSystemEnumType locSvSystemType =
@@ -3752,7 +3756,9 @@ void  LocApiV02 :: reportSvMeasurement (
             LOC_LOGE("%s:%d Error in clock_gettime() ",__func__, __LINE__);
         }
 
-        LOC_LOGv("report %d sv in sv meas", mSvMeasurementSet->svMeasCount);
+        LOC_LOGd("refFCnt %d, report %d sv in sv meas",
+                 gnss_raw_measurement_ptr->systemTimeExt.refFCount,
+                 mSvMeasurementSet->svMeasCount);
         LocApiBase::reportSvMeasurement(*mSvMeasurementSet);
         memset(mSvMeasurementSet, 0, sizeof(GnssSvMeasurementSet));
     }
@@ -4911,7 +4917,8 @@ void LocApiV02 :: reportGnssMeasurementData(
                  measurementsNotify.count);
     }
     // the GPS clock time reading
-    if (eQMI_LOC_SV_SYSTEM_GPS_V02 == gnss_measurement_report_ptr.system) {
+    if (eQMI_LOC_SV_SYSTEM_GPS_V02 == gnss_measurement_report_ptr.system &&
+        false == bGPSreceived) {
         bGPSreceived = true;
         msInWeek = convertGnssClock(measurementsNotify.clock,
                                     gnss_measurement_report_ptr);
