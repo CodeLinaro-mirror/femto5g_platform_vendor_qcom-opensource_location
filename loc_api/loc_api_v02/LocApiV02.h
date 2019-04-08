@@ -195,7 +195,10 @@ private:
   bool mMeasurementsStarted;
   std::vector<Resender> mResenders;
   bool mMasterRegisterNotSupported;
-  GnssSvMeasurementSet*  mSvMeasurementSet;
+  GnssMeasurements*  mGnssMeasurements;
+  bool mGPSreceived;
+  int  mMsInWeek;
+  bool mAgcIsPresent;
   bool mIsFirstFinalFixReported;
   bool mIsFirstStartFixReq;
   uint64_t mHlosQtimer1, mHlosQtimer2;
@@ -233,9 +236,9 @@ private:
       uint8_t gloFrequency);
 
   /*convert GnssMeasurement type from QMI LOC to loc eng format*/
-  bool convertGnssMeasurements (GnssMeasurementsData& measurementData,
+  bool convertGnssMeasurements (
       const qmiLocEventGnssSvMeasInfoIndMsgT_v02& gnss_measurement_report_ptr,
-      int index);
+      int index, bool isExt, bool validDgnssSvMeas);
 
   /* Convert APN Type mask */
   static qmiLocApnTypeMaskT_v02 convertLocApnTypeMask(LocApnTypeMask mask);
@@ -248,6 +251,9 @@ private:
 
   /* Convert GnssPowerMode to QMI Loc Power Mode Enum */
   static qmiLocPowerModeEnumT_v02 convertPowerMode(GnssPowerMode powerMode);
+
+  void convertGnssMeasurementsHeader(const Gnss_LocSvSystemEnumType locSvSystemType,
+      const qmiLocEventGnssSvMeasInfoIndMsgT_v02& gnss_measurement_info);
 
   /*convert LocGnssClock type from QMI LOC to loc eng format*/
   int convertGnssClock (GnssMeasurementsClock& clock,
@@ -276,25 +282,6 @@ private:
   /* convert satellite report to loc eng format and  send the converted
      report to loc eng */
   void reportSv (const qmiLocEventGnssSvInfoIndMsgT_v02 *gnss_report_ptr);
-
-  void reportSvMeasurement (
-          const qmiLocEventGnssSvMeasInfoIndMsgT_v02 *gnss_raw_measurement_ptr);
-
-  void reportSvMeasurementInternal();
-
-  void reportSvMeasurementSvLoop(
-          const qmiLocEventGnssSvMeasInfoIndMsgT_v02 *gnss_sv_measurement_ptr,
-          bool processExtSvMeas,
-          bool validCarrierPhaseUnc,
-          bool validDgnssSvMeas);
-
-  inline void resetSvMeasurementReport(){
-      memset(mSvMeasurementSet, 0, sizeof(GnssSvMeasurementSet));
-      mSvMeasurementSet->size = sizeof(GnssSvMeasurementSet);
-      mSvMeasurementSet->svMeasSetHeader.size = sizeof(GnssSvMeasurementHeader);
-  }
-
-  void setGnssBiases(GnssMeasurementsNotification& mGnssMeasurements);
 
   void invalidateCarrierPhaseInfo(
       qmiLocEventGnssSvMeasInfoIndMsgT_v02& gnss_measurement_report_ptr);
@@ -356,6 +343,24 @@ private:
   void reportGnssMeasurementData(
     const qmiLocEventGnssSvMeasInfoIndMsgT_v02& gnss_measurement_report_ptr);
 
+  void reportSvMeasurementInternal();
+
+  inline void resetSvMeasurementReport() {
+      if (mGnssMeasurements) {
+          memset(mGnssMeasurements, 0, sizeof(GnssMeasurements));
+          mGnssMeasurements->size = sizeof(GnssMeasurements);
+          mGnssMeasurements->gnssSvMeasurementSet.size = sizeof(GnssSvMeasurementSet);
+          mGnssMeasurements->gnssSvMeasurementSet.isNhz = false;
+          mGnssMeasurements->gnssSvMeasurementSet.svMeasSetHeader.size =
+               sizeof(GnssSvMeasurementHeader);
+      }
+      memset(&mTimeBiases, 0, sizeof(mTimeBiases));
+      mPreferredSignalTypeReceived = false;
+      mMsInWeek = -1;
+      mAgcIsPresent = false;
+  }
+
+  void setGnssBiases();
   /* convert and report ODCPI request */
   void requestOdcpi(
     const qmiLocEventWifiReqIndMsgT_v02& odcpiReq);
