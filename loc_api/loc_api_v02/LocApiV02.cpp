@@ -297,10 +297,9 @@ LocApiV02 :: open(LOC_API_ADAPTER_EVENT_MASK_T mask)
 
     // it is important to cap the mask here, because not all LocApi's
     // can enable the same bits, e.g. foreground and bckground.
-    status = locClientOpen(adjustMaskForNoSession(qmiMask), &globalCallbacks,
-                           &clientHandle, (void *)this);
     mMask = newMask;
-    mQmiMask = qmiMask;
+    mQmiMask = adjustMaskIfNoSession(qmiMask);
+    status = locClientOpen(mQmiMask, &globalCallbacks, &clientHandle, (void *)this);
     if (eLOC_CLIENT_SUCCESS != status ||
         clientHandle == LOC_CLIENT_INVALID_HANDLE_VALUE )
     {
@@ -448,15 +447,7 @@ LocApiV02 :: open(LOC_API_ADAPTER_EVENT_MASK_T mask)
   } else if (newMask != mMask) {
     // it is important to cap the mask here, because not all LocApi's
     // can enable the same bits, e.g. foreground and background.
-    if (!registerEventMask(qmiMask)) {
-      // we do not update mMask here, because it did not change
-      // as the mask update has failed.
-      rtv = LOC_API_ADAPTER_ERR_FAILURE;
-    }
-    else {
-        mMask = newMask;
-        mQmiMask = qmiMask;
-    }
+    registerEventMask(newMask);
   }
 
   if ((qmiMask & QMI_LOC_EVENT_MASK_GNSS_MEASUREMENT_REPORT_V02) ||
@@ -469,29 +460,31 @@ LocApiV02 :: open(LOC_API_ADAPTER_EVENT_MASK_T mask)
   return rtv;
 }
 
-bool LocApiV02 :: registerEventMask(locClientEventMaskType qmiMask)
+void LocApiV02 :: registerEventMask(LOC_API_ADAPTER_EVENT_MASK_T adapterMask)
 {
-    // if NOT in session and NOT the Background Loc Client, adjust the mask
-    if (!mInSession && (LocDualContext::mBgExclMask & mMask)) {
-        qmiMask = adjustMaskForNoSession(qmiMask);
+    locClientEventMaskType qmiMask = adjustMaskIfNoSession(convertMask(adapterMask));
+    if ((qmiMask != mQmiMask) && (locClientRegisterEventMask(clientHandle, qmiMask))) {
+        mQmiMask = qmiMask;
     }
-    LOC_LOGd("mQmiMask=0x%" PRIx64 " qmiMask=0x%" PRIx64 "", mQmiMask, qmiMask);
-    return locClientRegisterEventMask(clientHandle, qmiMask);
+    LOC_LOGd("registerEventMask:  mMask: %" PRIu64 " mQmiMask=%" PRIu64 " qmiMask=%" PRIu64, adapterMask, mQmiMask, qmiMask);
+    mMask = adapterMask;
 }
 
-locClientEventMaskType LocApiV02 :: adjustMaskForNoSession(locClientEventMaskType qmiMask)
+locClientEventMaskType LocApiV02 :: adjustMaskIfNoSession(locClientEventMaskType qmiMask)
 {
-    LOC_LOGd("before qmiMask=0x%" PRIx64 "", qmiMask);
-    locClientEventMaskType clearMask = QMI_LOC_EVENT_MASK_POSITION_REPORT_V02 |
-                                       QMI_LOC_EVENT_MASK_UNPROPAGATED_POSITION_REPORT_V02 |
-                                       QMI_LOC_EVENT_MASK_GNSS_SV_INFO_V02 |
-                                       QMI_LOC_EVENT_MASK_NMEA_V02 |
-                                       QMI_LOC_EVENT_MASK_ENGINE_STATE_V02 |
-                                       QMI_LOC_EVENT_MASK_GNSS_MEASUREMENT_REPORT_V02 |
-                                       QMI_LOC_EVENT_MASK_GNSS_SV_POLYNOMIAL_REPORT_V02;
+    locClientEventMaskType oldQmiMask = qmiMask;
+    if (!mInSession) {
+        locClientEventMaskType clearMask = QMI_LOC_EVENT_MASK_POSITION_REPORT_V02 |
+                                           QMI_LOC_EVENT_MASK_UNPROPAGATED_POSITION_REPORT_V02 |
+                                           QMI_LOC_EVENT_MASK_GNSS_SV_INFO_V02 |
+                                           QMI_LOC_EVENT_MASK_NMEA_V02 |
+                                           QMI_LOC_EVENT_MASK_ENGINE_STATE_V02 |
+                                           QMI_LOC_EVENT_MASK_GNSS_MEASUREMENT_REPORT_V02 |
+                                           QMI_LOC_EVENT_MASK_GNSS_SV_POLYNOMIAL_REPORT_V02;
 
-    qmiMask = qmiMask & ~clearMask;
-    LOC_LOGd("after qmiMask=0x%" PRIx64 "", qmiMask);
+        qmiMask = qmiMask & ~clearMask;
+    }
+    LOC_LOGd("oldQmiMask=%" PRIu64 " qmiMask=%" PRIu64 " mInSession: %d", oldQmiMask, qmiMask, mInSession);
     return qmiMask;
 }
 
@@ -505,7 +498,8 @@ enum loc_api_adapter_err LocApiV02 :: close()
       LOC_API_ADAPTER_ERR_SUCCESS : LOC_API_ADAPTER_ERR_FAILURE;
 
   mMask = 0;
-  mNmeaMask = 0;
+  mQmiMask = 0;
+  mInSession = false;
   clientHandle = LOC_CLIENT_INVALID_HANDLE_VALUE;
 
   return rtv;
@@ -532,7 +526,7 @@ enum loc_api_adapter_err LocApiV02 :: startFix(const LocPosMode& fixCriteria)
 
   mInSession = true;
   mMeasurementsStarted = true;
-  registerEventMask(mQmiMask);
+  registerEventMask(mMask);
 
   // fill in the start request
   switch(fixCriteria.mode)
@@ -678,7 +672,7 @@ enum loc_api_adapter_err LocApiV02 :: stopFix()
   // if engine on never happend, deregister events
   // without waiting for Engine Off
   if (!mEngineOn) {
-      registerEventMask(mQmiMask);
+      registerEventMask(mMask);
   }
 
   if( eLOC_CLIENT_SUCCESS != status)
@@ -3331,7 +3325,7 @@ void LocApiV02 :: reportEngineState (
           // If EngineOn is true and InSession is false and Engine is just turned off,
           // then unregister the gps tracking specific event masks
           if (mpLocApiV02->mEngineOn && !mpLocApiV02->mInSession && !mEngineOn) {
-              mpLocApiV02->registerEventMask(mpLocApiV02->mQmiMask);
+              mpLocApiV02->registerEventMask(mpLocApiV02->mMask);
           }
           mpLocApiV02->mEngineOn = mEngineOn;
 
@@ -3345,7 +3339,7 @@ void LocApiV02 :: reportEngineState (
           } else {
               mpLocApiV02->reportStatus(LOC_GPS_STATUS_SESSION_END);
               mpLocApiV02->reportStatus(LOC_GPS_STATUS_ENGINE_OFF);
-              mpLocApiV02->registerEventMask(mpLocApiV02->mQmiMask);
+              mpLocApiV02->registerEventMask(mpLocApiV02->mMask);
               for (auto resender : mpLocApiV02->mResenders) {
                   LOC_LOGV("%s:%d]: resend failed command.", __func__, __LINE__);
                   resender();
