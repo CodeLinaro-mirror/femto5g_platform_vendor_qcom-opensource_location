@@ -47,13 +47,17 @@
 #include <LocIpc.h>
 #include <LocThread.h>
 
+namespace loc_util {
+
 struct sockaddr_qrtr {
     __kernel_sa_family_t sq_family;
     __u32 sq_node;
     __u32 sq_port;
 };
 
-namespace loc_util {
+#define RETRY_FINDNEWSERVICE_MAX_COUNT 10000
+#define RETRY_FINDNEWSERVICE_SLEEP_MS  5
+#define SOCKET_TIMEOUT_SEC 2
 
 class LocSocketSender;
 
@@ -83,12 +87,15 @@ public:
     void stopListening();
 
     // Send out a message.
-    // Call this function to send a message in argument data to socket in argument name.
-    //
-    // Argument name contains the name of the target unix socket. data contains the
-    // message to be sent out. Convert your message to a string before calling this function.
-    // The function will return true on success, and false on failure.
+    // Argument:
+    //   service and instance id for socket to send data to
+    //   data to be sent specified in string format
     static bool send(int service, int instance, const std::string& data);
+
+    // Send out a message.
+    // Argument:
+    //   service and instance for socket to send data to
+    //   data to be sent specified in the byte array and array length
     static bool send(int service, int instance, const uint8_t data[], uint32_t length);
 
 protected:
@@ -106,12 +113,26 @@ protected:
     inline virtual void onListenerReady() {}
 
 private:
+    // This function will send byte array data to the socket with
+    // socket file descriptor specified in "fd" and node and port
+    // provided in "addr". The data to be sent is specified as
+    // byte array "data" and its length is specified via "length".
     static bool sendData(int fd, const sockaddr_qrtr& addr,
             const uint8_t data[], uint32_t length);
+
+    // This function will find the service node and port for the socket.
+    // The socket to be found is specified by "fd" and service id and instance id.
+    // The service node and port if found, will be returned in output parameter of
+    // "addr".
     static bool findService(int fd, sockaddr_qrtr& addr, int service, int instance,
                             bool & serviceDeleted);
-    // this call will find service with retry attempt of
-    // default retry count and interval
+
+    // This call will find service with retry attempt of
+    // default retry count (defined in RETRY_FINDNEWSERVICE_MAX_COUNT) and
+    // interval (defined in RETRY_FINDNEWSERVICE_SLEEP_MS).
+    // The service node and port if found, will be returned in output parameter of
+    // "addr". If the service is deleted, then the output parameter of "serviceDeleted"
+    // will be set to true.
     static bool findServiceWithRetry(int fd, sockaddr_qrtr& addr, int service, int instance,
                                      bool & serviceDeleted);
 
@@ -122,10 +143,6 @@ private:
     LocThread mThread;
     LocRunnable *mRunnable;
 };
-
-#define RETRY_FINDNEWSERVICE_MAX_COUNT 10000
-#define RETRY_FINDNEWSERVICE_SLEEP_MS  5
-#define SOCKET_TIMEOUT_SEC 2
 
 class LocSocketSender {
 public:
@@ -208,7 +225,7 @@ public:
             retryCount++;
         } while (retryCount < RETRY_FINDNEWSERVICE_MAX_COUNT);
 
-        LOC_LOGd("find new servie: service found %d, new service found %d, "
+        LOC_LOGd("service found %d, new service found %d, "
                  "retry count %d", rtv, newServiceFound, retryCount);
         return rtv;
     }

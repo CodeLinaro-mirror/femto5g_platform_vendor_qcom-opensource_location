@@ -73,12 +73,15 @@ public:
     void stopListening();
 
     // Send out a message.
-    // Call this function to send a message in argument data to socket in argument name.
-    //
-    // Argument name contains the name of the target unix socket. data contains the
-    // message to be sent out. Convert your message to a string before calling this function.
-    // The function will return true on success, and false on failure.
+    // Argument:
+    //   service and instance id for socket to send data to
+    //   data to be sent specified in string format
     static bool send(int service, int instance, const std::string& data);
+
+    // Send out a message.
+    // Argument:
+    //   service and instance for socket to send data to
+    //   data to be sent specified in the byte array and array length
     static bool send(int service, int instance, const uint8_t data[], uint32_t length);
 
 protected:
@@ -96,12 +99,26 @@ protected:
     inline virtual void onListenerReady() {}
 
 private:
+    // This function will send byte array data to the socket with
+    // socket file descriptor specified in "fd" and node and port
+    // provided in "addr". The data to be sent is specified as
+    // byte array "data" and its length is specified via "length".
     static bool sendData(int fd, const qsockaddr_ipcr& addr,
             const uint8_t data[], uint32_t length);
 
+    // This call will find service with retry attempt of
+    // default retry count (defined in RETRY_FINDNEWSERVICE_MAX_COUNT) and
+    // interval (defined in RETRY_FINDNEWSERVICE_SLEEP_MS).
+    // The service node and port if found, will be returned in output parameter of
+    // "addr". If the service is deleted, then the output parameter of "serviceDeleted"
+    // will be set to true.
     static bool findServiceWithRetry(int fd, qsockaddr_ipcr& addr,
                                      int service, int instance);
 
+    // This function will find the service node and port for the socket.
+    // The socket to be found is specified by "fd" and service id and instance id.
+    // The service node and port if found, will be returned in output parameter of
+    // "addr".
     static bool findService(int fd, qsockaddr_ipcr& addr,
                             int service, int instance);
 

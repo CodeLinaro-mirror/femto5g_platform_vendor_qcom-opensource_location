@@ -247,6 +247,10 @@ enum GnssLocationInfoFlagMask {
     GNSS_LOCATION_INFO_TIME_UNC_BIT                     = (1<<23),
     /** valid numSvUsedInPosition */
     GNSS_LOCATION_INFO_NUM_SV_USED_IN_POSITION_BIT      = (1<<24),
+    /** valid sensor calibrationConfidencePercent */
+    GNSS_LOCATION_INFO_CALIBRATION_CONFIDENCE_PERCENT_BIT = (1<<25),
+    /** valid sensor calibrationConfidence */
+    GNSS_LOCATION_INFO_CALIBRATION_STATUS_BIT           = (1<<26),
 };
 
 enum LocationReliability {
@@ -291,6 +295,24 @@ enum GnssGloTimeStructTypeFlags {
     GNSS_GLO_REF_FCOUNT_VALID               = (1 << 4),
     GNSS_GLO_NUM_CLOCK_RESETS_VALID         = (1 << 5),
     GNSS_GLO_FOUR_YEAR_VALID                = (1 << 6)
+};
+
+enum DrCalibrationStatusMask {
+    /** Indicate that roll calibration is needed. Need to take more
+     *  turns on level ground */
+    DR_ROLL_CALIBRATION_NEEDED  = (1<<0),
+    /** Indicate that pitch calibration is needed. Need to take more
+     *  turns on level ground */
+    DR_PITCH_CALIBRATION_NEEDED = (1<<1),
+    /** Indicate that yaw calibration is needed. Need to accelerate
+     *  in a straight line  */
+    DR_YAW_CALIBRATION_NEEDED   = (1<<2),
+    /** Indicate that odo calibration is needed. Need to accelerate
+     *  in a straight line  */
+    DR_ODO_CALIBRATION_NEEDED   = (1<<3),
+    /** Indicate that gyro calibration is needed. Need to take more
+     *  turns on level ground */
+    DR_GYRO_CALIBRATION_NEEDED  = (1<<4)
 };
 
 struct GnssLocationSvUsedInPosition {
@@ -519,6 +541,10 @@ struct GnssLocation : public Location {
     uint8_t leapSeconds;
     /** Time uncertainty in milliseconds   */
     float timeUncMs;
+    /** Sensor calibration confidence percent, range [0, 100] */
+    uint8_t calibrationConfidencePercent;
+    /** sensor calibration status  */
+    DrCalibrationStatusMask calibrationStatus;
 };
 
 struct GnssSv {
