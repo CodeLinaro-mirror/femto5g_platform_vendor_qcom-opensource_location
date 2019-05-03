@@ -736,9 +736,11 @@ LocationClientApiImpl::LocationClientApiImpl(CapabilitiesCb capabitiescb) :
         mGnssEnergyConsumedInfoCb(nullptr),
         mGnssEnergyConsumedResponseCb(nullptr),
         mLocationSysInfoCb(nullptr),
-        mLocationSysInfoResponseCb(nullptr), mDiagIface(nullptr)
+        mLocationSysInfoResponseCb(nullptr)
 #ifdef FEATURE_EXTERNAL_AP
         ,LocSocket()
+#else
+        ,mDiagIface(nullptr)
 #endif
 
 {
@@ -1300,9 +1302,14 @@ void LocationClientApiImpl::onListenerReady() {
 void LocationClientApiImpl::onReceive(const string& data) {
 
     struct OnReceiveHandler : public LocMsg {
+#ifndef FEATURE_EXTERNAL_AP
         OnReceiveHandler(LocationClientApiImpl* apiImpl, const string& data,
                 LocDiagIface* mDiagIface) :
                 mApiImpl(apiImpl), mMsgData(data),mDiagInterface(mDiagIface) {}
+#else
+        OnReceiveHandler(LocationClientApiImpl* apiImpl, const string& data) :
+                mApiImpl(apiImpl), mMsgData(data) {}
+#endif
         virtual ~OnReceiveHandler() {}
         void proc() const {
             LocAPIMsgHeader *pMsg = (LocAPIMsgHeader *)(mMsgData.data());
@@ -1390,7 +1397,7 @@ void LocationClientApiImpl::onReceive(const string& data) {
                             if (mApiImpl->mGnssReportCbs.gnssLocationCallback) {
                                 mApiImpl->mGnssReportCbs.gnssLocationCallback(gnssLocation);
                             }
-
+#ifndef FEATURE_EXTERNAL_AP
                             if (!mDiagInterface) {
                                 break;
                             }
@@ -1409,6 +1416,7 @@ void LocationClientApiImpl::onReceive(const string& data) {
                             mDiagInterface->logCommit(diagGnssLocPtr, bufferSrc,
                                     LOG_GNSS_CLIENT_API_LOCATION_REPORT_C,
                                     sizeof(clientDiagGnssLocationStructType));
+#endif // FEATURE_EXTERNAL_AP
                         }
                         break;
                     }
@@ -1432,7 +1440,7 @@ void LocationClientApiImpl::onReceive(const string& data) {
                             if (mApiImpl->mGnssReportCbs.gnssSvCallback) {
                                 mApiImpl->mGnssReportCbs.gnssSvCallback(gnssSvsVector);
                             }
-
+#ifndef FEATURE_EXTERNAL_AP
                             if (!mDiagInterface) {
                                 break;
                             }
@@ -1451,6 +1459,7 @@ void LocationClientApiImpl::onReceive(const string& data) {
                             mDiagInterface->logCommit(diagGnssSvPtr, bufferSrc,
                                     LOG_GNSS_CLIENT_API_SV_REPORT_C,
                                     sizeof(clientDiagGnssSvStructType));
+#endif // FEATURE_EXTERNAL_AP
                         }
                         break;
                     }
@@ -1564,8 +1573,11 @@ void LocationClientApiImpl::onReceive(const string& data) {
         }
         LocationClientApiImpl *mApiImpl;
         const string mMsgData;
+#ifndef FEATURE_EXTERNAL_AP
         LocDiagIface* mDiagInterface;
+#endif
     };
+#ifndef FEATURE_EXTERNAL_AP
     if (mDiagIface == nullptr) {
         void* libHandle = nullptr;
         getLocDiagIface_t* getter = (getLocDiagIface_t*)dlGetSymFromLib(libHandle,
@@ -1577,6 +1589,9 @@ void LocationClientApiImpl::onReceive(const string& data) {
         }
     }
     mMsgTask->sendMsg(new (nothrow) OnReceiveHandler(this, data, mDiagIface));
+#else
+    mMsgTask->sendMsg(new (nothrow) OnReceiveHandler(this, data));
+#endif // FEATURE_EXTERNAL_AP
 }
 
 /******************************************************************************
