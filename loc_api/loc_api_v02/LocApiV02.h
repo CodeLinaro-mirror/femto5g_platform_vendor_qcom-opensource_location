@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2019, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -65,6 +65,7 @@ typedef struct
 {
     uint32_t counter;
     qmiLocSvSystemEnumT_v02 system;
+    qmiLocGnssSignalTypeMaskT_v02 gnssSignalType;
     uint16_t gnssSvId;
     qmiLocMeasFieldsValidMaskT_v02 validMask;
     uint8_t cycleSlipCount;
@@ -87,11 +88,13 @@ private:
   bool mEngineOn;
   bool mMeasurementsStarted;
   std::vector<Resender> mResenders;
-  bool mIsMasterRegistered;
   bool mMasterRegisterNotSupported;
   uint32_t mCounter;
   uint32_t mMinInterval;
   std::vector<adrData>  mADRdata;
+  GnssMeasurements*  mGnssMeasurements;
+  size_t mBatchSize, mDesiredBatchSize;
+  size_t mTripBatchSize, mDesiredTripBatchSize;
 
   /* Convert event mask from loc eng to loc_api_v02 format */
   static locClientEventMaskType convertMask(LOC_API_ADAPTER_EVENT_MASK_T mask);
@@ -119,7 +122,7 @@ private:
       uint8_t gloFrequency);
 
   /*convert GnssMeasurement type from QMI LOC to loc eng format*/
-  bool convertGnssMeasurements (GnssMeasurementsData& measurementData,
+  bool convertGnssMeasurements (
       const qmiLocEventGnssSvMeasInfoIndMsgT_v02& gnss_measurement_report_ptr,
       int index);
 
@@ -137,6 +140,9 @@ private:
 
   /* get sv used count from sv mask */
   static int getNumSvUsed (uint64_t svUsedIdsMask, int totalSvCntInOneConstellation);
+
+  void convertGnssMeasurementsHeader(const Gnss_LocSvSystemEnumType locSvSystemType,
+      const qmiLocEventGnssSvMeasInfoIndMsgT_v02& gnss_measurement_info);
 
   /*convert LocGnssClock type from QMI LOC to loc eng format*/
   int convertGnssClock (GnssMeasurementsClock& clock,
@@ -158,9 +164,6 @@ private:
      report to loc eng */
   void reportSv (const qmiLocEventGnssSvInfoIndMsgT_v02 *gnss_report_ptr);
 
-  void reportSvMeasurement (
-  const qmiLocEventGnssSvMeasInfoIndMsgT_v02 *gnss_raw_measurement_ptr);
-
   void  reportSvPolynomial (
   const qmiLocEventGnssSvPolyIndMsgT_v02 *gnss_sv_poly_ptr);
 
@@ -178,11 +181,14 @@ private:
   void populateQzssEphemeris(const qmiLocQzssEphemerisReportIndMsgT_v02 *,
           GnssSvEphemerisReport &);
   void populateCommonEphemeris(const qmiLocEphGnssDataStructT_v02 &, GnssEphCommon &);
+  void populateGpsTimeOfReport(const qmiLocGnssTimeStructT_v02 &, GnssSystemTimeStructType &);
 
   void reportLocEvent(const qmiLocEventReportIndMsgT_v02 *event_report_ptr);
   /* convert system info to location api format and dispatch to
      the registered adapter */
   void reportSystemInfo(const qmiLocSystemInfoIndMsgT_v02* system_info_ptr);
+  void reportLocationRequestNotification(
+      const qmiLocLocationRequestNotificationIndMsgT_v02* loc_req_notif);
 
   /* convert engine state report to loc eng format and send the converted
      report to loc eng */
@@ -226,17 +232,6 @@ private:
   void registerMasterClient();
   int getGpsLock(uint8_t subType);
 
-  inline bool checkRegisterMaster() {
-      if (!mIsMasterRegistered) {
-          if (true == isMaster()) {
-              registerMasterClient();
-              mIsMasterRegistered = true;
-              return true;
-          }
-      }
-      return false;
-  }
-
   /* Convert get blacklist sv info to GnssSvIdConfig */
   void reportGnssSvIdConfig
     (const qmiLocGetBlacklistSvIndMsgT_v02& getBlacklistSvIndMsg);
@@ -247,6 +242,23 @@ private:
 
   /* Inform ODCPI availability to Modem */
   void wifiStatusInformSync();
+
+  void sendNfwNotification(GnssNfwNotification& notification);
+  LocationError queryBatchBuffer(size_t desiredSize,
+          size_t &allocatedSize, BatchingMode batchMode);
+  LocationError releaseBatchBuffer(BatchingMode batchMode);
+  void readModemLocations(Location* pLocationPiece, size_t count,
+          BatchingMode batchingMode, size_t& numbOfEntries);
+  void setOperationMode(GnssSuplMode mode);
+  bool needsNewTripBatchRestart(uint32_t newTripDistance, uint32_t newTripTBFInterval,
+          uint32_t &accumulatedDistance, uint32_t &numOfBatchedPositions);
+  void batchFullEvent(const qmiLocEventBatchFullIndMsgT_v02* batchFullInfo);
+  void batchStatusEvent(const qmiLocEventBatchingStatusIndMsgT_v02* batchStatusInfo);
+  void onDbtPosReportEvent(const qmiLocEventDbtPositionReportIndMsgT_v02* pDbtPosReport);
+  void geofenceBreachEvent(const qmiLocEventGeofenceBreachIndMsgT_v02* breachInfo);
+  void geofenceBreachEvent(const qmiLocEventGeofenceBatchedBreachIndMsgT_v02* batchedBreachInfo);
+  void geofenceStatusEvent(const qmiLocEventGeofenceGenAlertIndMsgT_v02* alertInfo);
+  void geofenceDwellEvent(const qmiLocEventGeofenceBatchedDwellIndMsgT_v02 *dwellEvent);
 
 protected:
   virtual enum loc_api_adapter_err
@@ -271,12 +283,51 @@ public:
   void errorCb(locClientHandleType handle,
                locClientErrorEnumType errorId);
 
-  virtual void startFix(const LocPosMode& posMode,
-        LocApiResponse *adapterResponse);
-
+  // Tracking
+  virtual void startFix(const LocPosMode& posMode, LocApiResponse *adapterResponse);
   virtual void stopFix(LocApiResponse *adapterResponse);
 
-  virtual void setPositionMode(const LocPosMode& mode);
+  void startTimeBasedTracking(const TrackingOptions& options, LocApiResponse* adapterResponse);
+  void stopTimeBasedTracking(LocApiResponse* adapterResponse);
+  void startDistanceBasedTracking(uint32_t sessionId, const LocationOptions& options,
+         LocApiResponse* adapterResponse);
+  void stopDistanceBasedTracking(uint32_t sessionId, LocApiResponse* adapterResponse);
+
+  // Batching
+  void startBatching(uint32_t sessionId, const LocationOptions& options, uint32_t accuracy,
+          uint32_t timeout, LocApiResponse* adapterResponse);
+  void stopBatching(uint32_t sessionId, LocApiResponse* adapterResponse);
+  LocationError startOutdoorTripBatchingSync(uint32_t tripDistance, uint32_t tripTbf,
+          uint32_t timeout);
+  void startOutdoorTripBatching(uint32_t tripDistance, uint32_t tripTbf, uint32_t timeout,
+          LocApiResponse* adapterResponse);
+  void reStartOutdoorTripBatching(uint32_t ongoingTripDistance, uint32_t ongoingTripInterval,
+          uint32_t batchingTimeout, LocApiResponse* adapterResponse);
+  LocationError stopOutdoorTripBatchingSync(bool deallocBatchBuffer = true);
+  void stopOutdoorTripBatching(bool deallocBatchBuffer = true,
+          LocApiResponse* adapterResponse = nullptr);
+  LocationError getBatchedLocationsSync(size_t count);
+  void getBatchedLocations(size_t count, LocApiResponse* adapterResponse);
+  LocationError getBatchedTripLocationsSync(size_t count, uint32_t accumulatedDistance);
+  void getBatchedTripLocations(size_t count, uint32_t accumulatedDistance,
+          LocApiResponse* adapterResponse);
+  virtual void setBatchSize(size_t size);
+  virtual void setTripBatchSize(size_t size);
+  LocationError queryAccumulatedTripDistanceSync(uint32_t &accumulatedTripDistance,
+          uint32_t &numOfBatchedPositions);
+  void queryAccumulatedTripDistance(
+          LocApiResponseData<LocApiBatchData>* adapterResponseData);
+
+  // Geofence
+  virtual void addGeofence(uint32_t clientId, const GeofenceOption& options,
+          const GeofenceInfo& info, LocApiResponseData<LocApiGeofenceData>* adapterResponseData);
+  virtual void removeGeofence(uint32_t hwId, uint32_t clientId, LocApiResponse* adapterResponse);
+  virtual void pauseGeofence(uint32_t hwId, uint32_t clientId, LocApiResponse* adapterResponse);
+  virtual void resumeGeofence(uint32_t hwId, uint32_t clientId, LocApiResponse* adapterResponse);
+  virtual void modifyGeofence(uint32_t hwId, uint32_t clientId,
+          const GeofenceOption& options, LocApiResponse* adapterResponse);
+  virtual void addToCallQueue(LocApiResponse* adapterResponse);
+
 
   virtual void
     setTime(LocGpsUtcTime time, int64_t timeReference, int uncertainty);
@@ -354,17 +405,13 @@ public:
                                size_t length,
                                uint32_t slotBitMask);
 
-  inline virtual void setInSession(bool inSession) override {
-      mInSession = inSession;
-      registerEventMask(mMask);
-  }
-
   virtual LocPosTechMask convertPosTechMask(qmiLocPosTechMaskT_v02 mask);
   virtual LocNavSolutionMask convertNavSolutionMask(qmiLocNavSolutionMaskT_v02 mask);
   virtual GnssConfigSuplVersion convertSuplVersion(const uint32_t suplVersion);
   virtual GnssConfigLppProfile convertLppProfile(const uint32_t lppProfile);
   virtual GnssConfigLppeControlPlaneMask convertLppeCp(const uint32_t lppeControlPlaneMask);
   virtual GnssConfigLppeUserPlaneMask convertLppeUp(const uint32_t lppeUserPlaneMask);
+  virtual LocationError setEmergencyExtensionWindowSync(const uint32_t emergencyExtensionSeconds);
 
   /* Requests for SV/Constellation Control */
   virtual LocationError setBlacklistSvSync(const GnssSvIdConfig& config);
