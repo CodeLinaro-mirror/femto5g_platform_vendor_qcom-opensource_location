@@ -96,7 +96,7 @@ int main(int argc, char *argv[])
                 LOC_PROCESS_MAX_NUM_GROUPS, ' ');
 
         int numGrpIds=0;
-        for(int i=0; i<numGrps; i++) {
+        for(int i=0; (i<numGrps) && (i<LOC_PROCESS_MAX_NUM_GROUPS); i++) {
             struct group* grp = getgrnam(splitGrpString[i]);
             if (grp) {
                 groupIds[numGrpIds] = grp->gr_gid;
