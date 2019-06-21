@@ -33,27 +33,19 @@
 #include <unordered_set>
 #include <unordered_map>
 
-#ifdef FEATURE_EXTERNAL_AP
-#include <LocSocket.h>
-#else  // FEATURE_EXTERNAL_AP
 #include <LocIpc.h>
-#endif // FEATURE_EXTERNAL_AP
 #include <LocationDataTypes.h>
 #include <ILocationAPI.h>
 #include <LocationClientApi.h>
 #include <MsgTask.h>
 #include <LocationApiMsg.h>
-
+#ifndef FEATURE_EXTERNAL_AP
+#include <LocDiagIface.h>
+#include <LocationClientApiLog.h>
+#endif
 
 using namespace std;
-
-#ifdef FEATURE_EXTERNAL_AP
-using loc_util::LocSocket;
-using loc_util::LocSocketSender;
-#else  // FEATURE_EXTERNAL_AP
-using loc_util::LocIpc;
-using loc_util::LocIpcSender;
-#endif // FEATURE_EXTERNAL_AP
+using namespace loc_util;
 
 /** @fn
     @brief
@@ -68,11 +60,35 @@ struct ClientCallbacks {
     location_client::LocationSystemInfoCb systemInfoCb;
 };
 
+#ifndef FEATURE_EXTERNAL_AP
+typedef LocDiagIface* (getLocDiagIface_t)();
+#endif
+
 namespace location_client
 {
+#ifndef FEATURE_EXTERNAL_AP
+void translateDiagGnssLocationPositionDynamics(clientDiagGnssLocationPositionDynamics& out,
+        const GnssLocationPositionDynamics& in);
+static clientDiagGnssSystemTimeStructType parseDiagGnssTime(
+        const GnssSystemTimeStructType &halGnssTime);
+static clientDiagGnssGloTimeStructType parseDiagGloTime(const GnssGloTimeStructType &halGloTime);
+static void translateDiagSystemTime(clientDiagGnssSystemTime& out,
+        const GnssSystemTime& in);
+static clientDiagGnssLocationSvUsedInPosition parseDiagLocationSvUsedInPosition(
+        const GnssLocationSvUsedInPosition &halSv);
+static void translateDiagGnssMeasUsageInfo(clientDiagGnssMeasUsageInfo& out,
+        const GnssMeasUsageInfo& in);
+void populateClientDiagLocation(clientDiagGnssLocationStructType* diagGnssLocPtr,
+        const GnssLocation& gnssLocation);
+static void translateDiagGnssSv(clientDiagGnssSv& out, const GnssSv& in);
+void populateClientDiagGnssSv(clientDiagGnssSvStructType* diagGnssSvPtr,
+        std::vector<GnssSv>& gnssSvs);
+#endif // FEATURE_EXTERNAL_AP
+
 typedef std::function<void(
     uint32_t response
 )> PingTestCb;
+
 
 class GeofenceImpl: public std::enable_shared_from_this<GeofenceImpl> {
     uint32_t mId;
@@ -88,14 +104,10 @@ public:
     inline uint32_t getClientId() { return mId; }
 };
 
-class LocationClientApiImpl :
-#ifdef FEATURE_EXTERNAL_AP
-    public LocSocket,
-#else // FEATURE_EXTERNAL_AP
-    public LocIpc,
-#endif // FEATURE_EXTERNAL_AP
-    public ILocationAPI,
-    public ILocationControlAPI {
+class IpcListener;
+
+class LocationClientApiImpl : public ILocationAPI, public ILocationControlAPI {
+    friend IpcListener;
 public:
     LocationClientApiImpl(CapabilitiesCb capabitiescb);
     void destroy();
@@ -138,10 +150,6 @@ public:
     virtual uint32_t* gnssUpdateConfig(GnssConfig config) override;
     virtual uint32_t gnssDeleteAidingData(GnssAidingData& data) override;
 
-    // override from LocIpc
-    virtual void onListenerReady() override;
-    virtual void onReceive(const string& data) override;
-
     // other interface
     void updateNetworkAvailability(bool available);
     void updateCallbackFunctions(const ClientCallbacks&);
@@ -156,6 +164,10 @@ public:
 
     std::vector<uint32_t>               mLastAddedClientIds;
     std::unordered_map<uint32_t, Geofence> mGeofenceMap; //clientId --> Geofence object
+    // convenient methods
+    inline bool sendMessage(const uint8_t* data, uint32_t length) const {
+        return (mIpcSender != nullptr) && LocIpc::send(*mIpcSender, data, length);
+    }
 
     void pingTest(PingTestCb pingTestCallback);
 
@@ -174,10 +186,10 @@ private:
     // For client on different processor, socket name will start with
     // defined constant of SOCKET_TO_EXTERANL_AP_LOCATION_CLIENT_BASE.
     // For client on same processor, socket name will start with
-    // SOCKET_TO_LOCATION_CLIENT_BASE.
-    char                    mSocketName[MAX_SOCKET_PATHNAME_LENGTH];
+    // SOCKET_LOC_CLIENT_DIR + LOC_CLIENT_NAME_PREFIX.
+    char                       mSocketName[MAX_SOCKET_PATHNAME_LENGTH];
     // for client on a different processor, 0 is invalid
-    uint32_t                mInstanceId;
+    uint32_t                   mInstanceId;
 
     // callbacks
     CapabilitiesCb          mCapabilitiesCb;
@@ -193,19 +205,21 @@ private:
     LocationOptions         mLocationOptions;
     BatchingOptions         mBatchingOptions;
 
-    GnssEnergyConsumedCb    mGnssEnergyConsumedInfoCb;
-    ResponseCb              mGnssEnergyConsumedResponseCb;
+    GnssEnergyConsumedCb       mGnssEnergyConsumedInfoCb;
+    ResponseCb                 mGnssEnergyConsumedResponseCb;
 
-    LocationSystemInfoCb    mLocationSysInfoCb;
-    ResponseCb              mLocationSysInfoResponseCb;
+    LocationSystemInfoCb       mLocationSysInfoCb;
+    ResponseCb                 mLocationSysInfoResponseCb;
 
-    MsgTask*                mMsgTask;
+    MsgTask*                   mMsgTask;
 
-#ifdef FEATURE_EXTERNAL_AP
-    LocSocketSender*       mIpcSender;
-#else  // FEATURE_EXTERNAL_AP
-    LocIpcSender*          mIpcSender;
-#endif // FEATURE_EXTERNAL_AP
+    LocIpc                     mIpc;
+    shared_ptr<LocIpcSender>   mIpcSender;
+
+#ifndef FEATURE_EXTERNAL_AP
+    // wrapper around diag interface to handle case when diag service starts late
+    LocDiagIface*           mDiagIface;
+#endif
 };
 
 } // namespace location_client

@@ -28,11 +28,22 @@
 
 #define LOG_TAG "LocSvc_LocationClientApi"
 
+#include <loc_cfg.h>
 #include <LocationClientApiImpl.h>
 #include <log_util.h>
 #include <gps_extended_c.h>
 #include <unistd.h>
 #include <sstream>
+#include <dlfcn.h>
+#include <loc_misc_utils.h>
+
+static uint32_t gDebug = 0;
+
+static const loc_param_s_type gConfigTable[] =
+{
+    {"DEBUG_LEVEL", &gDebug, NULL, 'n'}
+};
+
 
 namespace location_client {
 
@@ -254,34 +265,35 @@ static LocationReliability parseLocationReliability(const ::LocationReliability 
 static GnssSystemTimeStructType parseGnssTime(const ::GnssSystemTimeStructType &halGnssTime) {
 
     GnssSystemTimeStructType   gnssTime;
+    memset(&gnssTime, 0, sizeof(gnssTime));
     uint32_t gnssTimeFlags = 0;
 
     if (GNSS_SYSTEM_TIME_WEEK_VALID & halGnssTime.validityMask) {
         gnssTimeFlags |= GNSS_SYSTEM_TIME_WEEK_VALID;
+        gnssTime.systemWeek = halGnssTime.systemWeek;
     }
     if (GNSS_SYSTEM_TIME_WEEK_MS_VALID & halGnssTime.validityMask) {
         gnssTimeFlags |= GNSS_SYSTEM_TIME_WEEK_MS_VALID;
+        gnssTime.systemMsec = halGnssTime.systemMsec;
     }
     if (GNSS_SYSTEM_CLK_TIME_BIAS_VALID & halGnssTime.validityMask) {
         gnssTimeFlags |= GNSS_SYSTEM_CLK_TIME_BIAS_VALID;
+        gnssTime.systemClkTimeBias = halGnssTime.systemClkTimeBias;
     }
     if (GNSS_SYSTEM_CLK_TIME_BIAS_UNC_VALID & halGnssTime.validityMask) {
         gnssTimeFlags |= GNSS_SYSTEM_CLK_TIME_BIAS_UNC_VALID;
+        gnssTime.systemClkTimeUncMs = halGnssTime.systemClkTimeUncMs;
     }
     if (GNSS_SYSTEM_REF_FCOUNT_VALID & halGnssTime.validityMask) {
         gnssTimeFlags |= GNSS_SYSTEM_REF_FCOUNT_VALID;
+        gnssTime.refFCount = halGnssTime.refFCount;
     }
     if (GNSS_SYSTEM_NUM_CLOCK_RESETS_VALID & halGnssTime.validityMask) {
         gnssTimeFlags |= GNSS_SYSTEM_NUM_CLOCK_RESETS_VALID;
+        gnssTime.numClockResets = halGnssTime.numClockResets;
     }
 
     gnssTime.validityMask = (GnssSystemTimeStructTypeFlags)gnssTimeFlags;
-    gnssTime.systemWeek = halGnssTime.systemWeek;
-    gnssTime.systemMsec = halGnssTime.systemMsec;
-    gnssTime.systemClkTimeBias = halGnssTime.systemClkTimeBias;
-    gnssTime.systemClkTimeUncMs = halGnssTime.systemClkTimeUncMs;
-    gnssTime.refFCount = halGnssTime.refFCount;
-    gnssTime.numClockResets = halGnssTime.numClockResets;
 
     return gnssTime;
 }
@@ -289,38 +301,39 @@ static GnssSystemTimeStructType parseGnssTime(const ::GnssSystemTimeStructType &
 static GnssGloTimeStructType parseGloTime(const ::GnssGloTimeStructType &halGloTime) {
 
     GnssGloTimeStructType   gloTime;
+    memset(&gloTime, 0, sizeof(gloTime));
     uint32_t gloTimeFlags = 0;
 
     if (GNSS_CLO_DAYS_VALID & halGloTime.validityMask) {
         gloTimeFlags |= GNSS_CLO_DAYS_VALID;
+        gloTime.gloDays = halGloTime.gloDays;
     }
     if (GNSS_GLO_MSEC_VALID  & halGloTime.validityMask) {
         gloTimeFlags |= GNSS_GLO_MSEC_VALID ;
+        gloTime.gloMsec = halGloTime.gloMsec;
     }
     if (GNSS_GLO_CLK_TIME_BIAS_VALID & halGloTime.validityMask) {
         gloTimeFlags |= GNSS_GLO_CLK_TIME_BIAS_VALID;
+        gloTime.gloClkTimeBias = halGloTime.gloClkTimeBias;
     }
     if (GNSS_GLO_CLK_TIME_BIAS_UNC_VALID & halGloTime.validityMask) {
         gloTimeFlags |= GNSS_GLO_CLK_TIME_BIAS_UNC_VALID;
+        gloTime.gloClkTimeUncMs = halGloTime.gloClkTimeUncMs;
     }
     if (GNSS_GLO_REF_FCOUNT_VALID & halGloTime.validityMask) {
         gloTimeFlags |= GNSS_GLO_REF_FCOUNT_VALID;
+        gloTime.refFCount = halGloTime.refFCount;
     }
     if (GNSS_GLO_NUM_CLOCK_RESETS_VALID & halGloTime.validityMask) {
         gloTimeFlags |= GNSS_GLO_NUM_CLOCK_RESETS_VALID;
+        gloTime.numClockResets = halGloTime.numClockResets;
     }
     if (GNSS_GLO_FOUR_YEAR_VALID & halGloTime.validityMask) {
         gloTimeFlags |= GNSS_GLO_FOUR_YEAR_VALID;
+        gloTime.gloFourYear = halGloTime.gloFourYear;
     }
 
     gloTime.validityMask = (GnssGloTimeStructTypeFlags)gloTimeFlags;
-    gloTime.gloDays = halGloTime.gloDays;
-    gloTime.gloMsec = halGloTime.gloMsec;
-    gloTime.gloClkTimeBias = halGloTime.gloClkTimeBias;
-    gloTime.gloClkTimeUncMs = halGloTime.gloClkTimeUncMs;
-    gloTime.refFCount = halGloTime.refFCount;
-    gloTime.numClockResets = halGloTime.numClockResets;
-    gloTime.gloFourYear = halGloTime.gloFourYear;
 
     return gloTime;
 }
@@ -497,6 +510,10 @@ static GnssLocation parseLocationInfo(const ::GnssLocationInfoNotification &halL
         flags |= GNSS_LOCATION_INFO_TIME_UNC_BIT;
     }
 
+    if (GNSS_LOCATION_INFO_NUM_SV_USED_IN_POSITION_BIT & halLocationInfo.flags) {
+        flags |= GNSS_LOCATION_INFO_NUM_SV_USED_IN_POSITION_BIT;
+    }
+
     locationInfo.gnssInfoFlags = (GnssLocationInfoFlagMask)flags;
     locationInfo.altitudeMeanSeaLevel = halLocationInfo.altitudeMeanSeaLevel;
     locationInfo.pdop = halLocationInfo.pdop;
@@ -518,6 +535,7 @@ static GnssLocation parseLocationInfo(const ::GnssLocationInfoNotification &halL
     locationInfo.northVelocityStdDeviation = halLocationInfo.northVelocityStdDeviation;
     locationInfo.eastVelocityStdDeviation = halLocationInfo.eastVelocityStdDeviation;
     locationInfo.upVelocityStdDeviation = halLocationInfo.upVelocityStdDeviation;
+    locationInfo.numSvUsedInPosition = halLocationInfo.numSvUsedInPosition;
     locationInfo.svUsedInPosition =
             parseLocationSvUsedInPosition(halLocationInfo.svUsedInPosition);
     parseGnssMeasUsageInfo(halLocationInfo, locationInfo.measUsageInfo);
@@ -615,6 +633,10 @@ static GnssSv parseGnssSv(const ::GnssSv &halGnssSv) {
             gnssSv.type = GNSS_SV_TYPE_GALILEO;
             break;
 
+        case GNSS_SV_TYPE_NAVIC:
+            gnssSv.type = GNSS_SV_TYPE_NAVIC;
+            break;
+
         default:
             gnssSv.type = GNSS_SV_TYPE_UNKNOWN;
             break;
@@ -710,6 +732,19 @@ static LocationSystemInfo parseLocationSystemInfo(
 }
 
 /******************************************************************************
+ILocIpcListener override
+******************************************************************************/
+class IpcListener : public ILocIpcListener {
+    MsgTask& mMsgTask;
+    LocationClientApiImpl& mApiImpl;
+public:
+    inline IpcListener(LocationClientApiImpl& apiImpl, MsgTask& msgTask) :
+            mMsgTask(msgTask), mApiImpl(apiImpl) {}
+    virtual void onListenerReady() override;
+    virtual void onReceive(const char* data, uint32_t length) override;
+};
+
+/******************************************************************************
 LocationClientApiImpl
 ******************************************************************************/
 
@@ -729,11 +764,15 @@ LocationClientApiImpl::LocationClientApiImpl(CapabilitiesCb capabitiescb) :
         mGnssEnergyConsumedResponseCb(nullptr),
         mLocationSysInfoCb(nullptr),
         mLocationSysInfoResponseCb(nullptr)
-#ifdef FEATURE_EXTERNAL_AP
-        ,LocSocket()
+#ifndef FEATURE_EXTERNAL_AP
+        ,mDiagIface(nullptr)
 #endif
 
 {
+    // read configuration file
+    UTIL_READ_CONF(LOC_PATH_GPS_CONF, gConfigTable);
+    LOC_LOGd("gDebug=%u", gDebug);
+
     mMsgTask = new MsgTask("ClientApiImpl", false);
     // get pid to generate sokect name
     uint32_t pid = (uint32_t)getpid();
@@ -762,33 +801,21 @@ LocationClientApiImpl::LocationClientApiImpl(CapabilitiesCb capabitiescb) :
         return;
     }
 
-    int service = LOCATION_CLIENT_API_QSOCKET_HALDAEMON_SERVICE_ID;
-    // generate instance from pid and client id
-    int instance = pid * 100 + mClientId;
-    int numChars = snprintf(mSocketName, sizeof(mSocketName), "%u.%u",
-                            LOCATION_CLIENT_API_QSOCKET_CLIENT_SERVICE_ID,
-                            instance);
-    if (numChars >= (sizeof(mSocketName)-1)) {
-        LOC_LOGe("mSocketName to small, need %d, buffer size %d",
-                 numChars, sizeof(mSocketName));
-        return;
-    }
+    SockNodeEap sock(LOCATION_CLIENT_API_QSOCKET_CLIENT_SERVICE_ID,
+                     pid * 100 + mClientId);
+    strlcpy(mSocketName, sock.getNodePathname().c_str(), sizeof(mSocketName));
+    unique_ptr<LocIpcRecver> recver = LocIpc::getLocIpcQrtrRecver(
+            make_shared<IpcListener>(*this, *mMsgTask), sock.getId1(), sock.getId2());
 
     // establish an ipc sender to the hal daemon
-    mIpcSender = new LocSocketSender(LOCATION_CLIENT_API_QSOCKET_HALDAEMON_SERVICE_ID,
+    mIpcSender = LocIpc::getLocIpcQrtrSender(LOCATION_CLIENT_API_QSOCKET_HALDAEMON_SERVICE_ID,
                                      LOCATION_CLIENT_API_QSOCKET_HALDAEMON_INSTANCE_ID);
-    if (nullptr == mIpcSender) {
-        LOC_LOGe("create Qsocket failed addr=%u:%u", service, instance);
+    if (mIpcSender == nullptr) {
+        LOC_LOGe("create sender socket failed for service id: %d instance id: %d",
+                LOCATION_CLIENT_API_QSOCKET_HALDAEMON_SERVICE_ID, LOCATION_CLIENT_API_QSOCKET_HALDAEMON_INSTANCE_ID);
         return;
     }
 #else
-    // create ipc socket to send
-    mIpcSender = new LocIpcSender(SOCKET_TO_LOCATION_HAL_DAEMON);
-    if (nullptr == mIpcSender) {
-        LOC_LOGe("create mIpcSender failed %s", SOCKET_TO_LOCATION_HAL_DAEMON);
-        return;
-    }
-
     // get clientId
     lock_guard<mutex> lock(mMutex);
     mClientId = ++mClientIdGenerator;
@@ -797,20 +824,22 @@ LocationClientApiImpl::LocationClientApiImpl(CapabilitiesCb capabitiescb) :
     if (mClientId == LOCATION_CLIENT_SESSION_ID_INVALID) {
         mClientId = ++mClientIdGenerator;
     }
-    int strCopied = strlcpy(mSocketName,SOCKET_TO_LOCATION_CLIENT_BASE,
-                           MAX_SOCKET_PATHNAME_LENGTH);
-    if (strCopied>0 && strCopied< MAX_SOCKET_PATHNAME_LENGTH) {
-        snprintf(mSocketName+strCopied,
-                 MAX_SOCKET_PATHNAME_LENGTH-strCopied,
-                 ".%u.%u", pid, mClientId);
-    } else {
-        LOC_LOGe("strlcpy failed %d", strCopied);
+
+    SockNodeLocal sock(pid, mClientId);
+    strlcpy(mSocketName, sock.getNodePathname().c_str(), sizeof(mSocketName));
+    unique_ptr<LocIpcRecver> recver = LocIpc::getLocIpcLocalRecver(
+            make_shared<IpcListener>(*this, *mMsgTask), mSocketName);
+
+    // establish an ipc sender to the hal daemon
+    mIpcSender = LocIpc::getLocIpcLocalSender(SOCKET_TO_LOCATION_HAL_DAEMON);
+    if (mIpcSender == nullptr) {
+        LOC_LOGe("create sender socket failed %s", SOCKET_TO_LOCATION_HAL_DAEMON);
         return;
     }
 #endif
 
     LOC_LOGd("listen on socket: %s", mSocketName);
-    startListeningNonBlocking(mSocketName);
+    mIpc.startNonBlockingListening(recver);
 }
 
 LocationClientApiImpl::~LocationClientApiImpl() {
@@ -826,9 +855,8 @@ void LocationClientApiImpl::destroy() {
             // deregister
             if (mApiImpl->mHalRegistered && (nullptr != mApiImpl->mIpcSender)) {
                 LocAPIClientDeregisterReqMsg msg(mApiImpl->mSocketName);
-                bool rc = mApiImpl->mIpcSender->send(reinterpret_cast<uint8_t*>(&msg), sizeof(msg));
+                bool rc = mApiImpl->sendMessage(reinterpret_cast<uint8_t*>(&msg), sizeof(msg));
                 LOC_LOGd(">>> DeregisterReq rc=%d\n", rc);
-                delete mApiImpl->mIpcSender;
                 mApiImpl->mIpcSender = nullptr;
             }
 
@@ -920,7 +948,7 @@ void LocationClientApiImpl::updateCallbacks(LocationCallbacks& callbacks) {
                 if (mApiImpl->mHalRegistered) {
                     LocAPIUpdateCallbacksReqMsg msg(mApiImpl->mSocketName,
                                                     mApiImpl->mCallbacksMask);
-                    bool rc = mApiImpl->mIpcSender->send(reinterpret_cast<uint8_t*>(&msg),
+                    bool rc = mApiImpl->sendMessage(reinterpret_cast<uint8_t*>(&msg),
                                                          sizeof(msg));
                     LOC_LOGd(">>> UpdateCallbacksReq callBacksMask=0x%x rc=%d",
                              mApiImpl->mCallbacksMask, rc);
@@ -964,12 +992,11 @@ uint32_t LocationClientApiImpl::startTracking(TrackingOptions& option) {
 
                 if ((0 != mApiImpl->mLocationOptions.minInterval) ||
                     (0 != mApiImpl->mLocationOptions.minDistance)) {
-
                     LocAPIStartTrackingReqMsg msg(mApiImpl->mSocketName,
                                                   mApiImpl->mLocationOptions.minInterval,
                                                   mApiImpl->mLocationOptions.minDistance);
-                    bool rc = mApiImpl->mIpcSender->send(reinterpret_cast<uint8_t*>(&msg),
-                                                         sizeof(msg));
+                    mApiImpl->sendMessage(reinterpret_cast<uint8_t*>(&msg),
+                                          sizeof(msg));
                     LOC_LOGd(">>> StartTrackingReq Interval=%d Distance=%d",
                              mApiImpl->mLocationOptions.minInterval,
                              mApiImpl->mLocationOptions.minDistance);
@@ -1001,7 +1028,7 @@ void LocationClientApiImpl::stopTracking(uint32_t) {
                         ((mApiImpl->mLocationOptions.minInterval != 0) ||
                          (mApiImpl->mLocationOptions.minDistance != 0))) {
                     LocAPIStopTrackingReqMsg msg(mApiImpl->mSocketName);
-                    bool rc = mApiImpl->mIpcSender->send(reinterpret_cast<uint8_t*>(&msg),
+                    bool rc = mApiImpl->sendMessage(reinterpret_cast<uint8_t*>(&msg),
                                                         sizeof(msg));
                     LOC_LOGd(">>> StopTrackingReq rc=%d\n", rc);
                 }
@@ -1037,7 +1064,7 @@ void LocationClientApiImpl::updateTrackingOptionsSync(
             ((pImpl->mLocationOptions.minInterval != 0) ||
              (pImpl->mLocationOptions.minDistance != 0))) {
         LocAPIStopTrackingReqMsg msg(pImpl->mSocketName);
-        rc = pImpl->mIpcSender->send(reinterpret_cast<uint8_t*>(&msg),
+        rc = pImpl->sendMessage(reinterpret_cast<uint8_t*>(&msg),
                                         sizeof(msg));
     } else if (((option.minInterval != 0) || (option.minDistance != 0)) &&
                ((pImpl->mLocationOptions.minInterval == 0) &&
@@ -1047,14 +1074,14 @@ void LocationClientApiImpl::updateTrackingOptionsSync(
         LocAPIStartTrackingReqMsg msg(pImpl->mSocketName,
                                       option.minInterval,
                                       option.minDistance);
-        rc = pImpl->mIpcSender->send(reinterpret_cast<uint8_t*>(&msg),
+        rc = pImpl->sendMessage(reinterpret_cast<uint8_t*>(&msg),
                                         sizeof(msg));
         LOC_LOGd(">>> start tracking Interval=%d Distance=%d",
                  option.minInterval, option.minDistance);
     } else {
         LocAPIUpdateTrackingOptionsReqMsg
                 msg(pImpl->mSocketName, option.minInterval, option.minDistance);
-        rc = pImpl->mIpcSender->send(reinterpret_cast<uint8_t*>(&msg), sizeof(msg));
+        bool rc = pImpl->sendMessage(reinterpret_cast<uint8_t*>(&msg), sizeof(msg));
         LOC_LOGd(">>> updateTrackingOptionsSync Interval=%d Distance=%d",
                 option.minInterval, option.minDistance);
     }
@@ -1103,7 +1130,7 @@ uint32_t LocationClientApiImpl::startBatching(BatchingOptions& batchOptions) {
                         mApiImpl->mBatchingOptions.minInterval,
                         mApiImpl->mBatchingOptions.minDistance,
                         mApiImpl->mBatchingOptions.batchingMode);
-                bool rc = mApiImpl->mIpcSender->send(reinterpret_cast<uint8_t*>(&msg),
+                bool rc = mApiImpl->sendMessage(reinterpret_cast<uint8_t*>(&msg),
                         sizeof(msg));
                 LOC_LOGd(">>> StartBatchingReq Interval=%d Distance=%d BatchingMode=%d",
                         mApiImpl->mBatchingOptions.minInterval,
@@ -1130,7 +1157,7 @@ void LocationClientApiImpl::stopBatching(uint32_t id) {
             if (mApiImpl->mBatchingId == mApiImpl->mClientId) {
                 mApiImpl->mBatchingOptions = {};
                 LocAPIStopBatchingReqMsg msg(mApiImpl->mSocketName);
-                bool rc = mApiImpl->mIpcSender->send(reinterpret_cast<uint8_t*>(&msg),
+                bool rc = mApiImpl->sendMessage(reinterpret_cast<uint8_t*>(&msg),
                         sizeof(msg));
                 LOC_LOGd(">>> StopBatchingReq rc=%d", rc);
             }
@@ -1152,7 +1179,7 @@ void LocationClientApiImpl::updateBatchingOptions(uint32_t id, BatchingOptions& 
                     mApiImpl->mBatchingOptions.minInterval,
                     mApiImpl->mBatchingOptions.minDistance,
                     mApiImpl->mBatchingOptions.batchingMode);
-            bool rc = mApiImpl->mIpcSender->send(reinterpret_cast<uint8_t*>(&msg),
+            bool rc = mApiImpl->sendMessage(reinterpret_cast<uint8_t*>(&msg),
                     sizeof(msg));
             LOC_LOGd(">>> StartBatchingReq Interval=%d Distance=%d BatchingMode=%d",
                     mApiImpl->mBatchingOptions.minInterval,
@@ -1227,7 +1254,7 @@ uint32_t* LocationClientApiImpl::addGeofences(size_t count, GeofenceOption* opti
                     (*(pMsg->geofences.gfPayload + i)).gfOption = mGfOptions[i];
                     (*(pMsg->geofences.gfPayload + i)).gfInfo = mGfInfos[i];
                 }
-                bool rc = mApiImpl->mIpcSender->send(reinterpret_cast<uint8_t*>(msg),
+                bool rc = mApiImpl->sendMessage(reinterpret_cast<uint8_t*>(msg),
                         msglen);
                 LOC_LOGd(">>> AddGeofencesReq count=%zu", mGfCount);
                 delete[] msg;
@@ -1269,7 +1296,7 @@ void LocationClientApiImpl::removeGeofences(size_t count, uint32_t* ids) {
                 memcpy(pMsg->gfClientIds.gfIds, mGfIds, sizeof(uint32_t) * mGfCount);
                 pMsg->msgId = E_LOCAPI_REMOVE_GEOFENCES_MSG_ID;
                 strlcpy(pMsg->mSocketName, mApiImpl->mSocketName, MAX_SOCKET_PATHNAME_LENGTH);
-                bool rc = mApiImpl->mIpcSender->send(reinterpret_cast<uint8_t*>(msg),
+                bool rc = mApiImpl->sendMessage(reinterpret_cast<uint8_t*>(msg),
                         msglen);
                 LOC_LOGd(">>> RemoveGeofencesReq count=%zu", mGfCount);
                 delete[] msg;
@@ -1313,7 +1340,7 @@ void LocationClientApiImpl::modifyGeofences(
                     (*(pMsg->geofences.gfPayload + i)).gfClientId = mGfIds[i];
                     (*(pMsg->geofences.gfPayload + i)).gfOption = mGfOptions[i];
                 }
-                bool rc = mApiImpl->mIpcSender->send(reinterpret_cast<uint8_t*>(msg),
+                bool rc = mApiImpl->sendMessage(reinterpret_cast<uint8_t*>(msg),
                         msglen);
                 LOC_LOGd(">>> ModifyGeofencesReq count=%zu", mGfCount);
                 delete[] msg;
@@ -1352,7 +1379,7 @@ void LocationClientApiImpl::pauseGeofences(size_t count, uint32_t* ids) {
                 memcpy(&(pMsg->gfClientIds.gfIds[0]), mGfIds, sizeof(uint32_t) * mGfCount);
                 pMsg->msgId = E_LOCAPI_PAUSE_GEOFENCES_MSG_ID;
                 strlcpy(pMsg->mSocketName, mApiImpl->mSocketName, MAX_SOCKET_PATHNAME_LENGTH);
-                bool rc = mApiImpl->mIpcSender->send(reinterpret_cast<uint8_t*>(msg),
+                bool rc = mApiImpl->sendMessage(reinterpret_cast<uint8_t*>(msg),
                         msglen);
                 LOC_LOGd(">>> PauseGeofencesReq count=%zu", mGfCount);
                 delete[] msg;
@@ -1389,7 +1416,7 @@ void LocationClientApiImpl::resumeGeofences(size_t count, uint32_t* ids) {
                 memcpy(pMsg->gfClientIds.gfIds, mGfIds, sizeof(uint32_t) * mGfCount);
                 pMsg->msgId = E_LOCAPI_RESUME_GEOFENCES_MSG_ID;
                 strlcpy(pMsg->mSocketName, mApiImpl->mSocketName, MAX_SOCKET_PATHNAME_LENGTH);
-                bool rc = mApiImpl->mIpcSender->send(reinterpret_cast<uint8_t*>(msg),
+                bool rc = mApiImpl->sendMessage(reinterpret_cast<uint8_t*>(msg),
                         msglen);
                 LOC_LOGd(">>> ResumeGeofencesReq count=%zu", mGfCount);
                 delete[] msg;
@@ -1411,7 +1438,7 @@ uint32_t* LocationClientApiImpl::gnssUpdateConfig(GnssConfig config) {
         virtual ~UpdateConfigReq() {}
         void proc() const {
             LocAPIUpdateConfigReqMsg msg(mApiImpl->mSocketName, const_cast<GnssConfig&>(mConfig));
-            bool rc = mApiImpl->mIpcSender->send(reinterpret_cast<uint8_t*>(&msg),
+            bool rc = mApiImpl->sendMessage(reinterpret_cast<uint8_t*>(&msg),
                                                  sizeof(msg));
         }
         LocationClientApiImpl* mApiImpl;
@@ -1430,7 +1457,7 @@ uint32_t LocationClientApiImpl::gnssDeleteAidingData(GnssAidingData& data) {
         void proc() const {
             LocAPIDeleteAidingDataReqMsg msg(mApiImpl->mSocketName,
                                              const_cast<GnssAidingData&>(mAidingData));
-            bool rc = mApiImpl->mIpcSender->send(reinterpret_cast<uint8_t*>(&msg),
+            bool rc = mApiImpl->sendMessage(reinterpret_cast<uint8_t*>(&msg),
                                                  sizeof(msg));
             LOC_LOGd(">>> DeleteAidingDataReq rc=%d", rc);
         }
@@ -1450,7 +1477,7 @@ void LocationClientApiImpl::updateNetworkAvailability(bool available) {
         void proc() const {
             LocAPIUpdateNetworkAvailabilityReqMsg msg(mApiImpl->mSocketName,
                                                       mAvailable);
-            bool rc = mApiImpl->mIpcSender->send(reinterpret_cast<uint8_t*>(&msg),
+            bool rc = mApiImpl->sendMessage(reinterpret_cast<uint8_t*>(&msg),
                                                  sizeof(msg));
             LOC_LOGd(">>> UpdateNetworkAvailabilityReq available=%d ", mAvailable);
         }
@@ -1480,7 +1507,7 @@ void LocationClientApiImpl::getGnssEnergyConsumed(
             // send msg to the hal daemon
             if (nullptr != mApiImpl->mGnssEnergyConsumedInfoCb) {
                 LocAPIGetGnssEnergyConsumedReqMsg msg(mApiImpl->mSocketName);
-                mApiImpl->mIpcSender->send(reinterpret_cast<uint8_t*>(&msg),
+                mApiImpl->sendMessage(reinterpret_cast<uint8_t*>(&msg),
                                            sizeof(msg));
             }
         }
@@ -1533,7 +1560,7 @@ void LocationClientApiImpl::updateLocationSystemInfoListener(
                 if (mApiImpl->mHalRegistered) {
                     LocAPIUpdateCallbacksReqMsg msg(mApiImpl->mSocketName,
                                                     mApiImpl->mCallbacksMask);
-                    bool rc = mApiImpl->mIpcSender->send(reinterpret_cast<uint8_t*>(&msg),
+                    bool rc = mApiImpl->sendMessage(reinterpret_cast<uint8_t*>(&msg),
                                                          sizeof(msg));
                     LOC_LOGd(">>> UpdateCallbacksReq new callBacksMask=0x%x, "
                              "old mask =0x%x, rc=%d",
@@ -1570,7 +1597,7 @@ void LocationClientApiImpl::capabilitesCallback(ELocMsgID msgId, const void* msg
     // send updatecallback request
     if (0 != mCallbacksMask) {
         LocAPIUpdateCallbacksReqMsg msg(mSocketName, mCallbacksMask);
-        bool rc = mIpcSender->send(reinterpret_cast<uint8_t*>(&msg), sizeof(msg));
+        bool rc = sendMessage(reinterpret_cast<uint8_t*>(&msg), sizeof(msg));
         LOC_LOGd(">>> UpdateCallbacksReq callBacksMask=0x%x rc=%d", mCallbacksMask, rc);
     }
 
@@ -1590,7 +1617,7 @@ void LocationClientApiImpl::pingTest(PingTestCb pingTestCallback) {
         virtual ~PingTestReq() {}
         void proc() const {
             LocAPIPingTestReqMsg msg(mApiImpl->mSocketName);
-            bool rc = mApiImpl->mIpcSender->send(reinterpret_cast<uint8_t*>(&msg), sizeof(msg));
+            bool rc = mApiImpl->sendMessage(reinterpret_cast<uint8_t*>(&msg), sizeof(msg));
         }
         LocationClientApiImpl *mApiImpl;
     };
@@ -1599,340 +1626,404 @@ void LocationClientApiImpl::pingTest(PingTestCb pingTestCallback) {
 }
 
 /******************************************************************************
-LocationClientApiImpl - LocIpc overrides
+LocationClientApiImpl -ILocIpcListener
 ******************************************************************************/
-void LocationClientApiImpl::onListenerReady() {
-
+void IpcListener::onListenerReady() {
     struct ClientRegisterReq : public LocMsg {
-        ClientRegisterReq(LocationClientApiImpl* apiImpl) : mApiImpl(apiImpl) {}
-        virtual ~ClientRegisterReq() {}
+        ClientRegisterReq(LocationClientApiImpl& apiImpl) : mApiImpl(apiImpl) {}
         void proc() const {
-            LocAPIClientRegisterReqMsg msg(mApiImpl->mSocketName);
-            bool rc = mApiImpl->mIpcSender->send(reinterpret_cast<uint8_t *>(&msg),
-                                                 sizeof(msg));
+            LocAPIClientRegisterReqMsg msg(mApiImpl.mSocketName);
+            bool rc = mApiImpl.sendMessage(reinterpret_cast<uint8_t *>(&msg), sizeof(msg));
             LOC_LOGd(">>> onListenerReady::ClientRegisterReqMsg rc=%d", rc);
         }
-        LocationClientApiImpl *mApiImpl;
+        LocationClientApiImpl& mApiImpl;
     };
-    mMsgTask->sendMsg(new (nothrow) ClientRegisterReq(this));
+    mMsgTask.sendMsg(new (nothrow) ClientRegisterReq(mApiImpl));
 }
 
-void LocationClientApiImpl::onReceive(const string& data) {
-
+void IpcListener::onReceive(const char* data, uint32_t length) {
     struct OnReceiveHandler : public LocMsg {
-        OnReceiveHandler(LocationClientApiImpl* apiImpl, const string& data) :
-                mApiImpl(apiImpl), mMsgData(data) {}
+#ifndef FEATURE_EXTERNAL_AP
+        OnReceiveHandler(LocationClientApiImpl& apiImpl, IpcListener& listener,
+                         const char* data, uint32_t length, LocDiagIface* mDiagIface) :
+                mApiImpl(apiImpl), mListener(listener), mMsgData(data, length),
+                mDiagInterface(mDiagIface) {}
+#else
+        OnReceiveHandler(LocationClientApiImpl& apiImpl, IpcListener& listener,
+                         const char* data, uint32_t length) :
+                mApiImpl(apiImpl), mListener(listener), mMsgData(data, length) {}
+#endif
+
         virtual ~OnReceiveHandler() {}
         void proc() const {
             LocAPIMsgHeader *pMsg = (LocAPIMsgHeader *)(mMsgData.data());
 
             switch (pMsg->msgId) {
-                case E_LOCAPI_CAPABILILTIES_MSG_ID:
-                    {
-                        LOC_LOGd("<<< capabilities indication");
-                        if (sizeof(LocAPICapabilitiesIndMsg) != mMsgData.length()) {
-                            LOC_LOGe("invalid message");
-                            break;
+            case E_LOCAPI_CAPABILILTIES_MSG_ID:
+            {
+                LOC_LOGd("<<< capabilities indication");
+                if (sizeof(LocAPICapabilitiesIndMsg) != mMsgData.length()) {
+                    LOC_LOGe("invalid message");
+                    break;
+                }
+                mApiImpl.capabilitesCallback(pMsg->msgId, (void*)pMsg);
+                break;
+            }
+
+            case E_LOCAPI_HAL_READY_MSG_ID:
+            {
+                LOC_LOGd("<<< HAL ready");
+                if (sizeof(LocAPIHalReadyIndMsg) != mMsgData.length()) {
+                    LOC_LOGe("invalid message");
+                    break;
+                }
+                // location hal deamon has restarted, need to set this
+                // flag to false to prevent messages to be sent to hal
+                // before registeration completes
+                mApiImpl.mHalRegistered = false;
+                // set mSessionId to invalid so session can be restarted
+                mApiImpl.mSessionId = LOCATION_CLIENT_SESSION_ID_INVALID;
+                // when hal daemon crashes, we need to find the new node/port
+                mListener.onListenerReady();
+                break;
+            }
+
+            case E_LOCAPI_START_TRACKING_MSG_ID:
+            case E_LOCAPI_UPDATE_TRACKING_OPTIONS_MSG_ID:
+            case E_LOCAPI_STOP_TRACKING_MSG_ID:
+            case E_LOCAPI_START_BATCHING_MSG_ID:
+            case E_LOCAPI_STOP_BATCHING_MSG_ID:
+            case E_LOCAPI_UPDATE_BATCHING_OPTIONS_MSG_ID:
+            {
+                LOC_LOGd("<<< response message, msgId = %d", pMsg->msgId);
+                if (sizeof(LocAPIGenericRespMsg) != mMsgData.length()) {
+                    LOC_LOGe("invalid message");
+                    break;
+                }
+                const LocAPIGenericRespMsg* pRespMsg = (LocAPIGenericRespMsg*)(pMsg);
+                LocationResponse response = parseLocationError(pRespMsg->err);
+                if (mApiImpl.mResponseCb) {
+                    mApiImpl.mResponseCb(response);
+                }
+                break;
+            }
+            case E_LOCAPI_ADD_GEOFENCES_MSG_ID:
+            case E_LOCAPI_REMOVE_GEOFENCES_MSG_ID:
+            case E_LOCAPI_MODIFY_GEOFENCES_MSG_ID:
+            case E_LOCAPI_PAUSE_GEOFENCES_MSG_ID:
+            case E_LOCAPI_RESUME_GEOFENCES_MSG_ID:
+            {
+                LOC_LOGd("<<< collective response message, msgId = %d", pMsg->msgId);
+                const LocAPICollectiveRespMsg* pRespMsg = (LocAPICollectiveRespMsg*)(pMsg);
+                std::vector<pair<Geofence, LocationResponse>> responses{};
+                for (int i=0; i<pRespMsg->collectiveRes.count; ++i) {
+                    responses.push_back(make_pair(
+                                            mApiImpl.mGeofenceMap.at(
+                                                (*(pRespMsg->collectiveRes.resp + i)).clientId),
+                                            parseLocationError(
+                                                (*(pRespMsg->collectiveRes.resp + i)).error)));
+                    if (LOCATION_ERROR_SUCCESS !=
+                        (*(pRespMsg->collectiveRes.resp + i)).error ||
+                        E_LOCAPI_REMOVE_GEOFENCES_MSG_ID == pMsg->msgId) {
+                        mApiImpl.eraseGeofenceMap(1, const_cast<uint32_t*>(
+                                                       &((*(pRespMsg->collectiveRes.resp + i)).clientId)));
+                    }
+                }
+                if (mApiImpl.mCollectiveResCb) {
+                    mApiImpl.mCollectiveResCb(responses);
+                }
+                break;
+            }
+
+            // async indication messages
+            case E_LOCAPI_LOCATION_MSG_ID:
+            {
+                LOC_LOGd("<<< message = location");
+                if (sizeof(LocAPILocationIndMsg) != mMsgData.length()) {
+                    LOC_LOGe("invalid message");
+                    break;
+                }
+                if ((mApiImpl.mSessionId != LOCATION_CLIENT_SESSION_ID_INVALID) &&
+                        (mApiImpl.mCallbacksMask & E_LOC_CB_TRACKING_BIT)) {
+                    const LocAPILocationIndMsg* pLocationIndMsg = (LocAPILocationIndMsg*)(pMsg);
+                    Location location = parseLocation(pLocationIndMsg->locationNotification);
+                    if (mApiImpl.mLocationCb) {
+                        mApiImpl.mLocationCb(location);
+                    }
+                }
+                break;
+            }
+
+            case E_LOCAPI_BATCHING_MSG_ID:
+            {
+                LOC_LOGd("<<< message = batching");
+                if (mApiImpl.mCallbacksMask & E_LOC_CB_BATCHING_BIT) {
+                    const LocAPIBatchingIndMsg* pBatchingIndMsg =
+                            (LocAPIBatchingIndMsg*)(pMsg);
+                    std::vector<Location> locationVector;
+                    BatchingStatus status = BATCHING_STATUS_INACTIVE;
+                    if (BATCHING_STATUS_POSITION_AVAILABE ==
+                            pBatchingIndMsg->batchNotification.status) {
+                        for (int i=0; i<pBatchingIndMsg->batchNotification.count; ++i) {
+                            locationVector.push_back(parseLocation(
+                                        *(pBatchingIndMsg->batchNotification.location +
+                                        i)));
                         }
-                        mApiImpl->capabilitesCallback(pMsg->msgId, (void*)pMsg);
+                        status = BATCHING_STATUS_ACTIVE;
+                    } else if (BATCHING_STATUS_TRIP_COMPLETED ==
+                            pBatchingIndMsg->batchNotification.status) {
+                        mApiImpl.stopBatching(0);
+                        status = BATCHING_STATUS_DONE;
+                    } else {
+                        LOC_LOGe("invalid Batching Status!");
                         break;
                     }
 
-                case E_LOCAPI_HAL_READY_MSG_ID:
-                    {
-                        LOC_LOGd("<<< HAL ready ");
-                        if (sizeof(LocAPIHalReadyIndMsg) != mMsgData.length()) {
-                            LOC_LOGe("invalid message");
-                            break;
-                        }
-                        // location hal deamon has restarted, need to set this
-                        // flag to false to prevent messages to be sent to hal
-                        // before registeration completes
-                        mApiImpl->mHalRegistered = false;
+                    if (mApiImpl.mBatchingCb) {
+                        mApiImpl.mBatchingCb(locationVector, status);
+                    }
+                }
+                break;
+            }
 
-                        // set mSessionId to invalid so session can be restarted
-                        mApiImpl->mSessionId = LOCATION_CLIENT_SESSION_ID_INVALID;
-                        // when hal daemon crashes, we need to find the new node/port
-                        #ifdef FEATURE_EXTERNAL_AP
-                            mApiImpl->mIpcSender->findNewService();
-                        #endif
-                        mApiImpl->onListenerReady();
-                        break;
+            case E_LOCAPI_GEOFENCE_BREACH_MSG_ID:
+            {
+                LOC_LOGd("<<< message = geofence breach");
+                if (mApiImpl.mCallbacksMask & E_LOCAPI_GEOFENCE_BREACH_MSG_ID) {
+                    const LocAPIGeofenceBreachIndMsg* pGfBreachIndMsg =
+                        (LocAPIGeofenceBreachIndMsg*)(pMsg);
+                    std::vector<Geofence> geofences;
+                    for (int i=0; i<pGfBreachIndMsg->gfBreachNotification.count;
+                         ++i) {
+                        geofences.push_back(mApiImpl.mGeofenceMap.at(
+                                                *(pGfBreachIndMsg->gfBreachNotification.id + i)));
                     }
+                    if (mApiImpl.mGfBreachCb) {
+                        mApiImpl.mGfBreachCb(geofences,
+                                             parseLocation(
+                                                 pGfBreachIndMsg->gfBreachNotification.location),
+                                             GeofenceBreachTypeMask(
+                                                 pGfBreachIndMsg->gfBreachNotification.type),
+                                             pGfBreachIndMsg->gfBreachNotification.timestamp);
+                    }
+                }
+                break;
+            }
 
-                case E_LOCAPI_START_TRACKING_MSG_ID:
-                case E_LOCAPI_UPDATE_TRACKING_OPTIONS_MSG_ID:
-                case E_LOCAPI_STOP_TRACKING_MSG_ID:
-                case E_LOCAPI_START_BATCHING_MSG_ID:
-                case E_LOCAPI_STOP_BATCHING_MSG_ID:
-                case E_LOCAPI_UPDATE_BATCHING_OPTIONS_MSG_ID:
-                    {
-                        LOC_LOGd("<<< response message, msgId = %d", pMsg->msgId);
-                        if (sizeof(LocAPIGenericRespMsg) != mMsgData.length()) {
-                            LOC_LOGe("invalid message");
-                            break;
-                        }
-                        const LocAPIGenericRespMsg* pRespMsg = (LocAPIGenericRespMsg*)(pMsg);
-                        LocationResponse response = parseLocationError(pRespMsg->err);
-                        if (mApiImpl->mResponseCb) {
-                            mApiImpl->mResponseCb(response);
-                        }
+            case E_LOCAPI_LOCATION_INFO_MSG_ID:
+            {
+                LOC_LOGd("<<< message = location info");
+                if (sizeof(LocAPILocationInfoIndMsg) != mMsgData.length()) {
+                    LOC_LOGe("invalid message");
+                    break;
+                }
+                if ((mApiImpl.mSessionId != LOCATION_CLIENT_SESSION_ID_INVALID) &&
+                        (mApiImpl.mCallbacksMask & E_LOC_CB_GNSS_LOCATION_INFO_BIT)) {
+                    const LocAPILocationInfoIndMsg* pLocationInfoIndMsg =
+                        (LocAPILocationInfoIndMsg*)(pMsg);
+                    GnssLocation gnssLocation =
+                        parseLocationInfo(pLocationInfoIndMsg->gnssLocationInfoNotification);
+                    if (mApiImpl.mGnssReportCbs.gnssLocationCallback) {
+                        mApiImpl.mGnssReportCbs.gnssLocationCallback(gnssLocation);
+                    }
+#ifndef FEATURE_EXTERNAL_AP
+                    if (!mDiagInterface) {
                         break;
                     }
-                case E_LOCAPI_ADD_GEOFENCES_MSG_ID:
-                case E_LOCAPI_REMOVE_GEOFENCES_MSG_ID:
-                case E_LOCAPI_MODIFY_GEOFENCES_MSG_ID:
-                case E_LOCAPI_PAUSE_GEOFENCES_MSG_ID:
-                case E_LOCAPI_RESUME_GEOFENCES_MSG_ID:
-                    {
-                        LOC_LOGd("<<< collective response message, msgId = %d", pMsg->msgId);
-                        const LocAPICollectiveRespMsg* pRespMsg = (LocAPICollectiveRespMsg*)(pMsg);
-                        std::vector<pair<Geofence, LocationResponse>> responses{};
-                        for (int i=0; i<pRespMsg->collectiveRes.count; ++i) {
-                            responses.push_back(make_pair(
-                                    mApiImpl->mGeofenceMap.at(
-                                    (*(pRespMsg->collectiveRes.resp + i)).clientId),
-                                    parseLocationError(
-                                    (*(pRespMsg->collectiveRes.resp + i)).error)));
-                            if (LOCATION_ERROR_SUCCESS !=
-                                    (*(pRespMsg->collectiveRes.resp + i)).error ||
-                                    E_LOCAPI_REMOVE_GEOFENCES_MSG_ID == pMsg->msgId) {
-                                mApiImpl->eraseGeofenceMap(1, const_cast<uint32_t*>(
-                                        &((*(pRespMsg->collectiveRes.resp + i)).clientId)));
-                            }
-                        }
-                        if (mApiImpl->mCollectiveResCb) {
-                            mApiImpl->mCollectiveResCb(responses);
-                        }
+                    diagBuffSrc bufferSrc = BUFFER_INVALID;
+                    clientDiagGnssLocationStructType* diagGnssLocPtr = nullptr;
+                    diagGnssLocPtr = (clientDiagGnssLocationStructType*)
+                        mDiagInterface->logAlloc(LOG_GNSS_CLIENT_API_LOCATION_REPORT_C,
+                                sizeof(clientDiagGnssLocationStructType), &bufferSrc);
+                    if (diagGnssLocPtr == NULL) {
+                        LOC_LOGv("memory alloc failed");
                         break;
                     }
+                    populateClientDiagLocation(diagGnssLocPtr, gnssLocation);
+                    diagGnssLocPtr->version = LOG_CLIENT_DIAG_MSG_VERSION;
 
-                // async indication messages
-                case E_LOCAPI_LOCATION_MSG_ID:
-                    {
-                        LOC_LOGd("<<< message = location");
-                        if (sizeof(LocAPILocationIndMsg) != mMsgData.length()) {
-                            LOC_LOGe("invalid message");
-                            break;
-                        }
-                        if ((mApiImpl->mSessionId != LOCATION_CLIENT_SESSION_ID_INVALID) &&
-                                    (mApiImpl->mCallbacksMask & E_LOC_CB_TRACKING_BIT)) {
-                            const LocAPILocationIndMsg* pLocationIndMsg = (LocAPILocationIndMsg*)(pMsg);
-                            Location location = parseLocation(pLocationIndMsg->locationNotification);
-                            if (mApiImpl->mLocationCb) {
-                                mApiImpl->mLocationCb(location);
-                            }
-                        }
+                    mDiagInterface->logCommit(diagGnssLocPtr, bufferSrc,
+                            LOG_GNSS_CLIENT_API_LOCATION_REPORT_C,
+                            sizeof(clientDiagGnssLocationStructType));
+#endif
+                }
+                break;
+            }
+            case E_LOCAPI_SATELLITE_VEHICLE_MSG_ID:
+            {
+                LOC_LOGd("<<< message = sv");
+                if (sizeof(LocAPISatelliteVehicleIndMsg) != mMsgData.length()) {
+                    LOC_LOGe("invalid message");
+                    break;
+                }
+                if (mApiImpl.mCallbacksMask & E_LOC_CB_GNSS_SV_BIT) {
+                    const LocAPISatelliteVehicleIndMsg* pSvIndMsg =
+                        (LocAPISatelliteVehicleIndMsg*)(pMsg);
+                    std::vector<GnssSv> gnssSvsVector;
+                    for (int i=0; i< pSvIndMsg->gnssSvNotification.count; i++) {
+                        GnssSv gnssSv;
+                        gnssSv = parseGnssSv(pSvIndMsg->gnssSvNotification.gnssSvs[i]);
+                        gnssSvsVector.push_back(gnssSv);
+                    }
+                    if (mApiImpl.mGnssReportCbs.gnssSvCallback) {
+                        mApiImpl.mGnssReportCbs.gnssSvCallback(gnssSvsVector);
+                    }
+#ifndef FEATURE_EXTERNAL_AP
+                    if (!mDiagInterface) {
                         break;
                     }
-                case E_LOCAPI_BATCHING_MSG_ID:
-                    {
-                        LOC_LOGd("<<< message = batching");
-                        if (mApiImpl->mCallbacksMask & E_LOC_CB_BATCHING_BIT) {
-                            const LocAPIBatchingIndMsg* pBatchingIndMsg =
-                                    (LocAPIBatchingIndMsg*)(pMsg);
-                            std::vector<Location> locationVector;
-                            BatchingStatus status = BATCHING_STATUS_INACTIVE;
-                            if (BATCHING_STATUS_POSITION_AVAILABE ==
-                                    pBatchingIndMsg->batchNotification.status) {
-                                for (int i=0; i<pBatchingIndMsg->batchNotification.count; ++i) {
-                                    locationVector.push_back(parseLocation(
-                                                *(pBatchingIndMsg->batchNotification.location +
-                                                i)));
-                                }
-                                status = BATCHING_STATUS_ACTIVE;
-                            } else if (BATCHING_STATUS_TRIP_COMPLETED ==
-                                    pBatchingIndMsg->batchNotification.status) {
-                                mApiImpl->stopBatching(0);
-                                status = BATCHING_STATUS_DONE;
-                            } else {
-                                LOC_LOGe("invalid Batching Status!");
-                                break;
-                            }
+                    diagBuffSrc bufferSrc = BUFFER_INVALID;
+                    clientDiagGnssSvStructType* diagGnssSvPtr = nullptr;
+                    diagGnssSvPtr = (clientDiagGnssSvStructType*)mDiagInterface->logAlloc(
+                            LOG_GNSS_CLIENT_API_SV_REPORT_C,
+                            sizeof(clientDiagGnssSvStructType), &bufferSrc);
+                    if (diagGnssSvPtr == NULL) {
+                        LOC_LOGv("memory alloc failed");
+                        break;
+                    }
+                    populateClientDiagGnssSv(diagGnssSvPtr, gnssSvsVector);
+                    diagGnssSvPtr->version = LOG_CLIENT_DIAG_MSG_VERSION;
 
-                            if (mApiImpl->mBatchingCb) {
-                                mApiImpl->mBatchingCb(locationVector, status);
-                            }
-                        }
-                        break;
-                    }
-                case E_LOCAPI_GEOFENCE_BREACH_MSG_ID:
-                    {
-                        LOC_LOGd("<<< message = geofence breach");
-                        if (mApiImpl->mCallbacksMask & E_LOCAPI_GEOFENCE_BREACH_MSG_ID) {
-                            const LocAPIGeofenceBreachIndMsg* pGfBreachIndMsg =
-                                (LocAPIGeofenceBreachIndMsg*)(pMsg);
-                            std::vector<Geofence> geofences;
-                            for (int i=0; i<pGfBreachIndMsg->gfBreachNotification.count;
-                                    ++i) {
-                                geofences.push_back(mApiImpl->mGeofenceMap.at(
-                                        *(pGfBreachIndMsg->gfBreachNotification.id + i)));
-                            }
-                            if (mApiImpl->mGfBreachCb) {
-                                mApiImpl->mGfBreachCb(geofences,
-                                        parseLocation(
-                                                pGfBreachIndMsg->gfBreachNotification.location),
-                                        GeofenceBreachTypeMask(
-                                                pGfBreachIndMsg->gfBreachNotification.type),
-                                        pGfBreachIndMsg->gfBreachNotification.timestamp);
-                            }
-                        }
-                        break;
-                    }
+                    mDiagInterface->logCommit(diagGnssSvPtr, bufferSrc,
+                            LOG_GNSS_CLIENT_API_SV_REPORT_C,
+                            sizeof(clientDiagGnssSvStructType));
+#endif // FEATURE_EXTERNAL_AP
+                }
+                break;
+            }
 
-                case E_LOCAPI_LOCATION_INFO_MSG_ID:
-                    {
-                        LOC_LOGd("<<< message = location info");
-                        if (sizeof(LocAPILocationInfoIndMsg) != mMsgData.length()) {
-                            LOC_LOGe("invalid message");
-                            break;
-                        }
-                        if ((mApiImpl->mSessionId != LOCATION_CLIENT_SESSION_ID_INVALID) &&
-                                    (mApiImpl->mCallbacksMask & E_LOC_CB_GNSS_LOCATION_INFO_BIT)) {
-                            const LocAPILocationInfoIndMsg* pLocationInfoIndMsg =
-                                    (LocAPILocationInfoIndMsg*)(pMsg);
-                            GnssLocation gnssLocation =
-                                    parseLocationInfo(pLocationInfoIndMsg->gnssLocationInfoNotification);
-                            if (mApiImpl->mGnssReportCbs.gnssLocationCallback) {
-                                mApiImpl->mGnssReportCbs.gnssLocationCallback(gnssLocation);
-                            }
-                        }
-                        break;
+            case E_LOCAPI_NMEA_MSG_ID:
+            {
+                if ((mApiImpl.mSessionId != LOCATION_CLIENT_SESSION_ID_INVALID) &&
+                        (mApiImpl.mCallbacksMask & E_LOC_CB_GNSS_NMEA_BIT) &&
+                            (mApiImpl.mGnssReportCbs.gnssNmeaCallback)) {
+                    // nmea is variable length, can not be checked
+                    const LocAPINmeaIndMsg* pNmeaIndMsg = (LocAPINmeaIndMsg*)(pMsg);
+                    uint64_t timestamp = pNmeaIndMsg->gnssNmeaNotification.timestamp;
+                    std::string nmea(pNmeaIndMsg->gnssNmeaNotification.nmea,
+                                     pNmeaIndMsg->gnssNmeaNotification.length);
+                    LOC_LOGd("<<< message = nmea[%s]", nmea.c_str());
+                    std::stringstream ss(nmea);
+                    std::string each;
+                    while(std::getline(ss, each, '\n')) {
+                        each += '\n';
+                        mApiImpl.mGnssReportCbs.gnssNmeaCallback(timestamp, each);
                     }
-                case E_LOCAPI_SATELLITE_VEHICLE_MSG_ID:
-                    {
-                        LOC_LOGd("<<< message = sv");
-                        if (sizeof(LocAPISatelliteVehicleIndMsg) != mMsgData.length()) {
-                            LOC_LOGe("invalid message");
-                            break;
-                        }
-                        if (mApiImpl->mCallbacksMask & E_LOC_CB_GNSS_SV_BIT) {
-                            const LocAPISatelliteVehicleIndMsg* pSvIndMsg =
-                                    (LocAPISatelliteVehicleIndMsg*)(pMsg);
-                            std::vector<GnssSv> gnssSvsVector;
-                            for (int i=0; i< pSvIndMsg->gnssSvNotification.count; i++) {
-                                  GnssSv gnssSv;
-                                  gnssSv = parseGnssSv(pSvIndMsg->gnssSvNotification.gnssSvs[i]);
-                                  gnssSvsVector.push_back(gnssSv);
-                            }
-                            if (mApiImpl->mGnssReportCbs.gnssSvCallback) {
-                                mApiImpl->mGnssReportCbs.gnssSvCallback(gnssSvsVector);
-                            }
-                        }
-                        break;
-                    }
+                }
+                break;
+            }
 
-                case E_LOCAPI_NMEA_MSG_ID:
-                    {
-                        if ((mApiImpl->mSessionId != LOCATION_CLIENT_SESSION_ID_INVALID) &&
-                                    ((mApiImpl->mCallbacksMask & E_LOC_CB_GNSS_NMEA_BIT) &&
-                                     (mApiImpl->mGnssReportCbs.gnssNmeaCallback))) {
-                            // nmea is variable length, can not be checked
-                            const LocAPINmeaIndMsg* pNmeaIndMsg = (LocAPINmeaIndMsg*)(pMsg);
-                            uint64_t timestamp = pNmeaIndMsg->gnssNmeaNotification.timestamp;
-                            std::string nmea(pNmeaIndMsg->gnssNmeaNotification.nmea,
-                                             pNmeaIndMsg->gnssNmeaNotification.length);
-                            LOC_LOGd("<<< message = nmea[%s]", nmea.c_str());
-                            std::stringstream ss(nmea);
-                            std::string each;
-                            while(std::getline(ss, each, '\n')) {
-                                each += '\n';
-                                mApiImpl->mGnssReportCbs.gnssNmeaCallback(timestamp, each);
-                            }
-                        }
-                        break;
+            case E_LOCAPI_DATA_MSG_ID:
+            {
+                LOC_LOGd("<<< message = data");
+                if (sizeof(LocAPIDataIndMsg) != mMsgData.length()) {
+                    LOC_LOGe("invalid message");
+                    break;
+                }
+                if ((mApiImpl.mSessionId != LOCATION_CLIENT_SESSION_ID_INVALID) &&
+                        (mApiImpl.mCallbacksMask & E_LOC_CB_GNSS_DATA_BIT)) {
+                    const LocAPIDataIndMsg* pDataIndMsg = (LocAPIDataIndMsg*)(pMsg);
+                    GnssData gnssData =
+                        parseGnssData(pDataIndMsg->gnssDataNotification);
+                    if (mApiImpl.mGnssReportCbs.gnssDataCallback) {
+                        mApiImpl.mGnssReportCbs.gnssDataCallback(gnssData);
                     }
+                }
+                break;
+            }
 
-                case E_LOCAPI_DATA_MSG_ID:
-                    {
-                        LOC_LOGd("<<< message = data");
-                        if (sizeof(LocAPIDataIndMsg) != mMsgData.length()) {
-                            LOC_LOGe("invalid message");
-                            break;
-                        }
-                        if ((mApiImpl->mSessionId != LOCATION_CLIENT_SESSION_ID_INVALID) &&
-                                    (mApiImpl->mCallbacksMask & E_LOC_CB_GNSS_DATA_BIT)) {
-                            const LocAPIDataIndMsg* pDataIndMsg = (LocAPIDataIndMsg*)(pMsg);
-                            GnssData gnssData =
-                                parseGnssData(pDataIndMsg->gnssDataNotification);
-                            if (mApiImpl->mGnssReportCbs.gnssDataCallback) {
-                                mApiImpl->mGnssReportCbs.gnssDataCallback(gnssData);
-                            }
-                        }
-                        break;
+            case E_LOCAPI_GET_GNSS_ENGERY_CONSUMED_MSG_ID:
+            {
+                LOC_LOGd("<<< message = GNSS power consumption\n");
+                if (sizeof(LocAPIGnssEnergyConsumedIndMsg) != mMsgData.length()) {
+                    LOC_LOGe("invalid message");
+                    break;
+                }
+                LocAPIGnssEnergyConsumedIndMsg* pEnergyMsg =
+                    (LocAPIGnssEnergyConsumedIndMsg*) pMsg;
+                uint64_t energyNumber =
+                    pEnergyMsg->totalGnssEnergyConsumedSinceFirstBoot;
+                uint32_t flags = 0;
+                if (energyNumber != 0xffffffffffffffff) {
+                    flags = ENERGY_CONSUMED_SINCE_FIRST_BOOT_BIT;
+                }
+                GnssEnergyConsumedInfo energyConsumedInfo = {};
+                energyConsumedInfo.flags =
+                    (location_client::GnssEnergyConsumedInfoMask) flags;
+                energyConsumedInfo.totalEnergyConsumedSinceFirstBoot = energyNumber;
+                if (flags == 0 && mApiImpl.mGnssEnergyConsumedResponseCb) {
+                    mApiImpl.mGnssEnergyConsumedResponseCb(
+                        LOCATION_RESPONSE_UNKOWN_FAILURE);
+                } else if (mApiImpl.mGnssEnergyConsumedInfoCb){
+                    mApiImpl.mGnssEnergyConsumedInfoCb(energyConsumedInfo);
+                }
+                break;
+            }
+
+            case E_LOCAPI_LOCATION_SYSTEM_INFO_MSG_ID:
+            {
+                LOC_LOGd("<<< message = location system info");
+                if (sizeof(LocAPILocationSystemInfoIndMsg) != mMsgData.length()) {
+                    LOC_LOGe("invalid message");
+                    break;
+                }
+                if (mApiImpl.mCallbacksMask & E_LOC_CB_SYSTEM_INFO_BIT) {
+                    const LocAPILocationSystemInfoIndMsg * pDataIndMsg =
+                            (LocAPILocationSystemInfoIndMsg*)(pMsg);
+                    LocationSystemInfo locationSystemInfo =
+                            parseLocationSystemInfo(pDataIndMsg->locationSystemInfo);
+                    if (mApiImpl.mLocationSysInfoCb) {
+                        mApiImpl.mLocationSysInfoCb(locationSystemInfo);
                     }
+                }
+                break;
+            }
 
-                case E_LOCAPI_GET_GNSS_ENGERY_CONSUMED_MSG_ID:
-                    {
-                        LOC_LOGd("<<< message = GNSS power consumption");
-                        if (sizeof(LocAPIGnssEnergyConsumedIndMsg) != mMsgData.length()) {
-                            LOC_LOGe("invalid message");
-                            break;
-                        }
-                        LocAPIGnssEnergyConsumedIndMsg* pEnergyMsg =
-                                (LocAPIGnssEnergyConsumedIndMsg*) pMsg;
-                        uint64_t energyNumber =
-                                pEnergyMsg->totalGnssEnergyConsumedSinceFirstBoot;
-                        uint32_t flags = 0;
-                        if (energyNumber != 0xffffffffffffffff) {
-                            flags = ENERGY_CONSUMED_SINCE_FIRST_BOOT_BIT;
-                        }
-                        GnssEnergyConsumedInfo energyConsumedInfo = {};
-                        energyConsumedInfo.flags =
-                                (location_client::GnssEnergyConsumedInfoMask) flags;
-                        energyConsumedInfo.totalEnergyConsumedSinceFirstBoot = energyNumber;
-                        if (flags == 0 && mApiImpl->mGnssEnergyConsumedResponseCb) {
-                            mApiImpl->mGnssEnergyConsumedResponseCb(
-                                    LOCATION_RESPONSE_UNKOWN_FAILURE);
-                        } else if (mApiImpl->mGnssEnergyConsumedInfoCb){
-                            mApiImpl->mGnssEnergyConsumedInfoCb(energyConsumedInfo);
-                        }
-                        break;
-                    }
+            case E_LOCAPI_PINGTEST_MSG_ID:
+            {
+                LOC_LOGd("<<< ping message %d", pMsg->msgId);
+                if (sizeof(LocAPIPingTestIndMsg) != mMsgData.length()) {
+                    LOC_LOGe("invalid message");
+                    break;
+                }
+                const LocAPIPingTestIndMsg* pIndMsg = (LocAPIPingTestIndMsg*)(pMsg);
+                if (mApiImpl.mPingTestCb) {
+                    uint32_t response = pIndMsg->data[0];
+                    mApiImpl.mPingTestCb(response);
+                }
+                break;
+            }
 
-                case E_LOCAPI_LOCATION_SYSTEM_INFO_MSG_ID:
-                        LOC_LOGd("<<< message = location system info");
-                        if (sizeof(LocAPILocationSystemInfoIndMsg) != mMsgData.length()) {
-                            LOC_LOGe("invalid message");
-                            break;
-                        }
-                        if (mApiImpl->mCallbacksMask & E_LOC_CB_SYSTEM_INFO_BIT) {
-                            const LocAPILocationSystemInfoIndMsg * pDataIndMsg =
-                                    (LocAPILocationSystemInfoIndMsg*)(pMsg);
-                            LocationSystemInfo locationSystemInfo =
-                                parseLocationSystemInfo(pDataIndMsg->locationSystemInfo);
-                            if (mApiImpl->mLocationSysInfoCb) {
-                                mApiImpl->mLocationSysInfoCb(locationSystemInfo);
-                            }
-                        }
-                        break;
-
-                case E_LOCAPI_PINGTEST_MSG_ID:
-                    {
-                        LOC_LOGd("<<< ping message %d", pMsg->msgId);
-                        if (sizeof(LocAPIPingTestIndMsg) != mMsgData.length()) {
-                            LOC_LOGe("invalid message");
-                            break;
-                        }
-                        const LocAPIPingTestIndMsg* pIndMsg = (LocAPIPingTestIndMsg*)(pMsg);
-                        if (mApiImpl->mPingTestCb) {
-                            uint32_t response = pIndMsg->data[0];
-                            mApiImpl->mPingTestCb(response);
-                        }
-                        break;
-                    }
-
-                default:
-                    {
-                        LOC_LOGe("<<< unknown message %d", pMsg->msgId);
-                        break;
-                    }
+            default:
+            {
+                LOC_LOGe("<<< unknown message %d\n", pMsg->msgId);
+                break;
+            }
             }
         }
-        LocationClientApiImpl *mApiImpl;
+        LocationClientApiImpl& mApiImpl;
+        IpcListener& mListener;
         const string mMsgData;
+#ifndef FEATURE_EXTERNAL_AP
+        LocDiagIface* mDiagInterface;
+#endif //FEATURE_EXTERNAL_AP
     };
-    mMsgTask->sendMsg(new (nothrow) OnReceiveHandler(this, data));
+#ifndef FEATURE_EXTERNAL_AP
+    if (mApiImpl.mDiagIface == nullptr) {
+        void* libHandle = nullptr;
+        getLocDiagIface_t* getter = (getLocDiagIface_t*)dlGetSymFromLib(libHandle,
+                "liblocdiagiface.so.1.0.0", "getLocDiagIface");
+        if (getter != nullptr) {
+            mApiImpl.mDiagIface = (*getter)();
+        } else {
+            LOC_LOGe("<<< failed to load LocDiagIface library\n");
+        }
+    }
+    mMsgTask.sendMsg(new (nothrow) OnReceiveHandler(mApiImpl, *this, data, length,
+                mApiImpl.mDiagIface));
+#else
+    mMsgTask.sendMsg(new (nothrow) OnReceiveHandler(mApiImpl, *this, data, length));
+#endif // FEATURE_EXTERNAL_AP
 }
 
 /******************************************************************************

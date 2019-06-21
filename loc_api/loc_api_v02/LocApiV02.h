@@ -124,7 +124,7 @@ private:
   /*convert GnssMeasurement type from QMI LOC to loc eng format*/
   bool convertGnssMeasurements (
       const qmiLocEventGnssSvMeasInfoIndMsgT_v02& gnss_measurement_report_ptr,
-      int index);
+      int index, bool isExt);
 
   /* Convert APN Type mask */
   static qmiLocApnTypeMaskT_v02 convertLocApnTypeMask(LocApnTypeMask mask);
@@ -137,9 +137,6 @@ private:
 
   /* Convert GnssPowerMode to QMI Loc Power Mode Enum */
   static qmiLocPowerModeEnumT_v02 convertPowerMode(GnssPowerMode powerMode);
-
-  /* get sv used count from sv mask */
-  static int getNumSvUsed (uint64_t svUsedIdsMask, int totalSvCntInOneConstellation);
 
   void convertGnssMeasurementsHeader(const Gnss_LocSvSystemEnumType locSvSystemType,
       const qmiLocEventGnssSvMeasInfoIndMsgT_v02& gnss_measurement_info);
