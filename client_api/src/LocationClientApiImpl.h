@@ -56,17 +56,22 @@ using loc_util::LocIpc;
 using loc_util::LocIpcSender;
 #endif // FEATURE_EXTERNAL_AP
 
-/** @fn
-    @brief
-    Structure of all client callbacks
-*/
+enum ReportCbEnumType {
+    REPORT_CB_TYPE_NONE   = 0,
+    /** cb for GNSS info, including location, sv info, nmea and
+     *  etc */
+    REPORT_CB_GNSS_INFO   = 1,
+    /** cb for GNSS info, including location, sv info, nmea and
+     *  etc and also for location of other engines running in the
+     *  system */
+    REPORT_CB_ENGINE_INFO = 2,
+};
+
 struct ClientCallbacks {
-    location_client::CapabilitiesCb capabilitycb;
-    location_client::ResponseCb responsecb;
-    location_client::LocationCb locationcb;
-    location_client::GnssReportCbs gnssreportcbs;
-    // used for rare system event
-    location_client::LocationSystemInfoCb systemInfoCb;
+    location_client::ResponseCb      responsecb;
+    location_client::LocationCb      locationcb;
+    location_client::GnssReportCbs   gnssreportcbs;
+    location_client::EngineReportCbs engreportcbs;
 };
 
 #ifndef FEATURE_EXTERNAL_AP
@@ -155,11 +160,13 @@ public:
 
     // other interface
     void updateNetworkAvailability(bool available);
-    void updateCallbackFunctions(const ClientCallbacks&);
+    void updateCallbackFunctions(const ClientCallbacks&,
+                                 ReportCbEnumType reportCbType = REPORT_CB_TYPE_NONE);
     void getGnssEnergyConsumed(GnssEnergyConsumedCb gnssEnergyConsumedCallback,
                                ResponseCb responseCallback);
     void updateLocationSystemInfoListener(LocationSystemInfoCb locSystemInfoCallback,
                                           ResponseCb responseCallback);
+    void diagLogGnssLocation(const GnssLocation &gnssLocation);
 
     void pingTest(PingTestCb pingTestCallback);
 
@@ -181,16 +188,23 @@ private:
     char                    mSocketName[MAX_SOCKET_PATHNAME_LENGTH];
     // for client on a different processor, 0 is invalid
     uint32_t                mInstanceId;
-
     LocationCallbacksMask   mCallbacksMask;
     LocationOptions         mLocationOptions;
-    MsgTask*                mMsgTask;
+    LocationCapabilitiesMask  mCapsMask;
 
     // callbacks
     CapabilitiesCb          mCapabilitiesCb;
     ResponseCb              mResponseCb;
+
+    // location callbacks
     LocationCb              mLocationCb;
-    GnssReportCbs           mGnssReportCbs;
+    GnssLocationCb          mGnssLocationCb;
+    EngineLocationsCb       mEngLocationsCb;
+
+    // other GNSS related callback
+    GnssSvCb                mGnssSvCb;
+    GnssNmeaCb              mGnssNmeaCb;
+    GnssDataCb              mGnssDataCb;
 
     GnssEnergyConsumedCb    mGnssEnergyConsumedInfoCb;
     ResponseCb              mGnssEnergyConsumedResponseCb;
@@ -199,6 +213,8 @@ private:
     ResponseCb              mLocationSysInfoResponseCb;
 
     PingTestCb              mPingTestCb;
+
+    MsgTask*                mMsgTask;
 
 #ifdef FEATURE_EXTERNAL_AP
     LocSocketSender*       mIpcSender;

@@ -94,7 +94,8 @@ bool LocationClientApi::startPositionSession(
     mApiImpl->updateCallbacks(callbacksOption);
 
     // options
-    LocationOptions locationOption = {0};
+    LocationOptions locationOption;
+    locationOption.size = sizeof(locationOption);
     locationOption.minInterval = intervalInMs;
     locationOption.minDistance = distanceInMeters;
     mApiImpl->startTracking(locationOption);
@@ -121,7 +122,7 @@ bool LocationClientApi::startPositionSession(
     ClientCallbacks cbs = {0};
     cbs.responsecb = responseCallback;
     cbs.gnssreportcbs = gnssReportCallbacks;
-    mApiImpl->updateCallbackFunctions(cbs);
+    mApiImpl->updateCallbackFunctions(cbs, REPORT_CB_GNSS_INFO);
 
     // callback masks
     LocationCallbacks callbacksOption = {0};
@@ -141,9 +142,62 @@ bool LocationClientApi::startPositionSession(
     mApiImpl->updateCallbacks(callbacksOption);
 
     // options
-    LocationOptions locationOption = {0};
+    LocationOptions locationOption;
+    locationOption.size = sizeof(locationOption);
     locationOption.minInterval = intervalInMs;
     locationOption.minDistance = 0;
+    mApiImpl->startTracking(locationOption);
+    return true;
+}
+
+bool LocationClientApi::startPositionSession(
+        uint32_t intervalInMs,
+        LocReqEngineTypeMask locEngReqMask,
+        const EngineReportCbs& engReportCallbacks,
+        ResponseCb responseCallback) {
+
+    //Input parameter check
+    if (!engReportCallbacks.engLocationsCallback) {
+        LOC_LOGe ("engLocations callbacks can't be NULL");
+        return false;
+    }
+
+    if (!mApiImpl) {
+        LOC_LOGe ("NULL mApiImpl");
+        return false;
+    }
+
+    // callback functions
+    ClientCallbacks cbs = {0};
+    cbs.responsecb = responseCallback;
+    cbs.engreportcbs = engReportCallbacks;
+    mApiImpl->updateCallbackFunctions(cbs, REPORT_CB_ENGINE_INFO);
+
+    // callback masks
+    LocationCallbacks callbacksOption = {0};
+    callbacksOption.responseCb = [](::LocationError err, uint32_t id) {};
+
+    if (engReportCallbacks.engLocationsCallback) {
+        callbacksOption.engineLocationsInfoCb =
+                [](uint32_t count, ::GnssLocationInfoNotification* locArr) {};
+    }
+    if (engReportCallbacks.gnssSvCallback) {
+        callbacksOption.gnssSvCb = [](::GnssSvNotification n) {};
+    }
+    if (engReportCallbacks.gnssNmeaCallback) {
+        callbacksOption.gnssNmeaCb = [](::GnssNmeaNotification n) {};
+    }
+    if (engReportCallbacks.gnssDataCallback) {
+       callbacksOption.gnssDataCb = [] (::GnssDataNotification n) {};
+    }
+    mApiImpl->updateCallbacks(callbacksOption);
+
+    // options
+    LocationOptions locationOption;
+    locationOption.size = sizeof(locationOption);
+    locationOption.minInterval = intervalInMs;
+    locationOption.minDistance = 0;
+    locationOption.locReqEngTypeMask =(::LocReqEngineTypeMask)locEngReqMask;
     mApiImpl->startTracking(locationOption);
     return true;
 }
