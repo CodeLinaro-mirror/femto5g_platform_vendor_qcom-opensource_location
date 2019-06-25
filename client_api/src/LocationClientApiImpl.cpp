@@ -509,9 +509,17 @@ static GnssLocation parseLocationInfo(const ::GnssLocationInfoNotification &halL
     if (GNSS_LOCATION_INFO_TIME_UNC_BIT & halLocationInfo.flags) {
         flags |= GNSS_LOCATION_INFO_TIME_UNC_BIT;
     }
-
     if (GNSS_LOCATION_INFO_NUM_SV_USED_IN_POSITION_BIT & halLocationInfo.flags) {
         flags |= GNSS_LOCATION_INFO_NUM_SV_USED_IN_POSITION_BIT;
+    }
+    if (GNSS_LOCATION_INFO_CALIBRATION_CONFIDENCE_BIT & halLocationInfo.flags) {
+        flags |= GNSS_LOCATION_INFO_CALIBRATION_CONFIDENCE_PERCENT_BIT;
+        locationInfo.calibrationConfidencePercent = halLocationInfo.calibrationConfidence;
+    }
+    if (GNSS_LOCATION_INFO_CALIBRATION_STATUS_BIT & halLocationInfo.flags) {
+        flags |= GNSS_LOCATION_INFO_CALIBRATION_STATUS_BIT;
+        locationInfo.calibrationStatus =
+                (DrCalibrationStatusMask)halLocationInfo.calibrationStatus;
     }
 
     locationInfo.gnssInfoFlags = (GnssLocationInfoFlagMask)flags;
@@ -1008,6 +1016,7 @@ uint32_t LocationClientApiImpl::startTracking(TrackingOptions& option) {
                         mApiImpl, const_cast<TrackingOptions&>(mOption));
             } else {
                 LOC_LOGd(">>> StartTrackingReq - no change in option");
+                mApiImpl->mResponseCb(LOCATION_RESPONSE_SUCCESS);
             }
         }
         LocationClientApiImpl* mApiImpl;
@@ -1663,8 +1672,8 @@ void IpcListener::onReceive(const char* data, uint32_t length) {
             {
                 LOC_LOGd("<<< capabilities indication");
                 if (sizeof(LocAPICapabilitiesIndMsg) != mMsgData.length()) {
-                    LOC_LOGe("invalid message");
-                    break;
+                    LOC_LOGw("payload size does not match for message with id: %d",
+                             pMsg->msgId);
                 }
                 mApiImpl.capabilitesCallback(pMsg->msgId, (void*)pMsg);
                 break;
@@ -1674,8 +1683,8 @@ void IpcListener::onReceive(const char* data, uint32_t length) {
             {
                 LOC_LOGd("<<< HAL ready");
                 if (sizeof(LocAPIHalReadyIndMsg) != mMsgData.length()) {
-                    LOC_LOGe("invalid message");
-                    break;
+                    LOC_LOGw("payload size does not match for message with id: %d",
+                             pMsg->msgId);
                 }
                 // location hal deamon has restarted, need to set this
                 // flag to false to prevent messages to be sent to hal
@@ -1697,8 +1706,8 @@ void IpcListener::onReceive(const char* data, uint32_t length) {
             {
                 LOC_LOGd("<<< response message, msgId = %d", pMsg->msgId);
                 if (sizeof(LocAPIGenericRespMsg) != mMsgData.length()) {
-                    LOC_LOGe("invalid message");
-                    break;
+                    LOC_LOGw("payload size does not match for message with id: %d",
+                             pMsg->msgId);
                 }
                 const LocAPIGenericRespMsg* pRespMsg = (LocAPIGenericRespMsg*)(pMsg);
                 LocationResponse response = parseLocationError(pRespMsg->err);
@@ -1740,8 +1749,8 @@ void IpcListener::onReceive(const char* data, uint32_t length) {
             {
                 LOC_LOGd("<<< message = location");
                 if (sizeof(LocAPILocationIndMsg) != mMsgData.length()) {
-                    LOC_LOGe("invalid message");
-                    break;
+                    LOC_LOGw("payload size does not match for message with id: %d",
+                             pMsg->msgId);
                 }
                 if ((mApiImpl.mSessionId != LOCATION_CLIENT_SESSION_ID_INVALID) &&
                         (mApiImpl.mCallbacksMask & E_LOC_CB_TRACKING_BIT)) {
@@ -1814,8 +1823,8 @@ void IpcListener::onReceive(const char* data, uint32_t length) {
             {
                 LOC_LOGd("<<< message = location info");
                 if (sizeof(LocAPILocationInfoIndMsg) != mMsgData.length()) {
-                    LOC_LOGe("invalid message");
-                    break;
+                    LOC_LOGw("payload size does not match for message with id: %d",
+                             pMsg->msgId);
                 }
                 if ((mApiImpl.mSessionId != LOCATION_CLIENT_SESSION_ID_INVALID) &&
                         (mApiImpl.mCallbacksMask & E_LOC_CB_GNSS_LOCATION_INFO_BIT)) {
@@ -1853,8 +1862,8 @@ void IpcListener::onReceive(const char* data, uint32_t length) {
             {
                 LOC_LOGd("<<< message = sv");
                 if (sizeof(LocAPISatelliteVehicleIndMsg) != mMsgData.length()) {
-                    LOC_LOGe("invalid message");
-                    break;
+                    LOC_LOGw("payload size does not match for message with id: %d",
+                             pMsg->msgId);
                 }
                 if (mApiImpl.mCallbacksMask & E_LOC_CB_GNSS_SV_BIT) {
                     const LocAPISatelliteVehicleIndMsg* pSvIndMsg =
@@ -1917,8 +1926,8 @@ void IpcListener::onReceive(const char* data, uint32_t length) {
             {
                 LOC_LOGd("<<< message = data");
                 if (sizeof(LocAPIDataIndMsg) != mMsgData.length()) {
-                    LOC_LOGe("invalid message");
-                    break;
+                    LOC_LOGw("payload size does not match for message with id: %d",
+                             pMsg->msgId);
                 }
                 if ((mApiImpl.mSessionId != LOCATION_CLIENT_SESSION_ID_INVALID) &&
                         (mApiImpl.mCallbacksMask & E_LOC_CB_GNSS_DATA_BIT)) {
@@ -1936,8 +1945,8 @@ void IpcListener::onReceive(const char* data, uint32_t length) {
             {
                 LOC_LOGd("<<< message = GNSS power consumption\n");
                 if (sizeof(LocAPIGnssEnergyConsumedIndMsg) != mMsgData.length()) {
-                    LOC_LOGe("invalid message");
-                    break;
+                    LOC_LOGw("payload size does not match for message with id: %d",
+                             pMsg->msgId);
                 }
                 LocAPIGnssEnergyConsumedIndMsg* pEnergyMsg =
                     (LocAPIGnssEnergyConsumedIndMsg*) pMsg;
@@ -1964,8 +1973,8 @@ void IpcListener::onReceive(const char* data, uint32_t length) {
             {
                 LOC_LOGd("<<< message = location system info");
                 if (sizeof(LocAPILocationSystemInfoIndMsg) != mMsgData.length()) {
-                    LOC_LOGe("invalid message");
-                    break;
+                    LOC_LOGw("payload size does not match for message with id: %d",
+                             pMsg->msgId);
                 }
                 if (mApiImpl.mCallbacksMask & E_LOC_CB_SYSTEM_INFO_BIT) {
                     const LocAPILocationSystemInfoIndMsg * pDataIndMsg =
@@ -1983,8 +1992,8 @@ void IpcListener::onReceive(const char* data, uint32_t length) {
             {
                 LOC_LOGd("<<< ping message %d", pMsg->msgId);
                 if (sizeof(LocAPIPingTestIndMsg) != mMsgData.length()) {
-                    LOC_LOGe("invalid message");
-                    break;
+                    LOC_LOGw("payload size does not match for message with id: %d",
+                             pMsg->msgId);
                 }
                 const LocAPIPingTestIndMsg* pIndMsg = (LocAPIPingTestIndMsg*)(pMsg);
                 if (mApiImpl.mPingTestCb) {
