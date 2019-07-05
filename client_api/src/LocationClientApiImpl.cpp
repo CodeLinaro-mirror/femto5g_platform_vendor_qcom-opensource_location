@@ -729,10 +729,13 @@ mutex LocationClientApiImpl::mMutex;
 LocationClientApiImpl - constructors
 ******************************************************************************/
 LocationClientApiImpl::LocationClientApiImpl(CapabilitiesCb capabitiescb) :
-        mCapabilitiesCb(capabitiescb),
         mHalRegistered(false),
-        mCallbacksMask(0), mLocationOptions({0}),
+        mCallbacksMask(0),
+        mLocationOptions({0}),
         mSessionId(LOCATION_CLIENT_SESSION_ID_INVALID),
+        mCapabilitiesCb(capabitiescb),
+        mResponseCb(nullptr),
+        mLocationCb(nullptr),
         mGnssEnergyConsumedInfoCb(nullptr),
         mGnssEnergyConsumedResponseCb(nullptr),
         mLocationSysInfoCb(nullptr),
@@ -980,7 +983,9 @@ uint32_t LocationClientApiImpl::startTracking(LocationOptions& option) {
                         mApiImpl, const_cast<LocationOptions&>(mOption));
             } else {
                 LOC_LOGd(">>> StartTrackingReq - no change in option");
-                mApiImpl->mResponseCb(LOCATION_RESPONSE_SUCCESS);
+                if (mApiImpl->mResponseCb) {
+                    mApiImpl->mResponseCb(LOCATION_RESPONSE_SUCCESS);
+                }
             }
         }
         LocationClientApiImpl* mApiImpl;

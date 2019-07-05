@@ -182,15 +182,15 @@ private:
     // for client on a different processor, 0 is invalid
     uint32_t                mInstanceId;
 
+    LocationCallbacksMask   mCallbacksMask;
+    LocationOptions         mLocationOptions;
+    MsgTask*                mMsgTask;
+
     // callbacks
     CapabilitiesCb          mCapabilitiesCb;
     ResponseCb              mResponseCb;
     LocationCb              mLocationCb;
     GnssReportCbs           mGnssReportCbs;
-    PingTestCb              mPingTestCb;
-
-    LocationCallbacksMask   mCallbacksMask;
-    LocationOptions         mLocationOptions;
 
     GnssEnergyConsumedCb    mGnssEnergyConsumedInfoCb;
     ResponseCb              mGnssEnergyConsumedResponseCb;
@@ -198,7 +198,7 @@ private:
     LocationSystemInfoCb    mLocationSysInfoCb;
     ResponseCb              mLocationSysInfoResponseCb;
 
-    MsgTask*                mMsgTask;
+    PingTestCb              mPingTestCb;
 
 #ifdef FEATURE_EXTERNAL_AP
     LocSocketSender*       mIpcSender;
