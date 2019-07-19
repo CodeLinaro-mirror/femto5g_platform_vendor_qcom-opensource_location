@@ -261,7 +261,7 @@ LocApiV02 :: LocApiV02(LOC_API_ADAPTER_EVENT_MASK_T exMask,
     clientHandle(LOC_CLIENT_INVALID_HANDLE_VALUE),
     mQmiMask(0), mInSession(false), mPowerMode(GNSS_POWER_MODE_INVALID),
     mEngineOn(false), mMeasurementsStarted(false),
-    mIsMasterRegistered(false), mMasterRegisterNotSupported(false)
+    mMasterRegisterNotSupported(false)
 {
   // initialize loc_sync_req interface
   loc_sync_req_init();
@@ -339,12 +339,14 @@ LocApiV02 :: open(LOC_API_ADAPTER_EVENT_MASK_T mask)
 
         bool gnssMeasurementSupported = false;
         if (isMaster()) {
-            checkRegisterMaster();
+            registerMasterClient();
             gnssMeasurementSupported = cacheGnssMeasurementSupport();
             if (gnssMeasurementSupported) {
                 /* Indicate that QMI LOC message for GNSS measurement was sent */
                 mQmiMask |= QMI_LOC_EVENT_MASK_GNSS_MEASUREMENT_REPORT_V02;
             }
+
+            LocDualContext::injectFeatureConfig(mContext);
         }
 
         // check the modem
@@ -465,8 +467,6 @@ LocApiV02 :: open(LOC_API_ADAPTER_EVENT_MASK_T mask)
        mContext->setEngineCapabilities(supportedMsgList,
             (getSupportedFeatureList_ind.feature_len != 0 ? getSupportedFeatureList_ind.feature:
             NULL), gnssMeasurementSupported);
-
-       LocDualContext::injectFeatureConfig(mContext);
     }
   }
 
@@ -476,7 +476,6 @@ LocApiV02 :: open(LOC_API_ADAPTER_EVENT_MASK_T mask)
     LOC_LOGd("clientHandle = %p mMask: 0x%" PRIx64 " Adapter mask: 0x%" PRIx64 " "
              "newMask: 0x%" PRIx64 " mQmiMask: 0x%" PRIx64 " qmiMask: 0x%" PRIx64 "",
              clientHandle, mMask, mask, newMask, mQmiMask, qmiMask);
-    checkRegisterMaster();
 
     if ((mQmiMask ^ qmiMask) & qmiMask & QMI_LOC_EVENT_MASK_WIFI_REQ_V02) {
         wifiStatusInformSync();
@@ -598,7 +597,6 @@ enum loc_api_adapter_err LocApiV02 :: close()
   mQmiMask = 0;
   mInSession = false;
   clientHandle = LOC_CLIENT_INVALID_HANDLE_VALUE;
-  mIsMasterRegistered = false;
 
   return rtv;
 }
