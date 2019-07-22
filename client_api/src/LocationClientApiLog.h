@@ -119,7 +119,7 @@ typedef enum {
 typedef uint32_t clientDiagGnssGloTimeStructTypeFlags;
 typedef enum {
     CLIENT_DIAG_GNSS_CLO_DAYS_VALID                     = (1 << 0),
-    CLIENT_DIAG_GNSS_GLOS_MSEC_VALID                    = (1 << 1),
+    CLIENT_DIAG_GNSS_GLO_MSEC_VALID                    = (1 << 1),
     CLIENT_DIAG_GNSS_GLO_CLK_TIME_BIAS_VALID            = (1 << 2),
     CLIENT_DIAG_GNSS_GLO_CLK_TIME_BIAS_UNC_VALID        = (1 << 3),
     CLIENT_DIAG_GNSS_GLO_REF_FCOUNT_VALID               = (1 << 4),
@@ -265,7 +265,7 @@ typedef enum {
     /** GALILEO E5A RF Band */
     CLIENT_DIAG_GNSS_SIGNAL_GALILEO_E5A         = (1<<7),
     /** GALILEO E5B RF Band */
-    CLIENT_DIAG_GNSS_SIGNAL_GALILIEO_E5B        = (1<<8),
+    CLIENT_DIAG_GNSS_SIGNAL_GALILEO_E5B         = (1<<8),
     /** BEIDOU B1 RF Band */
     CLIENT_DIAG_GNSS_SIGNAL_BEIDOU_B1           = (1<<9),
     /** BEIDOU B2 RF Band */
@@ -279,7 +279,19 @@ typedef enum {
     /** QZSS L5 RF Band */
     CLIENT_DIAG_GNSS_SIGNAL_QZSS_L5             = (1<<14),
     /** SBAS L1 RF Band */
-    CLIENT_DIAG_GNSS_SIGNAL_SBAS_L1             = (1<<15)
+    CLIENT_DIAG_GNSS_SIGNAL_SBAS_L1             = (1<<15),
+    /** BEIDOU B1I RF Band */
+    CLIENT_DIAG_GNSS_SIGNAL_BEIDOU_B1I          = (1<<16),
+    /** BEIDOU B1C RF Band */
+    CLIENT_DIAG_GNSS_SIGNAL_BEIDOU_B1C          = (1<<17),
+    /** BEIDOU B2I RF Band */
+    CLIENT_DIAG_GNSS_SIGNAL_BEIDOU_B2I          = (1<<18),
+    /** BEIDOU B2AI RF Band */
+    CLIENT_DIAG_GNSS_SIGNAL_BEIDOU_B2AI         = (1<<19),
+    /** NAVIC L5 RF Band */
+    CLIENT_DIAG_GNSS_SIGNAL_NAVIC_L5            = (1<<20),
+    /** BEIDOU B2AQ RF Band */
+    CLIENT_DIAG_GNSS_SIGNAL_BEIDOU_B2AQ         = (1<<21)
 } clientDiagGnssSignalTypeBits;
 
 typedef PACKED struct PACKED_POST {

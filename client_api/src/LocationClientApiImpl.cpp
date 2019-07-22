@@ -143,6 +143,77 @@ static GnssLocationSvUsedInPosition parseLocationSvUsedInPosition(
     return clientSv;
 }
 
+static GnssSignalTypeMask parseGnssSignalType(const ::GnssSignalTypeMask &halGnssSignalTypeMask) {
+    uint32_t gnssSignalTypeMask = 0;
+    if (halGnssSignalTypeMask & GNSS_SIGNAL_GPS_L1CA) {
+        gnssSignalTypeMask |= GNSS_SIGNAL_GPS_L1CA_BIT;
+    }
+    if (halGnssSignalTypeMask & GNSS_SIGNAL_GPS_L1C) {
+        gnssSignalTypeMask |= GNSS_SIGNAL_GPS_L1C_BIT;
+    }
+    if (halGnssSignalTypeMask & GNSS_SIGNAL_GPS_L2) {
+        gnssSignalTypeMask |= GNSS_SIGNAL_GPS_L2_BIT;
+    }
+    if (halGnssSignalTypeMask & GNSS_SIGNAL_GPS_L5) {
+        gnssSignalTypeMask |= GNSS_SIGNAL_GPS_L5_BIT;
+    }
+    if (halGnssSignalTypeMask & GNSS_SIGNAL_GLONASS_G1) {
+        gnssSignalTypeMask |= GNSS_SIGNAL_GLONASS_G1_BIT;
+    }
+    if (halGnssSignalTypeMask & GNSS_SIGNAL_GLONASS_G2) {
+        gnssSignalTypeMask |= GNSS_SIGNAL_GLONASS_G2_BIT;
+    }
+    if (halGnssSignalTypeMask & GNSS_SIGNAL_GALILEO_E1) {
+        gnssSignalTypeMask |= GNSS_SIGNAL_GALILEO_E1_BIT;
+    }
+    if (halGnssSignalTypeMask & GNSS_SIGNAL_GALILEO_E5A) {
+        gnssSignalTypeMask |= GNSS_SIGNAL_GALILEO_E5A_BIT;
+    }
+    if (halGnssSignalTypeMask & GNSS_SIGNAL_GALILEO_E5B) {
+        gnssSignalTypeMask |= GNSS_SIGNAL_GALILEO_E5B_BIT;
+    }
+    if (halGnssSignalTypeMask & GNSS_SIGNAL_BEIDOU_B1I) {
+        gnssSignalTypeMask |= GNSS_SIGNAL_BEIDOU_B1I_BIT;
+    }
+    if (halGnssSignalTypeMask & GNSS_SIGNAL_BEIDOU_B1C) {
+        gnssSignalTypeMask |= GNSS_SIGNAL_BEIDOU_B1C_BIT;
+    }
+    if (halGnssSignalTypeMask & GNSS_SIGNAL_BEIDOU_B2I) {
+        gnssSignalTypeMask |= GNSS_SIGNAL_BEIDOU_B2I_BIT;
+    }
+    if (halGnssSignalTypeMask & GNSS_SIGNAL_BEIDOU_B2AI) {
+        gnssSignalTypeMask |= GNSS_SIGNAL_BEIDOU_B2AI_BIT;
+    }
+    if (halGnssSignalTypeMask & GNSS_SIGNAL_QZSS_L1CA) {
+        gnssSignalTypeMask |= GNSS_SIGNAL_QZSS_L1CA_BIT;
+    }
+    if (halGnssSignalTypeMask & GNSS_SIGNAL_QZSS_L1S) {
+        gnssSignalTypeMask |= GNSS_SIGNAL_QZSS_L1S_BIT;
+    }
+    if (halGnssSignalTypeMask & GNSS_SIGNAL_QZSS_L2) {
+        gnssSignalTypeMask |= GNSS_SIGNAL_QZSS_L2_BIT;
+    }
+    if (halGnssSignalTypeMask & GNSS_SIGNAL_QZSS_L5) {
+        gnssSignalTypeMask |= GNSS_SIGNAL_QZSS_L5_BIT;
+    }
+    if (halGnssSignalTypeMask & GNSS_SIGNAL_SBAS_L1) {
+        gnssSignalTypeMask |= GNSS_SIGNAL_SBAS_L1_BIT;
+    }
+    if (halGnssSignalTypeMask & GNSS_SIGNAL_NAVIC_L5) {
+        gnssSignalTypeMask |= GNSS_SIGNAL_NAVIC_L5_BIT;
+    }
+    if (halGnssSignalTypeMask & GNSS_SIGNAL_BEIDOU_B2AQ) {
+        gnssSignalTypeMask |= GNSS_SIGNAL_BEIDOU_B2AQ_BIT;
+    }
+    if (halGnssSignalTypeMask & GNSS_SIGNAL_BEIDOU_B1) {
+        gnssSignalTypeMask |= GNSS_SIGNAL_BEIDOU_B1;
+    }
+    if (halGnssSignalTypeMask & GNSS_SIGNAL_BEIDOU_B2) {
+        gnssSignalTypeMask |= GNSS_SIGNAL_BEIDOU_B2;
+    }
+    return (GnssSignalTypeMask)gnssSignalTypeMask;
+}
+
 static void parseGnssMeasUsageInfo(const ::GnssLocationInfoNotification &halLocationInfo,
         std::vector<GnssMeasUsageInfo>& clientMeasUsageInfo) {
 
@@ -151,8 +222,8 @@ static void parseGnssMeasUsageInfo(const ::GnssLocationInfoNotification &halLoca
         for (int idx = 0; idx < halLocationInfo.numOfMeasReceived; idx++) {
             GnssMeasUsageInfo measUsageInfo;
 
-            measUsageInfo.gnssSignalType = (GnssSignalTypeMask)
-                    halLocationInfo.measUsageInfo[idx].gnssSignalType;
+            measUsageInfo.gnssSignalType = parseGnssSignalType(
+                    halLocationInfo.measUsageInfo[idx].gnssSignalType);
             measUsageInfo.gnssConstellation = (Gnss_LocSvSystemEnumType)
                     halLocationInfo.measUsageInfo[idx].gnssConstellation;
             measUsageInfo.gnssSvId = halLocationInfo.measUsageInfo[idx].gnssSvId;
@@ -288,7 +359,7 @@ static GnssGloTimeStructType parseGloTime(const ::GnssGloTimeStructType &halGloT
         gloTime.gloDays = halGloTime.gloDays;
     }
     if (GNSS_GLOS_MSEC_VALID  & halGloTime.validityMask) {
-        gloTimeFlags |= GNSS_GLOS_MSEC_VALID ;
+        gloTimeFlags |= GNSS_GLO_MSEC_VALID ;
         gloTime.gloMsec = halGloTime.gloMsec;
     }
     if (GNSS_GLO_CLK_TIME_BIAS_VALID & halGloTime.validityMask) {
@@ -649,7 +720,6 @@ static GnssSv parseGnssSv(const ::GnssSv &halGnssSv) {
         gnssSvOptionsMask |= GNSS_SV_OPTIONS_USED_IN_FIX_BIT;
     }
     gnssSv.gnssSvOptionsMask = (GnssSvOptionsMask)gnssSvOptionsMask;
-
     return gnssSv;
 }
 
