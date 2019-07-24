@@ -225,6 +225,14 @@ void populateClientDiagLocation(clientDiagGnssLocationStructType* diagGnssLocPtr
     }
     diagGnssLocPtr->leapSeconds = gnssLocation.leapSeconds;
     diagGnssLocPtr->timeUncMs = gnssLocation.timeUncMs;
+    diagGnssLocPtr->numSvUsedInPosition = gnssLocation.numSvUsedInPosition;
+    diagGnssLocPtr->calibrationConfidencePercent = gnssLocation.calibrationConfidencePercent;
+    diagGnssLocPtr->calibrationStatus = gnssLocation.calibrationStatus;
+
+    struct timespec ts;
+    clock_gettime(CLOCK_BOOTTIME, &ts);
+    diagGnssLocPtr->bootTimestampNs =
+            (ts.tv_sec * 1000000000ULL + ts.tv_nsec);
 }
 
 void translateDiagGnssSv(clientDiagGnssSv& out, const GnssSv& in) {
