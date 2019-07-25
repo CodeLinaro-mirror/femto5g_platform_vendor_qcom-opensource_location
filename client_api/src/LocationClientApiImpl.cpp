@@ -1,4 +1,4 @@
-/* Copyright (c) 2018 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018-2019 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -160,6 +160,7 @@ static GnssLocationSvUsedInPosition parseLocationSvUsedInPosition(
     clientSv.galSvUsedIdsMask = halSv.galSvUsedIdsMask;
     clientSv.bdsSvUsedIdsMask = halSv.bdsSvUsedIdsMask;
     clientSv.qzssSvUsedIdsMask = halSv.qzssSvUsedIdsMask;
+    clientSv.navicSvUsedIdsMask = halSv.navicSvUsedIdsMask;
 
     return clientSv;
 }
@@ -367,6 +368,10 @@ static GnssSystemTime parseSystemTime(const ::GnssSystemTime &halSystemTime) {
            systemTime.gnssSystemTimeSrc = GNSS_LOC_SV_SYSTEM_QZSS;
            systemTime.u.qzssSystemTime = parseGnssTime(halSystemTime.u.qzssSystemTime);
            break;
+        case GNSS_LOC_SV_SYSTEM_NAVIC:
+            systemTime.gnssSystemTimeSrc = GNSS_LOC_SV_SYSTEM_NAVIC;
+            systemTime.u.navicSystemTime = parseGnssTime(halSystemTime.u.navicSystemTime);
+            break;
     }
 
     return systemTime;
@@ -663,7 +668,11 @@ static GnssSv parseGnssSv(const ::GnssSv &halGnssSv) {
     if (GNSS_SV_OPTIONS_USED_IN_FIX_BIT & halGnssSv.gnssSvOptionsMask) {
         gnssSvOptionsMask |= GNSS_SV_OPTIONS_USED_IN_FIX_BIT;
     }
+    if (GNSS_SV_OPTIONS_HAS_CARRIER_FREQUENCY_BIT & halGnssSv.gnssSvOptionsMask) {
+        gnssSvOptionsMask |= GNSS_SV_OPTIONS_HAS_CARRIER_FREQUENCY_BIT;
+    }
     gnssSv.gnssSvOptionsMask = (GnssSvOptionsMask)gnssSvOptionsMask;
+    gnssSv.gnssSignalTypeMask = (GnssSignalTypeMask)(halGnssSv.gnssSignalTypeMask);
 
     return gnssSv;
 }
@@ -872,13 +881,13 @@ void LocationClientApiImpl::destroy() {
                 mApiImpl->mMsgTask->destroy();
             }
 
-        #ifdef ENABLE_USE_LOC_SOCKET
+#ifdef FEATURE_EXTERNAL_AP
             // get clientId
             lock_guard<mutex> lock(mMutex);
             mApiImpl->mClientIdGenerator &= ~(1UL << mApiImpl->mClientId);
             LOC_LOGd("client id generarator 0x%x, id %d",
                      mApiImpl->mClientIdGenerator, mApiImpl->mClientId);
-        #endif
+#endif //FEATURE_EXTERNAL_AP
             delete mApiImpl;
         }
         LocationClientApiImpl* mApiImpl;
@@ -1686,13 +1695,19 @@ void IpcListener::onReceive(const char* data, uint32_t length) {
                     LOC_LOGw("payload size does not match for message with id: %d",
                              pMsg->msgId);
                 }
+
+                // when hal daemon crashes, we need to find the new node/port
+                // when remote socket api is used
+                // this code can not be moved to inside of onListenerReady as
+                // onListenerReady can be invoked from other places
+                if (mApiImpl.mIpcSender != nullptr) {
+                    mApiImpl.mIpcSender->informRecverRestarted();
+                }
+
                 // location hal deamon has restarted, need to set this
                 // flag to false to prevent messages to be sent to hal
                 // before registeration completes
                 mApiImpl.mHalRegistered = false;
-                // set mSessionId to invalid so session can be restarted
-                mApiImpl.mSessionId = LOCATION_CLIENT_SESSION_ID_INVALID;
-                // when hal daemon crashes, we need to find the new node/port
                 mListener.onListenerReady();
                 break;
             }
