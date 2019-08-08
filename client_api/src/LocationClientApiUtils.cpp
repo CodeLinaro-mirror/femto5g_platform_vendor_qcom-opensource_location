@@ -44,6 +44,35 @@ void translateDiagGnssLocationPositionDynamics(clientDiagGnssLocationPositionDyn
     out.pitchUnc = in.pitchUnc;
 }
 
+clientDiagGnss_LocSvSystemEnumType parseDiagGnssConstellation(
+        Gnss_LocSvSystemEnumType gnssConstellation) {
+    clientDiagGnss_LocSvSystemEnumType constellation;
+    switch(gnssConstellation) {
+        case GNSS_LOC_SV_SYSTEM_GPS:
+            constellation = CLIENT_DIAG_GNSS_LOC_SV_SYSTEM_GPS;
+            break;
+        case GNSS_LOC_SV_SYSTEM_GALILEO:
+            constellation = CLIENT_DIAG_GNSS_LOC_SV_SYSTEM_GALILEO;
+            break;
+        case GNSS_LOC_SV_SYSTEM_SBAS:
+            constellation = CLIENT_DIAG_GNSS_LOC_SV_SYSTEM_SBAS;
+            break;
+        case GNSS_LOC_SV_SYSTEM_GLONASS:
+            constellation = CLIENT_DIAG_GNSS_LOC_SV_SYSTEM_GLONASS;
+            break;
+        case GNSS_LOC_SV_SYSTEM_BDS:
+            constellation = CLIENT_DIAG_GNSS_LOC_SV_SYSTEM_BDS;
+            break;
+        case GNSS_LOC_SV_SYSTEM_QZSS:
+            constellation = CLIENT_DIAG_GNSS_LOC_SV_SYSTEM_QZSS;
+            break;
+        default:
+            constellation = (clientDiagGnss_LocSvSystemEnumType)~0;
+            break;
+    }
+    return constellation;
+}
+
 clientDiagGnssSystemTimeStructType parseDiagGnssTime(
         const GnssSystemTimeStructType &halGnssTime) {
 
@@ -162,7 +191,7 @@ void translateDiagGnssMeasUsageInfo(clientDiagGnssMeasUsageInfo& out,
         const GnssMeasUsageInfo& in) {
     out.gnssSignalType = in.gnssSignalType;
    /** Specifies GNSS Constellation Type */
-    out.gnssConstellation = (clientDiagGnss_LocSvSystemEnumType)in.gnssConstellation;
+    out.gnssConstellation = parseDiagGnssConstellation(in.gnssConstellation);
     /**  GNSS SV ID.
      For GPS:      1 to 32
      For GLONASS:  65 to 96. When slot-number to SV ID mapping is unknown, set as 255.

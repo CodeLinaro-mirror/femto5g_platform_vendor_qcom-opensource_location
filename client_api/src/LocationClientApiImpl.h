@@ -90,6 +90,8 @@ static void translateDiagSystemTime(clientDiagGnssSystemTime& out,
         const GnssSystemTime& in);
 static clientDiagGnssLocationSvUsedInPosition parseDiagLocationSvUsedInPosition(
         const GnssLocationSvUsedInPosition &halSv);
+static clientDiagGnss_LocSvSystemEnumType parseDiagGnssConstellation(
+        Gnss_LocSvSystemEnumType gnssConstellation);
 static void translateDiagGnssMeasUsageInfo(clientDiagGnssMeasUsageInfo& out,
         const GnssMeasUsageInfo& in);
 void populateClientDiagLocation(clientDiagGnssLocationStructType* diagGnssLocPtr,
