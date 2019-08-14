@@ -54,7 +54,9 @@ enum LocationCapabilitiesMask {
 enum GnssSvOptionsMask {
     GNSS_SV_OPTIONS_HAS_EPHEMER_BIT = (1<<0),
     GNSS_SV_OPTIONS_HAS_ALMANAC_BIT = (1<<1),
-    GNSS_SV_OPTIONS_USED_IN_FIX_BIT = (1<<2)
+    GNSS_SV_OPTIONS_USED_IN_FIX_BIT            = (1<<2),
+    GNSS_SV_OPTIONS_HAS_CARRIER_FREQUENCY_BIT  = (1<<3),
+    GNSS_SV_OPTIONS_HAS_GNSS_SIGNAL_TYPE_BIT   = (1<<4)
 };
 
 enum LocationFlagsMask {
@@ -161,7 +163,7 @@ enum GnssSignalTypeMask {
     /** GALILEO E5A RF Band */
     GNSS_SIGNAL_GALILEO_E5A_BIT         = (1<<7),
     /** GALILEO E5B RF Band */
-    GNSS_SIGNAL_GALILIEO_E5B_BIT        = (1<<8),
+    GNSS_SIGNAL_GALILEO_E5B_BIT         = (1<<8),
     /** BEIDOU B1 RF Band */
     GNSS_SIGNAL_BEIDOU_B1_BIT           = (1<<9),
     /** BEIDOU B2 RF Band */
@@ -175,7 +177,19 @@ enum GnssSignalTypeMask {
     /** QZSS L5 RF Band */
     GNSS_SIGNAL_QZSS_L5_BIT             = (1<<14),
     /** SBAS L1 RF Band */
-    GNSS_SIGNAL_SBAS_L1_BIT             = (1<<15)
+    GNSS_SIGNAL_SBAS_L1_BIT             = (1<<15),
+    /** BEIDOU B1I RF Band */
+    GNSS_SIGNAL_BEIDOU_B1I_BIT          = (1<<16),
+    /** BEIDOU B1C RF Band */
+    GNSS_SIGNAL_BEIDOU_B1C_BIT          = (1<<17),
+    /** BEIDOU B2I RF Band */
+    GNSS_SIGNAL_BEIDOU_B2I_BIT          = (1<<18),
+    /** BEIDOU B2AI RF Band */
+    GNSS_SIGNAL_BEIDOU_B2AI_BIT         = (1<<19),
+    /** NAVIC L5 RF Band */
+    GNSS_SIGNAL_NAVIC_L5_BIT            = (1<<20),
+    /** BEIDOU B2A_Q RF Band */
+    GNSS_SIGNAL_BEIDOU_B2AQ_BIT         = (1<<21),
 };
 
 
@@ -272,14 +286,12 @@ enum Gnss_LocSvSystemEnumType {
     GNSS_LOC_SV_SYSTEM_GALILEO                = 2,
     /** SBAS satellite. */
     GNSS_LOC_SV_SYSTEM_SBAS                   = 3,
-    /** COMPASS satellite. */
-    GNSS_LOC_SV_SYSTEM_COMPASS                = 4,
     /** GLONASS satellite. */
-    GNSS_LOC_SV_SYSTEM_GLONASS                = 5,
+    GNSS_LOC_SV_SYSTEM_GLONASS                = 4,
     /** BDS satellite. */
-    GNSS_LOC_SV_SYSTEM_BDS                    = 6,
+    GNSS_LOC_SV_SYSTEM_BDS                    = 5,
     /** QZSS satellite. */
-    GNSS_LOC_SV_SYSTEM_QZSS                   = 7
+    GNSS_LOC_SV_SYSTEM_QZSS                   = 6
 };
 
 enum GnssSystemTimeStructTypeFlags {
@@ -613,6 +625,16 @@ struct GnssSv {
     float azimuth;
     /** Bitwise OR of GnssSvOptionsBits */
     GnssSvOptionsMask gnssSvOptionsMask;
+    /** carrier frequency of the signal tracked */
+    float carrierFrequencyHz;
+    /** Specifies GNSS signal type */
+    GnssSignalTypeMask gnssSignalTypeMask;
+
+    inline GnssSv() :
+        svId(0), type(GNSS_SV_TYPE_UNKNOWN), cN0Dbhz(0.0f),
+        elevation(0.0f), azimuth(0.0f), gnssSvOptionsMask(GnssSvOptionsMask(0)),
+        carrierFrequencyHz(0), gnssSignalTypeMask((GnssSignalTypeMask)0) {
+    }
 };
 
 enum GnssSignalTypes {
@@ -634,7 +656,9 @@ enum GnssSignalTypes {
     GNSS_SIGNAL_TYPE_QZSS_L2C_L = 15,       /**<  QZSS L2C_L RF Band  */
     GNSS_SIGNAL_TYPE_QZSS_L5_Q = 16,        /**<  QZSS L5_Q RF Band  */
     GNSS_SIGNAL_TYPE_SBAS_L1_CA = 17,       /**<  SBAS L1_CA RF Band  */
-    GNSS_MAX_NUMBER_OF_SIGNAL_TYPES = 18    /**< Maximum number of signal types */
+    GNSS_SIGNAL_TYPE_NAVIC_L5 = 18,         /**<  NAVIC L5 RF Band */
+    GNSS_SIGNAL_TYPE_BEIDOU_B2A_Q = 19,     /**<  BEIDOU B2A_Q RF Band  */
+    GNSS_MAX_NUMBER_OF_SIGNAL_TYPES = 20    /**< Maximum number of signal types */
 };
 
 typedef uint64_t GnssDataMask;

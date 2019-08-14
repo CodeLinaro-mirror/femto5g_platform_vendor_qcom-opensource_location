@@ -334,9 +334,6 @@ static GnssSystemTime parseSystemTime(const ::GnssSystemTime &halSystemTime) {
         case GNSS_LOC_SV_SYSTEM_SBAS:
            systemTime.gnssSystemTimeSrc = GNSS_LOC_SV_SYSTEM_SBAS;
            break;
-        case GNSS_LOC_SV_SYSTEM_COMPASS:
-           systemTime.gnssSystemTimeSrc = GNSS_LOC_SV_SYSTEM_COMPASS;
-           break;
         case GNSS_LOC_SV_SYSTEM_GLONASS:
            systemTime.gnssSystemTimeSrc = GNSS_LOC_SV_SYSTEM_GLONASS;
            systemTime.u.gloSystemTime = parseGloTime(halSystemTime.u.gloSystemTime);
