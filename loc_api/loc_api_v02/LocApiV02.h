@@ -269,8 +269,10 @@ public:
   virtual void closeDataCall();
   virtual void releaseDataServiceClient();
   virtual LocationError setGpsLockSync(GnssConfigGpsLock lock);
-  virtual LocationError setConstrainedTuncMode(bool enabled, float tuncConstraint, uint32_t powerBudget);
-  virtual LocationError setPositionAssistedClockEstimatorMode(bool enabled);
+  virtual void setConstrainedTuncMode(bool enabled, float tuncConstraint, uint32_t powerBudget,
+                                      LocApiResponse *adapterResponse=nullptr);
+  virtual void setPositionAssistedClockEstimatorMode(bool enabled,
+                                                     LocApiResponse *adapterResponse=nullptr);
   virtual LocationError getGnssEnergyConsumed();
 
   /*

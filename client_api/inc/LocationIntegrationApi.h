@@ -1,0 +1,271 @@
+/* Copyright (c) 2019 The Linux Foundation. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ *     * Redistributions of source code must retain the above copyright
+ *       notice, this list of conditions and the following disclaimer.
+ *     * Redistributions in binary form must reproduce the above
+ *       copyright notice, this list of conditions and the following
+ *       disclaimer in the documentation and/or other materials provided
+ *       with the distribution.
+ *     * Neither the name of The Linux Foundation nor the names of its
+ *       contributors may be used to endorse or promote products derived
+ *       from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED "AS IS" AND ANY EXPRESS OR IMPLIED
+ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS
+ * BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+ * BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+ * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+ * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+#ifndef LOCATION_INTEGRATION_API_H
+#define LOCATION_INTEGRATION_API_H
+#include <map>
+
+namespace location_integration
+{
+/**
+ * Configuration API types that are currently supported
+ */
+enum LocConfigTypeEnum{
+    /** blacklist some SV constellations from being used by GNSS
+     *  engine */
+    CONFIG_CONSTELLATIONS = 1,
+    /** enable/disable the constrained time uncertainty
+     *  feature and configure related parameters when the feature is
+     *  enabled */
+    CONFIG_CONSTRAINED_TIME_UNCERTAINTY = 2,
+    /** enable/disable the position assisted clock estimator
+     *  feature */
+    CONFIG_POSITION_ASSISTED_CLOCK_ESTIMATOR = 3,
+} ;
+
+/**
+ * Define the priority to be used when the corresponding
+ * configuration API specified by type is invoked. Priority is
+ * specified via uint32_t and lower number means lower
+ * priority.
+ *
+ * Currently, all configuration requests, regardless of
+ * priority, will be honored. Priority based request
+ * honoring will come in subsequent phases and more
+ * detailed description on this will be available then.
+ */
+typedef std::map<LocConfigTypeEnum, uint32_t>
+        LocConfigPriorityMap;
+
+/** Gnss constellation type mask */
+typedef uint32_t GnssConstellationMask;
+
+/**
+ *  Specify SV Constellation types. Multiple constellation types
+ *  can be specified via bitwise OR of individual type. */
+enum GnssConstellationTypeBits{
+    /** GLONASS SV system */
+    GNSS_CONSTELLATION_TYPE_GLONASS_BIT  = (1<<0),
+    /** QZSS SV system */
+    GNSS_CONSTELLATION_TYPE_QZSS_BIT     = (1<<1),
+    /** BEIDOU SV system */
+    GNSS_CONSTELLATION_TYPE_BEIDOU_BIT   = (1<<2),
+    /** GALILEO SV system */
+    GNSS_CONSTELLATION_TYPE_GALILEO_BIT  = (1<<3),
+    /** SBAS SV system */
+    GNSS_CONSTELLATION_TYPE_SBAS_BIT     = (1<<4),
+    /** NAVIC SV system */
+    GNSS_CONSTELLATION_TYPE_NAVIC_BIT    = (1<<5),
+    /** MAX, forced enum to 32-bit */
+    GNSS_CONSTELLATION_TYPE_MAX          = (1<<31),
+};
+
+/**
+ *  Specify the asynchronous response when calling location
+ *  integration API. */
+enum LocIntegrationResponse {
+    /** Location integration API request is processed
+     *  successfully */
+    LOC_INT_RESPONSE_SUCCESS = 1,
+    /** Location integration API request is not processed
+     *  successfully */
+    LOC_INT_RESPONSE_FAILURE = 2,
+    /** Location integration API request is not supported */
+    LOC_INT_RESPONSE_NOT_SUPPORTED = 3,
+    /** Location integration API request has invalid parameter */
+    LOC_INT_RESPONSE_PARAM_INVALID = 4,
+};
+
+/** @fn
+    @brief
+    Used to get the asynchronous notification of the processing
+    status of the configuration APIs.
+
+    In order to get the notification, an instantiation
+    LocConfigCb need to be passed to the constructor of
+    LocationIntegration API. Please refer to each function for
+    details regarding how this callback will be invoked.
+
+    @param
+    response: if the response is not LOC_INT_API_RESPONSE_SUCCESS,
+    then the integration API of requestType has failed.
+*/
+typedef std::function<void(
+    /** location configuration request type */
+    LocConfigTypeEnum      configType,
+    /** processing status for the location configuration request*/
+    LocIntegrationResponse response
+)> LocConfigCb;
+
+/**
+ *  Specify the set of callbacks that can be passed to
+ *  LocationIntegrationAPI constructor to receive configuration
+ *  command processing status and the requested data.
+ */
+struct LocIntegrationCbs {
+    LocConfigCb configCb;
+};
+
+class LocationIntegrationApi : public location_client::LocationClientApi
+{
+public:
+
+    /** @brief
+        Creates an instance of LocationIntegrationApi object with
+        the specified priority map and callback functions. For this
+        phase, the priority map will be ignored.
+
+        @param
+        priorityMap: specify the priority for each of the
+        configuration type that this integration API client would
+        like to control.
+
+        @param
+        integrationCbs: set of callbacks to receive info from
+        location integration API. For example, client can pass
+        LocConfigCb to receive the asynchronous processing status of
+        configuration command.
+    */
+    LocationIntegrationApi(const LocConfigPriorityMap& priorityMap,
+                           LocIntegrationCbs& integrationCbs);
+
+    /** @brief Default destructor */
+    ~LocationIntegrationApi();
+
+    /** @brief
+        Blacklist some constellations from being used by the GNSS
+        engine on modem. The priority to be used when invoking this
+        API is specified via LocConfigPriorityMap with type set to
+        CONFIG_CONSTELLATIONS.
+
+        Client should wait for the command to finish, e.g.: via
+        configCb received before issuing a second configConstellations
+        command. Behavior is not defined if client issues a second
+        request of configConstellations without waiting for the finish
+        of the previous configConstellations request.
+
+        @param
+        blacklistedConstellations: specify the set of constellations that
+        should not be used by the GNSS engine on modem. Constellations not
+        specified in blacklistedConstellations will be allowed to
+        get used by the GNSS engine on modem.
+
+        @return true, if request is successfully processed as per
+                requested. When returning true, configCb will be
+                invoked to deliver asynchronous processing status.
+
+        @return false, if request is not successfully processed as
+                per requested. When returning false, configCb will
+                not be invoked.
+    */
+    bool configConstellations(GnssConstellationMask blacklistedConstellations);
+
+     /** @brief
+         Enable or disable the constrained time uncertainty feature.
+         The priority to be used when invoking this API is
+         specified via LocConfigPriorityMap with type set to
+         CONFIG_CONSTRAINED_TIME_UNCERTAINTY.
+
+         Client should wait for the command to finish, e.g.:
+         via configCb received before issuing a second
+         configConstrainedTimeUncertainty command. Behavior is not
+         defined if client issues a second request of
+         configConstrainedTimeUncertainty without waiting for
+         the finish of the previous configConstrainedTimeUncertainty
+         request.
+
+         @param
+         enable: true to enable the constrained time uncertainty
+         feature and false to disable the constrainted time
+         uncertainty feature.
+
+         @param
+         tuncThresholdMs: this specifies the time uncertainty
+         threshold that gps engine need to maintain, in units of
+         milli-seconds. Default is 0.0 meaning that modem default
+         value of time uncertainty threshold will be used. This
+         parameter is ignored when request is to disable this
+         feature.
+
+         @param
+         energyBudget: this specifies the power budget that gps
+         engine is allowed to spend to maintain the time uncertainty.
+         Default is 0 meaning that GPS engine is not constained by
+         power budget and can spend as much power as needed. The
+         parameter need to be specified in units of 0.1 milli watt
+         second. This parameter is ignored when request is to disable
+         this feature.
+
+        @return true, if the constrained time uncertainty feature is
+                successfully enabled or disabled as requested.
+                When returning true, configCb will be invoked to
+                deliver asynchronous processing status.
+
+        @return false, if the constrained time uncertainty feature is
+                not successfully enabled or disabled as requested.
+                When returning false, configCb will not be invoked.
+    */
+    bool configConstrainedTimeUncertainty(bool enable,
+                                          float tuncThresholdMs = 0.0,
+                                          uint32_t energyBudget = 0);
+
+    /** @brief
+        Enable or disable position assisted clock estimator feature.
+
+        The priority to be used when invoking this API is specified
+        via LocConfigPriorityMap with type set to
+        CONFIG_POSITION_ASSISTED_CLOCK_ESTIMATOR.
+
+        Client should wait for the command to finish, e.g.: via
+        configCb received before issuing a second
+        configPositionAssistedClockEstimator command. Behavior is
+        not defined if client issues a second request of
+        configPositionAssistedClockEstimator without waiting for the
+        finish of the previous configPositionAssistedClockEstimator
+        request.
+
+        @param
+        enable: true to enable position assisted clock estimator and
+        false to disable the position assisted clock estimator
+        feature.
+
+        @return true, if position assisted clock estimator is
+                successfully enabled or disabled as per requested.
+                When returning true, configCb will be invoked
+                to deliver asynchronous processing status.
+
+        @return false, if position assisted clock estimator is not
+                successfully enabled or disabled as per requested.
+                When returning false, configCb will not be invoked.
+    */
+    bool configPositionAssistedClockEstimator(bool enable);
+};
+
+} // namespace location_integration
+
+#endif /* LOCATION_INTEGRATION_API_H */

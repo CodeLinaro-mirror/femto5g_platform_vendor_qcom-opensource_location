@@ -14,11 +14,13 @@ requiredlibs = \
 
 h_sources = \
     src/LocationClientApiImpl.h \
-    inc/LocationClientApi.h
+    inc/LocationClientApi.h \
+    inc/LocationIntegrationApi.h
 
 c_sources = \
     src/LocationClientApiImpl.cpp \
-    src/LocationClientApi.cpp
+    src/LocationClientApi.cpp \
+    src/LocationIntegrationApi.cpp
 
 liblocation_client_api_la_SOURCES = \
     $(c_sources) $(h_sources)

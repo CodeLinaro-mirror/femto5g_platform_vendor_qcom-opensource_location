@@ -724,6 +724,37 @@ static LocationSystemInfo parseLocationSystemInfo(
     return systemInfo;
 }
 
+static LocConfigTypeEnum getLocConfigTypeFromMsgId(ELocMsgID  msgId) {
+    LocConfigTypeEnum configType = (LocConfigTypeEnum) 0;
+    if (msgId == E_INTAPI_CONFIG_CONSTRAINTED_TUNC_MSG_ID) {
+        configType = CONFIG_CONSTRAINED_TIME_UNCERTAINTY;
+    } else if (msgId == E_INTAPI_CONFIG_POSITION_ASSISTED_CLOCK_ESTIMATOR_MSG_ID) {
+        configType = CONFIG_POSITION_ASSISTED_CLOCK_ESTIMATOR;
+    }
+    return configType;
+}
+
+static LocIntegrationResponse getLocIntegrationResponse(::LocationError error) {
+    LocIntegrationResponse response;
+
+    switch (error) {
+        case LOCATION_ERROR_SUCCESS:
+            response = LOC_INT_RESPONSE_SUCCESS;
+            break;
+        case LOCATION_ERROR_NOT_SUPPORTED:
+            response = LOC_INT_RESPONSE_NOT_SUPPORTED;
+            break;
+        case LOCATION_ERROR_INVALID_PARAMETER:
+            response = LOC_INT_RESPONSE_PARAM_INVALID;
+            break;
+        default:
+            response = LOC_INT_RESPONSE_FAILURE;
+            break;
+    }
+
+    return response;
+}
+
 /******************************************************************************
 LocationClientApiImpl
 ******************************************************************************/
@@ -1374,6 +1405,10 @@ void LocationClientApiImpl::onReceive(const string& data) {
                         // flag to false to prevent messages to be sent to hal
                         // before registeration completes
                         mApiImpl->mHalRegistered = false;
+
+                        // we need to issue callback to all the config request that has been pending
+                        mApiImpl->flushConfigReqs();
+
                         // when hal daemon crashes, we need to find the new node/port
                         #ifdef FEATURE_EXTERNAL_AP
                             mApiImpl->mIpcSender->findNewService();
@@ -1396,6 +1431,27 @@ void LocationClientApiImpl::onReceive(const string& data) {
                         if (mApiImpl->mResponseCb) {
                             mApiImpl->mResponseCb(response);
                         }
+                        break;
+                    }
+
+                case E_INTAPI_CONFIG_CONSTRAINTED_TUNC_MSG_ID:
+                case E_INTAPI_CONFIG_POSITION_ASSISTED_CLOCK_ESTIMATOR_MSG_ID:
+                    {
+                        if (sizeof(LocAPIGenericRespMsg) != mMsgData.length()) {
+                            LOC_LOGw("payload size does not match for message with id: %d",
+                                     pMsg->msgId);
+                        }
+                        const LocAPIGenericRespMsg* pRespMsg = (LocAPIGenericRespMsg*)(pMsg);
+                        LocationResponse response = parseLocationError(pRespMsg->err);
+                        LocConfigTypeEnum configType = getLocConfigTypeFromMsgId(pMsg->msgId);
+                        LocIntegrationResponse intResponse =
+                                getLocIntegrationResponse(pRespMsg->err);
+
+                        LOC_LOGd("<<< response message id: %d, msg err: %d, "
+                                 "config type: %d, int response %d\n",
+                                 pMsg->msgId, pRespMsg->err, configType, intResponse);
+
+                        mApiImpl->invokeConfigRespCb(configType, intResponse);
                         break;
                     }
 
@@ -1676,6 +1732,134 @@ void LocationClientApiImpl::gnssNiResponse(uint32_t id, GnssNiResponse response)
 }
 
 void LocationClientApiImpl::updateTrackingOptions(uint32_t id, LocationOptions& options) {
+}
+
+/******************************************************************************
+LocationIntegrationApi - integration API implementation
+******************************************************************************/
+uint32_t LocationClientApiImpl::configConstrainedTimeUncertainty(
+        bool enable, float tuncThreshold, uint32_t energyBudget) {
+
+    struct ConfigConstrainedTuncReq : public LocMsg {
+        ConfigConstrainedTuncReq(LocationClientApiImpl* apiImpl,
+                                 bool enable,
+                                 float tuncThreshold,
+                                 uint32_t energyBudget) :
+                mApiImpl(apiImpl),
+                mEnable(enable),
+                mTuncThreshold(tuncThreshold),
+                mEnergyBudget(energyBudget) {}
+        virtual ~ConfigConstrainedTuncReq() {}
+        void proc() const {
+            LocConfigConstrainedTuncReqMsg msg(mApiImpl->mSocketName,
+                                               mEnable, mTuncThreshold, mEnergyBudget);
+            bool rc = mApiImpl->mIpcSender->send(reinterpret_cast<uint8_t*>(&msg),
+                                                 sizeof(msg));
+            LOC_LOGd(">>> configConstrainedTunc enable=%d, tuncThreshold=%f, "
+                     "energey budget %d, rc=%d\n",
+                     mEnable, mTuncThreshold, mEnergyBudget, rc);
+            if (false == rc) {
+                if (mApiImpl->mIntegrationCbs.configCb) {
+                    mApiImpl->mIntegrationCbs.configCb(CONFIG_CONSTRAINED_TIME_UNCERTAINTY,
+                                                       LOC_INT_RESPONSE_FAILURE);
+                }
+            } else {
+                mApiImpl->addConfigReq(CONFIG_CONSTRAINED_TIME_UNCERTAINTY);
+            }
+        }
+        LocationClientApiImpl* mApiImpl;
+        bool mEnable;
+        float mTuncThreshold;
+        uint32_t mEnergyBudget;
+    };
+    mMsgTask->sendMsg(new (nothrow)ConfigConstrainedTuncReq(
+            this, enable, tuncThreshold, energyBudget));
+
+    return 0;
+}
+
+uint32_t LocationClientApiImpl::configPositionAssistedClockEstimator(bool enable) {
+
+    struct ConfigPositionAssistedClockEstimatorReq : public LocMsg {
+        ConfigPositionAssistedClockEstimatorReq(LocationClientApiImpl* apiImpl,
+                                                bool enable) :
+                mApiImpl(apiImpl),
+                mEnable(enable) {}
+        virtual ~ConfigPositionAssistedClockEstimatorReq() {}
+        void proc() const {
+            LocConfigPositionAssistedClockEstimatorReqMsg msg(mApiImpl->mSocketName,
+                                                              mEnable);
+            bool rc = mApiImpl->mIpcSender->send(reinterpret_cast<uint8_t*>(&msg),
+                                                 sizeof(msg));
+            LOC_LOGd(">>> configPositionAssistedClockEstimatorReq "
+                     "enable=%d, rc=%d\n", mEnable, rc);
+            if (false == rc) {
+                if (mApiImpl->mIntegrationCbs.configCb) {
+                    mApiImpl->mIntegrationCbs.configCb(CONFIG_POSITION_ASSISTED_CLOCK_ESTIMATOR,
+                                                       LOC_INT_RESPONSE_FAILURE);
+                }
+            } else {
+                mApiImpl->addConfigReq(CONFIG_POSITION_ASSISTED_CLOCK_ESTIMATOR);
+            }
+        }
+        LocationClientApiImpl* mApiImpl;
+        bool mEnable;
+    };
+    mMsgTask->sendMsg(new (nothrow)
+            ConfigPositionAssistedClockEstimatorReq(this, enable));
+
+    return 0;
+}
+
+void LocationClientApiImpl::updateLocIntegrationCbs(LocIntegrationCbs& integrationCbs) {
+    // no need to synchronize, as this can only happen
+    // in the constructor of the class
+    mIntegrationCbs = integrationCbs;
+}
+
+void LocationClientApiImpl::addConfigReq(LocConfigTypeEnum configType) {
+    LOC_LOGv("add configType %d", configType);
+
+    // find client from property db
+    auto configReqData = mConfigReqCntMap.find(configType);
+    if (configReqData == std::end(mConfigReqCntMap)) {
+        mConfigReqCntMap.emplace(configType, 1);
+    } else{
+        int newCnt = configReqData->second+1;
+        mConfigReqCntMap.erase(configReqData);
+        mConfigReqCntMap.emplace(configType, newCnt);
+    }
+}
+
+void LocationClientApiImpl::invokeConfigRespCb(LocConfigTypeEnum configType,
+                                               LocIntegrationResponse response) {
+
+    if (mIntegrationCbs.configCb) {
+        // find client from property db
+        auto configReqData = mConfigReqCntMap.find(configType);
+        if (configReqData != std::end(mConfigReqCntMap)) {
+            int reqCnt = configReqData->second;
+            if (reqCnt > 0) {
+                mIntegrationCbs.configCb(configType, response);
+            }
+            mConfigReqCntMap.erase(configReqData);
+            if (--reqCnt > 0) {
+                mConfigReqCntMap.emplace(configType, reqCnt);
+            }
+        }
+    }
+}
+
+// flush all the pending config request if location hal daemon has crashed
+// and restarted
+void LocationClientApiImpl::flushConfigReqs() {
+    for (auto itr=mConfigReqCntMap.begin(); itr!=mConfigReqCntMap.end(); ++itr) {
+         int reqCnt = itr->second;
+         while (reqCnt-- > 0) {
+             mIntegrationCbs.configCb(itr->first, LOC_INT_RESPONSE_FAILURE);
+         }
+    }
+    mConfigReqCntMap.clear();
 }
 
 } // namespace location_client
