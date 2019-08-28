@@ -70,6 +70,7 @@ public:
     /* APIs to fetch current WLAN/WWAN status */
     bool isWlanConnected();
     bool isWwanConnected();
+    qcmap_msgr_wwan_call_type_v01 getWwanCallType();
 
     recursive_mutex& getMutex(){ return mMutex; }
 
