@@ -117,17 +117,19 @@ public:
 /******************************************************************************
 LocationApiService - constructors
 ******************************************************************************/
-LocationApiService::LocationApiService(uint32_t autostart, uint32_t sessiontbfms) :
+LocationApiService::LocationApiService(const configParamToRead & configParamRead) :
 
     mLocationControlId(0),
-    mAutoStartGnss(autostart)
+    mAutoStartGnss(configParamRead.autoStartGnss)
 #ifdef POWERMANAGER_ENABLED
     ,mPowerEventObserver(nullptr)
 #endif
     {
 
     LOC_LOGd("AutoStartGnss=%u", mAutoStartGnss);
-    LOC_LOGd("GnssSessionTbfMs=%u", sessiontbfms);
+    LOC_LOGd("GnssSessionTbfMs=%u", configParamRead.gnssSessionTbfMs);
+    LOC_LOGd("DeleteAllBeforeAutoStart=%u", configParamRead.deleteAllBeforeAutoStart);
+    LOC_LOGd("DeleteAllOnEnginesMask=%u", configParamRead.posEngineMask);
 
     // create Location control API
     mControlCallabcks.size = sizeof(mControlCallabcks);
@@ -160,6 +162,15 @@ LocationApiService::LocationApiService(uint32_t autostart, uint32_t sessiontbfms
 
     // create a default client if enabled by config
     if (mAutoStartGnss) {
+        if ((configParamRead.deleteAllBeforeAutoStart) &&
+                (configParamRead.posEngineMask != 0)) {
+            GnssAidingData aidingData = {};
+            aidingData.deleteAll = true;
+            aidingData.posEngineMask = configParamRead.posEngineMask;
+
+            gnssDeleteAidingData(aidingData);
+        }
+
         LOC_LOGd("--> Starting a default client...");
         LocHalDaemonClientHandler* pClient = new LocHalDaemonClientHandler(this, "default");
         mClients.emplace("default", pClient);
@@ -167,7 +178,12 @@ LocationApiService::LocationApiService(uint32_t autostart, uint32_t sessiontbfms
         pClient->updateSubscription(
                 E_LOC_CB_GNSS_LOCATION_INFO_BIT | E_LOC_CB_GNSS_SV_BIT);
 
-        pClient->startTracking(0, sessiontbfms);
+        LocationOptions locationOption;
+        locationOption.size = sizeof(locationOption);
+        locationOption.minInterval = configParamRead.gnssSessionTbfMs;
+        locationOption.minDistance = 0;
+
+        pClient->startTracking(locationOption);
         pClient->mTracking = true;
         pClient->mPendingMessages.push(E_LOCAPI_START_TRACKING_MSG_ID);
     }
@@ -446,7 +462,7 @@ void LocationApiService::startTracking(LocAPIStartTrackingReqMsg *pMsg) {
         return;
     }
 
-    if (!pClient->startTracking(pMsg->distanceInMeters, pMsg->intervalInMs)) {
+    if (!pClient->startTracking(pMsg->locOptions)) {
         LOC_LOGe("Failed to start session");
         return;
     }
@@ -495,7 +511,7 @@ void LocationApiService::updateTrackingOptions(LocAPIUpdateTrackingOptionsReqMsg
 
     LocHalDaemonClientHandler* pClient = getClient(pMsg->mSocketName);
     if (pClient) {
-        pClient->updateTrackingOptions(pMsg->distanceInMeters, pMsg->intervalInMs);
+        pClient->updateTrackingOptions(pMsg->locOptions);
         pClient->mPendingMessages.push(E_LOCAPI_UPDATE_TRACKING_OPTIONS_MSG_ID);
     }
 
