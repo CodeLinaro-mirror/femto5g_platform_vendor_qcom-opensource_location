@@ -337,16 +337,16 @@ void LocNetIface::handleQcmapCallback (
 
     ENTRY_LOG();
 
-    LOC_LOGD("WWAN Status (Connected_v4=3, Disconnected_v4=6): %d",
+    LOC_LOGD("WWAN Status (Connected_v4,v6=3,9, Disconnected_v4,v6=6,12): %d",
             wwanStatusIndData.wwan_status);
 
     /* Notify observers */
-    if (wwanStatusIndData.wwan_status ==
-            QCMAP_MSGR_WWAN_STATUS_CONNECTED_V01) {
+    if (wwanStatusIndData.wwan_status == QCMAP_MSGR_WWAN_STATUS_CONNECTED_V01 ||
+            wwanStatusIndData.wwan_status == QCMAP_MSGR_WWAN_STATUS_IPV6_CONNECTED_V01) {
         mLocNetWwanState = LOC_NET_CONN_STATE_CONNECTED;
         notifyCurrentNetworkInfo(false);
-    } else if (wwanStatusIndData.wwan_status ==
-            QCMAP_MSGR_WWAN_STATUS_DISCONNECTED_V01) {
+    } else if (wwanStatusIndData.wwan_status == QCMAP_MSGR_WWAN_STATUS_DISCONNECTED_V01 ||
+                    wwanStatusIndData.wwan_status == QCMAP_MSGR_WWAN_STATUS_IPV6_DISCONNECTED_V01) {
         mLocNetWwanState = LOC_NET_CONN_STATE_DISCONNECTED;
         notifyCurrentNetworkInfo(false);
     } else {
@@ -359,12 +359,12 @@ void LocNetIface::handleQcmapCallback (
 
     ENTRY_LOG();
 
-    LOC_LOGD("WWAN Bring up status (Connected=3, Disconnected=6): %d",
+    LOC_LOGD("WWAN Bring up status (Connected_v4,v6=3,9, connecting fail_v4,v6=2,8): %d",
             bringUpWwanIndData.conn_status);
 
     /* Notify observers */
-    if (bringUpWwanIndData.conn_status ==
-            QCMAP_MSGR_WWAN_STATUS_CONNECTED_V01) {
+    if (bringUpWwanIndData.conn_status == QCMAP_MSGR_WWAN_STATUS_CONNECTED_V01 ||
+            bringUpWwanIndData.conn_status == QCMAP_MSGR_WWAN_STATUS_IPV6_CONNECTED_V01) {
 
         mLocNetWwanState = LOC_NET_CONN_STATE_CONNECTED;
         notifyCurrentNetworkInfo(false);
@@ -378,8 +378,8 @@ void LocNetIface::handleQcmapCallback (
         }
         mIsConnectBackhaulPending = false;
 
-    } else if (bringUpWwanIndData.conn_status ==
-            QCMAP_MSGR_WWAN_STATUS_CONNECTING_FAIL_V01) {
+    } else if (bringUpWwanIndData.conn_status == QCMAP_MSGR_WWAN_STATUS_CONNECTING_FAIL_V01 ||
+               bringUpWwanIndData.conn_status == QCMAP_MSGR_WWAN_STATUS_IPV6_CONNECTING_FAIL_V01) {
 
         if (mIsConnectBackhaulPending &&
                 mWwanCallStatusCb != NULL){
@@ -401,12 +401,12 @@ void LocNetIface::handleQcmapCallback(
 
     ENTRY_LOG();
 
-    LOC_LOGD("WWAN teardown status (Connected=3, Disconnected=6): %d",
+    LOC_LOGD("WWAN teardown status (Disconnected_v4,v6=6,12) (Disconnecting fail_v4,v6=5,11): %d",
             teardownWwanIndData.conn_status);
 
     /* Notify observers */
-    if (teardownWwanIndData.conn_status ==
-            QCMAP_MSGR_WWAN_STATUS_DISCONNECTED_V01) {
+    if (teardownWwanIndData.conn_status == QCMAP_MSGR_WWAN_STATUS_DISCONNECTED_V01 ||
+        teardownWwanIndData.conn_status == QCMAP_MSGR_WWAN_STATUS_IPV6_DISCONNECTED_V01) {
 
         mLocNetWwanState = LOC_NET_CONN_STATE_DISCONNECTED;
         notifyCurrentNetworkInfo(false);
@@ -420,8 +420,9 @@ void LocNetIface::handleQcmapCallback(
         }
         mIsDisconnectBackhaulPending = false;
 
-    } else if (teardownWwanIndData.conn_status ==
-            QCMAP_MSGR_WWAN_STATUS_DISCONNECTING_FAIL_V01) {
+    } else if (teardownWwanIndData.conn_status == QCMAP_MSGR_WWAN_STATUS_DISCONNECTING_FAIL_V01 ||
+                   teardownWwanIndData.conn_status ==
+                       QCMAP_MSGR_WWAN_STATUS_IPV6_DISCONNECTING_FAIL_V01) {
 
         if (mIsDisconnectBackhaulPending &&
                 mWwanCallStatusCb != NULL){
@@ -875,16 +876,17 @@ bool LocNetIface::isWwanConnected() {
         LOC_LOGE("Failed to get wwan status, err 0x%x", qmi_err_num);
         return false;
     }
-    if (v4_status == QCMAP_MSGR_WWAN_STATUS_CONNECTED_V01) {
+    LOC_LOGV("Wwan status IPv4:%d, IPv6:%d", v4_status, v6_status);
+    if (v4_status == QCMAP_MSGR_WWAN_STATUS_CONNECTED_V01 ||
+        v6_status == QCMAP_MSGR_WWAN_STATUS_IPV6_CONNECTED_V01) {
         LOC_LOGV("WWAN is connected.");
         mLocNetWwanState = LOC_NET_CONN_STATE_CONNECTED;
         return true;
-    } else if (v4_status == QCMAP_MSGR_WWAN_STATUS_DISCONNECTED_V01) {
+    } else {
+        // status could be disconnected, disconnecting*, connecting*.
         LOC_LOGV("WWAN is disconnected.");
         mLocNetWwanState = LOC_NET_CONN_STATE_DISCONNECTED;
         return false;
-    } else {
-        LOC_LOGE("Unhandled wwan status %d", v4_status);
     }
 
     return false;
@@ -922,12 +924,14 @@ bool LocNetIface::connectBackhaul() {
         LOC_LOGE("Failed to get wwan status, err 0x%x", qmi_err_num);
         return false;
     }
-    if (v4_status == QCMAP_MSGR_WWAN_STATUS_CONNECTING_V01) {
+    if (v4_status == QCMAP_MSGR_WWAN_STATUS_CONNECTING_V01 ||
+        v6_status == QCMAP_MSGR_WWAN_STATUS_IPV6_CONNECTING_V01) {
         LOC_LOGI("Ongoing connection attempt, ignoring connect.");
         mConnectReqRecvCount++;
         return true;
     }
-    if (v4_status == QCMAP_MSGR_WWAN_STATUS_CONNECTED_V01) {
+    if (v4_status == QCMAP_MSGR_WWAN_STATUS_CONNECTED_V01 ||
+        v6_status == QCMAP_MSGR_WWAN_STATUS_IPV6_CONNECTED_V01) {
         LOC_LOGV("Backhaul already connected, ignoring connect.");
         if (mWwanCallStatusCb != NULL) {
             mWwanCallStatusCb(
@@ -952,9 +956,10 @@ bool LocNetIface::connectBackhaul() {
 
     /* Send connect request to QCMAP */
     qmi_err_num = QMI_ERR_NONE_V01;
+    qcmap_msgr_wwan_call_type_v01 wwan_call_type = getWwanCallType();
     LOC_LOGV("Sending ConnectBackhaul request..");
     if (mQcmapClientPtr->ConnectBackHaul(
-            QCMAP_MSGR_WWAN_CALL_TYPE_V4_V01, &qmi_err_num) == false) {
+        wwan_call_type, &qmi_err_num) == false) {
         LOC_LOGE("Connect backhaul failed, err 0x%x", qmi_err_num);
         return false;
     }
@@ -964,6 +969,12 @@ bool LocNetIface::connectBackhaul() {
     mIsConnectBackhaulPending = true;
     mConnectReqRecvCount++;
     return true;
+}
+
+qcmap_msgr_wwan_call_type_v01 LocNetIface::getWwanCallType() {
+    return (getIpTypeFromConfig() == LOC_NET_CONN_IP_TYPE_V6) ?
+            QCMAP_MSGR_WWAN_CALL_TYPE_V6_V01 :
+            QCMAP_MSGR_WWAN_CALL_TYPE_V4_V01;
 }
 
 bool LocNetIface::disconnectBackhaul() {
@@ -1009,9 +1020,10 @@ bool LocNetIface::disconnectBackhaul() {
 
     /* Send disconnect request to QCMAP */
     qmi_error_type_v01 qmi_err_num = QMI_ERR_NONE_V01;
+    qcmap_msgr_wwan_call_type_v01 wwan_call_type = getWwanCallType();
     LOC_LOGV("Sending DisconnectBackhaul..");
     if (mQcmapClientPtr->DisconnectBackHaul(
-            QCMAP_MSGR_WWAN_CALL_TYPE_V4_V01, &qmi_err_num) == false) {
+            wwan_call_type, &qmi_err_num) == false) {
         LOC_LOGE("Disconnect backhaul failed, err 0x%x", qmi_err_num);
         return false;
     }
