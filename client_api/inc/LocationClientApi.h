@@ -163,29 +163,33 @@ enum GnssSignalTypeMask {
     /** GALILEO E5A RF Band */
     GNSS_SIGNAL_GALILEO_E5A_BIT         = (1<<7),
     /** GALILEO E5B RF Band */
-    GNSS_SIGNAL_GALILIEO_E5B_BIT        = (1<<8),
-    /** BEIDOU B1I RF Band */
-    GNSS_SIGNAL_BEIDOU_B1I_BIT          = (1<<9),
-    /** BEIDOU B1C RF Band */
-    GNSS_SIGNAL_BEIDOU_B1C_BIT          = (1<<10),
-    /** BEIDOU B2I RF Band */
-    GNSS_SIGNAL_BEIDOU_B2I_BIT          = (1<<11),
-    /** BEIDOU B2AI RF Band */
-    GNSS_SIGNAL_BEIDOU_B2AI_BIT         = (1<<12),
+    GNSS_SIGNAL_GALILEO_E5B_BIT         = (1<<8),
+    /** BEIDOU B1 RF Band */
+    GNSS_SIGNAL_BEIDOU_B1_BIT           = (1<<9),
+    /** BEIDOU B2 RF Band */
+    GNSS_SIGNAL_BEIDOU_B2_BIT           = (1<<10),
     /** QZSS L1CA RF Band */
-    GNSS_SIGNAL_QZSS_L1CA_BIT           = (1<<13),
+    GNSS_SIGNAL_QZSS_L1CA_BIT           = (1<<11),
     /** QZSS L1S RF Band */
-    GNSS_SIGNAL_QZSS_L1S_BIT            = (1<<14),
+    GNSS_SIGNAL_QZSS_L1S_BIT            = (1<<12),
     /** QZSS L2 RF Band */
-    GNSS_SIGNAL_QZSS_L2_BIT             = (1<<15),
+    GNSS_SIGNAL_QZSS_L2_BIT             = (1<<13),
     /** QZSS L5 RF Band */
-    GNSS_SIGNAL_QZSS_L5_BIT             = (1<<16),
+    GNSS_SIGNAL_QZSS_L5_BIT             = (1<<14),
     /** SBAS L1 RF Band */
-    GNSS_SIGNAL_SBAS_L1_BIT             = (1<<17),
+    GNSS_SIGNAL_SBAS_L1_BIT             = (1<<15),
+    /** BEIDOU B1I RF Band */
+    GNSS_SIGNAL_BEIDOU_B1I_BIT          = (1<<16),
+    /** BEIDOU B1C RF Band */
+    GNSS_SIGNAL_BEIDOU_B1C_BIT          = (1<<17),
+    /** BEIDOU B2I RF Band */
+    GNSS_SIGNAL_BEIDOU_B2I_BIT          = (1<<18),
+    /** BEIDOU B2AI RF Band */
+    GNSS_SIGNAL_BEIDOU_B2AI_BIT         = (1<<19),
     /** NAVIC L5 RF Band */
-    GNSS_SIGNAL_NAVIC_L5_BIT            = (1<<18),
+    GNSS_SIGNAL_NAVIC_L5_BIT            = (1<<20),
     /** BEIDOU B2A_Q RF Band */
-    GNSS_SIGNAL_BEIDOU_B2AQ_BIT         = (1<<19)
+    GNSS_SIGNAL_BEIDOU_B2AQ_BIT         = (1<<21),
 };
 
 
@@ -491,8 +495,7 @@ typedef enum {
     /** Mask to indicate that the fused/default position is needed
       to be reported back via EngineLocationsCb for the tracking sessions.
       The default position is the propagated/aggregated reports from
-      all engines running on the system (e.g.: DR/SPE/PPE) according to
-      proprietary algorithm.
+      all engines running on the system (e.g.: DR/SPE/PPE).
     */
     LOC_REQ_ENGINE_FUSED_BIT = (1<<0),
     /** Mask to indicate that the unmodified SPE position is needed
@@ -509,8 +512,7 @@ typedef enum {
 
 typedef enum {
     /** This is the propagated/aggregated reports from all engines
-        running on the system (e.g.: DR/SPE/PPE) according to proprietary
-        algorithm. */
+        running on the system (e.g.: DR/SPE/PPE). */
     LOC_OUTPUT_ENGINE_FUSED = 0,
     /** This fix is the unmodified fix from modem GNSS engine */
     LOC_OUTPUT_ENGINE_SPE   = 1,
@@ -617,9 +619,8 @@ struct GnssLocation : public Location {
     /** location engine type. When the fix. when the type is set to
         LOC_ENGINE_SRC_FUSED, the fix is the propagated/aggregated
         reports from all engines running on the system (e.g.:
-        DR/SPE/PPE) based proprietary algorithm. To check which
-        location engine contributes to the fused output, check for
-        locOutputEngMask. */
+        DR/SPE/PPE). To check which location engine contributes to
+        the fused output, check for locOutputEngMask. */
     LocOutputEngineType locOutputEngType;
     /** when loc output eng type is set to fused, this field
         indicates the set of engines contribute to the fix. */
@@ -1014,10 +1015,11 @@ public:
         When distanceInMeters is set to none zero, intervalInMs indicates
         the max latency that position report should be reported after the
         min distance criteria has been met. For example device has been
-        static, at UTC time of “x” millisecond, the device starts to move,
-        at UTC time of “y” milliseconds, the device has moved by
-        “distanceInMeters”. Then the location API client shall expect
-        to get a fix no later at UTC time of “y+intervalInMs” milli-seconds.
+        static, at UTC time of x millisecond, the device starts to
+        move, at UTC time of y milliseconds, the device has moved by
+        distanceInMeters. Then the location API client shall
+        expect to get a fix no later at UTC time of y+intervalInMs
+        milli-seconds.
 
         1)  The underlying system may have a minimum interval threshold
         (e.g. 100 ms or 1000 ms). Effective intervals will not be smaller
@@ -1134,7 +1136,7 @@ public:
                        unpropagated SPE report.
                        If LOC_REQ_ENGINE_FUSED_BIT is set, and there is at least one additional
                        engine running on the system other than SPE engine, then the fused position
-                       will be the propagated report to current time based on proprietary algorithm.
+                       will be the propagated report to current time.
                        The SPE and PPE report will be the original report from the position
                        engine without any modification.
                        If LOC_REQ_ENGINE_PPE_BIT is set, but PPE is not enabled on the system,
