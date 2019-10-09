@@ -56,6 +56,14 @@ class LocHalDaemonQsockReceiver;
 /******************************************************************************
 LocationApiService
 ******************************************************************************/
+
+typedef struct {
+    // this stores the client name and the command type that client requests
+    // the info will be used to send back command response
+    std::string clientName;
+    ELocMsgID   configMsgId;
+} ConfigReqClientData;
+
 class LocationApiService
 {
 public:
@@ -120,6 +128,12 @@ private:
     void onControlCollectiveResponseCallback(size_t count, LocationError *errs, uint32_t *ids);
     void onGnssEnergyConsumedCb(uint64_t totalEnergyConsumedSinceFirstBoot);
 
+    // Location configuration API requests
+    void configConstrainedTunc(
+            const LocConfigConstrainedTuncReqMsg* pMsg);
+    void configPositionAssistedClockEstimator(
+            const LocConfigPositionAssistedClockEstimatorReqMsg* pMsg);
+
     LocationApiService();
     virtual ~LocationApiService();
 
@@ -156,6 +170,7 @@ private:
 
     // Client propery database
     std::unordered_map<std::string, LocHalDaemonClientHandler*> mClients;
+    std::unordered_map<uint32_t, ConfigReqClientData> mConfigReqs;
 
     // Location Control API interface
     uint32_t mLocationControlId;

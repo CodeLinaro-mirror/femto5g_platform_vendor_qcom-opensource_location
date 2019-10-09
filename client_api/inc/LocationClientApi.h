@@ -862,7 +862,7 @@ public:
     LocationClientApi(CapabilitiesCb capsCallback);
 
     /** @brief Default destructor */
-    virtual ~LocationClientApi();
+    ~LocationClientApi();
 
     /* ================================== POSITIONING ================================== */
 
@@ -1068,7 +1068,7 @@ public:
     void updateLocationSystemInfoListener(LocationSystemInfoCb locSystemInfoCallback,
                                           ResponseCb responseCallback);
 
-private:
+protected:
     LocationClientApiImpl* mApiImpl;
 };
 

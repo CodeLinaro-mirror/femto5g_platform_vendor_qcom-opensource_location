@@ -39,6 +39,7 @@
 #include <LocationDataTypes.h>
 #include <ILocationAPI.h>
 #include <LocationClientApi.h>
+#include <LocationIntegrationApi.h>
 #include <MsgTask.h>
 #include <LocationApiMsg.h>
 #ifndef FEATURE_EXTERNAL_AP
@@ -47,6 +48,7 @@
 #endif
 
 using namespace std;
+using namespace location_integration;
 
 #ifdef FEATURE_EXTERNAL_AP
 using loc_util::LocSocket;
@@ -77,6 +79,8 @@ struct ClientCallbacks {
 #ifndef FEATURE_EXTERNAL_AP
 typedef LocDiagIface* (getLocDiagIface_t)();
 #endif
+
+typedef std::map<LocConfigTypeEnum, int32_t> LocConfigReqCntMap;
 
 namespace location_client
 {
@@ -172,10 +176,20 @@ public:
 
     void pingTest(PingTestCb pingTestCallback);
 
+    // config API
+    virtual uint32_t configConstrainedTimeUncertainty(
+            bool enable, float tuncThreshold, uint32_t energyBudget) override;
+    virtual uint32_t configPositionAssistedClockEstimator(bool enable) override;
+    void updateLocIntegrationCbs(location_integration::LocIntegrationCbs& integrationCbs);
+    void invokeConfigRespCb (LocConfigTypeEnum configType,
+                             LocIntegrationResponse response);
+
 private:
     ~LocationClientApiImpl();
     void capabilitesCallback(ELocMsgID  msgId, const void* msgData);
     void updateTrackingOptionsSync(LocationClientApiImpl* pImpl, LocationOptions& option);
+    void addConfigReq(LocConfigTypeEnum configType);
+    void flushConfigReqs();
 
     // internal session parameter
     static uint32_t         mClientIdGenerator;
@@ -193,6 +207,7 @@ private:
     LocationCallbacksMask   mCallbacksMask;
     LocationOptions         mLocationOptions;
     LocationCapabilitiesMask  mCapsMask;
+    LocConfigReqCntMap      mConfigReqCntMap;
 
     // callbacks
     CapabilitiesCb          mCapabilitiesCb;
@@ -213,6 +228,8 @@ private:
 
     LocationSystemInfoCb    mLocationSysInfoCb;
     ResponseCb              mLocationSysInfoResponseCb;
+
+    LocIntegrationCbs       mIntegrationCbs;
 
     PingTestCb              mPingTestCb;
 

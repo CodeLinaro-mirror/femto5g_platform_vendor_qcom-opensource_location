@@ -90,6 +90,7 @@ public:
     void stopTracking();
     void updateTrackingOptions(LocationOptions& locOptions);
     void onGnssEnergyConsumedInfoAvailable(LocAPIGnssEnergyConsumedIndMsg &msg);
+    void onControlResponseCb(LocationError err, ELocMsgID msgId);
     bool hasPendingEngineInfoRequest(uint32_t mask);
     void addEngineInfoRequst(uint32_t mask);
     void pingTest();

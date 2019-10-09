@@ -702,7 +702,9 @@ void LocApiV02 :: stopFix(LocApiResponse *adapterResponse)
       err = LOCATION_ERROR_SUCCESS;
   }
 
-  adapterResponse->returnToSender(err);
+  if (adapterResponse != NULL) {
+      adapterResponse->returnToSender(err);
+  }
   }));
 }
 
@@ -1265,8 +1267,9 @@ LocApiV02::deleteAidingData(const GnssAidingData& data, LocApiResponse *adapterR
           err = LOCATION_ERROR_GENERAL_FAILURE;
       }
   }
-
-  adapterResponse->returnToSender(err);
+  if (adapterResponse != NULL) {
+      adapterResponse->returnToSender(err);
+  }
   }));
 }
 
@@ -4967,9 +4970,12 @@ int LocApiV02::setSvMeasurementConstellation(const locClientEventMaskType mask)
     return ret_val;
 }
 
-LocationError LocApiV02::setConstrainedTuncMode(bool enabled,
-                                                float tuncConstraint,
-                                                uint32_t energyBudget) {
+void LocApiV02::setConstrainedTuncMode(bool enabled,
+                                       float tuncConstraint,
+                                       uint32_t energyBudget,
+                                       LocApiResponse *adapterResponse) {
+    sendMsg(new LocApiMsg([this, enabled, tuncConstraint, energyBudget, adapterResponse] () {
+
     LocationError err = LOCATION_ERROR_SUCCESS;
     qmiLocSetConstrainedTuncModeReqMsgT_v02 req;
     qmiLocSetConstrainedTuncModeIndMsgT_v02 ind;
@@ -5005,11 +5011,18 @@ LocationError LocApiV02::setConstrainedTuncMode(bool enabled,
         err = LOCATION_ERROR_GENERAL_FAILURE;
     }
 
-    LOC_LOGd("Exit. err: %u", err);
-    return err;
+    if (adapterResponse) {
+        adapterResponse->returnToSender(err);
+    }
+    LOC_LOGv("Exit. err: %u", err);
+  }));
 }
 
-LocationError LocApiV02::setPositionAssistedClockEstimatorMode(bool enabled) {
+void LocApiV02::setPositionAssistedClockEstimatorMode
+        (bool enabled, LocApiResponse *adapterResponse) {
+
+    sendMsg(new LocApiMsg([this, enabled, adapterResponse] () {
+
     LocationError err = LOCATION_ERROR_SUCCESS;
     qmiLocEnablePositionAssistedClockEstReqMsgT_v02 req;
     qmiLocEnablePositionAssistedClockEstIndMsgT_v02 ind;
@@ -5032,9 +5045,11 @@ LocationError LocApiV02::setPositionAssistedClockEstimatorMode(bool enabled) {
                  loc_get_v02_qmi_status_name(ind.status));
         err = LOCATION_ERROR_GENERAL_FAILURE;
     }
-
-    LOC_LOGd("Exit. err: %u", err);
-    return err;
+    if (adapterResponse) {
+        adapterResponse->returnToSender(err);
+    }
+    LOC_LOGv("Exit. err: %u", err);
+    }));
 }
 
 LocationError LocApiV02::getGnssEnergyConsumed() {

@@ -86,7 +86,11 @@ enum ELocMsgID {
     E_LOCAPI_ENGINE_LOCATIONS_INFO_MSG_ID = 19,
 
     // ping
-    E_LOCAPI_PINGTEST_MSG_ID = 99
+    E_LOCAPI_PINGTEST_MSG_ID = 99,
+
+    // integration API config request
+    E_INTAPI_CONFIG_CONSTRAINTED_TUNC_MSG_ID = 200,
+    E_INTAPI_CONFIG_POSITION_ASSISTED_CLOCK_ESTIMATOR_MSG_ID = 201,
 };
 
 typedef uint32_t LocationCallbacksMask;
@@ -268,6 +272,33 @@ struct LocAPIGetGnssEnergyConsumedReqMsg: LocAPIMsgHeader
 {
     inline LocAPIGetGnssEnergyConsumedReqMsg(const char* name) :
         LocAPIMsgHeader(name, E_LOCAPI_GET_GNSS_ENGERY_CONSUMED_MSG_ID) { }
+};
+
+
+struct LocConfigConstrainedTuncReqMsg: LocAPIMsgHeader
+{
+    bool     mEnable;
+    float    mTuncConstraint;
+    uint32_t mEnergyBudget;
+
+    inline LocConfigConstrainedTuncReqMsg(const char* name,
+                                          bool enable,
+                                          float tuncConstraint,
+                                          uint32_t energyBudget) :
+            LocAPIMsgHeader(name, E_INTAPI_CONFIG_CONSTRAINTED_TUNC_MSG_ID),
+            mEnable(enable),
+            mTuncConstraint(tuncConstraint),
+            mEnergyBudget(energyBudget) { }
+};
+
+struct LocConfigPositionAssistedClockEstimatorReqMsg: LocAPIMsgHeader
+{
+    bool     mEnable;
+    inline LocConfigPositionAssistedClockEstimatorReqMsg(const char* name,
+                                                         bool enable) :
+            LocAPIMsgHeader(name,
+                            E_INTAPI_CONFIG_POSITION_ASSISTED_CLOCK_ESTIMATOR_MSG_ID),
+            mEnable(enable) { }
 };
 
 /******************************************************************************

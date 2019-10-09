@@ -130,7 +130,7 @@ int main(int argc, char *argv[])
     }
 
     // move to root dir
-    chdir("/");
+    (void) chdir("/");
 
     // start listening for client events - will not return
     if (!LocationApiService::getInstance()) {

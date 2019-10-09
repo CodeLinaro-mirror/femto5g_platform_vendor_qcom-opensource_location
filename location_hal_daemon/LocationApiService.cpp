@@ -355,6 +355,27 @@ void LocationApiService::processClientMsg(const std::string& data) {
             pingTest(reinterpret_cast<LocAPIPingTestReqMsg*>(pMsg));
             break;
         }
+
+        // location configuration API
+        case E_INTAPI_CONFIG_CONSTRAINTED_TUNC_MSG_ID: {
+            if (sizeof(LocConfigConstrainedTuncReqMsg) != data.length()) {
+                LOC_LOGe("invalid LocConfigConstrainedTuncReqMsg");
+                break;
+            }
+            configConstrainedTunc(reinterpret_cast<LocConfigConstrainedTuncReqMsg*>(pMsg));
+            break;
+        }
+
+        case E_INTAPI_CONFIG_POSITION_ASSISTED_CLOCK_ESTIMATOR_MSG_ID: {
+            if (sizeof(LocConfigPositionAssistedClockEstimatorReqMsg) != data.length()) {
+                LOC_LOGe("invalid LocConfigPositionAssistedClockEstimatorReqMsg");
+                break;
+            }
+            configPositionAssistedClockEstimator(reinterpret_cast
+                    <LocConfigPositionAssistedClockEstimatorReqMsg*>(pMsg));
+            break;
+        }
+
         default: {
             LOC_LOGe("Unknown message");
             break;
@@ -539,12 +560,69 @@ void LocationApiService::pingTest(LocAPIPingTestReqMsg* pMsg) {
     LOC_LOGd(">-- pingTest");
 }
 
+void LocationApiService::configConstrainedTunc(
+        const LocConfigConstrainedTuncReqMsg* pMsg){
+
+    std::lock_guard<std::mutex> lock(mMutex);
+    if (!pMsg || !mLocationControlApi) {
+        return;
+    }
+
+    uint32_t sessionId = mLocationControlApi->configConstrainedTimeUncertainty(
+            pMsg->mEnable, pMsg->mTuncConstraint, pMsg->mEnergyBudget);
+    if (sessionId != 0) {
+        ConfigReqClientData configClientData;
+        configClientData.configMsgId = pMsg->msgId;
+        configClientData.clientName  = pMsg->mSocketName;
+        mConfigReqs.emplace(sessionId, configClientData);
+        LOC_LOGi(">-- enable: %d, tunc constraint %f, energy budget %d, session ID = %d",
+                 pMsg->mEnable, pMsg->mTuncConstraint, pMsg->mEnergyBudget,
+                 sessionId);
+    } else {
+        LocHalDaemonClientHandler* pClient = getClient(pMsg->mSocketName);
+        pClient->onControlResponseCb(LOCATION_ERROR_GENERAL_FAILURE, pMsg->msgId);
+    }
+}
+
+void LocationApiService::configPositionAssistedClockEstimator(
+        const LocConfigPositionAssistedClockEstimatorReqMsg* pMsg)
+{
+    std::lock_guard<std::mutex> lock(mMutex);
+    if (!pMsg || !mLocationControlApi) {
+        return;
+    }
+
+    uint32_t sessionId = mLocationControlApi->
+            configPositionAssistedClockEstimator(pMsg->mEnable);
+
+    if (sessionId != 0) {
+        ConfigReqClientData configClientData;
+        configClientData.configMsgId = pMsg->msgId;
+        configClientData.clientName  = pMsg->mSocketName;
+        mConfigReqs.emplace(sessionId, configClientData);
+    } else {
+        LocHalDaemonClientHandler* pClient = getClient(pMsg->mSocketName);
+        pClient->onControlResponseCb(LOCATION_ERROR_GENERAL_FAILURE, pMsg->msgId);
+    }
+    LOC_LOGi(">-- enable: %d, session ID = %d", pMsg->mEnable,  sessionId);
+}
+
 /******************************************************************************
 LocationApiService - Location Control API callback functions
 ******************************************************************************/
-void LocationApiService::onControlResponseCallback(LocationError err, uint32_t id) {
+void LocationApiService::onControlResponseCallback(LocationError err, uint32_t sessionId) {
     std::lock_guard<std::mutex> lock(mMutex);
-    LOC_LOGd("--< onControlResponseCallback err=%u id=%u", err, id);
+    LOC_LOGe("--< onControlResponseCallback err=%u id=%u", err, sessionId);
+
+    auto configReqData = mConfigReqs.find(sessionId);
+    if (configReqData != std::end(mConfigReqs)) {
+        LocHalDaemonClientHandler* pClient = getClient(configReqData->second.clientName);
+        pClient->onControlResponseCb(err, configReqData->second.configMsgId);
+        mConfigReqs.erase(configReqData);
+        LOC_LOGe("--< map size %d", mConfigReqs.size());
+    } else {
+        LOC_LOGe("--< client not found");
+    }
 }
 
 void LocationApiService::onControlCollectiveResponseCallback(
