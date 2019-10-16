@@ -983,12 +983,14 @@ bool LocNetIface::connectBackhaul() {
         LOC_LOGE("Failed to get wwan status, err 0x%x", qmi_err_num);
         return false;
     }
-    if (v4_status == QCMAP_MSGR_WWAN_STATUS_CONNECTING_V01) {
+    if (v4_status == QCMAP_MSGR_WWAN_STATUS_CONNECTING_V01 ||
+        v6_status == QCMAP_MSGR_WWAN_STATUS_IPV6_CONNECTING_V01) {
         LOC_LOGI("Ongoing connection attempt, ignoring connect.");
         mConnectReqRecvCount++;
         return true;
     }
-    if (v4_status == QCMAP_MSGR_WWAN_STATUS_CONNECTED_V01) {
+    if (v4_status == QCMAP_MSGR_WWAN_STATUS_CONNECTED_V01 ||
+        v6_status == QCMAP_MSGR_WWAN_STATUS_IPV6_CONNECTED_V01) {
         LOC_LOGV("Backhaul already connected, ignoring connect.");
         if (mWwanCallStatusCb != NULL) {
             mWwanCallStatusCb(
