@@ -1431,7 +1431,7 @@ void LocationClientApiImpl::onListenerReady() {
         ClientRegisterReq(LocationClientApiImpl* apiImpl) : mApiImpl(apiImpl) {}
         virtual ~ClientRegisterReq() {}
         void proc() const {
-            LocAPIClientRegisterReqMsg msg(mApiImpl->mSocketName);
+            LocAPIClientRegisterReqMsg msg(mApiImpl->mSocketName, LOCATION_CLIENT_API);
             bool rc = mApiImpl->mIpcSender->send(reinterpret_cast<uint8_t *>(&msg),
                                                  sizeof(msg));
             LOC_LOGd(">>> onListenerReady::ClientRegisterReqMsg rc=%d", rc);
