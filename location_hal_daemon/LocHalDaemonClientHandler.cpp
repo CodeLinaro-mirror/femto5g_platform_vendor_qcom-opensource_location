@@ -173,11 +173,7 @@ void LocHalDaemonClientHandler::updateTrackingOptions(LocationOptions & locOptio
         LOC_LOGd("distance %d, internal %d, req mask %x",
                  locOptions.minDistance, locOptions.minInterval,
                  locOptions.locReqEngTypeMask);
-
-        if ((mOptions.minDistance != locOptions.minDistance) ||
-            (mOptions.minInterval != locOptions.minInterval)) {
-            mLocationApi->updateTrackingOptions(mSessionId, locOptions);
-        }
+        mLocationApi->updateTrackingOptions(mSessionId, locOptions);
         // save other info: eng req type that will be used in filtering
         mOptions = locOptions;
     }
