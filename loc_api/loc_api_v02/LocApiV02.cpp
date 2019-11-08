@@ -2687,7 +2687,7 @@ void LocApiV02 :: reportPosition (
                     if (gnssSvIdUsed <= GPS_SV_PRN_MAX)
                     {
                         locationExtended.gnss_sv_used_ids.gps_sv_used_ids_mask |=
-                                                    (1 << (gnssSvIdUsed - GPS_SV_PRN_MIN));
+                                (1ULL << (gnssSvIdUsed - GPS_SV_PRN_MIN));
                         locationExtended.measUsageInfo[idx].gnssConstellation =
                                 GNSS_LOC_SV_SYSTEM_GPS;
                         locationExtended.measUsageInfo[idx].gnssSignalType =
@@ -2696,7 +2696,7 @@ void LocApiV02 :: reportPosition (
                     else if ((gnssSvIdUsed >= GLO_SV_PRN_MIN) && (gnssSvIdUsed <= GLO_SV_PRN_MAX))
                     {
                         locationExtended.gnss_sv_used_ids.glo_sv_used_ids_mask |=
-                                                    (1 << (gnssSvIdUsed - GLO_SV_PRN_MIN));
+                                (1ULL << (gnssSvIdUsed - GLO_SV_PRN_MIN));
                         locationExtended.measUsageInfo[idx].gnssConstellation =
                                 GNSS_LOC_SV_SYSTEM_GLONASS;
                         locationExtended.measUsageInfo[idx].gnssSignalType =
@@ -2705,7 +2705,7 @@ void LocApiV02 :: reportPosition (
                     else if ((gnssSvIdUsed >= BDS_SV_PRN_MIN) && (gnssSvIdUsed <= BDS_SV_PRN_MAX))
                     {
                         locationExtended.gnss_sv_used_ids.bds_sv_used_ids_mask |=
-                                                    (1 << (gnssSvIdUsed - BDS_SV_PRN_MIN));
+                                (1ULL << (gnssSvIdUsed - BDS_SV_PRN_MIN));
                         locationExtended.measUsageInfo[idx].gnssConstellation =
                                 GNSS_LOC_SV_SYSTEM_BDS;
                         locationExtended.measUsageInfo[idx].gnssSignalType =
@@ -2714,7 +2714,7 @@ void LocApiV02 :: reportPosition (
                     else if ((gnssSvIdUsed >= GAL_SV_PRN_MIN) && (gnssSvIdUsed <= GAL_SV_PRN_MAX))
                     {
                         locationExtended.gnss_sv_used_ids.gal_sv_used_ids_mask |=
-                                                    (1 << (gnssSvIdUsed - GAL_SV_PRN_MIN));
+                                (1ULL << (gnssSvIdUsed - GAL_SV_PRN_MIN));
                         locationExtended.measUsageInfo[idx].gnssConstellation =
                                 GNSS_LOC_SV_SYSTEM_GALILEO;
                         locationExtended.measUsageInfo[idx].gnssSignalType =
@@ -2723,7 +2723,7 @@ void LocApiV02 :: reportPosition (
                     else if ((gnssSvIdUsed >= QZSS_SV_PRN_MIN) && (gnssSvIdUsed <= QZSS_SV_PRN_MAX))
                     {
                         locationExtended.gnss_sv_used_ids.qzss_sv_used_ids_mask |=
-                                                    (1 << (gnssSvIdUsed - QZSS_SV_PRN_MIN));
+                                (1ULL << (gnssSvIdUsed - QZSS_SV_PRN_MIN));
                         locationExtended.measUsageInfo[idx].gnssConstellation =
                                 GNSS_LOC_SV_SYSTEM_QZSS;
                         locationExtended.measUsageInfo[idx].gnssSignalType =
@@ -2735,14 +2735,16 @@ void LocApiV02 :: reportPosition (
             if (location_report_ptr->navSolutionMask_valid)
             {
                locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_NAV_SOLUTION_MASK;
-               locationExtended.navSolutionMask = convertNavSolutionMask(location_report_ptr->navSolutionMask);
+               locationExtended.navSolutionMask =
+                       convertNavSolutionMask(location_report_ptr->navSolutionMask);
             }
 
             if (location_report_ptr->gpsTime_valid)
             {
                locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_GPS_TIME;
                locationExtended.gpsTime.gpsWeek = location_report_ptr->gpsTime.gpsWeek;
-               locationExtended.gpsTime.gpsTimeOfWeekMs = location_report_ptr->gpsTime.gpsTimeOfWeekMs;
+               locationExtended.gpsTime.gpsTimeOfWeekMs =
+                       location_report_ptr->gpsTime.gpsTimeOfWeekMs;
             }
 
             if (location_report_ptr->extDOP_valid)
@@ -4086,13 +4088,13 @@ void LocApiV02 :: convertGnssMeasurements (GnssMeasurementsData& measurementData
     if (GNSS_SV_TYPE_GALILEO == measurementData.svType) {
         galSVstateMask = GNSS_MEASUREMENTS_STATE_GAL_E1BC_CODE_LOCK_BIT;
 
-        if (gnss_measurement_info.measurementStatus & (1 << 30)) {
+        if (gnss_measurement_info.measurementStatus & (1ULL << 30)) {
             /* 1<<30 corresponds to MEAS_STATUS_100MS_VALID
                which is not documented in location_service_v02.h
                yet, temporary workaround */
             galSVstateMask |= GNSS_MEASUREMENTS_STATE_GAL_E1C_2ND_CODE_LOCK_BIT;
         }
-        if (gnss_measurement_info.measurementStatus & (1 << 31)) {
+        if (gnss_measurement_info.measurementStatus & (1ULL << 31)) {
             /* 1<<31 corresponds to MEAS_STATUS_2S_VALID
             which is not documented in location_service_v02.h
             yet, temporary workaround */
