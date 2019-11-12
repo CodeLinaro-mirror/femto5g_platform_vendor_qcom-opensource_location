@@ -142,6 +142,8 @@ private:
         return ret;
     }
 
+    uint32_t getSupportedTbf (uint32_t tbfMsec);
+
     // pointer to parent service
     LocationApiService* mService;
 
