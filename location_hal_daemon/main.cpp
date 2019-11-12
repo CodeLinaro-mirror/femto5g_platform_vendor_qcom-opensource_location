@@ -1,4 +1,4 @@
-/* Copyright (c) 2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018,2020 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -86,6 +86,7 @@ int main(int argc, char *argv[])
     }
 
     LOC_LOGi("location hal daemon - ver %s", HAL_DAEMON_VERSION);
+    loc_boot_kpi_marker("L - Location Probe Start");
 
     waitForDir(SOCKET_DIR_LOCATION);
     waitForDir(SOCKET_LOC_CLIENT_DIR);
