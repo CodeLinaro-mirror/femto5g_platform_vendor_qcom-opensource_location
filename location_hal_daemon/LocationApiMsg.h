@@ -47,6 +47,11 @@ Constants
 #define LOCATION_CLIENT_API_QSOCKET_HALDAEMON_INSTANCE_ID   (1)
 #define LOCATION_CLIENT_API_QSOCKET_CLIENT_SERVICE_ID       (5002)
 
+enum ClientType {
+    LOCATION_CLIENT_API = 1,
+    LOCATION_INTEGRATION_API = 2,
+};
+
 /******************************************************************************
 List of message IDs supported by Location Remote API
 ******************************************************************************/
@@ -95,20 +100,26 @@ enum ELocMsgID {
 
 typedef uint32_t LocationCallbacksMask;
 enum ELocationCallbacksOption {
-    E_LOC_CB_TRACKING_BIT               = (1<<0), /**< Register for Location */
+    E_LOC_CB_DISTANCE_BASED_TRACKING_BIT= (1<<0), /**< Register for DBT location report */
     E_LOC_CB_GNSS_LOCATION_INFO_BIT     = (1<<1), /**< Register for GNSS Location */
     E_LOC_CB_GNSS_SV_BIT                = (1<<2), /**< Register for GNSS SV */
     E_LOC_CB_GNSS_NMEA_BIT              = (1<<3), /**< Register for GNSS NMEA */
     E_LOC_CB_GNSS_DATA_BIT              = (1<<4), /**< Register for GNSS DATA */
     E_LOC_CB_SYSTEM_INFO_BIT            = (1<<5), /**< Register for Location system info */
-    E_LOC_CB_ENGINE_LOCATIONS_INFO_BIT  = (1<<6), /**< Register for multiple engine reports */
+    E_LOC_CB_BATCHING_BIT               = (1<<6), /**< Register for Batching */
+    E_LOC_CB_BATCHING_STATUS_BIT        = (1<<7), /**< Register for Batching  Status*/
+    E_LOC_CB_GEOFENCE_BREACH_BIT        = (1<<8), /**< Register for Geofence Breach */
+    E_LOC_CB_ENGINE_LOCATIONS_INFO_BIT  = (1<<9), /**< Register for multiple engine reports */
+    E_LOC_CB_SIMPLE_LOCATION_INFO_BIT   = (1<<10), /**< Register for simple location */
 };
 
 // Mask related to all info that are tied with a position session and need to be unsubscribed
 // when session is stopped
-#define LOCATION_SESSON_ALL_INFO_MASK (E_LOC_CB_TRACKING_BIT|E_LOC_CB_GNSS_LOCATION_INFO_BIT|\
+#define LOCATION_SESSON_ALL_INFO_MASK (E_LOC_CB_DISTANCE_BASED_TRACKING_BIT|\
+                                       E_LOC_CB_GNSS_LOCATION_INFO_BIT|\
                                        E_LOC_CB_GNSS_SV_BIT|E_LOC_CB_GNSS_NMEA_BIT|\
-                                       E_LOC_CB_GNSS_DATA_BIT|E_LOC_CB_ENGINE_LOCATIONS_INFO_BIT)
+                                       E_LOC_CB_GNSS_DATA_BIT|E_LOC_CB_ENGINE_LOCATIONS_INFO_BIT|\
+                                       E_LOC_CB_SIMPLE_LOCATION_INFO_BIT)
 
 typedef uint32_t EngineInfoCallbacksMask;
 enum EEngineInfoCallbacksMask {
@@ -152,8 +163,11 @@ IPC message structure - client registration
 // defintion for message with msg id of E_LOCAPI_CLIENT_REGISTER_MSG_ID
 struct LocAPIClientRegisterReqMsg: LocAPIMsgHeader
 {
-    inline LocAPIClientRegisterReqMsg(const char* name) :
-        LocAPIMsgHeader(name, E_LOCAPI_CLIENT_REGISTER_MSG_ID) { }
+    ClientType mClientType;
+
+    inline LocAPIClientRegisterReqMsg(const char* name, ClientType clientType) :
+        LocAPIMsgHeader(name, E_LOCAPI_CLIENT_REGISTER_MSG_ID),
+        mClientType(clientType) { }
 };
 
 // defintion for message with msg id of E_LOCAPI_CLIENT_DEREGISTER_MSG_ID

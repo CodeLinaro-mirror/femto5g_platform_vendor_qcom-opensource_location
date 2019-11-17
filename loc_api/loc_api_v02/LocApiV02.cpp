@@ -122,21 +122,38 @@ static void globalEventCb(locClientHandleType clientHandle,
                           const locClientEventIndUnionType eventPayload,
                           void*  pClientCookie)
 {
-  MODEM_LOG_CALLFLOW(%s, loc_get_v02_event_name(eventId));
-  LocApiV02 *locApiV02Instance =
-      (LocApiV02 *)pClientCookie;
+    switch (eventId) {
+    case QMI_LOC_EVENT_POSITION_REPORT_IND_V02:
+    case QMI_LOC_EVENT_UNPROPAGATED_POSITION_REPORT_IND_V02:
+    case QMI_LOC_EVENT_NMEA_IND_V02:
+    case QMI_LOC_EVENT_GNSS_SV_INFO_IND_V02:
+    case QMI_LOC_EVENT_GNSS_MEASUREMENT_REPORT_IND_V02:
+    case QMI_LOC_EVENT_SV_POLYNOMIAL_REPORT_IND_V02:
+    case QMI_LOC_EVENT_GPS_EPHEMERIS_REPORT_IND_V02:
+    case QMI_LOC_EVENT_GLONASS_EPHEMERIS_REPORT_IND_V02:
+    case QMI_LOC_EVENT_BDS_EPHEMERIS_REPORT_IND_V02:
+    case QMI_LOC_EVENT_GALILEO_EPHEMERIS_REPORT_IND_V02:
+    case QMI_LOC_EVENT_QZSS_EPHEMERIS_REPORT_IND_V02:
+        MODEM_LOG_CALLFLOW_DEBUG(%s, loc_get_v02_event_name(eventId));
+        break;
+    default:
+        MODEM_LOG_CALLFLOW(%s, loc_get_v02_event_name(eventId));
+        break;
+    }
 
-  LOC_LOGV ("%s:%d] client = %p, event id = %d, client cookie ptr = %p\n",
-                  __func__,  __LINE__,  clientHandle, eventId, pClientCookie);
+    LocApiV02 *locApiV02Instance = (LocApiV02 *)pClientCookie;
 
-  // return if null is passed
-  if( NULL == locApiV02Instance)
-  {
-    LOC_LOGE ("%s:%d] NULL object passed : client = %p, event id = %d\n",
+    LOC_LOGV ("%s:%d] client = %p, event id = %d, client cookie ptr = %p\n",
+              __func__,  __LINE__,  clientHandle, eventId, pClientCookie);
+
+    // return if null is passed
+    if( NULL == locApiV02Instance)
+    {
+        LOC_LOGE ("%s:%d] NULL object passed : client = %p, event id = %d\n",
                   __func__,  __LINE__,  clientHandle, eventId);
-    return;
-  }
-  locApiV02Instance->eventCb(clientHandle, eventId, eventPayload);
+        return;
+    }
+    locApiV02Instance->eventCb(clientHandle, eventId, eventPayload);
 }
 
 /* global response callback, it calls the sync request process
@@ -2412,6 +2429,11 @@ void LocApiV02 :: reportPosition (
     GpsLocationExtended locationExtended;
     memset(&locationExtended, 0, sizeof (GpsLocationExtended));
     locationExtended.size = sizeof(locationExtended);
+    locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_OUTPUT_ENG_TYPE;
+    locationExtended.locOutputEngType = LOC_OUTPUT_ENGINE_SPE;
+    locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_OUTPUT_ENG_MASK;
+    locationExtended.locOutputEngMask = STANDARD_POSITIONING_ENGINE;
+
     if( clock_gettime( CLOCK_BOOTTIME, &locationExtended.timeStamp.apTimeStamp)== 0 )
     {
        locationExtended.timeStamp.apTimeStampUncertaintyMs = (float)ap_timestamp_uncertainty;
@@ -2687,7 +2709,7 @@ void LocApiV02 :: reportPosition (
                     if (gnssSvIdUsed <= GPS_SV_PRN_MAX)
                     {
                         locationExtended.gnss_sv_used_ids.gps_sv_used_ids_mask |=
-                                                    (1 << (gnssSvIdUsed - GPS_SV_PRN_MIN));
+                                (1ULL << (gnssSvIdUsed - GPS_SV_PRN_MIN));
                         locationExtended.measUsageInfo[idx].gnssConstellation =
                                 GNSS_LOC_SV_SYSTEM_GPS;
                         locationExtended.measUsageInfo[idx].gnssSignalType =
@@ -2696,7 +2718,7 @@ void LocApiV02 :: reportPosition (
                     else if ((gnssSvIdUsed >= GLO_SV_PRN_MIN) && (gnssSvIdUsed <= GLO_SV_PRN_MAX))
                     {
                         locationExtended.gnss_sv_used_ids.glo_sv_used_ids_mask |=
-                                                    (1 << (gnssSvIdUsed - GLO_SV_PRN_MIN));
+                                (1ULL << (gnssSvIdUsed - GLO_SV_PRN_MIN));
                         locationExtended.measUsageInfo[idx].gnssConstellation =
                                 GNSS_LOC_SV_SYSTEM_GLONASS;
                         locationExtended.measUsageInfo[idx].gnssSignalType =
@@ -2705,7 +2727,7 @@ void LocApiV02 :: reportPosition (
                     else if ((gnssSvIdUsed >= BDS_SV_PRN_MIN) && (gnssSvIdUsed <= BDS_SV_PRN_MAX))
                     {
                         locationExtended.gnss_sv_used_ids.bds_sv_used_ids_mask |=
-                                                    (1 << (gnssSvIdUsed - BDS_SV_PRN_MIN));
+                                (1ULL << (gnssSvIdUsed - BDS_SV_PRN_MIN));
                         locationExtended.measUsageInfo[idx].gnssConstellation =
                                 GNSS_LOC_SV_SYSTEM_BDS;
                         locationExtended.measUsageInfo[idx].gnssSignalType =
@@ -2714,7 +2736,7 @@ void LocApiV02 :: reportPosition (
                     else if ((gnssSvIdUsed >= GAL_SV_PRN_MIN) && (gnssSvIdUsed <= GAL_SV_PRN_MAX))
                     {
                         locationExtended.gnss_sv_used_ids.gal_sv_used_ids_mask |=
-                                                    (1 << (gnssSvIdUsed - GAL_SV_PRN_MIN));
+                                (1ULL << (gnssSvIdUsed - GAL_SV_PRN_MIN));
                         locationExtended.measUsageInfo[idx].gnssConstellation =
                                 GNSS_LOC_SV_SYSTEM_GALILEO;
                         locationExtended.measUsageInfo[idx].gnssSignalType =
@@ -2723,7 +2745,7 @@ void LocApiV02 :: reportPosition (
                     else if ((gnssSvIdUsed >= QZSS_SV_PRN_MIN) && (gnssSvIdUsed <= QZSS_SV_PRN_MAX))
                     {
                         locationExtended.gnss_sv_used_ids.qzss_sv_used_ids_mask |=
-                                                    (1 << (gnssSvIdUsed - QZSS_SV_PRN_MIN));
+                                (1ULL << (gnssSvIdUsed - QZSS_SV_PRN_MIN));
                         locationExtended.measUsageInfo[idx].gnssConstellation =
                                 GNSS_LOC_SV_SYSTEM_QZSS;
                         locationExtended.measUsageInfo[idx].gnssSignalType =
@@ -2735,14 +2757,16 @@ void LocApiV02 :: reportPosition (
             if (location_report_ptr->navSolutionMask_valid)
             {
                locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_NAV_SOLUTION_MASK;
-               locationExtended.navSolutionMask = convertNavSolutionMask(location_report_ptr->navSolutionMask);
+               locationExtended.navSolutionMask =
+                       convertNavSolutionMask(location_report_ptr->navSolutionMask);
             }
 
             if (location_report_ptr->gpsTime_valid)
             {
                locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_GPS_TIME;
                locationExtended.gpsTime.gpsWeek = location_report_ptr->gpsTime.gpsWeek;
-               locationExtended.gpsTime.gpsTimeOfWeekMs = location_report_ptr->gpsTime.gpsTimeOfWeekMs;
+               locationExtended.gpsTime.gpsTimeOfWeekMs =
+                       location_report_ptr->gpsTime.gpsTimeOfWeekMs;
             }
 
             if (location_report_ptr->extDOP_valid)
@@ -2815,11 +2839,6 @@ void LocApiV02 :: reportPosition (
                locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_LEAP_SECONDS;
                locationExtended.leapSeconds = location_report_ptr->leapSeconds;
             }
-
-            locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_OUTPUT_ENG_TYPE;
-            locationExtended.locOutputEngType = LOC_OUTPUT_ENGINE_SPE;
-            locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_OUTPUT_ENG_MASK;
-            locationExtended.locOutputEngMask = STANDARD_POSITIONING_ENGINE;
 
             LocApiBase::reportPosition(location,
                                        locationExtended,
@@ -4086,13 +4105,13 @@ void LocApiV02 :: convertGnssMeasurements (GnssMeasurementsData& measurementData
     if (GNSS_SV_TYPE_GALILEO == measurementData.svType) {
         galSVstateMask = GNSS_MEASUREMENTS_STATE_GAL_E1BC_CODE_LOCK_BIT;
 
-        if (gnss_measurement_info.measurementStatus & (1 << 30)) {
+        if (gnss_measurement_info.measurementStatus & (1ULL << 30)) {
             /* 1<<30 corresponds to MEAS_STATUS_100MS_VALID
                which is not documented in location_service_v02.h
                yet, temporary workaround */
             galSVstateMask |= GNSS_MEASUREMENTS_STATE_GAL_E1C_2ND_CODE_LOCK_BIT;
         }
-        if (gnss_measurement_info.measurementStatus & (1 << 31)) {
+        if (gnss_measurement_info.measurementStatus & (1ULL << 31)) {
             /* 1<<31 corresponds to MEAS_STATUS_2S_VALID
             which is not documented in location_service_v02.h
             yet, temporary workaround */

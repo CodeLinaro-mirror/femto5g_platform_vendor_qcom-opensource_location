@@ -96,6 +96,7 @@ static clientDiagGnssLocationSvUsedInPosition parseDiagLocationSvUsedInPosition(
         const GnssLocationSvUsedInPosition &halSv);
 static clientDiagGnss_LocSvSystemEnumType parseDiagGnssConstellation(
         Gnss_LocSvSystemEnumType gnssConstellation);
+static void translateDiagGnssSignalType(clientDiagGnssSignalTypeMask& out, GnssSignalTypeMask in);
 static void translateDiagGnssMeasUsageInfo(clientDiagGnssMeasUsageInfo& out,
         const GnssMeasUsageInfo& in);
 void populateClientDiagLocation(clientDiagGnssLocationStructType* diagGnssLocPtr,

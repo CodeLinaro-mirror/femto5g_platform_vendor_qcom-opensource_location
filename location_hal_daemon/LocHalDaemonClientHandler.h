@@ -46,9 +46,11 @@ LocHalDaemonClientHandler
 class LocHalDaemonClientHandler
 {
 public:
-    inline LocHalDaemonClientHandler(LocationApiService* service, const std::string& clientname) :
+    inline LocHalDaemonClientHandler(LocationApiService* service, const std::string& clientname,
+                                     ClientType clientType) :
                 mService(service),
                 mName(clientname),
+                mClientType(clientType),
                 mCapabilityMask(0),
                 mTracking(false),
                 mSessionId(0),
@@ -74,7 +76,7 @@ public:
                 }
             }
         }
-        updateSubscription(0);
+        updateSubscription(E_LOC_CB_GNSS_LOCATION_INFO_BIT);
         mLocationApi = LocationAPI::createInstance(mCallbacks);
     }
 
@@ -145,6 +147,7 @@ private:
 
     // name of this client
     const std::string mName;
+    ClientType mClientType;
 
     // LocationAPI interface
     LocationCapabilitiesMask mCapabilityMask;

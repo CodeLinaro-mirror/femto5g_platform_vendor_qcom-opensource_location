@@ -120,8 +120,8 @@ clientDiagGnssGloTimeStructType parseDiagGloTime(const GnssGloTimeStructType &ha
         gloTimeFlags |= GNSS_CLO_DAYS_VALID;
         gloTime.gloDays = halGloTime.gloDays;
     }
-    if (GNSS_GLOS_MSEC_VALID  & halGloTime.validityMask) {
-        gloTimeFlags |= GNSS_GLOS_MSEC_VALID ;
+    if (GNSS_GLO_MSEC_VALID  & halGloTime.validityMask) {
+        gloTimeFlags |= GNSS_GLO_MSEC_VALID ;
         gloTime.gloMsec = halGloTime.gloMsec;
     }
     if (GNSS_GLO_CLK_TIME_BIAS_VALID & halGloTime.validityMask) {
@@ -187,9 +187,81 @@ clientDiagGnssLocationSvUsedInPosition parseDiagLocationSvUsedInPosition(
     return clientSv;
 }
 
+void translateDiagGnssSignalType(clientDiagGnssSignalTypeMask& out, GnssSignalTypeMask in) {
+    out = (clientDiagGnssSignalTypeMask)0;
+    if (in & GNSS_SIGNAL_GPS_L1CA_BIT) {
+        out |= CLIENT_DIAG_GNSS_SIGNAL_GPS_L1CA;
+    }
+    if (in & GNSS_SIGNAL_GPS_L1C_BIT) {
+        out |= CLIENT_DIAG_GNSS_SIGNAL_GPS_L1C;
+    }
+    if (in & GNSS_SIGNAL_GPS_L2_BIT) {
+        out |= CLIENT_DIAG_GNSS_SIGNAL_GPS_L2;
+    }
+    if (in & GNSS_SIGNAL_GPS_L5_BIT) {
+        out |= CLIENT_DIAG_GNSS_SIGNAL_GPS_L5;
+    }
+    if (in & GNSS_SIGNAL_GLONASS_G1_BIT) {
+        out |= CLIENT_DIAG_GNSS_SIGNAL_GLONASS_G1;
+    }
+    if (in & GNSS_SIGNAL_GLONASS_G2_BIT) {
+        out |= CLIENT_DIAG_GNSS_SIGNAL_GLONASS_G2;
+    }
+    if (in & GNSS_SIGNAL_GALILEO_E1_BIT) {
+        out |= CLIENT_DIAG_GNSS_SIGNAL_GALILEO_E1;
+    }
+    if (in & GNSS_SIGNAL_GALILEO_E5A_BIT) {
+        out |= CLIENT_DIAG_GNSS_SIGNAL_GALILEO_E5A;
+    }
+    if (in & GNSS_SIGNAL_GALILEO_E5B_BIT) {
+        out |= CLIENT_DIAG_GNSS_SIGNAL_GALILEO_E5B;
+    }
+    if (in & GNSS_SIGNAL_BEIDOU_B1I_BIT) {
+        out |= CLIENT_DIAG_GNSS_SIGNAL_BEIDOU_B1I;
+    }
+    if (in & GNSS_SIGNAL_BEIDOU_B1C_BIT) {
+        out |= CLIENT_DIAG_GNSS_SIGNAL_BEIDOU_B1C;
+    }
+    if (in & GNSS_SIGNAL_BEIDOU_B2I_BIT) {
+        out |= CLIENT_DIAG_GNSS_SIGNAL_BEIDOU_B2I;
+    }
+    if (in & GNSS_SIGNAL_BEIDOU_B2AI_BIT) {
+        out |= CLIENT_DIAG_GNSS_SIGNAL_BEIDOU_B2AI;
+    }
+    if (in & GNSS_SIGNAL_QZSS_L1CA_BIT) {
+        out |= CLIENT_DIAG_GNSS_SIGNAL_QZSS_L1CA;
+    }
+    if (in & GNSS_SIGNAL_QZSS_L1S_BIT) {
+        out |= CLIENT_DIAG_GNSS_SIGNAL_QZSS_L1S;
+    }
+    if (in & GNSS_SIGNAL_QZSS_L2_BIT) {
+        out |= CLIENT_DIAG_GNSS_SIGNAL_QZSS_L2;
+    }
+    if (in & GNSS_SIGNAL_QZSS_L5_BIT) {
+        out |= CLIENT_DIAG_GNSS_SIGNAL_QZSS_L5;
+    }
+    if (in & GNSS_SIGNAL_SBAS_L1_BIT) {
+        out |= CLIENT_DIAG_GNSS_SIGNAL_SBAS_L1;
+    }
+    if (in & GNSS_SIGNAL_NAVIC_L5_BIT) {
+        out |= CLIENT_DIAG_GNSS_SIGNAL_NAVIC_L5;
+    }
+    if (in & GNSS_SIGNAL_BEIDOU_B2AQ_BIT) {
+        out |= CLIENT_DIAG_GNSS_SIGNAL_BEIDOU_B2AQ;
+    }
+    if (in & GNSS_SIGNAL_BEIDOU_B1_BIT) {
+        out |= CLIENT_DIAG_GNSS_SIGNAL_BEIDOU_B1;
+    }
+    if (in & GNSS_SIGNAL_BEIDOU_B2_BIT) {
+        out |= CLIENT_DIAG_GNSS_SIGNAL_BEIDOU_B2;
+    }
+}
+
 void translateDiagGnssMeasUsageInfo(clientDiagGnssMeasUsageInfo& out,
         const GnssMeasUsageInfo& in) {
-    out.gnssSignalType = in.gnssSignalType;
+    clientDiagGnssSignalTypeMask diagGnssSignalType;
+    translateDiagGnssSignalType(diagGnssSignalType, in.gnssSignalType);
+    out.gnssSignalType = diagGnssSignalType;
    /** Specifies GNSS Constellation Type */
     out.gnssConstellation = parseDiagGnssConstellation(in.gnssConstellation);
     /**  GNSS SV ID.

@@ -305,7 +305,7 @@ enum GnssSystemTimeStructTypeFlags {
 
 enum GnssGloTimeStructTypeFlags {
     GNSS_CLO_DAYS_VALID                     = (1 << 0),
-    GNSS_GLOS_MSEC_VALID                    = (1 << 1),
+    GNSS_GLO_MSEC_VALID                     = (1 << 1),
     GNSS_GLO_CLK_TIME_BIAS_VALID            = (1 << 2),
     GNSS_GLO_CLK_TIME_BIAS_UNC_VALID        = (1 << 3),
     GNSS_GLO_REF_FCOUNT_VALID               = (1 << 4),
@@ -880,43 +880,46 @@ public:
            parameters / callback will be updated, and the session continues but with
            the new set of parameters / callback.
 
-        @param
-        intervalInMs, time between fixes, or TBF, in milliseconds. The actual interval
-                      of reports recieved will be no larger than milliseconds being
-                      rounded up the next interval granularity supported by the underlying
-                      system.
-                      0 to indicate don't care.
+        @param intervalInMs
+        time between fixes, or TBF, in milliseconds. The actual interval
+        of reports recieved will be no larger than milliseconds being
+        rounded up the next interval granularity supported by the underlying
+        system.
+        0 to indicate don't care.
 
-                      When distanceInMeters is set to none zero, intervalInMs indicates
-                      the max latency that position report should be reported after the
-                      min distance criteria has been met. For example device has been
-                      static, at UTC time of “x” millisecond, the device starts to move,
-                      at UTC time of “y” milliseconds, the device has moved by
-                      “distanceInMeters”. Then the location API client shall expect
-                      to get a fix no later at UTC time of “y+intervalInMs” milli-seconds.
+        When distanceInMeters is set to none zero, intervalInMs indicates
+        the max latency that position report should be reported after the
+        min distance criteria has been met. For example device has been
+        static, at UTC time of x millisecond, the device starts to
+        move, at UTC time of y milliseconds, the device has moved by
+        distanceInMeters. Then the location API client shall
+        expect to get a fix no later at UTC time of y+intervalInMs
+        milli-seconds.
 
-                      1)  The underlying system may have a minimum interval threshold
-                      (e.g. 100 ms or 1000 ms). Effective intervals will not be smaller
-                      than this lower bound.
-                      2) The effective intervals may have a granularity level higher
-                      than 1 ms, e.g. 100 ms or 1000 ms. So milliseconds being 1559
-                      may be honored at 1600 or 2000 ms, depending on the system.
-                      3) Where there is anotehr application in they system having a
-                      session with shorter interval, this client may benefit and
-                      receive reports at that interval.
-        distanceInMeters, distance between fixes, in meters. 0 to indicate don't care.
-                      1)  The underlying system may have a minimum distance threshold
-                      (e.g. 1 meter). Effective distance will not be smaller
-                      than this lower bound.
-                      2) The effective distance may have a granularity level higher
-                      than 1 m, e.g. 5 m. So distanceInMeters being 59 may be honored
-                      at 60 m, depending on the system.
-                      3) Where there is anotehr application in they system having a
-                      session with shorter distance, this client may benefit and
-                      receive reports at that distance.
-        locationCallback, callback to receive positions
-        responseCallback, callback to receive system responses; optional.
-
+        1)  The underlying system may have a minimum interval threshold
+        (e.g. 100 ms or 1000 ms). Effective intervals will not be smaller
+        than this lower bound.
+        2) The effective intervals may have a granularity level higher
+        than 1 ms, e.g. 100 ms or 1000 ms. So milliseconds being 1559
+        may be honored at 1600 or 2000 ms, depending on the system.
+        3) Where there is anotehr application in they system having a
+        session with shorter interval, this client may benefit and
+        receive reports at that interval.
+        @param distanceInMeters
+        distance between fixes, in meters. 0 to indicate don't care.
+        1)  The underlying system may have a minimum distance threshold
+        (e.g. 1 meter). Effective distance will not be smaller
+        than this lower bound.
+        2) The effective distance may have a granularity level higher
+        than 1 m, e.g. 5 m. So distanceInMeters being 59 may be honored
+        at 60 m, depending on the system.
+        3) Where there is anotehr application in they system having a
+        session with shorter distance, this client may benefit and
+        receive reports at that distance.
+        @param locationCallback
+        callback to receive positions
+        @param responseCallback
+        callback to receive system responses; optional.
 
         @return True, if a session is successfully started.
                 False, if no session is started, i.e. when locationCallback is nullptr.
