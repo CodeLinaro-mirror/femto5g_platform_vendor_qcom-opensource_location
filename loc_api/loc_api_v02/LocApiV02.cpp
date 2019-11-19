@@ -2591,6 +2591,12 @@ void LocApiV02 :: reportPosition (
     GpsLocationExtended locationExtended;
     memset(&locationExtended, 0, sizeof (GpsLocationExtended));
     locationExtended.size = sizeof(locationExtended);
+
+    locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_OUTPUT_ENG_TYPE;
+    locationExtended.locOutputEngType = LOC_OUTPUT_ENGINE_SPE;
+    locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_OUTPUT_ENG_MASK;
+    locationExtended.locOutputEngMask = STANDARD_POSITIONING_ENGINE;
+
     struct timespec apTimestamp;
     if( clock_gettime( CLOCK_BOOTTIME, &apTimestamp)== 0)
     {
@@ -2896,11 +2902,13 @@ void LocApiV02 :: reportPosition (
                                 location_report_ptr->gnssSvUsedSignalTypeList[idx];
                         GnssSignalTypeMask gnssSignalTypeMask =
                                 convertQmiGnssSignalType(qmiGnssSignalType);
+                        LOC_LOGd("sv id %d, qmi signal type: 0x%" PRIx64 ", hal signal type: 0x%x",
+                                 gnssSvIdUsed, qmiGnssSignalType, gnssSignalTypeMask);
 
                         if (gnssSvIdUsed <= GPS_SV_PRN_MAX)
                         {
                             locationExtended.gnss_sv_used_ids.gps_sv_used_ids_mask |=
-                                    (1 << (gnssSvIdUsed - GPS_SV_PRN_MIN));
+                                    (1ULL << (gnssSvIdUsed - GPS_SV_PRN_MIN));
                             locationExtended.measUsageInfo[idx].gnssConstellation =
                                     GNSS_LOC_SV_SYSTEM_GPS;
                             if (multiBandTypesAvailable) {
@@ -2909,19 +2917,19 @@ void LocApiV02 :: reportPosition (
                                 switch (locationExtended.measUsageInfo[idx].gnssSignalType) {
                                 case GNSS_SIGNAL_GPS_L1CA:
                                     locationExtended.gnss_mb_sv_used_ids.gps_l1ca_sv_used_ids_mask
-                                            |= (1 << (gnssSvIdUsed - GPS_SV_PRN_MIN));
+                                            |= (1ULL << (gnssSvIdUsed - GPS_SV_PRN_MIN));
                                     break;
                                 case GNSS_SIGNAL_GPS_L1C:
                                     locationExtended.gnss_mb_sv_used_ids.gps_l1c_sv_used_ids_mask
-                                            |= (1 << (gnssSvIdUsed - GPS_SV_PRN_MIN));
+                                            |= (1ULL << (gnssSvIdUsed - GPS_SV_PRN_MIN));
                                     break;
                                 case GNSS_SIGNAL_GPS_L2:
                                     locationExtended.gnss_mb_sv_used_ids.gps_l2_sv_used_ids_mask
-                                            |= (1 << (gnssSvIdUsed - GPS_SV_PRN_MIN));
+                                            |= (1ULL << (gnssSvIdUsed - GPS_SV_PRN_MIN));
                                     break;
                                 case GNSS_SIGNAL_GPS_L5:
                                     locationExtended.gnss_mb_sv_used_ids.gps_l5_sv_used_ids_mask
-                                            |= (1 << (gnssSvIdUsed - GPS_SV_PRN_MIN));
+                                            |= (1ULL << (gnssSvIdUsed - GPS_SV_PRN_MIN));
                                     break;
                                 }
                             } else {
@@ -2933,7 +2941,7 @@ void LocApiV02 :: reportPosition (
                                  (gnssSvIdUsed <= GLO_SV_PRN_MAX))
                         {
                             locationExtended.gnss_sv_used_ids.glo_sv_used_ids_mask |=
-                                    (1 << (gnssSvIdUsed - GLO_SV_PRN_MIN));
+                                    (1ULL << (gnssSvIdUsed - GLO_SV_PRN_MIN));
                             locationExtended.measUsageInfo[idx].gnssConstellation =
                                     GNSS_LOC_SV_SYSTEM_GLONASS;
                             if (multiBandTypesAvailable) {
@@ -2942,11 +2950,11 @@ void LocApiV02 :: reportPosition (
                                 switch (locationExtended.measUsageInfo[idx].gnssSignalType) {
                                 case GNSS_SIGNAL_GLONASS_G1:
                                     locationExtended.gnss_mb_sv_used_ids.glo_g1_sv_used_ids_mask
-                                            |= (1 << (gnssSvIdUsed - GLO_SV_PRN_MIN));
+                                            |= (1ULL << (gnssSvIdUsed - GLO_SV_PRN_MIN));
                                     break;
                                 case GNSS_SIGNAL_GLONASS_G2:
                                     locationExtended.gnss_mb_sv_used_ids.glo_g2_sv_used_ids_mask
-                                            |= (1 << (gnssSvIdUsed - GLO_SV_PRN_MIN));
+                                            |= (1ULL << (gnssSvIdUsed - GLO_SV_PRN_MIN));
                                     break;
                                 }
                             } else {
@@ -2959,7 +2967,7 @@ void LocApiV02 :: reportPosition (
                                  (gnssSvIdUsed <= BDS_SV_PRN_MAX))
                         {
                             locationExtended.gnss_sv_used_ids.bds_sv_used_ids_mask |=
-                                    (1 << (gnssSvIdUsed - BDS_SV_PRN_MIN));
+                                    (1ULL << (gnssSvIdUsed - BDS_SV_PRN_MIN));
                             locationExtended.measUsageInfo[idx].gnssConstellation =
                                     GNSS_LOC_SV_SYSTEM_BDS;
                             if (multiBandTypesAvailable) {
@@ -2968,23 +2976,23 @@ void LocApiV02 :: reportPosition (
                                 switch (locationExtended.measUsageInfo[idx].gnssSignalType) {
                                 case GNSS_SIGNAL_BEIDOU_B1I:
                                     locationExtended.gnss_mb_sv_used_ids.bds_b1i_sv_used_ids_mask
-                                            |= (1 << (gnssSvIdUsed - BDS_SV_PRN_MIN));
+                                            |= (1ULL << (gnssSvIdUsed - BDS_SV_PRN_MIN));
                                     break;
                                 case GNSS_SIGNAL_BEIDOU_B1C:
                                     locationExtended.gnss_mb_sv_used_ids.bds_b1c_sv_used_ids_mask
-                                            |= (1 << (gnssSvIdUsed - BDS_SV_PRN_MIN));
+                                            |= (1ULL << (gnssSvIdUsed - BDS_SV_PRN_MIN));
                                     break;
                                 case GNSS_SIGNAL_BEIDOU_B2I:
                                     locationExtended.gnss_mb_sv_used_ids.bds_b2i_sv_used_ids_mask
-                                            |= (1 << (gnssSvIdUsed - BDS_SV_PRN_MIN));
+                                            |= (1ULL << (gnssSvIdUsed - BDS_SV_PRN_MIN));
                                     break;
                                 case GNSS_SIGNAL_BEIDOU_B2AI:
                                     locationExtended.gnss_mb_sv_used_ids.bds_b2ai_sv_used_ids_mask
-                                            |= (1 << (gnssSvIdUsed - BDS_SV_PRN_MIN));
+                                            |= (1ULL << (gnssSvIdUsed - BDS_SV_PRN_MIN));
                                     break;
                                 case GNSS_SIGNAL_BEIDOU_B2AQ:
                                     locationExtended.gnss_mb_sv_used_ids.bds_b2aq_sv_used_ids_mask
-                                            |= (1 << (gnssSvIdUsed - BDS_SV_PRN_MIN));
+                                            |= (1ULL << (gnssSvIdUsed - BDS_SV_PRN_MIN));
                                     break;
                                 }
                             } else {
@@ -2996,7 +3004,7 @@ void LocApiV02 :: reportPosition (
                                  (gnssSvIdUsed <= GAL_SV_PRN_MAX))
                         {
                             locationExtended.gnss_sv_used_ids.gal_sv_used_ids_mask |=
-                                    (1 << (gnssSvIdUsed - GAL_SV_PRN_MIN));
+                                    (1ULL << (gnssSvIdUsed - GAL_SV_PRN_MIN));
                             locationExtended.measUsageInfo[idx].gnssConstellation =
                                     GNSS_LOC_SV_SYSTEM_GALILEO;
                             if (multiBandTypesAvailable) {
@@ -3005,15 +3013,15 @@ void LocApiV02 :: reportPosition (
                                 switch (locationExtended.measUsageInfo[idx].gnssSignalType) {
                                 case GNSS_SIGNAL_GALILEO_E1:
                                     locationExtended.gnss_mb_sv_used_ids.gal_e1_sv_used_ids_mask
-                                            |= (1 << (gnssSvIdUsed - GAL_SV_PRN_MIN));
+                                            |= (1ULL << (gnssSvIdUsed - GAL_SV_PRN_MIN));
                                     break;
                                 case GNSS_SIGNAL_GALILEO_E5A:
                                     locationExtended.gnss_mb_sv_used_ids.gal_e5a_sv_used_ids_mask
-                                            |= (1 << (gnssSvIdUsed - GAL_SV_PRN_MIN));
+                                            |= (1ULL << (gnssSvIdUsed - GAL_SV_PRN_MIN));
                                     break;
                                 case GNSS_SIGNAL_GALILEO_E5B:
                                     locationExtended.gnss_mb_sv_used_ids.gal_e5b_sv_used_ids_mask
-                                            |= (1 << (gnssSvIdUsed - GAL_SV_PRN_MIN));
+                                            |= (1ULL << (gnssSvIdUsed - GAL_SV_PRN_MIN));
                                     break;
                                 }
                             } else {
@@ -3025,7 +3033,7 @@ void LocApiV02 :: reportPosition (
                                  (gnssSvIdUsed <= QZSS_SV_PRN_MAX))
                         {
                             locationExtended.gnss_sv_used_ids.qzss_sv_used_ids_mask |=
-                                    (1 << (gnssSvIdUsed - QZSS_SV_PRN_MIN));
+                                    (1ULL << (gnssSvIdUsed - QZSS_SV_PRN_MIN));
                             locationExtended.measUsageInfo[idx].gnssConstellation =
                                     GNSS_LOC_SV_SYSTEM_QZSS;
                             if (multiBandTypesAvailable) {
@@ -3034,19 +3042,19 @@ void LocApiV02 :: reportPosition (
                                 switch (locationExtended.measUsageInfo[idx].gnssSignalType) {
                                 case GNSS_SIGNAL_QZSS_L1CA:
                                     locationExtended.gnss_mb_sv_used_ids.qzss_l1ca_sv_used_ids_mask
-                                            |= (1 << (gnssSvIdUsed - QZSS_SV_PRN_MIN));
+                                            |= (1ULL << (gnssSvIdUsed - QZSS_SV_PRN_MIN));
                                     break;
                                 case GNSS_SIGNAL_QZSS_L1S:
                                     locationExtended.gnss_mb_sv_used_ids.qzss_l1s_sv_used_ids_mask
-                                            |= (1 << (gnssSvIdUsed - QZSS_SV_PRN_MIN));
+                                            |= (1ULL << (gnssSvIdUsed - QZSS_SV_PRN_MIN));
                                     break;
                                 case GNSS_SIGNAL_QZSS_L2:
                                     locationExtended.gnss_mb_sv_used_ids.qzss_l2_sv_used_ids_mask
-                                            |= (1 << (gnssSvIdUsed - QZSS_SV_PRN_MIN));
+                                            |= (1ULL << (gnssSvIdUsed - QZSS_SV_PRN_MIN));
                                     break;
                                 case GNSS_SIGNAL_QZSS_L5:
                                     locationExtended.gnss_mb_sv_used_ids.qzss_l5_sv_used_ids_mask
-                                            |= (1 << (gnssSvIdUsed - QZSS_SV_PRN_MIN));
+                                            |= (1ULL << (gnssSvIdUsed - QZSS_SV_PRN_MIN));
                                     break;
                                 }
                             } else {
@@ -3145,11 +3153,6 @@ void LocApiV02 :: reportPosition (
                locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_LEAP_SECONDS;
                locationExtended.leapSeconds = location_report_ptr->leapSeconds;
             }
-
-            locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_OUTPUT_ENG_TYPE;
-            locationExtended.locOutputEngType = LOC_OUTPUT_ENGINE_SPE;
-            locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_OUTPUT_ENG_MASK;
-            locationExtended.locOutputEngMask = STANDARD_POSITIONING_ENGINE;
 
             LocApiBase::reportPosition(location,
                                        locationExtended,
@@ -3316,47 +3319,41 @@ void  LocApiV02 :: reportSv (
             {
                 GnssSvOptionsMask mask = 0;
 
-                LOC_LOGv("i:%d sv-id:%d count:%d sys:%d en:0x%X",
+                LOC_LOGv("i:%d sv-id:%d count:%d sys:%d en:0x%" PRIu64,
                     i, sv_info_ptr->gnssSvId, SvNotify.count, sv_info_ptr->system,
                     gnss_report_ptr->gnssSignalTypeList[SvNotify.count]);
 
                 GnssSv &gnssSv_ref = SvNotify.gnssSvs[SvNotify.count];
 
                 gnssSv_ref.size = sizeof(GnssSv);
+                gnssSv_ref.svId = sv_info_ptr->gnssSvId;
                 switch (sv_info_ptr->system) {
                 case eQMI_LOC_SV_SYSTEM_GPS_V02:
-                    gnssSv_ref.svId = sv_info_ptr->gnssSvId;
                     gnssSv_ref.type = GNSS_SV_TYPE_GPS;
                     break;
 
                 case eQMI_LOC_SV_SYSTEM_GALILEO_V02:
-                    gnssSv_ref.svId = sv_info_ptr->gnssSvId - 300;
                     gnssSv_ref.type = GNSS_SV_TYPE_GALILEO;
                     break;
 
                 case eQMI_LOC_SV_SYSTEM_SBAS_V02:
-                    gnssSv_ref.svId = sv_info_ptr->gnssSvId;
                     gnssSv_ref.type = GNSS_SV_TYPE_SBAS;
                     break;
 
                 case eQMI_LOC_SV_SYSTEM_GLONASS_V02:
-                    gnssSv_ref.svId = sv_info_ptr->gnssSvId;
                     gnssSv_ref.type = GNSS_SV_TYPE_GLONASS;
                     break;
 
                 case eQMI_LOC_SV_SYSTEM_BDS_V02:
                 case eQMI_LOC_SV_SYSTEM_COMPASS_V02:
-                    gnssSv_ref.svId = sv_info_ptr->gnssSvId - 200;
                     gnssSv_ref.type = GNSS_SV_TYPE_BEIDOU;
                     break;
 
                 case eQMI_LOC_SV_SYSTEM_QZSS_V02:
-                    gnssSv_ref.svId = sv_info_ptr->gnssSvId - 192;
                     gnssSv_ref.type = GNSS_SV_TYPE_QZSS;
                     break;
 
                 default:
-                    gnssSv_ref.svId = sv_info_ptr->gnssSvId;
                     gnssSv_ref.type = GNSS_SV_TYPE_UNKNOWN;
                     break;
                 }
@@ -3402,9 +3399,12 @@ void  LocApiV02 :: reportSv (
                                         gnss_report_ptr->gnssSignalTypeList[SvNotify.count],
                                         gloFrequency);
                             mask |= GNSS_SV_OPTIONS_HAS_CARRIER_FREQUENCY_BIT;
-
                             gnssSv_ref.gnssSignalTypeMask = convertQmiGnssSignalType(
                                     gnss_report_ptr->gnssSignalTypeList[SvNotify.count]);
+                            LOC_LOGd("sv id %d, qmi signal type: 0x%" PRIx64 ", "
+                                     "hal signal type: 0x%x", gnssSv_ref.svId,
+                                     gnss_report_ptr->gnssSignalTypeList[SvNotify.count],
+                                     gnssSv_ref.gnssSignalTypeMask);
                         }
                     }
                 } else {
@@ -3859,6 +3859,10 @@ void LocApiV02::reportSvMeasurementSvLoop(
             if (gnss_raw_measurement_ptr->gnssSignalType_valid) {
                 svMeas.gnssSignalTypeMask = convertQmiGnssSignalType(
                         gnss_raw_measurement_ptr->gnssSignalType);
+                LOC_LOGd("sv id %d, qmi signal type: 0x%" PRIx64 ", hal signal type: 0x%x",
+                         qmiSvMeas.gnssSvId, gnss_raw_measurement_ptr->gnssSignalType,
+                         svMeas.gnssSignalTypeMask);
+
             }
             svMeas.gnssSvId = qmiSvMeas.gnssSvId;
             svMeas.gloFrequency = qmiSvMeas.gloFrequency;
@@ -5283,50 +5287,39 @@ bool LocApiV02 :: convertGnssMeasurements (GnssMeasurementsData& measurementData
     // flag initiation
     measurementData.flags = 0;
 
-    // constellation and svid
+    // svid
+    measurementData.svId = gnss_measurement_info.gnssSvId;
+
+    // constellation
     switch (gnss_measurement_report_ptr.system)
     {
         case eQMI_LOC_SV_SYSTEM_GPS_V02:
             measurementData.svType = GNSS_SV_TYPE_GPS;
-            measurementData.svId = gnss_measurement_info.gnssSvId;
             break;
 
         case eQMI_LOC_SV_SYSTEM_GALILEO_V02:
             measurementData.svType = GNSS_SV_TYPE_GALILEO;
-            measurementData.svId = gnss_measurement_info.gnssSvId + 1 - GAL_SV_PRN_MIN;
             break;
 
         case eQMI_LOC_SV_SYSTEM_SBAS_V02:
             measurementData.svType = GNSS_SV_TYPE_SBAS;
-            measurementData.svId = gnss_measurement_info.gnssSvId;
             break;
 
         case eQMI_LOC_SV_SYSTEM_GLONASS_V02:
             measurementData.svType = GNSS_SV_TYPE_GLONASS;
-            if (gnss_measurement_info.gnssSvId != 255) // OSN is known
-            {
-                measurementData.svId = gnss_measurement_info.gnssSvId + 1 - GLO_SV_PRN_MIN;
-            }
-            else // OSN is not known, report FCN
-            {
-                measurementData.svId = gnss_measurement_info.gloFrequency + 92;
-            }
             gloFrequency = gnss_measurement_info.gloFrequency;
             break;
 
         case eQMI_LOC_SV_SYSTEM_BDS_V02:
             measurementData.svType = GNSS_SV_TYPE_BEIDOU;
-            measurementData.svId = gnss_measurement_info.gnssSvId + 1 - BDS_SV_PRN_MIN;
             break;
 
         case eQMI_LOC_SV_SYSTEM_QZSS_V02:
             measurementData.svType = GNSS_SV_TYPE_QZSS;
-            measurementData.svId = gnss_measurement_info.gnssSvId;
             break;
 
         default:
             measurementData.svType = GNSS_SV_TYPE_UNKNOWN;
-            measurementData.svId = gnss_measurement_info.gnssSvId;
             break;
     }
 
@@ -7044,64 +7037,64 @@ GnssSignalTypeMask LocApiV02::convertQmiGnssSignalType(
 
     switch (qmiGnssSignalType) {
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L1CA_V02:
-        gnssSignalType = GNSS_LOC_SIGNAL_TYPE_GPS_L1CA;
+        gnssSignalType = GNSS_SIGNAL_GPS_L1CA;
         break;
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L1C_V02:
-        gnssSignalType = GNSS_LOC_SIGNAL_TYPE_GPS_L1C;
+        gnssSignalType = GNSS_SIGNAL_GPS_L1C;
         break;
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L2C_L_V02:
-        gnssSignalType = GNSS_LOC_SIGNAL_TYPE_GPS_L2C_L;
+        gnssSignalType = GNSS_SIGNAL_GPS_L2;
         break;
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L5_Q_V02:
-        gnssSignalType = GNSS_LOC_SIGNAL_TYPE_GPS_L5_Q;
+        gnssSignalType = GNSS_SIGNAL_GPS_L5;
         break;
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GLONASS_G1_V02:
-        gnssSignalType = GNSS_LOC_SIGNAL_TYPE_GLONASS_G1;
+        gnssSignalType = GNSS_SIGNAL_GLONASS_G1;
         break;
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GLONASS_G2_V02:
-        gnssSignalType = GNSS_LOC_SIGNAL_TYPE_GLONASS_G2;
+        gnssSignalType = GNSS_SIGNAL_GLONASS_G2;
         break;
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GALILEO_E1_C_V02:
-        gnssSignalType = GNSS_LOC_SIGNAL_TYPE_GALILEO_E1_C;
+        gnssSignalType = GNSS_SIGNAL_GALILEO_E1;
         break;
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GALILEO_E5A_Q_V02:
-        gnssSignalType = GNSS_LOC_SIGNAL_TYPE_GALILEO_E5A_Q;
+        gnssSignalType = GNSS_SIGNAL_GALILEO_E5A;
         break;
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GALILEO_E5B_Q_V02:
-        gnssSignalType = GNSS_LOC_SIGNAL_TYPE_GALILEO_E5B_Q;
+        gnssSignalType = GNSS_SIGNAL_GALILEO_E5B;
         break;
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B1_I_V02:
-        gnssSignalType = GNSS_LOC_SIGNAL_TYPE_BEIDOU_B1_I;
+        gnssSignalType = GNSS_SIGNAL_BEIDOU_B1I;
         break;
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B1C_V02:
-        gnssSignalType = GNSS_LOC_SIGNAL_TYPE_BEIDOU_B1C;
+        gnssSignalType = GNSS_SIGNAL_BEIDOU_B1C;
         break;
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2_I_V02:
-        gnssSignalType = GNSS_LOC_SIGNAL_TYPE_BEIDOU_B2_I;
+        gnssSignalType = GNSS_SIGNAL_BEIDOU_B2I;
         break;
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2A_I_V02:
-        gnssSignalType = GNSS_LOC_SIGNAL_TYPE_BEIDOU_B2A_I;
+        gnssSignalType = GNSS_SIGNAL_BEIDOU_B2AI;
         break;
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1CA_V02:
-        gnssSignalType = GNSS_LOC_SIGNAL_TYPE_QZSS_L1CA;
+        gnssSignalType = GNSS_SIGNAL_QZSS_L1CA;
         break;
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1S_V02:
-        gnssSignalType = GNSS_LOC_SIGNAL_TYPE_QZSS_L1S;
+        gnssSignalType =  GNSS_SIGNAL_QZSS_L1S;
         break;
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L2C_L_V02:
-        gnssSignalType = GNSS_LOC_SIGNAL_TYPE_QZSS_L2C_L;
+        gnssSignalType = GNSS_SIGNAL_QZSS_L2;
         break;
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L5_Q_V02:
-        gnssSignalType = GNSS_LOC_SIGNAL_TYPE_QZSS_L5_Q;
+        gnssSignalType = GNSS_SIGNAL_QZSS_L5;
         break;
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_SBAS_L1_CA_V02:
-        gnssSignalType = GNSS_LOC_SIGNAL_TYPE_SBAS_L1_CA;
+        gnssSignalType = GNSS_SIGNAL_SBAS_L1;
         break;
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_NAVIC_L5_V02:
-        gnssSignalType = GNSS_LOC_SIGNAL_TYPE_NAVIC_L5;
+        gnssSignalType = GNSS_SIGNAL_NAVIC_L5;
         break;
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2A_Q_V02:
-        gnssSignalType = GNSS_LOC_SIGNAL_TYPE_BEIDOU_B2A_Q;
+        gnssSignalType = GNSS_SIGNAL_BEIDOU_B2AQ;
         break;
     default:
         break;
