@@ -3101,7 +3101,7 @@ void  LocApiV02 :: reportSvMeasurement (
   }
 
   svMeasurementSet.gnssMeas.size  = sizeof(Gnss_SVMeasurementStructType);
-  svMeasurementSet.gnssMeas.system  = (Gnss_LocSvSystemEnumType)gnss_raw_measurement_ptr->system;
+  svMeasurementSet.gnssMeas.system  = getLocApiSvSystemType(gnss_raw_measurement_ptr->system);
 
   if(1 == gnss_raw_measurement_ptr->systemTime_valid)
   {
@@ -5440,4 +5440,41 @@ LocApiV02::convertLppeUp(const uint32_t lppeUserPlaneMask)
         mask |= GNSS_CONFIG_LPPE_USER_PLANE_SENSOR_BARO_MEASUREMENTS_BIT;
     }
     return mask;
+}
+
+Gnss_LocSvSystemEnumType LocApiV02::getLocApiSvSystemType
+        (qmiLocSvSystemEnumT_v02 qmiSvSystemType) {
+
+    Gnss_LocSvSystemEnumType locSvSystemType = (Gnss_LocSvSystemEnumType) 0;
+    switch (qmiSvSystemType) {
+    case eQMI_LOC_SV_SYSTEM_GPS_V02:
+        locSvSystemType = GNSS_LOC_SV_SYSTEM_GPS;
+        break;
+
+    case eQMI_LOC_SV_SYSTEM_GALILEO_V02:
+        locSvSystemType = GNSS_LOC_SV_SYSTEM_GALILEO;
+        break;
+
+    case eQMI_LOC_SV_SYSTEM_SBAS_V02:
+        locSvSystemType = GNSS_LOC_SV_SYSTEM_SBAS;
+        break;
+
+    case eQMI_LOC_SV_SYSTEM_GLONASS_V02:
+        locSvSystemType = GNSS_LOC_SV_SYSTEM_GLONASS;
+        break;
+
+    case eQMI_LOC_SV_SYSTEM_BDS_V02:
+    case eQMI_LOC_SV_SYSTEM_COMPASS_V02:
+        locSvSystemType = GNSS_LOC_SV_SYSTEM_BDS;
+        break;
+
+    case eQMI_LOC_SV_SYSTEM_QZSS_V02:
+        locSvSystemType = GNSS_LOC_SV_SYSTEM_QZSS;
+        break;
+
+    default:
+        break;
+    }
+
+    return locSvSystemType;
 }

@@ -111,6 +111,9 @@ private:
   int convertGnssClock (GnssMeasurementsClock& clock,
       const qmiLocEventGnssSvMeasInfoIndMsgT_v02& gnss_measurement_info);
 
+  Gnss_LocSvSystemEnumType getLocApiSvSystemType(
+          qmiLocSvSystemEnumT_v02 qmiSvSystemType);
+
   /* If Confidence value is less than 68%, then scale the accuracy value to 68%
      confidence.*/
   void scaleAccuracyTo68PercentConfidence(const uint8_t confidenceValue,
