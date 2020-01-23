@@ -84,7 +84,6 @@ private:
   bool mEngineOn;
   bool mMeasurementsStarted;
   std::vector<Resender> mResenders;
-  bool mIsMasterRegistered;
 
   /* Convert event mask from loc eng to loc_api_v02 format */
   static locClientEventMaskType convertMask(LOC_API_ADAPTER_EVENT_MASK_T mask);
@@ -180,17 +179,6 @@ private:
   bool cacheGnssMeasurementSupport();
   void registerMasterClient();
   int getGpsLock(uint8_t subType);
-
-  inline bool checkRegisterMaster() {
-      if (!mIsMasterRegistered) {
-          if (true == isMaster()) {
-              registerMasterClient();
-              mIsMasterRegistered = true;
-              return true;
-          }
-      }
-      return false;
-  }
 
 protected:
   virtual enum loc_api_adapter_err
