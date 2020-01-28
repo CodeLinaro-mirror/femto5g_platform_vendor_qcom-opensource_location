@@ -66,24 +66,60 @@ typedef std::map<LocConfigTypeEnum, uint32_t>
 typedef uint32_t GnssConstellationMask;
 
 /**
- *  Specify SV Constellation types. Multiple constellation types
- *  can be specified via bitwise OR of individual type. */
-enum GnssConstellationTypeBits{
+ *  Specify SV Constellation types. */
+enum GnssConstellationType {
     /** GLONASS SV system */
-    GNSS_CONSTELLATION_TYPE_GLONASS_BIT  = (1<<0),
+    GNSS_CONSTELLATION_TYPE_GLONASS  = 1,
     /** QZSS SV system */
-    GNSS_CONSTELLATION_TYPE_QZSS_BIT     = (1<<1),
+    GNSS_CONSTELLATION_TYPE_QZSS     = 2,
     /** BEIDOU SV system */
-    GNSS_CONSTELLATION_TYPE_BEIDOU_BIT   = (1<<2),
+    GNSS_CONSTELLATION_TYPE_BEIDOU   = 3,
     /** GALILEO SV system */
-    GNSS_CONSTELLATION_TYPE_GALILEO_BIT  = (1<<3),
+    GNSS_CONSTELLATION_TYPE_GALILEO  = 4,
     /** SBAS SV system */
-    GNSS_CONSTELLATION_TYPE_SBAS_BIT     = (1<<4),
-    /** NAVIC SV system */
-    GNSS_CONSTELLATION_TYPE_NAVIC_BIT    = (1<<5),
-    /** MAX, forced enum to 32-bit */
-    GNSS_CONSTELLATION_TYPE_MAX          = (1<<31),
+    GNSS_CONSTELLATION_TYPE_SBAS     = 5
 };
+
+/**
+ * Specify parameters related to enable/disable SVs */
+struct GnssSvIdInfo {
+    /** constellation for the sv  */
+    GnssConstellationType constellation;
+    /** sv id for the constellation:
+     * GLONASS SV id range: 65 to 96
+     * QZSS SV id range: 193 to 197
+     * BDS SV id range: 201 to 237
+     * GAL SV id range: 301 to 336
+     * SBAS SV id range: 120 to 158 and 183 to 191
+     */
+    uint32_t              svId;
+};
+
+/**
+ * Specify the absolute set of constellations and SVs
+ * that should not be used by the GNSS engine on modem.
+ *
+ * To blacklist all SVs from one constellation, use
+ * GNSS_SV_ID_BLACKLIST_ALL as sv id for that constellation.
+ *
+ * To specify only a subset of the SVs to be blacklisted, for
+ * each SV, specify its constelaltion and the SV id and put in
+ * the vector.
+ *
+ * All SVs being blacklisted should not be used in positioning.
+ * For SBAS, SVs are not used by GNSS engine on modem by
+ * default. Blacklisting SBAS SV only blocks SBAS data demod.
+ * SBAS XCORR functionality will not be disabled for blacklisted
+ * SBAS SVs.
+ *
+ * GLONASS SV id range: 65 to 96
+ * QZSS SV id range: 193 to 197
+ * BDS SV id range: 201 to 237
+ * GAL SV id range: 301 to 336
+ * SBAS SV id range: 120 to 158 and 183 to 191
+ */
+#define GNSS_SV_ID_BLACKLIST_ALL (0)
+typedef std::vector<GnssSvIdInfo> LocConfigBlacklistedSvIdList;
 
 /**
  *  Specify the asynchronous response when calling location
@@ -158,38 +194,45 @@ public:
     ~LocationIntegrationApi();
 
     /** @brief
-        Blacklist some constellations from being used by the GNSS
-        engine on modem. The priority to be used when invoking this
-        API is specified via LocConfigPriorityMap with type set to
-        CONFIG_CONSTELLATIONS.
+        Blacklist some constellations or subset of SVs from the
+        constellation from being used by the GNSS engine on modem.
+
+        Please note this API call is not incremental and the new
+        setting will completely overwrite the previous call.
+        blacklistedSvList shall contain the complete list
+        of blacklisted constellations and blacklisted SVs.
+        Constellations and SVs not specified in the parameter will
+        be considered to be allowed to get used by GNSS engine.
 
         Client should wait for the command to finish, e.g.: via
-        configCb received before issuing a second configConstellations
-        command. Behavior is not defined if client issues a second
-        request of configConstellations without waiting for the finish
-        of the previous configConstellations request.
+        configCb received before issuing a second
+        configConstellations command. Behavior is not defined if
+        client issues a second request of configConstellations
+        without waiting for the finish of the previous
+        configConstellations request.
 
         @param
-        blacklistedConstellations: specify the set of constellations that
-        should not be used by the GNSS engine on modem. Constellations not
-        specified in blacklistedConstellations will be allowed to
-        get used by the GNSS engine on modem.
+        blacklistedSvList: specify the set of constellations and SVs
+        that should not be used by the GNSS engine on modem.
+        Constellations and SVs not specified in blacklistedSvList
+        will be allowed to get used by the GNSS engine on modem.
 
-        @return true, if request is successfully processed as per
+        Nullptr of blacklistedSvList will be interpreted as to reset
+        the constellation configuration to device default.
+
+        @return true, if request is successfully processed as
                 requested. When returning true, configCb will be
                 invoked to deliver asynchronous processing status.
 
         @return false, if request is not successfully processed as
-                per requested. When returning false, configCb will
+                requested. When returning false, configCb will
                 not be invoked.
     */
-    bool configConstellations(GnssConstellationMask blacklistedConstellations);
+    bool configConstellations(const LocConfigBlacklistedSvIdList*
+                              blacklistedSvList=nullptr);
 
      /** @brief
          Enable or disable the constrained time uncertainty feature.
-         The priority to be used when invoking this API is
-         specified via LocConfigPriorityMap with type set to
-         CONFIG_CONSTRAINED_TIME_UNCERTAINTY.
 
          Client should wait for the command to finish, e.g.:
          via configCb received before issuing a second
@@ -213,13 +256,14 @@ public:
          feature.
 
          @param
-         energyBudget: this specifies the power budget that gps
+         energyBudget: this specifies the power budget that GNSS
          engine is allowed to spend to maintain the time uncertainty.
          Default is 0 meaning that GPS engine is not constained by
          power budget and can spend as much power as needed. The
          parameter need to be specified in units of 0.1 milli watt
-         second. This parameter is ignored when request is to disable
-         this feature.
+         second, e.g.: an energy budget of 2.0 milli watt will be of
+         20 units. This parameter is ignored when request is to
+         disable this feature.
 
         @return true, if the constrained time uncertainty feature is
                 successfully enabled or disabled as requested.
@@ -237,10 +281,6 @@ public:
     /** @brief
         Enable or disable position assisted clock estimator feature.
 
-        The priority to be used when invoking this API is specified
-        via LocConfigPriorityMap with type set to
-        CONFIG_POSITION_ASSISTED_CLOCK_ESTIMATOR.
-
         Client should wait for the command to finish, e.g.: via
         configCb received before issuing a second
         configPositionAssistedClockEstimator command. Behavior is
@@ -255,13 +295,13 @@ public:
         feature.
 
         @return true, if position assisted clock estimator is
-                successfully enabled or disabled as per requested.
-                When returning true, configCb will be invoked
-                to deliver asynchronous processing status.
+                successfully enabled or disabled as requested. When
+                returning true, configCb will be invoked to deliver
+                asynchronous processing status.
 
         @return false, if position assisted clock estimator is not
-                successfully enabled or disabled as per requested.
-                When returning false, configCb will not be invoked.
+                successfully enabled or disabled as requested. When
+                returning false, configCb will not be invoked.
     */
     bool configPositionAssistedClockEstimator(bool enable);
 };

@@ -58,7 +58,7 @@ LocationIntegrationApi::~LocationIntegrationApi() {
 }
 
 bool LocationIntegrationApi::configConstellations(
-        GnssConstellationMask blacklistedConstellations) {
+        const LocConfigBlacklistedSvIdList* blacklistedSvList) {
     return false;
 }
 
