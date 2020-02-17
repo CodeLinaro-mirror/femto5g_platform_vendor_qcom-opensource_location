@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -77,6 +77,8 @@ void populateClientDiagGnssSv(clientDiagGnssSvStructType* diagGnssSvPtr,
         std::vector<GnssSv>& gnssSvs);
 void populateClientDiagNmea(clientDiagGnssNmeaStructType *diagGnssNmeaPtr,
         const LocAPINmeaSerializedPayload &nmeaSerializedPayload);
+void populateClientDiagSvPoly(clientDiagGnssSvPoly *diagGnssSvPolyPtr,
+        const GnssSvPoly &gnssSvPoly);
 #endif // FEATURE_EXTERNAL_AP
 
 enum ReportCbEnumType {
@@ -88,6 +90,17 @@ enum ReportCbEnumType {
      *  etc and also for location of other engines running in the
      *  system */
     REPORT_CB_ENGINE_INFO = 2,
+};
+
+struct ClientCallbacks {
+    CapabilitiesCb capabilitycb;
+    ResponseCb responsecb;
+    CollectiveResponseCb collectivecb;
+    LocationCb locationcb;
+    BatchingCb batchingcb;
+    GeofenceBreachCb gfbreachcb;
+    GnssReportCbs gnssreportcbs;
+    EngineReportCbs engreportcbs;
 };
 
 typedef std::function<void(
@@ -162,6 +175,7 @@ public:
             bool enable, float tuncThreshold, uint32_t energyBudget) override;
     virtual uint32_t configPositionAssistedClockEstimator(bool enable) override;
     virtual uint32_t configLeverArm(const LeverArmConfigInfo& configInfo) override;
+    virtual uint32_t configRobustLocation(bool enable, bool enableForE911) override;
 
     // other interface
     void updateNetworkAvailability(bool available);
@@ -229,6 +243,7 @@ private:
     GnssNmeaCb              mGnssNmeaCb;
     GnssDataCb              mGnssDataCb;
     GnssMeasurementsCb      mGnssMeasurementsCb;
+    GnssSvPolyCb            mGnssSvPolyCb;
 
     GnssEnergyConsumedCb    mGnssEnergyConsumedInfoCb;
     ResponseCb              mGnssEnergyConsumedResponseCb;

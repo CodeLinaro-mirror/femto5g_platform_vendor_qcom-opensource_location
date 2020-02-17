@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -212,6 +212,10 @@ enum ELocMsgID {
     // Measurement reports
     E_LOCAPI_MEAS_MSG_ID = 30,
 
+    // SV poly reports
+    E_LOCAPI_SV_POLY_MSG_ID = 31,
+
+
     // ping
     E_LOCAPI_PINGTEST_MSG_ID = 99,
 
@@ -221,6 +225,7 @@ enum ELocMsgID {
     E_INTAPI_CONFIG_SV_CONSTELLATION_MSG_ID  = 202,
     E_INTAPI_CONFIG_AIDING_DATA_DELETION_MSG_ID  = 203,
     E_INTAPI_CONFIG_LEVER_ARM_MSG_ID  = 204,
+    E_INTAPI_CONFIG_ROBUST_LOCATION_MSG_ID  = 205,
 };
 
 typedef uint32_t LocationCallbacksMask;
@@ -237,6 +242,7 @@ enum ELocationCallbacksOption {
     E_LOC_CB_ENGINE_LOCATIONS_INFO_BIT  = (1<<9), /**< Register for multiple engine reports */
     E_LOC_CB_SIMPLE_LOCATION_INFO_BIT   = (1<<10), /**< Register for simple location */
     E_LOC_CB_GNSS_MEAS_BIT              = (1<<11), /**< Register for GNSS Measurements */
+    E_LOC_CB_GNSS_SV_POLY_BIT           = (1<<12), /**< Register for GNSS SV poly reports */
 };
 
 // Mask related to all info that are tied with a position session and need to be unsubscribed
@@ -246,7 +252,8 @@ enum ELocationCallbacksOption {
                                        E_LOC_CB_GNSS_SV_BIT|E_LOC_CB_GNSS_NMEA_BIT|\
                                        E_LOC_CB_GNSS_DATA_BIT|E_LOC_CB_GNSS_MEAS_BIT|\
                                        E_LOC_CB_ENGINE_LOCATIONS_INFO_BIT|\
-                                       E_LOC_CB_SIMPLE_LOCATION_INFO_BIT)
+                                       E_LOC_CB_SIMPLE_LOCATION_INFO_BIT|\
+                                       E_LOC_CB_GNSS_SV_POLY_BIT)
 
 typedef uint32_t EngineInfoCallbacksMask;
 enum EEngineInfoCallbacksMask {
@@ -617,12 +624,24 @@ struct LocConfigLeverArmReqMsg: LocAPIMsgHeader
 {
     LeverArmConfigInfo mLeverArmConfigInfo;
 
-    inline LocConfigLeverArmReqMsg(const char* name, const
-                                   LeverArmConfigInfo & configInfo) :
+    inline LocConfigLeverArmReqMsg(const char* name,
+                                   const LeverArmConfigInfo & configInfo) :
         LocAPIMsgHeader(name, E_INTAPI_CONFIG_LEVER_ARM_MSG_ID),
         mLeverArmConfigInfo(configInfo) { }
 };
 
+struct LocConfigRobustLocationReqMsg: LocAPIMsgHeader
+{
+    bool mEnable;
+    bool mEnableForE911;
+
+    inline LocConfigRobustLocationReqMsg(const char* name,
+                                         bool enable,
+                                         bool enableForE911) :
+        LocAPIMsgHeader(name, E_INTAPI_CONFIG_ROBUST_LOCATION_MSG_ID),
+        mEnable(enable),
+        mEnableForE911(enableForE911) { }
+};
 
 /******************************************************************************
 IPC message structure - indications
@@ -738,6 +757,17 @@ struct LocAPIMeasIndMsg : LocAPIMsgHeader
         GnssMeasurementsNotification& measurementsNotification) :
         LocAPIMsgHeader(name, E_LOCAPI_MEAS_MSG_ID),
         gnssMeasurementsNotification(measurementsNotification) { }
+};
+
+// defintion for message with msg id of E_LOCAPI_SV_POLY_MSG_ID
+struct LocAPIGnssSvPolyIndMsg : LocAPIMsgHeader
+{
+    GnssSvPolynomial gnssSvPolynomial;
+
+    inline LocAPIGnssSvPolyIndMsg(const char* name,
+            GnssSvPolynomial& gnssSvPolynomialNotification) :
+            LocAPIMsgHeader(name, E_LOCAPI_SV_POLY_MSG_ID),
+            gnssSvPolynomial(gnssSvPolynomialNotification) { }
 };
 
 // defintion for message with msg id of E_LOCAPI_GET_TOTAL_ENGERY_CONSUMED_BY_GPS_ENGINE_MSG_ID
