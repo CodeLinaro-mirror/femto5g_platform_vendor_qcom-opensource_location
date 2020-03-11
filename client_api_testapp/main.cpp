@@ -39,7 +39,11 @@
 #include <semaphore.h>
 #include <loc_pla.h>
 #include <loc_cfg.h>
-#include <unordered_map>
+#ifdef NO_UNORDERED_SET_OR_MAP
+    #include <map>
+#else
+    #include <unordered_map>
+#endif
 
 #include <LocationClientApi.h>
 #include <LocationIntegrationApi.h>
@@ -217,6 +221,7 @@ void setRequiredPermToRunAsLocClient()
         numGrpIds = getgroups(LOC_PROCESS_MAX_NUM_GROUPS, appGrpsIds);
         if(numGrpIds == -1) {
             printf("Could not find groups. ngroups:%d\n", numGrpIds);
+            numGrpIds = 0;
         }
         else {
             printf("Curr num_groups = %d, Current GIDs: ", numGrpIds);
@@ -430,7 +435,7 @@ int main(int argc, char *argv[]) {
             token = strtok_r(NULL, " ", &save);
             if (token != NULL) {
                 enable = (atoi(token) == 1);
-                enableForE911 = strtok_r(NULL, " ", &save);
+                token = strtok_r(NULL, " ", &save);
                 if (token != NULL) {
                     enableForE911 = (atoi(token) == 1);
                 }

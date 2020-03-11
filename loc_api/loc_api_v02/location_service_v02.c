@@ -29,8 +29,8 @@
  *THIS IS AN AUTO GENERATED FILE. DO NOT ALTER IN ANY WAY
  *====*====*====*====*====*====*====*====*====*====*====*====*====*====*====*/
 
-/* This file was generated with Tool version 6.14.7
-   It was generated on: Wed Jan 29 2020 (Spin 0)
+/* This file was generated with Tool version 6.14.9
+   It was generated on: Thu Feb 13 2020 (Spin 1)
    From IDL File: location_service_v02.idl */
 
 #include "stdint.h"
@@ -2201,10 +2201,10 @@ static const uint8_t qmiLocEventPositionReportIndMsgT_data_v02[] = {
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
   QMI_IDL_OFFSET16ARRAY(qmiLocEventPositionReportIndMsgT_v02, dgnssDataAgeMsec),
 
-  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(qmiLocEventPositionReportIndMsgT_v02, probabilityOfGoodFix) - QMI_IDL_OFFSET16RELATIVE(qmiLocEventPositionReportIndMsgT_v02, probabilityOfGoodFix_valid)),
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(qmiLocEventPositionReportIndMsgT_v02, conformityIndex) - QMI_IDL_OFFSET16RELATIVE(qmiLocEventPositionReportIndMsgT_v02, conformityIndex_valid)),
   0x3E,
    QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_4_BYTE,
-  QMI_IDL_OFFSET16ARRAY(qmiLocEventPositionReportIndMsgT_v02, probabilityOfGoodFix)
+  QMI_IDL_OFFSET16ARRAY(qmiLocEventPositionReportIndMsgT_v02, conformityIndex)
 };
 
 static const uint8_t qmiLocEventGnssSvInfoIndMsgT_data_v02[] = {
@@ -7639,14 +7639,15 @@ static const uint8_t qmiLocGetRobustLocationConfigIndMsgT_data_v02[] = {
    QMI_IDL_GENERIC_4_BYTE,
   QMI_IDL_OFFSET8(qmiLocGetRobustLocationConfigIndMsgT_v02, status),
 
-  0x02,
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(qmiLocGetRobustLocationConfigIndMsgT_v02, isEnabled) - QMI_IDL_OFFSET8(qmiLocGetRobustLocationConfigIndMsgT_v02, isEnabled_valid)),
+  0x10,
    QMI_IDL_GENERIC_1_BYTE,
   QMI_IDL_OFFSET8(qmiLocGetRobustLocationConfigIndMsgT_v02, isEnabled),
 
-  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(qmiLocGetRobustLocationConfigIndMsgT_v02, overriddenE911) - QMI_IDL_OFFSET8(qmiLocGetRobustLocationConfigIndMsgT_v02, overriddenE911_valid)),
-  0x10,
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(qmiLocGetRobustLocationConfigIndMsgT_v02, isEnabledForE911) - QMI_IDL_OFFSET8(qmiLocGetRobustLocationConfigIndMsgT_v02, isEnabledForE911_valid)),
+  0x11,
    QMI_IDL_GENERIC_1_BYTE,
-  QMI_IDL_OFFSET8(qmiLocGetRobustLocationConfigIndMsgT_v02, overriddenE911)
+  QMI_IDL_OFFSET8(qmiLocGetRobustLocationConfigIndMsgT_v02, isEnabledForE911)
 };
 
 /* Type Table */
@@ -8518,7 +8519,7 @@ struct qmi_idl_service_object loc_qmi_idl_service_object_v02 = {
     sizeof(loc_service_indication_messages_v02)/sizeof(qmi_idl_service_message_table_entry) },
   { loc_service_command_messages_v02, loc_service_response_messages_v02, loc_service_indication_messages_v02},
   &loc_qmi_idl_type_table_object_v02,
-  0x76,
+  0x77,
   NULL
 };
 
