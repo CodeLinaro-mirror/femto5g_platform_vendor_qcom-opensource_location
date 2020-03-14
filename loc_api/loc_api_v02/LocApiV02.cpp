@@ -97,27 +97,6 @@ using namespace loc_core;
 /* the time, in seconds, to wait for user response for NI  */
 #define LOC_NI_NO_RESPONSE_TIME 20
 
-#define GPS_L1CA_CARRIER_FREQUENCY      1575420000.0
-#define GPS_L1C_CARRIER_FREQUENCY       1575420000.0
-#define GPS_L2C_L_CARRIER_FREQUENCY     1227600000.0
-#define GPS_L5_Q_CARRIER_FREQUENCY      1176450000.0
-#define GLONASS_G1_CARRIER_FREQUENCY    1602000000.0
-#define GLONASS_G2_CARRIER_FREQUENCY    1246000000.0
-#define GALILEO_E1_C_CARRIER_FREQUENCY  1575420000.0
-#define GALILEO_E5A_Q_CARRIER_FREQUENCY 1176450000.0
-#define GALILEO_E5B_Q_CARRIER_FREQUENCY 1207140000.0
-#define BEIDOU_B1_I_CARRIER_FREQUENCY   1561098000.0
-#define BEIDOU_B1C_CARRIER_FREQUENCY    1575420000.0
-#define BEIDOU_B2_I_CARRIER_FREQUENCY   1207140000.0
-#define BEIDOU_B2A_I_CARRIER_FREQUENCY  1176450000.0
-#define BEIDOU_B2A_Q_CARRIER_FREQUENCY  1176450000.0
-#define QZSS_L1CA_CARRIER_FREQUENCY     1575420000.0
-#define QZSS_L1S_CARRIER_FREQUENCY      1575420000.0
-#define QZSS_L2C_L_CARRIER_FREQUENCY    1227600000.0
-#define QZSS_L5_Q_CARRIER_FREQUENCY     1176450000.0
-#define SBAS_L1_CA_CARRIER_FREQUENCY    1575420000.0
-#define NAVIC_L5_CARRIER_FREQUENCY      1176450000.0
-
 #define LAT_LONG_TO_RADIANS .000005364418
 #define GF_RESPONSIVENESS_THRESHOLD_MSEC_HIGH   120000 //2 mins
 #define GF_RESPONSIVENESS_THRESHOLD_MSEC_MEDIUM 900000 //15 mins
@@ -2804,6 +2783,11 @@ void LocApiV02 :: reportPosition (
             locationExtended.vdop = location_report_ptr->DOP.VDOP;
         }
 
+        if (location_report_ptr->conformityIndex_valid) {
+            locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_CONFORMITY_INDEX;
+            locationExtended.conformityIndex = location_report_ptr->conformityIndex;
+        }
+
         if (location_report_ptr->altitudeWrtMeanSeaLevel_valid)
         {
             locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_ALTITUDE_MEAN_SEA_LEVEL;
@@ -3448,52 +3432,48 @@ void  LocApiV02 :: reportSv (
             {
                 GnssSvOptionsMask mask = 0;
 
-                LOC_LOGv("i:%d sv-id:%d count:%d sys:%d en:%" PRIu64,
+                LOC_LOGv("i:%d sv-id:%d count:%d sys:%d en:0x%" PRIx64,
                     i, sv_info_ptr->gnssSvId, SvNotify.count, sv_info_ptr->system,
                     gnss_report_ptr->gnssSignalTypeList[SvNotify.count]);
 
                 GnssSv &gnssSv_ref = SvNotify.gnssSvs[SvNotify.count];
 
                 gnssSv_ref.size = sizeof(GnssSv);
+                gnssSv_ref.svId = sv_info_ptr->gnssSvId;
                 switch (sv_info_ptr->system) {
                 case eQMI_LOC_SV_SYSTEM_GPS_V02:
-                    gnssSv_ref.svId = sv_info_ptr->gnssSvId;
                     gnssSv_ref.type = GNSS_SV_TYPE_GPS;
                     break;
 
                 case eQMI_LOC_SV_SYSTEM_GALILEO_V02:
-                    gnssSv_ref.svId = sv_info_ptr->gnssSvId - 300;
                     gnssSv_ref.type = GNSS_SV_TYPE_GALILEO;
                     break;
 
                 case eQMI_LOC_SV_SYSTEM_SBAS_V02:
-                    gnssSv_ref.svId = sv_info_ptr->gnssSvId;
                     gnssSv_ref.type = GNSS_SV_TYPE_SBAS;
                     break;
 
+                // Glonass in SV report comes in range of [1, 32],
+                // convert to [65, 96]
                 case eQMI_LOC_SV_SYSTEM_GLONASS_V02:
-                    gnssSv_ref.svId = sv_info_ptr->gnssSvId;
                     gnssSv_ref.type = GNSS_SV_TYPE_GLONASS;
+                    gnssSv_ref.svId = sv_info_ptr->gnssSvId + GLO_SV_PRN_MIN - 1;
                     break;
 
                 case eQMI_LOC_SV_SYSTEM_BDS_V02:
                 case eQMI_LOC_SV_SYSTEM_COMPASS_V02:
-                    gnssSv_ref.svId = sv_info_ptr->gnssSvId - 200;
                     gnssSv_ref.type = GNSS_SV_TYPE_BEIDOU;
                     break;
 
                 case eQMI_LOC_SV_SYSTEM_QZSS_V02:
-                    gnssSv_ref.svId = sv_info_ptr->gnssSvId - 192;
                     gnssSv_ref.type = GNSS_SV_TYPE_QZSS;
                     break;
 
                 case eQMI_LOC_SV_SYSTEM_NAVIC_V02:
-                    gnssSv_ref.svId = sv_info_ptr->gnssSvId - 400;
                     gnssSv_ref.type = GNSS_SV_TYPE_NAVIC;
                     break;
 
                 default:
-                    gnssSv_ref.svId = sv_info_ptr->gnssSvId;
                     gnssSv_ref.type = GNSS_SV_TYPE_UNKNOWN;
                     break;
                 }
@@ -3523,6 +3503,7 @@ void  LocApiV02 :: reportSv (
                 }
 
                 if (gnss_report_ptr->gnssSignalTypeList_valid) {
+                    mask |= GNSS_SV_OPTIONS_HAS_GNSS_SIGNAL_TYPE_BIT;
                     if (SvNotify.count > gnss_report_ptr->gnssSignalTypeList_len - 1) {
                         LOC_LOGv("Frequency not available for this SV");
                     }
@@ -5095,6 +5076,13 @@ void LocApiV02::convertGnssMeasurementsHeader(const Gnss_LocSvSystemEnumType loc
     GnssSvMeasurementHeader &svMeasSetHead =
         mGnssMeasurements->gnssSvMeasurementSet.svMeasSetHeader;
 
+    // The refCountTicks for each constellation sent for one meas report is the same
+    // always. It does not matter if it gets overwritten.
+    if (gnss_measurement_info.refCountTicks_valid) {
+        svMeasSetHead.flags |= GNSS_SV_MEAS_HEADER_HAS_REF_COUNT_TICKS;
+        svMeasSetHead.refCountTicks = gnss_measurement_info.refCountTicks;
+    }
+
     // clock frequency
     if (1 == gnss_measurement_info.rcvrClockFrequencyInfo_valid) {
         const qmiLocRcvrClockFrequencyInfoStructT_v02* rcvClockFreqInfo =
@@ -5423,7 +5411,6 @@ bool LocApiV02 :: convertGnssMeasurements(
     const qmiLocEventGnssSvMeasInfoIndMsgT_v02& gnss_measurement_report_ptr,
     int index, bool isExt, bool validDgnssSvMeas)
 {
-    uint8_t gloFrequency = 0;
     bool bAgcIsPresent = false;
     qmiLocSVMeasurementStructT_v02 gnss_measurement_info;
     uint32_t count = mGnssMeasurements->gnssMeasNotification.count;
@@ -5472,9 +5459,43 @@ bool LocApiV02 :: convertGnssMeasurements(
     svMeas.svTimeSpeed.dopplerShift = gnss_measurement_info.svTimeSpeed.dopplerShift;
     svMeas.svTimeSpeed.dopplerShiftUnc = gnss_measurement_info.svTimeSpeed.dopplerShiftUnc;
 
-    svMeas.measurementStatus = (uint32_t)gnss_measurement_info.measurementStatus;
     svMeas.validMeasStatusMask = gnss_measurement_info.validMeasStatusMask;
-
+    qmiLocSvMeasStatusMaskT_v02 measStatus = gnss_measurement_info.measurementStatus;
+    svMeas.measurementStatus = GNSS_LOC_MEAS_STATUS_NULL;
+    // Convert qmiSvMeas.measurementStatus to svMeas.measurementStatus
+    if (QMI_LOC_MASK_MEAS_STATUS_SM_VALID_V02 & measStatus) {
+        svMeas.measurementStatus |= GNSS_LOC_MEAS_STATUS_SM_VALID;
+    }
+    if (QMI_LOC_MASK_MEAS_STATUS_SB_VALID_V02 & measStatus) {
+        svMeas.measurementStatus |= GNSS_LOC_MEAS_STATUS_SB_VALID;
+    }
+    if (QMI_LOC_MASK_MEAS_STATUS_MS_VALID_V02 & measStatus) {
+        svMeas.measurementStatus |= GNSS_LOC_MEAS_STATUS_MS_VALID;
+    }
+    if (QMI_LOC_MASK_MEAS_STATUS_BE_CONFIRM_V02 & measStatus) {
+        svMeas.measurementStatus |= GNSS_LOC_MEAS_STATUS_BE_CONFIRM;
+    }
+    if (QMI_LOC_MASK_MEAS_STATUS_VELOCITY_VALID_V02 & measStatus) {
+        svMeas.measurementStatus |= GNSS_LOC_MEAS_STATUS_VELOCITY_VALID;
+    }
+    if (QMI_LOC_MASK_MEAS_STATUS_VELOCITY_FINE_V02 & measStatus) {
+        svMeas.measurementStatus |= GNSS_LOC_MEAS_STATUS_VELOCITY_FINE;
+    }
+    if (QMI_LOC_MASK_MEAS_STATUS_LP_VALID_V02 & measStatus) {
+        svMeas.measurementStatus |= GNSS_LOC_MEAS_STATUS_LP_VALID;
+    }
+    if (QMI_LOC_MASK_MEAS_STATUS_LP_POS_VALID_V02 & measStatus) {
+        svMeas.measurementStatus |= GNSS_LOC_MEAS_STATUS_LP_POS_VALID;
+    }
+    if (QMI_LOC_MASK_MEAS_STATUS_FROM_RNG_DIFF_V02 & measStatus) {
+        svMeas.measurementStatus |= GNSS_LOC_MEAS_STATUS_FROM_RNG_DIFF;
+    }
+    if (QMI_LOC_MASK_MEAS_STATUS_FROM_VE_DIFF_V02 & measStatus) {
+        svMeas.measurementStatus |= GNSS_LOC_MEAS_STATUS_FROM_VE_DIFF;
+    }
+    if (QMI_LOC_MASK_MEAS_STATUS_GNSS_FRESH_MEAS_VALID_V02 & measStatus) {
+        svMeas.measurementStatus |= GNSS_LOC_MEAS_STATUS_GNSS_FRESH_MEAS;
+    }
     if (gnss_measurement_info.validMask & QMI_LOC_SV_MULTIPATH_EST_VALID_V02) {
         svMeas.multipathEstValid = 1;
         svMeas.multipathEstimate = gnss_measurement_info.multipathEstimate;
@@ -5546,55 +5567,43 @@ bool LocApiV02 :: convertGnssMeasurements(
     // flag initiation
     measurementData.flags = 0;
 
-    // constellation and svid
+    // svid
+    measurementData.svId = gnss_measurement_info.gnssSvId;
+
+    // constellation
     switch (gnss_measurement_report_ptr.system)
     {
         case eQMI_LOC_SV_SYSTEM_GPS_V02:
             measurementData.svType = GNSS_SV_TYPE_GPS;
-            measurementData.svId = gnss_measurement_info.gnssSvId;
             break;
 
         case eQMI_LOC_SV_SYSTEM_GALILEO_V02:
             measurementData.svType = GNSS_SV_TYPE_GALILEO;
-            measurementData.svId = gnss_measurement_info.gnssSvId + 1 - GAL_SV_PRN_MIN;
             break;
 
         case eQMI_LOC_SV_SYSTEM_SBAS_V02:
             measurementData.svType = GNSS_SV_TYPE_SBAS;
-            measurementData.svId = gnss_measurement_info.gnssSvId;
             break;
 
         case eQMI_LOC_SV_SYSTEM_GLONASS_V02:
             measurementData.svType = GNSS_SV_TYPE_GLONASS;
-            if (gnss_measurement_info.gnssSvId != 255) // OSN is known
-            {
-                measurementData.svId = gnss_measurement_info.gnssSvId + 1 - GLO_SV_PRN_MIN;
-            }
-            else // OSN is not known, report FCN
-            {
-                measurementData.svId = gnss_measurement_info.gloFrequency + 92;
-            }
-            gloFrequency = gnss_measurement_info.gloFrequency;
+            measurementData.gloFrequency = gnss_measurement_info.gloFrequency;
             break;
 
         case eQMI_LOC_SV_SYSTEM_BDS_V02:
             measurementData.svType = GNSS_SV_TYPE_BEIDOU;
-            measurementData.svId = gnss_measurement_info.gnssSvId + 1 - BDS_SV_PRN_MIN;
             break;
 
         case eQMI_LOC_SV_SYSTEM_QZSS_V02:
             measurementData.svType = GNSS_SV_TYPE_QZSS;
-            measurementData.svId = gnss_measurement_info.gnssSvId;
             break;
 
         case eQMI_LOC_SV_SYSTEM_NAVIC_V02:
             measurementData.svType = GNSS_SV_TYPE_NAVIC;
-            measurementData.svId = gnss_measurement_info.gnssSvId;
             break;
 
         default:
             measurementData.svType = GNSS_SV_TYPE_UNKNOWN;
-            measurementData.svId = gnss_measurement_info.gnssSvId;
             break;
     }
 
@@ -5754,9 +5763,9 @@ bool LocApiV02 :: convertGnssMeasurements(
     // carrier frequency
     if (gnss_measurement_report_ptr.gnssSignalType_valid) {
         LOC_LOGv("gloFrequency = 0x%X, sigType=%" PRIu64,
-                 gloFrequency, gnss_measurement_report_ptr.gnssSignalType);
+                 gnss_measurement_info.gloFrequency, gnss_measurement_report_ptr.gnssSignalType);
         measurementData.carrierFrequencyHz = convertSignalTypeToCarrierFrequency(
-                gnss_measurement_report_ptr.gnssSignalType, gloFrequency);
+                gnss_measurement_report_ptr.gnssSignalType, gnss_measurement_info.gloFrequency);
         measurementData.flags |= GNSS_MEASUREMENTS_DATA_CARRIER_FREQUENCY_BIT;
     }
     else {
@@ -5764,8 +5773,8 @@ bool LocApiV02 :: convertGnssMeasurements(
         // GLONASS is FDMA system, so each channel has its own carrier frequency
         // The formula is f(k) = fc + k * 0.5625;
         // This is applicable for GLONASS G1 only, where fc = 1602MHz
-        if ((gloFrequency >= 1 && gloFrequency <= 14)) {
-            measurementData.carrierFrequencyHz += ((gloFrequency - 8) * 562500);
+        if ((gnss_measurement_info.gloFrequency >= 1 && gnss_measurement_info.gloFrequency <= 14)) {
+            measurementData.carrierFrequencyHz += (gnss_measurement_info.gloFrequency - 8) * 562500;
         }
         measurementData.carrierFrequencyHz += CarrierFrequencies[measurementData.svType];
         measurementData.flags |= GNSS_MEASUREMENTS_DATA_CARRIER_FREQUENCY_BIT;
@@ -6819,6 +6828,42 @@ void LocApiV02 :: updateSystemPowerState(PowerStateType powerState){
     }));
 }
 
+void LocApiV02::configRobustLocation
+        (bool enable, bool enableForE911, LocApiResponse *adapterResponse) {
+
+    sendMsg(new LocApiMsg([this, enable, enableForE911, adapterResponse] () {
+
+    LocationError err = LOCATION_ERROR_SUCCESS;
+    qmiLocSetRobustLocationReqMsgT_v02 req;
+    qmiLocGenReqStatusIndMsgT_v02 ind;
+    locClientStatusEnumType status;
+    locClientReqUnionType req_union;
+
+    LOC_LOGd("Enter. enabled %d, enableForE911 %d", enable, enableForE911);
+    memset(&req, 0, sizeof(req));
+    memset(&ind, 0, sizeof(ind));
+    req.enable = enable;
+    req.enableForE911_valid = true;
+    req.enableForE911 = enableForE911;
+
+    req_union.pSetRobustLocationReq = &req;
+    status = locSyncSendReq(QMI_LOC_SET_ROBUST_LOCATION_CONFIG_REQ_V02,
+                            req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
+                            QMI_LOC_SET_ROBUST_LOCATION_CONFIG_IND_V02,
+                            &ind);
+    if (status != eLOC_CLIENT_SUCCESS || ind.status != eQMI_LOC_SUCCESS_V02) {
+        LOC_LOGe("failed. status: %s, ind status:%s\n",
+                 loc_get_v02_client_status_name(status),
+                 loc_get_v02_qmi_status_name(ind.status));
+        err = LOCATION_ERROR_GENERAL_FAILURE;
+    }
+    if (adapterResponse) {
+        adapterResponse->returnToSender(err);
+    }
+    LOC_LOGv("Exit. err: %u", err);
+    }));
+}
+
 bool LocApiV02 :: cacheGnssMeasurementSupport()
 {
     bool gnssMeasurementSupported = false;
@@ -7095,6 +7140,9 @@ LocNavSolutionMask LocApiV02 :: convertNavSolutionMask(
 
    if (mask & QMI_LOC_NAV_MASK_SBAS_INTEGRITY_V02)
       locNavMask |= LOC_NAV_MASK_SBAS_INTEGRITY;
+
+   if (mask & QMI_LOC_NAV_MASK_CORRECTION_DGNSS_V02)
+      locNavMask |= LOC_NAV_MASK_DGNSS_CORRECTION;
 
    return locNavMask;
 }
