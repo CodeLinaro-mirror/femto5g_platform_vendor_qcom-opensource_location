@@ -181,17 +181,6 @@ private:
   void registerMasterClient();
   int getGpsLock(uint8_t subType);
 
-  inline bool checkRegisterMaster() {
-      if (!mIsMasterRegistered) {
-          if (true == isMaster()) {
-              registerMasterClient();
-              mIsMasterRegistered = true;
-              return true;
-          }
-      }
-      return false;
-  }
-
 protected:
   virtual enum loc_api_adapter_err
     open(LOC_API_ADAPTER_EVENT_MASK_T mask);
