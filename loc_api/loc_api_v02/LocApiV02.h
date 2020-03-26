@@ -150,9 +150,10 @@ private:
 
   void reportSvMeasurement (
           const qmiLocEventGnssSvMeasInfoIndMsgT_v02 *gnss_raw_measurement_ptr);
+  void reportSapInsParamsReport(
+          const qmiLocSapInsParamsIndMsgT_v02 *gnss_sap_ins_params_ptr);
 
   void reportSvMeasurementInternal();
-
   void reportSvMeasurementSvLoop(
           const qmiLocEventGnssSvMeasInfoIndMsgT_v02 *gnss_sv_measurement_ptr,
           bool processExtSvMeas,
@@ -219,6 +220,10 @@ private:
   /* convert and report GNSS measurement data to loc eng */
   void reportGnssMeasurementData(
     const qmiLocEventGnssSvMeasInfoIndMsgT_v02& gnss_measurement_report_ptr);
+
+  /* convert and report SAP INS Params to loc eng */
+  void reportSapInsParams(
+    const qmiLocSapInsParamsIndMsgT_v02 *gnss_sap_ins_params_ptr);
 
   /* convert and report ODCPI request */
   void requestOdcpi(

@@ -143,6 +143,7 @@ static void globalEventCb(locClientHandleType clientHandle,
     case QMI_LOC_EVENT_BDS_EPHEMERIS_REPORT_IND_V02:
     case QMI_LOC_EVENT_GALILEO_EPHEMERIS_REPORT_IND_V02:
     case QMI_LOC_EVENT_QZSS_EPHEMERIS_REPORT_IND_V02:
+    case QMI_LOC_EVENT_SAP_INS_PARAMETERS_IND_V02:
         MODEM_LOG_CALLFLOW_DEBUG(%s, loc_get_v02_event_name(eventId));
         break;
     default:
@@ -2509,6 +2510,9 @@ locClientEventMaskType LocApiV02 :: convertMask(
       eventMask |= QMI_LOC_EVENT_MASK_GNSS_NHZ_MEASUREMENT_REPORT_V02;
   }
 
+  if (mask & LOC_API_ADAPTER_BIT_SAP_INS_REPORT_INFO) {
+      eventMask |= QMI_LOC_EVENT_MASK_SAP_INS_PARAMETERS_REPORT_V02;
+  }
   return eventMask;
 }
 
@@ -3972,6 +3976,331 @@ void  LocApiV02 :: reportSvMeasurement (
         // set up flag to indicate that no new info in mSvMeasurementSet
         newMeasProcessed = false;
     }
+}
+
+/* convert SAP INS Params to loc eng format and  send the converted
+   report to loc eng */
+void  LocApiV02 :: reportSapInsParams(
+  const qmiLocSapInsParamsIndMsgT_v02 *gnss_sap_ins_params_ptr)
+{
+    GnssSapInsParams sapInsParams;
+
+    if (!gnss_sap_ins_params_ptr) {
+        return;
+    }
+    memset(&sapInsParams, 0, sizeof(sapInsParams));
+
+    LOC_LOGv("status:%d fixStatus:%d week:%d sec:%d svLen:%d",
+        gnss_sap_ins_params_ptr->status,
+        gnss_sap_ins_params_ptr->fixStatus,
+        gnss_sap_ins_params_ptr->systemTime.systemWeek,
+        gnss_sap_ins_params_ptr->systemTime.systemMsec,
+        gnss_sap_ins_params_ptr->gnssSvId_len);
+
+    /** set to sizeof(GnssSapInsParams) */
+    sapInsParams.size = sizeof(GnssSapInsParams);
+    /** Contains GnssSapInsParamsFlags bits */
+    sapInsParams.flags = 0;
+
+    /* Convert QMI structre to local structure */
+
+    /** Overall Filter state */
+    sapInsParams.status = gnss_sap_ins_params_ptr->status;
+    /** Filter fix status information */
+    sapInsParams.fixStatus = gnss_sap_ins_params_ptr->fixStatus;
+
+    /** System Time Src */
+    sapInsParams.systemSrc = gnss_sap_ins_params_ptr->systemTime.system;
+    /** System Time Week */
+    sapInsParams.systemWeek = gnss_sap_ins_params_ptr->systemTime.systemWeek;
+    /** System Time Msec */
+    sapInsParams.systemMsec = gnss_sap_ins_params_ptr->systemTime.systemMsec;
+    /** System Time Clock Bias */
+    sapInsParams.systemClkTimeBias= gnss_sap_ins_params_ptr->systemTime.systemClkTimeBias;
+    /** System Time Time Uncertainity */
+    sapInsParams.systemClkTimeUncMs = gnss_sap_ins_params_ptr->systemTime.systemClkTimeUncMs;
+
+    /** Filter state information */
+    if ( gnss_sap_ins_params_ptr->state_valid ) {
+        memscpy(sapInsParams.state, sizeof(sapInsParams.state),
+            gnss_sap_ins_params_ptr->state, sizeof(gnss_sap_ins_params_ptr->state));
+        sapInsParams.flags |= GNSS_LOCATION_EXTENDED_HAS_FLT_STATES;
+    }
+
+    /** Filter variance information */
+    if ( gnss_sap_ins_params_ptr->var_valid ) {
+        memscpy(sapInsParams.var, sizeof(sapInsParams.var),
+            gnss_sap_ins_params_ptr->var, sizeof(gnss_sap_ins_params_ptr->var));
+        sapInsParams.flags |= GNSS_LOCATION_EXTENDED_HAS_FLT_VARIANCE;
+    }
+
+    /** Filter reliability 1 */
+    if ( gnss_sap_ins_params_ptr->rel1_valid ) {
+        sapInsParams.rel1 = gnss_sap_ins_params_ptr->rel1;
+        sapInsParams.flags |= GNSS_LOCATION_EXTENDED_HAS_FLT_HOR_REL;
+    }
+
+    /** Filter reliability 2 */
+    if ( gnss_sap_ins_params_ptr->rel2_valid ) {
+        sapInsParams.rel2 = gnss_sap_ins_params_ptr->rel2;
+        sapInsParams.flags |= GNSS_LOCATION_EXTENDED_HAS_FLT_VER_REL;
+    }
+
+    /* Filter residual 1 */
+    if ( gnss_sap_ins_params_ptr->residual1_valid ) {
+        sapInsParams.residual1 = gnss_sap_ins_params_ptr->residual1;
+        sapInsParams.flags |= GNSS_LOCATION_EXTENDED_HAS_FLT_HOR_NHC_RES;
+    }
+    /* Filter observation 1 */
+    if ( gnss_sap_ins_params_ptr->obs1_valid ) {
+        memscpy(sapInsParams.obs1, sizeof(sapInsParams.obs1),
+            gnss_sap_ins_params_ptr->obs1, sizeof(gnss_sap_ins_params_ptr->obs1));
+        sapInsParams.flags |= GNSS_LOCATION_EXTENDED_HAS_FLT_HOR_NHC_MEAS_OBJ;
+    }
+    /* Filter variance 1 */
+    if ( gnss_sap_ins_params_ptr->var1_valid ) {
+        sapInsParams.var1 = gnss_sap_ins_params_ptr->var1;
+        sapInsParams.flags |= GNSS_LOCATION_EXTENDED_HAS_FLT_HOR_NHC_MEAS_VAR;
+    }
+    /* Filter result 1 */
+    if ( gnss_sap_ins_params_ptr->result1_valid ) {
+        sapInsParams.result1 = gnss_sap_ins_params_ptr->result1;
+        sapInsParams.flags |= GNSS_LOCATION_EXTENDED_HAS_FLT_HOR_NHC_RAIM_RSLT;
+    }
+
+    /* Filter residual 2 */
+    if ( gnss_sap_ins_params_ptr->residual2_valid ) {
+        sapInsParams.residual2 = gnss_sap_ins_params_ptr->residual2;
+        sapInsParams.flags |= GNSS_LOCATION_EXTENDED_HAS_FLT_VER_NHC_RESI;
+    }
+    /* Filter observation 2 */
+    if ( gnss_sap_ins_params_ptr->obs2_valid ) {
+        memscpy(sapInsParams.obs2, sizeof(sapInsParams.obs2),
+            gnss_sap_ins_params_ptr->obs2, sizeof(gnss_sap_ins_params_ptr->obs2));
+        sapInsParams.flags |= GNSS_LOCATION_EXTENDED_HAS_FLT_VER_NHC_MEAS_OBJ;
+    }
+    /* Filter variance 2 */
+    if ( gnss_sap_ins_params_ptr->var2_valid ) {
+        sapInsParams.var2 = gnss_sap_ins_params_ptr->var2;
+        sapInsParams.flags |= GNSS_LOCATION_EXTENDED_HAS_FLT_VER_NHC_MEAS_VAR;
+    }
+    /* Filter result 2 */
+    if ( gnss_sap_ins_params_ptr->result2_valid ) {
+        sapInsParams.result2 = gnss_sap_ins_params_ptr->result2;
+        sapInsParams.flags |= GNSS_LOCATION_EXTENDED_HAS_FLT_VER_NHC_RAIM_REST;
+    }
+
+    /* Filter residual 3 */
+    if ( gnss_sap_ins_params_ptr->residual3_valid ) {
+        memscpy(sapInsParams.residual3, sizeof(sapInsParams.residual3),
+            gnss_sap_ins_params_ptr->residual3, sizeof(gnss_sap_ins_params_ptr->residual3));
+        sapInsParams.flags |= GNSS_LOCATION_EXTENDED_HAS_FLT_ZUPT_RES;
+    }
+    /* Filter variance 3 */
+    if ( gnss_sap_ins_params_ptr->var3_valid ) {
+        memscpy(sapInsParams.var3, sizeof(sapInsParams.var3),
+            gnss_sap_ins_params_ptr->var3, sizeof(gnss_sap_ins_params_ptr->var3));
+        sapInsParams.flags |= GNSS_LOCATION_EXTENDED_HAS_FLT_ZUPT_MEAS_VAR;
+    }
+    /* Filter result 3 */
+    if ( gnss_sap_ins_params_ptr->result3_valid ) {
+        memscpy(sapInsParams.result3, sizeof(sapInsParams.result3),
+            gnss_sap_ins_params_ptr->result3, sizeof(gnss_sap_ins_params_ptr->result3));
+        sapInsParams.flags |= GNSS_LOCATION_EXTENDED_HAS_FLT_ZUPT_RAIM_RSLT;
+    }
+
+    /* Filter residual 4 */
+    if ( gnss_sap_ins_params_ptr->residual4_valid ) {
+        memscpy(sapInsParams.residual4, sizeof(sapInsParams.residual4),
+            gnss_sap_ins_params_ptr->residual4, sizeof(gnss_sap_ins_params_ptr->residual4));
+        sapInsParams.flags |= GNSS_LOCATION_EXTENDED_HAS_FLT_ZTUPT_RES;
+    }
+    /* Filter variance 4 */
+    if ( gnss_sap_ins_params_ptr->var4_valid ) {
+        memscpy(sapInsParams.var4, sizeof(sapInsParams.var4),
+            gnss_sap_ins_params_ptr->var4, sizeof(gnss_sap_ins_params_ptr->var4));
+        sapInsParams.flags |= GNSS_LOCATION_EXTENDED_HAS_FLT_ZTUPT_MEAS_VAR;
+    }
+    /* Filter result 4 */
+    if ( gnss_sap_ins_params_ptr->result4_valid ) {
+        memscpy(sapInsParams.result4, sizeof(sapInsParams.result4),
+            gnss_sap_ins_params_ptr->result4, sizeof(gnss_sap_ins_params_ptr->result4));
+        sapInsParams.flags |= GNSS_LOCATION_EXTENDED_HAS_FLT_ZTUPT_RAIM_RSLT;
+    }
+
+    /* Filter Acceleration */
+    if ( gnss_sap_ins_params_ptr->acc_valid ) {
+        memscpy(sapInsParams.acc, sizeof(sapInsParams.acc),
+            gnss_sap_ins_params_ptr->acc, sizeof(gnss_sap_ins_params_ptr->acc));
+        sapInsParams.flags |= GNSS_LOCATION_EXTENDED_HAS_IMU_ACCEL;
+    }
+    /* Filter Quaternion*/
+    if ( gnss_sap_ins_params_ptr->quat_valid ) {
+        memscpy(sapInsParams.quat, sizeof(sapInsParams.quat),
+            gnss_sap_ins_params_ptr->quat, sizeof(gnss_sap_ins_params_ptr->quat));
+        sapInsParams.flags |= GNSS_LOCATION_EXTENDED_HAS_INT_QTRN;
+    }
+
+    /* Bias M1*/
+    if ( gnss_sap_ins_params_ptr->biasM1_valid ) {
+        memscpy(sapInsParams.biasM1, sizeof(sapInsParams.biasM1),
+            gnss_sap_ins_params_ptr->biasM1, sizeof(gnss_sap_ins_params_ptr->biasM1));
+        sapInsParams.flags |= GNSS_LOCATION_EXTENDED_HAS_BIAS_M1;
+    }
+    /* Bias V1*/
+    if ( gnss_sap_ins_params_ptr->biasV1_valid ) {
+        memscpy(sapInsParams.biasV1, sizeof(sapInsParams.biasV1),
+            gnss_sap_ins_params_ptr->biasV1, sizeof(gnss_sap_ins_params_ptr->biasV1));
+        sapInsParams.flags |= GNSS_LOCATION_EXTENDED_HAS_BIAS_V1;
+    }
+    /* Bias M2*/
+    if ( gnss_sap_ins_params_ptr->biasM2_valid ) {
+        memscpy(sapInsParams.biasM2, sizeof(sapInsParams.biasM2),
+            gnss_sap_ins_params_ptr->biasM2, sizeof(gnss_sap_ins_params_ptr->biasM2));
+        sapInsParams.flags |= GNSS_LOCATION_EXTENDED_HAS_BIAS_M2;
+    }
+    /* Bias V2*/
+    if ( gnss_sap_ins_params_ptr->biasV1_valid ) {
+        memscpy(sapInsParams.biasV2, sizeof(sapInsParams.biasV2),
+            gnss_sap_ins_params_ptr->biasV2, sizeof(gnss_sap_ins_params_ptr->biasV2));
+        sapInsParams.flags |= GNSS_LOCATION_EXTENDED_HAS_BIAS_V2;
+    }
+
+    /* Rotation Matrix 1*/
+    if ( gnss_sap_ins_params_ptr->rMat1_valid ) {
+        memscpy(sapInsParams.rMat1, sizeof(sapInsParams.rMat1),
+            gnss_sap_ins_params_ptr->rMat1, sizeof(gnss_sap_ins_params_ptr->rMat1));
+        sapInsParams.flags |= GNSS_LOCATION_EXTENDED_HAS_MAT1;
+    }
+    /* Rotation Matrix 1 count */
+    if ( gnss_sap_ins_params_ptr->rMat1Count_valid ) {
+        sapInsParams.rMat1Count = gnss_sap_ins_params_ptr->rMat1Count;
+        sapInsParams.flags |= GNSS_LOCATION_EXTENDED_HAS_MAT1_CNT;
+    }
+    /* Rotation Matrix 2*/
+    if ( gnss_sap_ins_params_ptr->rMat2_valid ) {
+        memscpy(sapInsParams.rMat2, sizeof(sapInsParams.rMat2),
+            gnss_sap_ins_params_ptr->rMat2, sizeof(gnss_sap_ins_params_ptr->rMat2));
+        sapInsParams.flags |= GNSS_LOCATION_EXTENDED_HAS_MAT2;
+    }
+
+    /* Detector 1 reset  */
+    if ( gnss_sap_ins_params_ptr->det1Reset_valid ) {
+        sapInsParams.det1Reset = gnss_sap_ins_params_ptr->det1Reset;
+        sapInsParams.flags |= GNSS_LOCATION_EXTENDED_HAS_DTCR1_RESET;
+    }
+
+    /* Detector 2 status */
+    if ( gnss_sap_ins_params_ptr->det2Status_valid ) {
+        sapInsParams.det2Status = gnss_sap_ins_params_ptr->det2Status;
+        sapInsParams.flags |= GNSS_LOCATION_EXTENDED_HAS_DTCR2_STATUS;
+    }
+    /* Detector 2 position */
+    if ( gnss_sap_ins_params_ptr->det2Position_valid ) {
+        memscpy(sapInsParams.det2Position, sizeof(sapInsParams.det2Position),
+            gnss_sap_ins_params_ptr->det2Position, sizeof(gnss_sap_ins_params_ptr->det2Position));
+        sapInsParams.flags |= GNSS_LOCATION_EXTENDED_HAS_DTCR2_POS;
+    }
+    /* Detector 2 position uncertainty */
+    if ( gnss_sap_ins_params_ptr->det2PositionUnc_valid ) {
+        memscpy(sapInsParams.det2PositionUnc, sizeof(sapInsParams.det2PositionUnc),
+            gnss_sap_ins_params_ptr->det2PositionUnc,
+            sizeof(gnss_sap_ins_params_ptr->det2PositionUnc));
+        sapInsParams.flags |= GNSS_LOCATION_EXTENDED_HAS_DTCR2_POS_UNC;
+    }
+
+    /* Detector 3 status */
+    if ( gnss_sap_ins_params_ptr->det3Status_valid ) {
+        sapInsParams.det3Status = gnss_sap_ins_params_ptr->det3Status;
+        sapInsParams.flags |= GNSS_LOCATION_EXTENDED_HAS_DTCR3_STATUS;
+    }
+    /*    Detector 3 variance 1 */
+    if ( gnss_sap_ins_params_ptr->det3Variance1_valid ) {
+        memscpy(sapInsParams.det3Variance1, sizeof(sapInsParams.det3Variance1),
+            gnss_sap_ins_params_ptr->det3Variance1, sizeof(gnss_sap_ins_params_ptr->det3Variance1));
+        sapInsParams.flags |= GNSS_LOCATION_EXTENDED_HAS_DTCR3_VAR1;
+    }
+    /* Detector 3 variance 2 */
+    if ( gnss_sap_ins_params_ptr->det3Variance2_valid ) {
+        memscpy(sapInsParams.det3Variance2, sizeof(sapInsParams.det3Variance2),
+            gnss_sap_ins_params_ptr->det3Variance2,
+            sizeof(gnss_sap_ins_params_ptr->det3Variance2));
+        sapInsParams.flags |= GNSS_LOCATION_EXTENDED_HAS_DTCR3_VAR2;
+    }
+
+    /* Detector 4 status */
+    if ( gnss_sap_ins_params_ptr->det4Status_valid ) {
+        sapInsParams.det4Status = gnss_sap_ins_params_ptr->det4Status;
+        sapInsParams.flags |= GNSS_LOCATION_EXTENDED_HAS_DTCR4_STATUS;
+    }
+    /* Detector 4 position */
+    if ( gnss_sap_ins_params_ptr->det4Position_valid ) {
+        memscpy(sapInsParams.det4Position, sizeof(sapInsParams.det4Position),
+            gnss_sap_ins_params_ptr->det4Position, sizeof(gnss_sap_ins_params_ptr->det4Position));
+        sapInsParams.flags |= GNSS_LOCATION_EXTENDED_HAS_DTCR4_POS;
+    }
+
+    /* Detector 5 status */
+    if ( gnss_sap_ins_params_ptr->det5Status_valid ) {
+        sapInsParams.det5Status = gnss_sap_ins_params_ptr->det5Status;
+        sapInsParams.flags |= GNSS_LOCATION_EXTENDED_HAS_DTCR5_STATUS;
+    }
+
+    /* Detector 6 status */
+    if ( gnss_sap_ins_params_ptr->det6Status_valid ) {
+        sapInsParams.det6Status = gnss_sap_ins_params_ptr->det6Status;
+        sapInsParams.flags |= GNSS_LOCATION_EXTENDED_HAS_DTCR6_STATUS;
+    }
+
+    /* Satellite identifier list */
+    if ( gnss_sap_ins_params_ptr->gnssSvId_valid ) {
+        sapInsParams.gnssSvId_len = gnss_sap_ins_params_ptr->gnssSvId_len;
+        memscpy(sapInsParams.gnssSvId, sizeof(sapInsParams.gnssSvId),
+            gnss_sap_ins_params_ptr->gnssSvId, sizeof(gnss_sap_ins_params_ptr->gnssSvId));
+        sapInsParams.flags |= GNSS_LOCATION_EXTENDED_HAS_SAT_ID;
+    }
+
+    /* GNSS Signal Type list */
+    if ( gnss_sap_ins_params_ptr->measType_valid ) {
+        sapInsParams.measType_len = gnss_sap_ins_params_ptr->measType_len;
+        memscpy(sapInsParams.measType, sizeof(sapInsParams.measType),
+            gnss_sap_ins_params_ptr->measType, sizeof(gnss_sap_ins_params_ptr->measType));
+        sapInsParams.flags |= GNSS_LOCATION_EXTENDED_HAS_SIG_TYPE;
+    }
+
+    /* Measurement var 1 list */
+    if ( gnss_sap_ins_params_ptr->measVar1_valid ) {
+        sapInsParams.measVar1_len = gnss_sap_ins_params_ptr->measVar1_len;
+        memscpy(sapInsParams.measVar1, sizeof(sapInsParams.measVar1),
+            gnss_sap_ins_params_ptr->measVar1, sizeof(gnss_sap_ins_params_ptr->measVar1));
+        sapInsParams.flags |= GNSS_LOCATION_EXTENDED_HAS_PR_MEAS_VAR_USED;
+    }
+
+    /* Measurement info 1 list */
+    if ( gnss_sap_ins_params_ptr->measUse1_valid ) {
+        sapInsParams.measUse1_len = gnss_sap_ins_params_ptr->measUse1_len;
+        memscpy(sapInsParams.measUse1, sizeof(sapInsParams.measUse1),
+            gnss_sap_ins_params_ptr->measUse1, sizeof(gnss_sap_ins_params_ptr->measUse1));
+        sapInsParams.flags |= GNSS_LOCATION_EXTENDED_HAS_PR_MEAS_USED_INFO;
+    }
+
+    /* Measurement var 2 list */
+    if ( gnss_sap_ins_params_ptr->measVar2_valid ) {
+        sapInsParams.measVar2_len = gnss_sap_ins_params_ptr->measVar2_len;
+        memscpy(sapInsParams.measVar2, sizeof(sapInsParams.measVar2),
+            gnss_sap_ins_params_ptr->measVar2, sizeof(gnss_sap_ins_params_ptr->measVar2));
+        sapInsParams.flags |= GNSS_LOCATION_EXTENDED_HAS_PRR_MEAS_VAR_USED;
+    }
+
+    /* Measurement info 2 list */
+    if ( gnss_sap_ins_params_ptr->measUse2_valid ) {
+        sapInsParams.measUse2_len = gnss_sap_ins_params_ptr->measUse2_len;
+        memscpy(sapInsParams.measUse2, sizeof(sapInsParams.measUse2),
+            gnss_sap_ins_params_ptr->measUse2, sizeof(gnss_sap_ins_params_ptr->measUse2));
+        sapInsParams.flags |= GNSS_LOCATION_EXTENDED_HAS_PRR_MEAS_USED_INFO;
+    }
+
+    LocApiBase::reportSapInsParams(sapInsParams);
 }
 
 void LocApiV02 ::reportSvMeasurementInternal() {
@@ -5968,6 +6297,12 @@ void LocApiV02 :: eventCb(locClientHandleType /*clientHandle*/,
                __LINE__);
       reportSvMeasurement(eventPayload.pGnssSvRawInfoEvent);
       reportGnssMeasurementData(*eventPayload.pGnssSvRawInfoEvent); /*TBD merge into one function*/
+      break;
+
+    case QMI_LOC_EVENT_SAP_INS_PARAMETERS_IND_V02:
+      LOC_LOGD("%s:%d]: GNSS SAP INS Params Report\n", __func__,
+               __LINE__);
+      reportSapInsParams(eventPayload.pGnssSapInsParamsInfoEvent);
       break;
 
     case QMI_LOC_EVENT_SV_POLYNOMIAL_REPORT_IND_V02:

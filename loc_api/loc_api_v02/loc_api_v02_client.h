@@ -1008,6 +1008,12 @@ typedef union
 
    const qmiLocEventGnssSvPolyIndMsgT_v02* pGnssSvPolyInfoEvent;
 
+   /**< Sent by the engine when GNSS SAP INS params are available
+        The eventIndId field in the event indication callback is set to
+        QMI_LOC_EVENT_SAP_INS_PARAMETERS_IND_V02. @newpagetable */
+
+   const qmiLocSapInsParamsIndMsgT_v02* pGnssSapInsParamsInfoEvent;
+
    /**< Sent by the engine when GNSS measurements are available
         The eventIndId field in the event indication callback is set to
         QMI_LOC_EVENT_SV_POLYNOMIAL_REPORT_IND_V02. @newpagetable */
