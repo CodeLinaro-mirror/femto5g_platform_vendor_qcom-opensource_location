@@ -30,7 +30,6 @@
 #define LOCATION_INTEGRATION_API_IMPL_H
 
 #include <mutex>
-#include <unordered_map>
 
 #include <LocIpc.h>
 #include <LocationDataTypes.h>
@@ -38,6 +37,12 @@
 #include <LocationIntegrationApi.h>
 #include <MsgTask.h>
 #include <LocationApiMsg.h>
+
+#ifdef NO_UNORDERED_SET_OR_MAP
+    #include <map>
+#else
+    #include <unordered_map>
+#endif
 
 using namespace std;
 using namespace loc_util;
@@ -99,6 +104,10 @@ public:
     // rest of ILocationController API that are not used in integration API
     virtual uint32_t* gnssUpdateConfig(GnssConfig config) override;
     virtual uint32_t gnssDeleteAidingData(GnssAidingData& data) override;
+    virtual uint32_t configMinGpsWeek(uint16_t minGpsWeek) override;
+
+    uint32_t getRobustLocationConfig();
+    uint32_t getMinGpsWeek();
 
 private:
     ~LocationIntegrationApiImpl();
@@ -112,8 +121,10 @@ private:
 
     void addConfigReq(LocConfigTypeEnum configType);
     void flushConfigReqs();
-    void invokeConfigRespCb(LocConfigTypeEnum configType,
-                            LocIntegrationResponse response);
+    void processConfigRespCb(const LocAPIGenericRespMsg* pRespMsg);
+    void processGetRobustLocationConfigRespCb(
+            const LocConfigGetRobustLocationConfigRespMsg* pRespMsg);
+    void processGetMinGpsWeekRespCb(const LocConfigGetMinGpsWeekRespMsg* pRespMsg);
 
     // internal session parameter
     static mutex             mMutex;

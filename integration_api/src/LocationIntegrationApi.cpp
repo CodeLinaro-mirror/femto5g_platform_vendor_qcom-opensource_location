@@ -256,5 +256,34 @@ bool LocationIntegrationApi::configRobustLocation(bool enable, bool enableForE91
     }
 }
 
+bool LocationIntegrationApi::getRobustLocationConfig() {
+    if (mApiImpl) {
+        // mApiImpl->getRobustLocationConfig returns none-zero when
+        // there is no callback
+        return (mApiImpl->getRobustLocationConfig() == 0);
+    } else {
+        LOC_LOGe ("NULL mApiImpl");
+        return false;
+    }
+}
+
+bool LocationIntegrationApi::configMinGpsWeek(uint16_t minGpsWeek) {
+    if (mApiImpl && minGpsWeek != 0) {
+        return (mApiImpl->configMinGpsWeek(minGpsWeek) == 0);
+    } else {
+        LOC_LOGe ("NULL mApiImpl");
+        return false;
+    }
+}
+
+bool LocationIntegrationApi::getMinGpsWeek() {
+    if (mApiImpl) {
+        return (mApiImpl->getMinGpsWeek() == 0);
+    } else {
+        LOC_LOGe ("NULL mApiImpl or callback");
+        return false;
+    }
+}
+
 } // namespace location_integration
 
