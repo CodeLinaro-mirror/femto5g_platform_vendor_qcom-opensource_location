@@ -176,7 +176,7 @@ static GnssLocationSvUsedInPosition parseLocationSvUsedInPosition(
     clientSv.galSvUsedIdsMask = halSv.galSvUsedIdsMask;
     clientSv.bdsSvUsedIdsMask = halSv.bdsSvUsedIdsMask;
     clientSv.qzssSvUsedIdsMask = halSv.qzssSvUsedIdsMask;
-
+    clientSv.navicSvUsedIdsMask = halSv.navicSvUsedIdsMask;
     return clientSv;
 }
 
@@ -270,7 +270,8 @@ static void parseGnssMeasUsageInfo(const ::GnssLocationInfoNotification &halLoca
 }
 
 static GnssLocationPositionDynamics parseLocationPositionDynamics(
-        const ::GnssLocationPositionDynamics &halPositionDynamics) {
+        const ::GnssLocationPositionDynamics &halPositionDynamics,
+        const ::GnssLocationPositionDynamicsExt &halPositionDynamicsExt) {
     GnssLocationPositionDynamics positionDynamics = {};
     uint32_t bodyFrameDataMask = 0;
 
@@ -286,15 +287,6 @@ static GnssLocationPositionDynamics parseLocationPositionDynamics(
         bodyFrameDataMask |= LOCATION_NAV_DATA_HAS_VERT_ACCEL_BIT;
         positionDynamics.vertAccel = halPositionDynamics.vertAccel;
     }
-    if (::LOCATION_NAV_DATA_HAS_YAW_RATE_BIT & halPositionDynamics.bodyFrameDataMask) {
-        bodyFrameDataMask |= LOCATION_NAV_DATA_HAS_YAW_RATE_BIT;
-        positionDynamics.yawRate = halPositionDynamics.yawRate;
-    }
-    if (::LOCATION_NAV_DATA_HAS_PITCH_BIT & halPositionDynamics.bodyFrameDataMask) {
-        bodyFrameDataMask |= LOCATION_NAV_DATA_HAS_PITCH_BIT;
-        positionDynamics.pitch = halPositionDynamics.pitch;
-    }
-
     if (::LOCATION_NAV_DATA_HAS_LONG_ACCEL_UNC_BIT & halPositionDynamics.bodyFrameDataMask) {
         bodyFrameDataMask |= LOCATION_NAV_DATA_HAS_LONG_ACCEL_UNC_BIT;
         positionDynamics.longAccelUnc = halPositionDynamics.longAccelUnc;
@@ -307,15 +299,57 @@ static GnssLocationPositionDynamics parseLocationPositionDynamics(
         bodyFrameDataMask |= LOCATION_NAV_DATA_HAS_VERT_ACCEL_UNC_BIT;
         positionDynamics.vertAccelUnc = halPositionDynamics.vertAccelUnc;
     }
-    if (::LOCATION_NAV_DATA_HAS_YAW_RATE_UNC_BIT & halPositionDynamics.bodyFrameDataMask) {
-        bodyFrameDataMask |= LOCATION_NAV_DATA_HAS_YAW_RATE_UNC_BIT;
-        positionDynamics.yawRateUnc = halPositionDynamics.yawRateUnc;
+
+    if (::LOCATION_NAV_DATA_HAS_ROLL_BIT & halPositionDynamicsExt.bodyFrameDataMask) {
+        bodyFrameDataMask |= LOCATION_NAV_DATA_HAS_ROLL_BIT;
+        positionDynamics.roll = halPositionDynamicsExt.roll;
+    }
+    if (::LOCATION_NAV_DATA_HAS_ROLL_UNC_BIT & halPositionDynamicsExt.bodyFrameDataMask) {
+        bodyFrameDataMask |= LOCATION_NAV_DATA_HAS_ROLL_UNC_BIT;
+        positionDynamics.rollUnc = halPositionDynamicsExt.rollUnc;
+    }
+    if (::LOCATION_NAV_DATA_HAS_ROLL_RATE_BIT & halPositionDynamicsExt.bodyFrameDataMask) {
+        bodyFrameDataMask |= LOCATION_NAV_DATA_HAS_ROLL_RATE_BIT;
+        positionDynamics.rollRate = halPositionDynamicsExt.rollRate;
+    }
+    if (::LOCATION_NAV_DATA_HAS_ROLL_RATE_UNC_BIT & halPositionDynamicsExt.bodyFrameDataMask) {
+        bodyFrameDataMask |= LOCATION_NAV_DATA_HAS_ROLL_RATE_UNC_BIT;
+        positionDynamics.rollRateUnc = halPositionDynamicsExt.rollRateUnc;
+    }
+
+    if (::LOCATION_NAV_DATA_HAS_PITCH_BIT & halPositionDynamics.bodyFrameDataMask) {
+        bodyFrameDataMask |= LOCATION_NAV_DATA_HAS_PITCH_BIT;
+        positionDynamics.pitch = halPositionDynamics.pitch;
     }
     if (::LOCATION_NAV_DATA_HAS_PITCH_UNC_BIT & halPositionDynamics.bodyFrameDataMask) {
         bodyFrameDataMask |= LOCATION_NAV_DATA_HAS_PITCH_UNC_BIT;
         positionDynamics.pitchUnc = halPositionDynamics.pitchUnc;
     }
+    if (::LOCATION_NAV_DATA_HAS_PITCH_RATE_BIT & halPositionDynamicsExt.bodyFrameDataMask) {
+        bodyFrameDataMask |= LOCATION_NAV_DATA_HAS_PITCH_RATE_BIT;
+        positionDynamics.pitchRate = halPositionDynamicsExt.pitchRate;
+    }
+    if (::LOCATION_NAV_DATA_HAS_PITCH_RATE_UNC_BIT & halPositionDynamicsExt.bodyFrameDataMask) {
+        bodyFrameDataMask |= LOCATION_NAV_DATA_HAS_PITCH_RATE_UNC_BIT;
+        positionDynamics.pitchRateUnc = halPositionDynamicsExt.pitchRateUnc;
+    }
 
+    if (::LOCATION_NAV_DATA_HAS_YAW_BIT & halPositionDynamicsExt.bodyFrameDataMask) {
+        bodyFrameDataMask |= LOCATION_NAV_DATA_HAS_YAW_BIT;
+        positionDynamics.yaw = halPositionDynamicsExt.yaw;
+    }
+    if (::LOCATION_NAV_DATA_HAS_YAW_UNC_BIT & halPositionDynamicsExt.bodyFrameDataMask) {
+        bodyFrameDataMask |= LOCATION_NAV_DATA_HAS_YAW_UNC_BIT;
+        positionDynamics.yawUnc = halPositionDynamicsExt.yawUnc;
+    }
+    if (::LOCATION_NAV_DATA_HAS_YAW_RATE_BIT & halPositionDynamics.bodyFrameDataMask) {
+        bodyFrameDataMask |= LOCATION_NAV_DATA_HAS_YAW_RATE_BIT;
+        positionDynamics.yawRate = halPositionDynamics.yawRate;
+    }
+    if (::LOCATION_NAV_DATA_HAS_YAW_RATE_UNC_BIT & halPositionDynamics.bodyFrameDataMask) {
+        bodyFrameDataMask |= LOCATION_NAV_DATA_HAS_YAW_RATE_UNC_BIT;
+        positionDynamics.yawRateUnc = halPositionDynamics.yawRateUnc;
+    }
     positionDynamics.bodyFrameDataMask = (GnssLocationPosDataMask)bodyFrameDataMask;
 
     return positionDynamics;
@@ -453,6 +487,10 @@ static GnssSystemTime parseSystemTime(const ::GnssSystemTime &halSystemTime) {
         case ::GNSS_LOC_SV_SYSTEM_QZSS:
            systemTime.gnssSystemTimeSrc = GNSS_LOC_SV_SYSTEM_QZSS;
            systemTime.u.qzssSystemTime = parseGnssTime(halSystemTime.u.qzssSystemTime);
+           break;
+        case GNSS_LOC_SV_SYSTEM_NAVIC:
+           systemTime.gnssSystemTimeSrc = GNSS_LOC_SV_SYSTEM_NAVIC;
+           systemTime.u.navicSystemTime = parseGnssTime(halSystemTime.u.navicSystemTime);
            break;
     }
 
@@ -618,6 +656,14 @@ static GnssLocation parseLocationInfo(const ::GnssLocationInfoNotification &halL
         flags |= GNSS_LOCATION_INFO_CONFORMITY_INDEX_BIT;
     }
 
+    if (::GNSS_LOCATION_INFO_LLA_VRP_BASED_BIT & halLocationInfo.flags) {
+        flags |= GNSS_LOCATION_INFO_LLA_VRP_BASED_BIT;
+    }
+
+    if (::GNSS_LOCATION_INFO_ENU_VELOCITY_VRP_BASED_BIT & halLocationInfo.flags) {
+        flags |= GNSS_LOCATION_INFO_ENU_VELOCITY_VRP_BASED_BIT;
+    }
+
     locationInfo.gnssInfoFlags = (GnssLocationInfoFlagMask)flags;
     locationInfo.altitudeMeanSeaLevel = halLocationInfo.altitudeMeanSeaLevel;
     locationInfo.pdop = halLocationInfo.pdop;
@@ -647,7 +693,13 @@ static GnssLocation parseLocationInfo(const ::GnssLocationInfoNotification &halL
     locationInfo.locOutputEngMask =
             (PositioningEngineMask)halLocationInfo.locOutputEngMask;
     locationInfo.conformityIndex = halLocationInfo.conformityIndex;
-
+    locationInfo.llaVRPBased.latitude = halLocationInfo.llaVRPBased.latitude;
+    locationInfo.llaVRPBased.longitude = halLocationInfo.llaVRPBased.longitude;
+    locationInfo.llaVRPBased.altitude = halLocationInfo.llaVRPBased.altitude;
+    // copy VRP-based north, east, up velocity
+    locationInfo.enuVelocityVRPBased[0] = halLocationInfo.enuVelocityVRPBased[0];
+    locationInfo.enuVelocityVRPBased[1] = halLocationInfo.enuVelocityVRPBased[1];
+    locationInfo.enuVelocityVRPBased[2] = halLocationInfo.enuVelocityVRPBased[2];
     parseGnssMeasUsageInfo(halLocationInfo, locationInfo.measUsageInfo);
 
     flags = 0;
@@ -706,7 +758,8 @@ static GnssLocation parseLocationInfo(const ::GnssLocationInfoNotification &halL
         flags |= LOCATION_POS_TECH_PPE_BIT;
     }
     locationInfo.posTechMask = (GnssLocationPosTechMask)flags;
-    locationInfo.bodyFrameData = parseLocationPositionDynamics(halLocationInfo.bodyFrameData);
+    locationInfo.bodyFrameData = parseLocationPositionDynamics(
+            halLocationInfo.bodyFrameData, halLocationInfo.bodyFrameDataExt);
     locationInfo.gnssSystemTime = parseSystemTime(halLocationInfo.gnssSystemTime);
     locationInfo.leapSeconds = halLocationInfo.leapSeconds;
     locationInfo.timeUncMs = halLocationInfo.timeUncMs;
@@ -906,224 +959,6 @@ static LocationSystemInfo parseLocationSystemInfo(
     return systemInfo;
 }
 
-// Parse SV polynomial info.
-static GnssSvPoly parseGnssSvPolynomial(const ::GnssSvPolynomial
-            &halGnssSvPoly) {
-
-    GnssSvPoly gnssSvPoly = {};
-    uint32_t validFlags = 0;
-
-    gnssSvPoly.svId = halGnssSvPoly.gnssSvId;
-    validFlags |= GNSS_SV_POLY_HAS_SV_ID;
-
-    if (gnssSvPoly.svId >= GPS_SV_PRN_MIN && gnssSvPoly.svId <= GPS_SV_PRN_MAX) {
-        gnssSvPoly.svConstellation = GNSS_LOC_SV_SYSTEM_GPS;
-    } else if (gnssSvPoly.svId >= GLO_SV_PRN_MIN && gnssSvPoly.svId <= GLO_SV_PRN_MAX) {
-        gnssSvPoly.svConstellation = GNSS_LOC_SV_SYSTEM_GLONASS;
-    } else if (gnssSvPoly.svId >= SBAS_SV_PRN_MIN && gnssSvPoly.svId <= SBAS_SV_PRN_MAX) {
-        gnssSvPoly.svConstellation = GNSS_LOC_SV_SYSTEM_SBAS;
-    } else if (gnssSvPoly.svId >= QZSS_SV_PRN_MIN && gnssSvPoly.svId <= QZSS_SV_PRN_MAX) {
-        gnssSvPoly.svConstellation = GNSS_LOC_SV_SYSTEM_QZSS;
-    } else if (gnssSvPoly.svId >= BDS_SV_PRN_MIN && gnssSvPoly.svId <= BDS_SV_PRN_MAX) {
-        gnssSvPoly.svConstellation = GNSS_LOC_SV_SYSTEM_BDS;
-    } else if (gnssSvPoly.svId >= GAL_SV_PRN_MIN && gnssSvPoly.svId <= GAL_SV_PRN_MAX) {
-        gnssSvPoly.svConstellation = GNSS_LOC_SV_SYSTEM_GALILEO;
-    }
-    if (gnssSvPoly.svConstellation != 0) {
-        validFlags |= GNSS_SV_POLY_HAS_SV_CONSTELLATION;
-    }
-
-    if ((halGnssSvPoly.is_valid & ULP_GNSS_SV_POLY_BIT_GLO_FREQ) &&
-        (gnssSvPoly.svConstellation == GNSS_LOC_SV_SYSTEM_GLONASS)) {
-        gnssSvPoly.gloFrequency = halGnssSvPoly.freqNum;
-        validFlags |= GNSS_SV_POLY_HAS_GLO_FREQUENCY;
-    }
-
-    uint32_t actionType = GNSS_SV_POLY_ACTION_UPDATE;
-    if (halGnssSvPoly.is_valid & ULP_GNSS_SV_POLY_BIT_FLAG) {
-        if ((halGnssSvPoly.svPolyStatusMaskValidity & GNSS_SV_POLY_DELETE_VALID_V02) &&
-            (halGnssSvPoly.svPolyStatusMask & GNSS_SV_POLY_DELETE_V02)) {
-            actionType = GNSS_SV_POLY_ACTION_INVALIDATE;
-        }
-    }
-    gnssSvPoly.actionType = (GnssSvPolyActionType) actionType;
-    validFlags |= GNSS_SV_POLY_HAS_ACTION_TYPE;
-
-    if (halGnssSvPoly.is_valid & ULP_GNSS_SV_POLY_BIT_FLAG) {
-        uint32_t statusMask = 0;
-        if ((halGnssSvPoly.svPolyStatusMaskValidity & GNSS_SV_POLY_SRC_ALM_CORR_VALID_V02) &&
-            (halGnssSvPoly.svPolyStatusMask & GNSS_SV_POLY_SRC_ALM_CORR_V02)) {
-            statusMask |= GNSS_SV_POLY_STATUS_SRC_ALM_CORR;
-        }
-
-        if ((halGnssSvPoly.svPolyStatusMaskValidity & GNSS_SV_POLY_GLO_STR4_VALID_V02) &&
-            (halGnssSvPoly.svPolyStatusMask & GNSS_SV_POLY_GLO_STR4_V02)) {
-            statusMask |= GNSS_SV_POLY_STATUS_GLO_STR4;
-        }
-
-        if (halGnssSvPoly.svPolyStatusMaskValidity &
-                    GNSS_SV_POLY_SRC_GAL_FNAV_OR_INAV_VALID_V02) {
-            if (halGnssSvPoly.svPolyStatusMask & GNSS_SV_POLY_SRC_GAL_FNAV_OR_INAV_V02) {
-                statusMask |= GNSS_SV_POLY_STATUS_GAL_FNAV;
-            } else {
-                statusMask |= GNSS_SV_POLY_STATUS_GAL_INAV;
-            }
-        }
-        gnssSvPoly.statusMask = (GnssSvPolyStatusMask) statusMask;
-        validFlags |= GNSS_SV_POLY_HAS_STATUS_MASK;
-    }
-
-    if (gnssSvPoly.actionType == GNSS_SV_POLY_ACTION_UPDATE) {
-        gnssSvPoly.T0 = halGnssSvPoly.T0;
-        validFlags |= GNSS_SV_POLY_HAS_T0;
-
-        uint32_t index = 0;
-        if (halGnssSvPoly.is_valid & ULP_GNSS_SV_POLY_BIT_POLYCOEFF_XYZ0) {
-            if (GNSS_SV_POLY_XYZ_0_TH_ORDER_COF_SIZE ==
-                    GNSS_SV_POLY_XYZ_0_TH_ORDER_COEFF_MAX_SIZE) {
-                for (index = 0; index < GNSS_SV_POLY_XYZ_0_TH_ORDER_COF_SIZE; index++) {
-                    gnssSvPoly.polyCofXYZ0[index] = halGnssSvPoly.polyCoeffXYZ0[index];
-                }
-                validFlags |= GNSS_SV_POLY_HAS_POLY_COF_XYZ0;
-            } else {
-                LOC_LOGe("array size for polyCofXYZ0 not match");
-            }
-        }
-        if (halGnssSvPoly.is_valid & ULP_GNSS_SV_POLY_BIT_POLYCOEFF_XYZN) {
-            if (GNSS_SV_POLY_XYZ_N_TH_ORDER_COF_SIZE ==
-                    GNSS_SV_POLY_XYZ_N_TH_ORDER_COEFF_MAX_SIZE) {
-                for (index = 0; index < GNSS_SV_POLY_XYZ_N_TH_ORDER_COF_SIZE; index++) {
-                    gnssSvPoly.polyCofXYZN[index] = halGnssSvPoly.polyCoefXYZN[index];
-                }
-                validFlags |= GNSS_SV_POLY_HAS_POLY_COF_XYZN;
-            } else {
-                LOC_LOGe("array size for polyCofXYZN not match");
-            }
-        }
-        if (halGnssSvPoly.is_valid & ULP_GNSS_SV_POLY_BIT_POLYCOEFF_OTHER) {
-            if (GNSS_SV_POLY_SV_CLKBIAS_COF_SIZE ==
-                    GNSS_SV_POLY_SV_CLKBIAS_COEFF_MAX_SIZE) {
-                for (index = 0; index < GNSS_SV_POLY_SV_CLKBIAS_COF_SIZE; index++) {
-                    gnssSvPoly.polyCofClockBias[index] = halGnssSvPoly.polyCoefOther[index];
-                }
-                validFlags |= GNSS_SV_POLY_HAS_POLY_COF_CLK_BIAS;
-            } else {
-                LOC_LOGe("array size for polyCofClockBias not match");
-            }
-        }
-        if (halGnssSvPoly.is_valid & ULP_GNSS_SV_POLY_BIT_IODE) {
-            gnssSvPoly.iode = halGnssSvPoly.iode;
-            validFlags |= GNSS_SV_POLY_HAS_IODE;
-        }
-        if (halGnssSvPoly.is_valid & ULP_GNSS_SV_POLY_BIT_ENHANCED_IOD) {
-            gnssSvPoly.enhancedIOD = halGnssSvPoly.enhancedIOD;
-            validFlags |= GNSS_SV_POLY_HAS_ENHANCED_IOD;
-        }
-        if (halGnssSvPoly.is_valid & ULP_GNSS_SV_POLY_BIT_SV_POSUNC) {
-            gnssSvPoly.svPosUnc = halGnssSvPoly.svPosUnc;
-            validFlags |= GNSS_SV_POLY_HAS_SV_POS_UNC;
-        }
-        if (halGnssSvPoly.is_valid & ULP_GNSS_SV_POLY_BIT_IONODELAY) {
-            gnssSvPoly.ionoDelay = halGnssSvPoly.ionoDelay;
-            validFlags |= GNSS_SV_POLY_HAS_IONO_DELAY;
-        }
-        if (halGnssSvPoly.is_valid & ULP_GNSS_SV_POLY_BIT_IONODOT) {
-            gnssSvPoly.ionoDot = halGnssSvPoly.ionoDot;
-            validFlags |= GNSS_SV_POLY_HAS_IONO_DOT;
-        }
-        if (halGnssSvPoly.is_valid & ULP_GNSS_SV_POLY_BIT_SBAS_IONODELAY) {
-            gnssSvPoly.sbasIonoDelay = halGnssSvPoly.sbasIonoDelay;
-            validFlags |= GNSS_SV_POLY_HAS_SBAS_IONO_DELAY;
-        }
-        if (halGnssSvPoly.is_valid & ULP_GNSS_SV_POLY_BIT_SBAS_IONODOT) {
-            gnssSvPoly.sbasIonoDot = halGnssSvPoly.sbasIonoDot;
-            validFlags |= GNSS_SV_POLY_HAS_SBAS_IONO_DOT;
-        }
-        if (halGnssSvPoly.is_valid & ULP_GNSS_SV_POLY_BIT_TROPODELAY) {
-            gnssSvPoly.tropoDelay = halGnssSvPoly.tropoDelay;
-            validFlags |= GNSS_SV_POLY_HAS_TROPO_DELAY;
-        }
-
-        if (halGnssSvPoly.is_valid & ULP_GNSS_SV_POLY_BIT_ELEVATION) {
-            gnssSvPoly.elevation = halGnssSvPoly.elevation;
-            validFlags |= GNSS_SV_POLY_HAS_ELEVATION;
-        }
-        if (halGnssSvPoly.is_valid & ULP_GNSS_SV_POLY_BIT_ELEVATIONDOT) {
-            gnssSvPoly.elevationDot = halGnssSvPoly.elevationDot;
-            validFlags |= GNSS_SV_POLY_HAS_ELEVATION_DOT;
-        }
-        if (halGnssSvPoly.is_valid & ULP_GNSS_SV_POLY_BIT_ELEVATIONUNC) {
-            gnssSvPoly.elevationUnc = halGnssSvPoly.elevationUnc;
-            validFlags |= GNSS_SV_POLY_HAS_ELEVATION_UNC;
-        }
-        if (halGnssSvPoly.is_valid & ULP_GNSS_SV_POLY_BIT_VELO_COEFF) {
-            if (GNSS_SV_POLY_VELOCITY_COF_SIZE ==
-                    GNSS_SV_POLY_VELOCITY_COEF_MAX_SIZE) {
-                for (index = 0; index < GNSS_SV_POLY_VELOCITY_COF_SIZE; index++) {
-                    gnssSvPoly.velCof[index] = halGnssSvPoly.velCoef[index];
-                }
-                validFlags |= GNSS_SV_POLY_HAS_VEL_COF;
-            } else {
-                LOC_LOGe("array size for velCof not match");
-            }
-        }
-        if (halGnssSvPoly.is_valid & ULP_GNSS_SV_POLY_BIT_GPS_ISC_L1CA) {
-            gnssSvPoly.gpsIscL1ca = halGnssSvPoly.gpsIscL1ca;
-            validFlags |= GNSS_SV_POLY_HAS_GPS_ISC_L1CA;
-        }
-        if (halGnssSvPoly.is_valid & ULP_GNSS_SV_POLY_BIT_GPS_ISC_L2C) {
-            gnssSvPoly.gpsIscL2c = halGnssSvPoly.gpsIscL2c;
-            validFlags |= GNSS_SV_POLY_HAS_GPS_ISC_L2C;
-        }
-        if (halGnssSvPoly.is_valid & ULP_GNSS_SV_POLY_BIT_GPS_ISC_L5I5) {
-            gnssSvPoly.gpsIscL5I5 = halGnssSvPoly.gpsIscL5I5;
-            validFlags |= GNSS_SV_POLY_HAS_GPS_ISC_L5I5;
-        }
-        if (halGnssSvPoly.is_valid & ULP_GNSS_SV_POLY_BIT_GPS_ISC_L5Q5) {
-            gnssSvPoly.gpsIscL5Q5 = halGnssSvPoly.gpsIscL5Q5;
-            validFlags |= GNSS_SV_POLY_HAS_GPS_ISC_L5Q5;
-        }
-        if (halGnssSvPoly.is_valid & ULP_GNSS_SV_POLY_BIT_GPS_TGD) {
-            gnssSvPoly.gpsTgd = halGnssSvPoly.gpsTgd;
-            validFlags |= GNSS_SV_POLY_HAS_GPS_TGD;
-        }
-        if (halGnssSvPoly.is_valid & ULP_GNSS_SV_POLY_BIT_GLO_TGD_G1G2) {
-            gnssSvPoly.gloTgdG1G2 = halGnssSvPoly.gloTgdG1G2;
-            validFlags |= GNSS_SV_POLY_HAS_GLO_TGD_G1G2;
-        }
-        if (halGnssSvPoly.is_valid & ULP_GNSS_SV_POLY_BIT_BDS_TGD_B1) {
-            gnssSvPoly.bdsTgdB1 = halGnssSvPoly.bdsTgdB1;
-            validFlags |= GNSS_SV_POLY_HAS_BDS_TGD_B1;
-        }
-        if (halGnssSvPoly.is_valid & ULP_GNSS_SV_POLY_BIT_BDS_TGD_B2) {
-            gnssSvPoly.bdsTgdB2= halGnssSvPoly.bdsTgdB2;
-            validFlags |= GNSS_SV_POLY_HAS_BDS_TGD_B2;
-        }
-        if (halGnssSvPoly.is_valid & ULP_GNSS_SV_POLY_BIT_BDS_TGD_B2A) {
-            gnssSvPoly.bdsTgdB2a = halGnssSvPoly.bdsTgdB2a;
-            validFlags |= GNSS_SV_POLY_HAS_BDS_TGD_B2A;
-        }
-        if (halGnssSvPoly.is_valid & ULP_GNSS_SV_POLY_BIT_BDS_ISC_B2A) {
-            gnssSvPoly.bdsIscB2a = halGnssSvPoly.bdsIscB2a;
-            validFlags |= GNSS_SV_POLY_HAS_BDS_ISC_B2A;
-        }
-        if (halGnssSvPoly.is_valid & ULP_GNSS_SV_POLY_BIT_GAL_BGD_E1E5A) {
-            gnssSvPoly.galBgdE1E5a = halGnssSvPoly.galBgdE1E5a;
-            validFlags |= GNSS_SV_POLY_HAS_GAL_BGD_E1E5A;
-        }
-        if (halGnssSvPoly.is_valid & ULP_GNSS_SV_POLY_BIT_GAL_BGD_E1E5B) {
-            gnssSvPoly.galBgdE1E5b = halGnssSvPoly.galBgdE1E5b;
-            validFlags |= GNSS_SV_POLY_HAS_GAL_BGD_E1E5B;
-        }
-        if (halGnssSvPoly.is_valid & ULP_GNSS_SV_POLY_BIT_NAVIC_TGD_L5) {
-            gnssSvPoly.navicTgdL5 = halGnssSvPoly.navicTgdL5;
-            validFlags |= GNSS_SV_POLY_HAS_NAVIC_TDG_L5;
-        }
-    }
-    gnssSvPoly.validityMask = (GnssSvPolyValidityMask)validFlags;
-    return gnssSvPoly;
-}
-
 /******************************************************************************
 ILocIpcListener override
 ******************************************************************************/
@@ -1165,7 +1000,6 @@ LocationClientApiImpl::LocationClientApiImpl(CapabilitiesCb capabitiescb) :
         mGnssNmeaCb(nullptr),
         mGnssDataCb(nullptr),
         mGnssMeasurementsCb(nullptr),
-        mGnssSvPolyCb(nullptr),
         mGnssEnergyConsumedInfoCb(nullptr),
         mGnssEnergyConsumedResponseCb(nullptr),
         mLocationSysInfoCb(nullptr),
@@ -1316,7 +1150,6 @@ void LocationClientApiImpl::updateCallbackFunctions(const ClientCallbacks& cbs,
                 mApiImpl->mGnssNmeaCb         = mCbs.engreportcbs.gnssNmeaCallback;
                 mApiImpl->mGnssDataCb         = mCbs.engreportcbs.gnssDataCallback;
                 mApiImpl->mGnssMeasurementsCb = mCbs.engreportcbs.gnssMeasurementsCallback;
-                mApiImpl->mGnssSvPolyCb       = mCbs.engreportcbs.gnssSvPolyCallback;
             }
         }
         LocationClientApiImpl* mApiImpl;
@@ -1361,10 +1194,6 @@ void LocationClientApiImpl::updateCallbacks(LocationCallbacks& callbacks) {
             if (mCallBacks.gnssMeasurementsCb) {
                 callBacksMask |= E_LOC_CB_GNSS_MEAS_BIT;
             }
-            if (mCallBacks.gnssSvPolynomialCb) {
-                callBacksMask |= E_LOC_CB_GNSS_SV_POLY_BIT;
-            }
-
             // handle callbacks that are not related to a fix session
             if (mApiImpl->mLocationSysInfoCb) {
                 callBacksMask |= E_LOC_CB_SYSTEM_INFO_BIT;
@@ -1925,8 +1754,15 @@ void LocationClientApiImpl::getGnssEnergyConsumed(
             // send msg to the hal daemon
             if (nullptr != mApiImpl->mGnssEnergyConsumedInfoCb) {
                 LocAPIGetGnssEnergyConsumedReqMsg msg(mApiImpl->mSocketName);
-                mApiImpl->sendMessage(reinterpret_cast<uint8_t*>(&msg),
+                bool rc = mApiImpl->sendMessage(reinterpret_cast<uint8_t*>(&msg),
                                            sizeof(msg));
+                if (mResponseCb) {
+                    if (true == rc) {
+                        mResponseCb(LOCATION_RESPONSE_SUCCESS);
+                    } else {
+                        mResponseCb(LOCATION_RESPONSE_UNKOWN_FAILURE);
+                    }
+                }
             }
         }
 
@@ -2474,47 +2310,6 @@ void IpcListener::onReceive(const char* data, uint32_t length,
                 break;
             }
 
-            case E_LOCAPI_SV_POLY_MSG_ID:
-            {
-                LOC_LOGd("<<< message = SV poly");
-                if (sizeof(LocAPIGnssSvPolyIndMsg) != mMsgData.length()) {
-                    LOC_LOGw("payload size does not match for message with id: %d",
-                        pMsg->msgId);
-                }
-                if ((mApiImpl.mSessionId != LOCATION_CLIENT_SESSION_ID_INVALID) &&
-                    (mApiImpl.mCallbacksMask & E_LOC_CB_GNSS_SV_POLY_BIT)) {
-                    const LocAPIGnssSvPolyIndMsg* pSvPolyIndMsg =
-                            (LocAPIGnssSvPolyIndMsg*)(pMsg);
-                    GnssSvPoly gnssSvPoly =
-                        parseGnssSvPolynomial (pSvPolyIndMsg->gnssSvPolynomial);
-                    if (mApiImpl.mGnssSvPolyCb ) {
-                        mApiImpl.mGnssSvPolyCb(gnssSvPoly);
-                    }
-#ifndef FEATURE_EXTERNAL_AP
-                    if (!mDiagInterface) {
-                        break;
-                    }
-                    diagBuffSrc bufferSrc = BUFFER_INVALID;
-                    clientDiagGnssSvPoly *diagGnssSvPolyPtr =
-                            (clientDiagGnssSvPoly*)mDiagInterface->logAlloc(
-                                    LOG_GNSS_CLIENT_API_SV_POLY_REPORT_C,
-                                    sizeof(clientDiagGnssSvPoly), &bufferSrc);
-                    if (NULL == diagGnssSvPolyPtr) {
-                        LOC_LOGv("memory alloc failed");
-                        break;
-                    }
-                    populateClientDiagSvPoly(diagGnssSvPolyPtr, gnssSvPoly);
-                    diagGnssSvPolyPtr->version = LOG_CLIENT_SV_POLY_DIAG_MSG_VERSION ;
-
-                    mDiagInterface->logCommit(diagGnssSvPolyPtr, bufferSrc,
-                            LOG_GNSS_CLIENT_API_SV_POLY_REPORT_C,
-                            sizeof(clientDiagGnssSvPoly));
-
-#endif // FEATURE_EXTERNAL_AP
-                }
-                break;
-            }
-
             case E_LOCAPI_GET_GNSS_ENGERY_CONSUMED_MSG_ID:
             {
                 LOC_LOGd("<<< message = GNSS power consumption\n");
@@ -2643,6 +2438,10 @@ uint32_t LocationClientApiImpl::configLeverArm(const LeverArmConfigInfo& configI
 }
 
 uint32_t LocationClientApiImpl::configRobustLocation(bool enable, bool enableForE911) {
+    return 0;
+}
+
+uint32_t LocationClientApiImpl::configMinGpsWeek(uint16_t minGpsWeek) {
     return 0;
 }
 

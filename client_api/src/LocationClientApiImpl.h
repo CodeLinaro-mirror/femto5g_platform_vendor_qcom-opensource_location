@@ -84,8 +84,6 @@ void populateClientDiagGnssSv(clientDiagGnssSvStructType* diagGnssSvPtr,
         std::vector<GnssSv>& gnssSvs);
 void populateClientDiagNmea(clientDiagGnssNmeaStructType *diagGnssNmeaPtr,
         const LocAPINmeaSerializedPayload &nmeaSerializedPayload);
-void populateClientDiagSvPoly(clientDiagGnssSvPoly *diagGnssSvPolyPtr,
-        const GnssSvPoly &gnssSvPoly);
 #endif // FEATURE_EXTERNAL_AP
 
 enum ReportCbEnumType {
@@ -183,6 +181,7 @@ public:
     virtual uint32_t configPositionAssistedClockEstimator(bool enable) override;
     virtual uint32_t configLeverArm(const LeverArmConfigInfo& configInfo) override;
     virtual uint32_t configRobustLocation(bool enable, bool enableForE911) override;
+    virtual uint32_t configMinGpsWeek(uint16_t minGpsWeek) override;
 
     // other interface
     void updateNetworkAvailability(bool available);
@@ -250,7 +249,6 @@ private:
     GnssNmeaCb              mGnssNmeaCb;
     GnssDataCb              mGnssDataCb;
     GnssMeasurementsCb      mGnssMeasurementsCb;
-    GnssSvPolyCb            mGnssSvPolyCb;
 
     GnssEnergyConsumedCb    mGnssEnergyConsumedInfoCb;
     ResponseCb              mGnssEnergyConsumedResponseCb;
