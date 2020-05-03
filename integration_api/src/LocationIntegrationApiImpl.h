@@ -52,30 +52,39 @@ namespace location_integration
 {
 typedef std::unordered_map<LocConfigTypeEnum, int32_t> LocConfigReqCntMap;
 
-typedef struct {
+struct TuncConfigInfo {
     bool     isValid;
     bool     enable;
     float    tuncThresholdMs; // need to be specified if enable is true
     uint32_t energyBudget;    // need to be specified if enable is true
-} TuncConfigInfo;
+};
 
-typedef struct {
+struct PaceConfigInfo {
     bool isValid;
     bool enable;
-} PaceConfigInfo;
+};
 
-typedef struct {
+struct SVConfigInfo {
     bool             isValid;
     bool             resetToDeFault;
     GnssSvTypeConfig svTypeConfig;
     GnssSvIdConfig   svIdConfig;
-} SVConfigInfo;
+};
 
-typedef struct {
+struct RobustLocationConfigInfo {
     bool isValid;
     bool enable;
     bool enableForE911;
-} RobustLocationConfigInfo;
+};
+
+struct SystemConfigInfo {
+    bool sensorConfigInputValid;
+    ::SystemConfiguration sensorConfigInput;
+    bool gnssSignalLevelValid;
+    ::SystemConfiguration gnssSignalLevel;
+    bool powerContinuityStatusValid;
+    ::SystemConfiguration powerContinuityStatus;
+};
 
 class IpcListener;
 
@@ -106,6 +115,9 @@ public:
     virtual uint32_t gnssDeleteAidingData(GnssAidingData& data) override;
 
     uint32_t getRobustLocationConfig();
+
+    // update DRE engine of various system configuration
+    uint32_t updateSystemConfiguration(const SystemConfiguration& systemConfiguration);
 
 private:
     ~LocationIntegrationApiImpl();
@@ -140,6 +152,7 @@ private:
     SVConfigInfo             mSVConfigInfo;
     LeverArmConfigInfo       mLeverArmConfigInfo;
     RobustLocationConfigInfo mRobustLocationConfigInfo;
+    SystemConfigInfo         mSysConfigInfo;
 
     LocConfigReqCntMap       mConfigReqCntMap;
     LocIntegrationCbs        mIntegrationCbs;

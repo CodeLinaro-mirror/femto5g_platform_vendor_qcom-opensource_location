@@ -62,6 +62,8 @@ enum LocConfigTypeEnum{
     /** Get configuration regarding robust location setting used by
      *  GNSS engine.  </br> */
     GET_ROBUST_LOCATION_CONFIG = 100,
+    /** Update engine service of system status */
+    UPDATE_SYSTEM_CONFIGUAITON = 201,
 } ;
 
 /**
@@ -245,6 +247,104 @@ struct RobustLocationConfig {
     /** Specify whether robust location feature is enabled or not
      *  when device is on E911 call. <br/> */
     bool enabledForE911;
+};
+
+enum VehicleSensorConfigurationInput {
+    /** Auto-detect availability of vehicle sensor input
+     *  Note: This is the recommended configuration for after-market
+     *  deployments which have access to vehicle sensor data port
+     *  (e.g: CAN), but the data decode-ability on the port is not
+     *  assured, due to varied or older vehicle make and model-year.
+     *  This setting also alters QDR/IOTDR error handling
+     *  functionality during vehicle sensor (intermittent)
+     *  outage, to be more accommodative and try to remain in DR
+     *  mode in case of error <br/> */
+    VEHICLE_SENSOR_INPUT_CONFIG_AUTODETECT = 1,
+    /** Vehicle sensor input is available
+     *  Note: This is the recommended configuration for product
+     *  deployments like factory-fit, which have access to vehicle
+     *  sensor data port (e.g: CAN) and data on the port is
+     *  decode-able/known. This setting also alters QDR/IOTDR
+     *  error handling functionality during vehicle sensor
+     *  (intermittent) outage, to be conservative and fall back
+     *  to non-DR mode in case of error <br/> */
+    VEHICLE_SENSOR_INPUT_CONFIG_AVAILABLE = 2,
+    /** Vehicle sensor input is unavailable
+     *  Note: Recommended configuration for product deployments where
+     *  vehicle sensor data port is not available all together.
+     *  <br/> */
+    VEHICLE_SENSOR_INPUT_CONFIG_UNAVAILABLE = 3,
+} ;
+
+enum GnssSignalLevel {
+    /** Auto-detect received GNSS signal level.
+     *  Note: With this setting QDR/IOTDR will attempt to determine
+     *  received signal level. If the receiver is started in
+     *  challenging environments, the auto-detection may
+     *  conservatively estimate the received GNSS signal level. By
+     *  virtue of placement/mounting of GNSS antenna if the expected
+     *  received signal strength range is known, instead of using
+     *  auto-detect option, it is recommended to use one of the
+     *  below other options <br/> */
+    GNSS_SIGNAL_LEVEL_AUTODETECT = 1,
+    /** Strongest received GNSS signal level in open sky condition
+     *  is >= 40dBHz. <br/> */
+    GNSS_SIGNAL_LEVEL_HIGH    = 2,
+    /** Strongest received GNSS signal level in open sky condition
+     *  is [30dbHz, 40dBHz). <br/> */
+    GNSS_SIGNAL_LEVEL_MED     = 3,
+    /** Strongest received GNSS signal level in open sky condition
+     *  is < 30dbHz. <br/> */
+    GNSS_SIGNAL_LEVEL_LOW     = 4,
+};
+
+enum PowerSupplyContiniuityStatus {
+    /** Power supply continuity since last session-stop is unknown <br/> */
+    POWER_CONTINUITY_STATUS_UNKNOWN      = 1,
+    /** Power supply discontinuity detected since last session-stop </br> */
+    POWER_CONTINUITY_STATUS_DISCONNECT = 2,
+    /** Power supply was continuous since last session-stop. </br> */
+    POWER_CONTINUITY_STATUS_CONTINUOUS    = 3,
+};
+
+/** Specify the system configuration in SystemConfiguration. </br> */
+enum SystemConfigurationType {
+    /** SystemConfiguration::systemConfigurationInfo has vehicle sensor
+     *  configuration input </br>  */
+    SYSTEM_CONFIG_TYPE_VEHICLE_SENSOR_CONFIG_INPUT = 1,
+    /** SystemConfiguration::systemConfigurationInfo has gnssSignalLevel.
+     *  </br>  */
+    SYSTEM_CONFIG_TYPE_GNSS_SIGNAL_LEVEL       = 2,
+    /** SystemConfiguration::systemConfigurationInfo has
+     *  powerConnectionStatus. </br>  */
+    SYSTEM_CONFIG_TYPE_POWER_CONTINUITY_STATUS = 3,
+};
+
+/** Specify the System Configuration, which can be either vehicle sensor
+ *  configuration input, received GNSS signal level, or power continuity
+ *  status. </br> */
+struct SystemConfiguration {
+    /** Specify the type in SystemConfiguration::configType.
+     *  If type is SYSTEM_CONFIG_TYPE_VEHICLE_SENSOR_CONFIG_INPUT,
+     *  SystemConfiguration::systemConfigurationInfo has valid sensorConfigInput.
+     *  If type is SYSTEM_CONFIG_TYPE_GNSS_SIGNAL_LEVEL,
+     *  SystemConfiguration::systemConfigurationInfo has valid gnssSignalLevel.
+     *  If type is SYSTEM_CONFIG_TYPE_POWER_CONTINUITY_STATUS,
+     *  SystemConfiguration::systemConfigurationInfo has valid
+     *  powerContinuityStatus.
+     *  Note: This API is meant to inject configuration one time, typically at
+     *  boot or resume and not meant to provide configuration on
+     *  continual basis during run-time.
+     *  </br> */
+    SystemConfigurationType configType;
+    union {
+        /** Specify vehicle sensor configuration </br>  */
+        VehicleSensorConfigurationInput  sensorConfigInput;
+        /** Specify received GNSS signal level. </br>  */
+        GnssSignalLevel           gnssSignalLevel;
+        /** Specify power supply continuity status. </br>  */
+        PowerSupplyContiniuityStatus     powerContinuityStatus;
+    } systemConfigurationInfo;
 };
 
 /**
@@ -509,6 +609,34 @@ public:
                 invoked.
     */
     bool getRobustLocationConfig();
+
+    /** @brief
+       Update device of vehicle system status, including vehicle
+       sensor configuration, received GNSS signal level and power
+       continuity status. <br/>
+
+       Client should wait for the command to finish, e.g.: via
+       LocConfigCb() received before issuing a second
+       udpateSystemConfiguration() command. Behavior is not defined
+       if client issues a second request of
+       udpateSystemConfiguration() without waiting for the previous
+       udpateSystemConfiguration() to finish. <br/>
+
+       @param
+       systemConfiguration: vehicle sysem status to update the
+       device, can be vehicle sensor configuration, or received GNSS
+       signal level or power continuity status. <br/>
+
+       @return true, if system configuration status has been
+               accepted for further processing. When returning true,
+               LocConfigCb() will be invoked to deliver asynchronous
+               processing status. <br/>
+
+       @return false, if vehicle system status is not accepted for
+               further processing. When returning false,
+               LocConfigCb() will not be invoked. <br/>
+    */
+    bool udpateSystemConfiguration(const SystemConfiguration& systemConfiguration);
 
 private:
     LocationIntegrationApiImpl* mApiImpl;

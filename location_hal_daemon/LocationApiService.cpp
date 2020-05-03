@@ -480,6 +480,17 @@ void LocationApiService::processClientMsg(const char* data, uint32_t length) {
             getGnssConfig(pMsg, GNSS_CONFIG_FLAGS_ROBUST_LOCATION_BIT);
             break;
         }
+
+        case E_INTAPI_UPDATE_SYSTEM_CONFIGURATION_MSG_ID: {
+            if (sizeof(LocConfigUpdateSystemConfigurationMsg) != length) {
+                LOC_LOGe("invalid LocConfigUpdateSystemConfigurationMsg");
+                break;
+            }
+            updateDreOfSystemConfig(
+                    reinterpret_cast<LocConfigUpdateSystemConfigurationMsg*> (pMsg));
+            break;
+        }
+
         default: {
             LOC_LOGe("Unknown message");
             break;
@@ -1036,6 +1047,26 @@ void LocationApiService::getGnssConfig(const LocAPIMsgHeader* pReqMsg,
     // if sessionId is 0, e.g.: error callback will be delivered
     // by addConfigRequestToMap
     addConfigRequestToMap(sessionId, pReqMsg);
+}
+
+void LocationApiService::updateDreOfSystemConfig(
+        const LocConfigUpdateSystemConfigurationMsg* pMsg) {
+    if (!pMsg) {
+        return;
+    }
+    std::lock_guard<std::mutex> lock(mMutex);
+    LOC_LOGi(">-- updateDreOfSystemConfig");
+    GnssInterface* gnssInterface = getGnssInterface();
+    if (gnssInterface) {
+        uint32_t sessionId = gnssInterface->updateDreOfSystemConfig(pMsg->mSystemConfiguration);
+        addConfigRequestToMap(sessionId, pMsg);
+    } else {
+        LOC_LOGe(">-- GnssInterface is null");
+        LocHalDaemonClientHandler* pClient = getClient(pMsg->mSocketName);
+        if (pClient) {
+            pClient->onControlResponseCb(LOCATION_ERROR_GENERAL_FAILURE, pMsg->msgId);
+        }
+    }
 }
 
 void LocationApiService::addConfigRequestToMap(
