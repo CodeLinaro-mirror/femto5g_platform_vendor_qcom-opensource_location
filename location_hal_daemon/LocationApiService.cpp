@@ -582,7 +582,11 @@ void LocationApiService::configConstrainedTunc(
                  sessionId);
     } else {
         LocHalDaemonClientHandler* pClient = getClient(pMsg->mSocketName);
-        pClient->onControlResponseCb(LOCATION_ERROR_GENERAL_FAILURE, pMsg->msgId);
+        if (pClient) {
+            pClient->onControlResponseCb(LOCATION_ERROR_GENERAL_FAILURE, pMsg->msgId);
+        } else {
+            LOC_LOGe(">-- invalid client=%s", pMsg->mSocketName);
+        }
     }
 }
 
@@ -604,7 +608,11 @@ void LocationApiService::configPositionAssistedClockEstimator(
         mConfigReqs.emplace(sessionId, configClientData);
     } else {
         LocHalDaemonClientHandler* pClient = getClient(pMsg->mSocketName);
-        pClient->onControlResponseCb(LOCATION_ERROR_GENERAL_FAILURE, pMsg->msgId);
+        if (pClient) {
+            pClient->onControlResponseCb(LOCATION_ERROR_GENERAL_FAILURE, pMsg->msgId);
+        } else {
+            LOC_LOGe(">-- invalid client=%s", pMsg->mSocketName);
+        }
     }
     LOC_LOGi(">-- enable: %d, session ID = %d", pMsg->mEnable,  sessionId);
 }
@@ -619,7 +627,11 @@ void LocationApiService::onControlResponseCallback(LocationError err, uint32_t s
     auto configReqData = mConfigReqs.find(sessionId);
     if (configReqData != std::end(mConfigReqs)) {
         LocHalDaemonClientHandler* pClient = getClient(configReqData->second.clientName);
-        pClient->onControlResponseCb(err, configReqData->second.configMsgId);
+        if (pClient) {
+            pClient->onControlResponseCb(err, configReqData->second.configMsgId);
+        } else {
+            LOC_LOGe(">-- invalid client=%s", configReqData->second.clientName.c_str());
+        }
         mConfigReqs.erase(configReqData);
         LOC_LOGe("--< map size %d", mConfigReqs.size());
     } else {
