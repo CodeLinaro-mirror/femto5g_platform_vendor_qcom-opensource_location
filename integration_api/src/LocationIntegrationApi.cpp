@@ -28,7 +28,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -305,6 +305,9 @@ bool LocationIntegrationApi::deleteAllAidingData() {
         GnssAidingData aidingData = {};
         aidingData.deleteAll = true;
         aidingData.posEngineMask = POSITION_ENGINE_MASK_ALL;
+        aidingData.sv.svTypeMask = GNSS_AIDING_DATA_SV_TYPE_MASK_ALL;
+        aidingData.sv.svMask |= GNSS_AIDING_DATA_SV_EPHEMERIS_BIT;
+        aidingData.dreAidingDataMask |= DR_ENGINE_AIDING_DATA_CALIBRATION_BIT;
         mApiImpl->gnssDeleteAidingData(aidingData);
         return true;
     } else {
