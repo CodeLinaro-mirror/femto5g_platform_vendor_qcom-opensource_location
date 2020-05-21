@@ -144,8 +144,12 @@ void LocNetIface::subscribeWithQcmap() {
 
 #ifdef FEATURE_MOBILEAP_INDICATION
     // We need to Enable/Disable mobile AP only for backhaul connection only if the feature
-    // FEATURE_MOBILEAP_INDICATION is available, since RegisterForIndications will give us
-    // network notification and we don't need to keep mobileap enabled for the same.
+    // FEATURE_MOBILEAP_INDICATION isn't available, since RegisterForIndications will give
+    // us network notification and we don't need to keep mobileap enabled for the same.
+    // If RegisterForIndications api is available, we need not call EnableMobileAP in
+    // constructor and/or bootup, as it is required only to be invoked before initiating
+    // a data call (before ConnectBackhaul). We should not unnecessarily EnableMobileAP
+    // at bootup.
     /* Need to RegisterForIndications to get station mode status indications */
     uint64_t reg_mask = WWAN_ROAMING_STATUS_IND|BACKHAUL_STATUS_IND|WWAN_STATUS_IND| \
             MOBILE_AP_STATUS_IND|STATION_MODE_STATUS_IND|CRADLE_MODE_STATUS_IND| \
@@ -162,7 +166,7 @@ void LocNetIface::subscribeWithQcmap() {
 #else
     /* Need to enable MobileAP to get station mode status indications */
     bool ret = mQcmapClientPtr->EnableMobileAP(&qcmapErr);
-    if (ret == false || qcmapErr != 0) {
+    if (ret == false) {
         LOC_LOGE("Failed to enable mobileap, qcmapErr %d", qcmapErr);
     }
     /* Invoke WLAN status registration
@@ -196,8 +200,6 @@ void LocNetIface::qcmapClientCallback(
         void *ind_cb_data /**< User callback handle. */ ) {
 
     ENTRY_LOG();
-    lock_guard<recursive_mutex> guard(
-            LocNetIface::sLocNetIfaceInstance->getMutex());
 
     qmi_client_error_type qmi_error;
 
@@ -996,7 +998,7 @@ bool LocNetIface::connectBackhaul() {
     /* Access QCMAP instance only from the static instance */
     if (this != LocNetIface::sLocNetIfaceInstance &&
             LocNetIface::sLocNetIfaceInstance != NULL) {
-        LOC_LOGV("Invoke from static LocNetIface instance..");
+        LOC_LOGi("Invoke from static LocNetIface instance..");
         if (mWwanCallStatusCb != NULL) {
             LocNetIface::sLocNetIfaceInstance->
             registerWwanCallStatusCallback(
@@ -1018,7 +1020,6 @@ bool LocNetIface::connectBackhaul() {
     if (mQcmapClientPtr->GetWWANStatus(
             &v4_status, &v6_status, &qmi_err_num) == false) {
         LOC_LOGE("Failed to get wwan status, err 0x%x", qmi_err_num);
-        return false;
     }
     if (v4_status == QCMAP_MSGR_WWAN_STATUS_CONNECTING_V01 ||
         v6_status == QCMAP_MSGR_WWAN_STATUS_IPV6_CONNECTING_V01) {
@@ -1042,7 +1043,7 @@ bool LocNetIface::connectBackhaul() {
 
     /* Check if we've already sent the request */
     if (mIsConnectBackhaulPending || mIsConnectReqSent) {
-        LOC_LOGI("Ignoring connect, connect pending %d, wwan state %d "
+        LOC_LOGd("Ignoring connect, connect pending %d, wwan state %d "
                 "req sent %d", mIsConnectBackhaulPending, mLocNetBackHaulState,
                 mIsConnectReqSent);
         mConnectReqRecvCount++;
@@ -1050,30 +1051,38 @@ bool LocNetIface::connectBackhaul() {
     }
 
 #ifdef FEATURE_MOBILEAP_INDICATION
-    qmi_err_num = QMI_ERR_NONE_V01;
-     /* Need to enable MobileAP to invoke backhaul functions */
-    bool ret = mQcmapClientPtr->EnableMobileAP(&qmi_err_num);
-    if (false == ret ||  0 != qmi_err_num) {
-        LOC_LOGE("Failed to enable mobileap, qcmapErr %d", qmi_err_num);
-        return false;
+    if (!mIsMobileApEnabled) {
+        LOC_LOGi("Enabling MobileAP..");
+        qmi_err_num = QMI_ERR_NONE_V01;
+         /* Need to enable MobileAP to invoke backhaul functions */
+        bool ret = mQcmapClientPtr->EnableMobileAP(&qmi_err_num);
+        if (false == ret) {
+            LOC_LOGE("Failed to enable mobileap, qcmapErr %d", qmi_err_num);
+            return false;
+        }
+        mIsMobileApEnabled = true;
     }
 #endif
+
+    /* Enable roaming */
+    qmi_err_num = QMI_ERR_NONE_V01;
+    LOC_LOGi("Calling SetRoaming enable");
+    if (false == mQcmapClientPtr->SetRoaming(true, &qmi_err_num)) {
+        LOC_LOGE("Connect backhaul failed, err 0x%x", qmi_err_num);
+        return false;
+    }
 
     /* Send connect request to QCMAP */
     qmi_err_num = QMI_ERR_NONE_V01;
     qcmap_msgr_wwan_call_type_v01 wwan_call_type = getWwanCallType();
-    LOC_LOGV("Sending ConnectBackhaul request..");
+    LOC_LOGi("Sending ConnectBackhaul request..");
     if (mQcmapClientPtr->ConnectBackHaul(
             wwan_call_type, &qmi_err_num) == false) {
-        LOC_LOGE("Connect backhaul failed, err 0x%x", qmi_err_num);
-#ifdef FEATURE_MOBILEAP_INDICATION
-        qmi_err_num = QMI_ERR_NONE_V01;
-        //Disabling mobile AP here if connect backhaul fails
-        bool ret = mQcmapClientPtr->DisableMobileAP(&qmi_err_num);
-        if (false == ret || 0 != qmi_err_num ) {
-            LOC_LOGE("Failed to disable mobileap, qcmapErr %d", qmi_err_num);
-        }
-#endif
+        LOC_LOGe("Connect backhaul failed, err 0x%x", qmi_err_num);
+        // Do not Disable mobile AP if connect backhaul fails, as we
+        // should not unnecessarily enable/disable MobileAp. MobileAP
+        // will be disabled in Disconnect Backhaul after retries are
+        // done.
         return false;
     }
 
@@ -1100,7 +1109,7 @@ bool LocNetIface::disconnectBackhaul() {
     /* Access QCMAP instance only from the static instance */
     if (this != LocNetIface::sLocNetIfaceInstance &&
             LocNetIface::sLocNetIfaceInstance != NULL) {
-        LOC_LOGV("Invoke from static LocNetIface instance..");
+        LOC_LOGi("Invoke from static LocNetIface instance..");
         return LocNetIface::sLocNetIfaceInstance->disconnectBackhaul();
     }
 
@@ -1122,7 +1131,7 @@ bool LocNetIface::disconnectBackhaul() {
      * If we didn't send the connect request, no need to disconnect.
      * If we still have surplus connect request count, don't disconnect */
     if (!mIsConnectReqSent || mConnectReqRecvCount > 0) {
-        LOC_LOGI("Conn req sent %d, conn req rcvd cnt %d, "
+        LOC_LOGi("Conn req sent %d, conn req rcvd cnt %d, "
                 "ignoring disconnect", mIsConnectReqSent,
                 mConnectReqRecvCount);
         if (mWwanCallStatusCb != NULL) {
@@ -1136,21 +1145,24 @@ bool LocNetIface::disconnectBackhaul() {
     /* Send disconnect request to QCMAP */
     qmi_error_type_v01 qmi_err_num = QMI_ERR_NONE_V01;
     qcmap_msgr_wwan_call_type_v01 wwan_call_type = getWwanCallType();
-    LOC_LOGV("Sending DisconnectBackhaul..");
-    if (mQcmapClientPtr->DisconnectBackHaul(
+    LOC_LOGi("Sending DisconnectBackhaul..");
+    if (mIsMobileApEnabled && mQcmapClientPtr->DisconnectBackHaul(
             wwan_call_type, &qmi_err_num) == false) {
-        LOC_LOGE("Disconnect backhaul failed, err 0x%x", qmi_err_num);
-#ifdef FEATURE_MOBILEAP_INDICATION
+        LOC_LOGe("Disconnect backhaul failed, err 0x%x", qmi_err_num);
+
         // Even if DisconnectBackHaul fails, do not return, we need to
         // DisableMobileAP in any case.
     }
+    mIsMobileApEnabled = false;
+#ifdef FEATURE_MOBILEAP_INDICATION
     qmi_err_num = QMI_ERR_NONE_V01;
+    LOC_LOGi("Disabling MobileAp..");
     bool ret = mQcmapClientPtr->DisableMobileAP(&qmi_err_num);
     if ( false == ret || 0 != qmi_err_num) {
-        LOC_LOGE("Failed to disable mobileap, qcmapErr %d", qmi_err_num);
-#endif
+        LOC_LOGe("Failed to disable mobileap, qcmapErr %d", qmi_err_num);
         return false;
     }
+#endif
 
     /* Set the flag to track */
     mIsConnectReqSent = false;
