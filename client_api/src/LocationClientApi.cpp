@@ -113,11 +113,6 @@ bool LocationClientApi::startPositionSession(
         ResponseCb responseCallback) {
 
     loc_boot_kpi_marker("L - LCA Extended startFix, tbf %d", intervalInMs);
-    //Input parameter check
-    if (!gnssReportCallbacks.gnssLocationCallback) {
-        LOC_LOGe ("gnssLocation Callbacks can't be NULL");
-        return false;
-    }
 
     if (!mApiImpl) {
         LOC_LOGe ("NULL mApiImpl");
@@ -168,12 +163,6 @@ bool LocationClientApi::startPositionSession(
         ResponseCb responseCallback) {
 
     loc_boot_kpi_marker("L - LCA Fused startFix, tbf %d", intervalInMs);
-    //Input parameter check
-    if (!engReportCallbacks.engLocationsCallback) {
-        LOC_LOGe ("engLocations Callbacks can't be NULL");
-        return false;
-    }
-
     if (!mApiImpl) {
         LOC_LOGe ("NULL mApiImpl");
         return false;
