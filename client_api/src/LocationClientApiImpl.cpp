@@ -1941,11 +1941,6 @@ void IpcListener::onReceive(const char* data, uint32_t length,
         void proc() const {
             LocAPIMsgHeader *pMsg = (LocAPIMsgHeader *)(mMsgData.data());
 
-            // throw away message that does not come from location hal daemon
-            if (false == pMsg->isValidServerMsg(mMsgData.length())) {
-                return;
-            }
-
             switch (pMsg->msgId) {
             case E_LOCAPI_CAPABILILTIES_MSG_ID:
             {
@@ -2380,6 +2375,13 @@ void IpcListener::onReceive(const char* data, uint32_t length,
         LocDiagIface* mDiagInterface;
 #endif //FEATURE_EXTERNAL_AP
     };
+
+    LocAPIMsgHeader *pMsg = (LocAPIMsgHeader *)(data);
+    // throw away message that does not come from location hal daemon
+    if (false == pMsg->isValidServerMsg(length)) {
+        return;
+    }
+
 #ifndef FEATURE_EXTERNAL_AP
     if (mApiImpl.mDiagIface == nullptr) {
         void* libHandle = nullptr;
