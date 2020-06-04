@@ -120,6 +120,12 @@ private:
             qcmap_msgr_backhaul_status_ind_msg_v01 &backhaulStatusIndData);
     void handleQcmapCallback(
             qcmap_msgr_wwan_roaming_status_ind_msg_v01 &roamingStatusIndData);
+#else
+    // Older Pls which does not have backhaul status and roaming status indications.
+    void handleQcmapCallback(
+            qcmap_msgr_station_mode_status_ind_msg_v01 &stationModeIndData);
+    void handleQcmapCallback(
+            qcmap_msgr_wwan_status_ind_msg_v01 &wwanStatusIndData);
 #endif
     void notifyObserverForWlanStatus(bool isWlanEnabled);
     void notifyObserverForNetworkInfo(boolean isConnected, LocNetConnType connType);
