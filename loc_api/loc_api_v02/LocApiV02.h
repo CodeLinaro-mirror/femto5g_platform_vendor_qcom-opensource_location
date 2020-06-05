@@ -80,6 +80,8 @@ private:
   std::vector<Resender> mResenders;
   bool mMasterRegisterNotSupported;
   GnssSvMeasurementSet*  mSvMeasurementSet;
+  bool mIsFirstFinalFixReported;
+  bool mIsFirstStartFixReq;
 
   /* Convert event mask from loc eng to loc_api_v02 format */
   static locClientEventMaskType convertMask(LOC_API_ADAPTER_EVENT_MASK_T mask);
@@ -345,6 +347,10 @@ public:
                                     LocApiResponse *adapterResponse=nullptr);
   virtual void configMinGpsWeek(uint16_t minGpsWeek,
                                 LocApiResponse *adapterResponse=nullptr);
+  virtual LocationError setParameterSync(const GnssConfig & gnssConfig);
+
+  virtual void getParameter(uint32_t sessionId, GnssConfigFlagsMask flags,
+                            LocApiResponse* adapterResponse=nullptr);
   /*
   Returns
   Current value of GPS Lock on success
