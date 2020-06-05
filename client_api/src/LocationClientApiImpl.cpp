@@ -721,8 +721,15 @@ static GnssLocation parseLocationInfo(const ::GnssLocationInfoNotification &halL
     if (::LOCATION_NAV_CORRECTION_RTK_BIT & halLocationInfo.navSolutionMask) {
         flags |= LOCATION_NAV_CORRECTION_RTK_BIT;
     }
+    if (::LOCATION_NAV_CORRECTION_RTK_FIXED_BIT & halLocationInfo.navSolutionMask) {
+        flags |= LOCATION_NAV_CORRECTION_RTK_FIXED_BIT;
+    }
     if (::LOCATION_NAV_CORRECTION_PPP_BIT & halLocationInfo.navSolutionMask) {
         flags |= LOCATION_NAV_CORRECTION_PPP_BIT;
+    }
+    if (::LOCATION_NAV_CORRECTION_ONLY_SBAS_CORRECTED_SV_USED_BIT &
+            halLocationInfo.navSolutionMask) {
+        flags |= LOCATION_NAV_CORRECTION_ONLY_SBAS_CORRECTED_SV_USED_BIT;
     }
     locationInfo.navSolutionMask = (GnssLocationNavSolutionMask)flags;
 
@@ -1677,28 +1684,9 @@ void LocationClientApiImpl::resumeGeofences(size_t count, uint32_t* ids) {
     mMsgTask->sendMsg(new (nothrow) ResumeGeofencesReq(this, count, ids));
 }
 
-uint32_t* LocationClientApiImpl::gnssUpdateConfig(GnssConfig config) {
-
-    struct UpdateConfigReq : public LocMsg {
-        UpdateConfigReq(LocationClientApiImpl* apiImpl, GnssConfig& config) :
-                mApiImpl(apiImpl), mConfig(config) {}
-        virtual ~UpdateConfigReq() {}
-        void proc() const {
-            LocAPIUpdateConfigReqMsg msg(mApiImpl->mSocketName, const_cast<GnssConfig&>(mConfig));
-            bool rc = mApiImpl->sendMessage(reinterpret_cast<uint8_t*>(&msg),
-                                                 sizeof(msg));
-        }
-        LocationClientApiImpl* mApiImpl;
-        GnssConfig mConfig;
-    };
-    mMsgTask->sendMsg(new (nothrow) UpdateConfigReq(this, config));
-    return nullptr;
-}
-
-uint32_t LocationClientApiImpl::gnssDeleteAidingData(GnssAidingData& data) {
-
+uint32_t LocationClientApiImpl::gnssDeleteAidingData(const GnssAidingData& data) {
     struct DeleteAidingDataReq : public LocMsg {
-        DeleteAidingDataReq(const LocationClientApiImpl* apiImpl, GnssAidingData& data) :
+        DeleteAidingDataReq(const LocationClientApiImpl* apiImpl, const GnssAidingData& data) :
                 mApiImpl(apiImpl), mAidingData(data) {}
         virtual ~DeleteAidingDataReq() {}
         void proc() const {
@@ -2299,12 +2287,39 @@ void IpcListener::onReceive(const char* data, uint32_t length,
                         LOC_LOGv("memory alloc failed");
                         break;
                     }
-                    populateClientDiagMeasurements(diagGnssMeasPtr, gnssMeasurements);
+                    diagGnssMeasPtr->count = gnssMeasurements.measurements.size();
+                    if (diagGnssMeasPtr->count > CLIENT_DIAG_GNSS_MEASUREMENTS_MAX) {
+                        diagGnssMeasPtr->count = CLIENT_DIAG_GNSS_MEASUREMENTS_MAX;
+                    }
+                    diagGnssMeasPtr->maxSequence =
+                            (uint8)(((diagGnssMeasPtr->count - 0.5) /
+                                    CLIENT_DIAG_GNSS_MEASUREMENTS_SEQ) + 1);
+                    LOC_LOGv("maxSequence = %d, count = %d",
+                             diagGnssMeasPtr->maxSequence, diagGnssMeasPtr->count);
                     diagGnssMeasPtr->version = LOG_CLIENT_MEASUREMENTS_DIAG_MSG_VERSION;
-
-                    mDiagInterface->logCommit(diagGnssMeasPtr, bufferSrc,
-                            LOG_GNSS_CLIENT_API_MEASUREMENTS_REPORT_C,
-                            sizeof(clientDiagGnssMeasurementsStructType));
+                    diagGnssMeasPtr->clock.flags =
+                        (clientDiagGnssMeasurementsClockFlagsMask)gnssMeasurements.clock.flags;
+                    diagGnssMeasPtr->clock.leapSecond = gnssMeasurements.clock.leapSecond;
+                    diagGnssMeasPtr->clock.timeNs = gnssMeasurements.clock.timeNs;
+                    diagGnssMeasPtr->clock.timeUncertaintyNs =
+                            gnssMeasurements.clock.timeUncertaintyNs;
+                    diagGnssMeasPtr->clock.fullBiasNs = gnssMeasurements.clock.fullBiasNs;
+                    diagGnssMeasPtr->clock.biasNs = gnssMeasurements.clock.biasNs;
+                    diagGnssMeasPtr->clock.biasUncertaintyNs =
+                            gnssMeasurements.clock.biasUncertaintyNs;
+                    diagGnssMeasPtr->clock.driftNsps = gnssMeasurements.clock.driftNsps;
+                    diagGnssMeasPtr->clock.driftUncertaintyNsps =
+                            gnssMeasurements.clock.driftUncertaintyNsps;
+                    diagGnssMeasPtr->clock.hwClockDiscontinuityCount =
+                            gnssMeasurements.clock.hwClockDiscontinuityCount;
+                    for (uint8 i = 0; i < diagGnssMeasPtr->maxSequence; i++) {
+                        diagGnssMeasPtr->sequenceNumber = i + 1;
+                        LOC_LOGv("seqNumber = %d", diagGnssMeasPtr->sequenceNumber);
+                        populateClientDiagMeasurements(diagGnssMeasPtr, gnssMeasurements);
+                        mDiagInterface->logCommit(diagGnssMeasPtr, bufferSrc,
+                                LOG_GNSS_CLIENT_API_MEASUREMENTS_REPORT_C,
+                                sizeof(clientDiagGnssMeasurementsStructType));
+                    }
 #endif // FEATURE_EXTERNAL_AP
                 }
                 break;
@@ -2413,36 +2428,4 @@ void LocationClientApiImpl::gnssNiResponse(uint32_t id, GnssNiResponse response)
 
 void LocationClientApiImpl::updateTrackingOptions(uint32_t id, TrackingOptions& options) {
 }
-
-uint32_t LocationClientApiImpl::resetConstellationConfig() {
-    return 0;
-}
-
-uint32_t LocationClientApiImpl::configConstellations(
-        const GnssSvTypeConfig& svTypeConfig,
-        const GnssSvIdConfig&   svIdConfig) {
-    return 0;
-}
-
-uint32_t LocationClientApiImpl::configConstrainedTimeUncertainty(
-            bool enable, float tuncThreshold, uint32_t energyBudget) {
-    return 0;
-}
-
-uint32_t LocationClientApiImpl::configPositionAssistedClockEstimator(bool enable) {
-    return 0;
-}
-
-uint32_t LocationClientApiImpl::configLeverArm(const LeverArmConfigInfo& configInfo) {
-    return 0;
-}
-
-uint32_t LocationClientApiImpl::configRobustLocation(bool enable, bool enableForE911) {
-    return 0;
-}
-
-uint32_t LocationClientApiImpl::configMinGpsWeek(uint16_t minGpsWeek) {
-    return 0;
-}
-
 } // namespace location_client

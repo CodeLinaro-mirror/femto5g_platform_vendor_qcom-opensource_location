@@ -140,8 +140,11 @@ private:
 
     void pingTest(LocAPIPingTestReqMsg*);
 
-    inline void gnssUpdateConfig(GnssConfig config) {
-        mLocationControlApi->gnssUpdateConfig(config);
+    inline uint32_t gnssUpdateConfig(const GnssConfig& config) {
+        uint32_t* sessioIds =  mLocationControlApi->gnssUpdateConfig(config);
+        // in our usage, we only configure one setting at a time,
+        // so we have only one sessionId
+        return *sessioIds;
     }
 
     inline void gnssDeleteAidingData(GnssAidingData& data) {
@@ -166,6 +169,8 @@ private:
     void configLeverArm(const LocConfigLeverArmReqMsg* pMsg);
     void configRobustLocation(const LocConfigRobustLocationReqMsg* pMsg);
     void configMinGpsWeek(const LocConfigMinGpsWeekReqMsg* pMsg);
+    void configB2sMountParams(const LocConfigB2sMountParamsReqMsg* pMsg);
+    void configMinSvElevation(const LocConfigMinSvElevationReqMsg* pMsg);
 
     // Location configuration API get/read requests
     void getGnssConfig(const LocAPIMsgHeader* pReqMsg,

@@ -69,11 +69,13 @@ bool LocationIntegrationApi::configConstellations(
             svTypeConfig.size = sizeof(svTypeConfig);
             svTypeConfig.enabledSvTypesMask =
                     GNSS_SV_TYPES_MASK_GLO_BIT|GNSS_SV_TYPES_MASK_BDS_BIT|
-                    GNSS_SV_TYPES_MASK_QZSS_BIT|GNSS_SV_TYPES_MASK_GAL_BIT;
+                    GNSS_SV_TYPES_MASK_QZSS_BIT|GNSS_SV_TYPES_MASK_GAL_BIT|
+                    GNSS_SV_TYPES_MASK_NAVIC_BIT;
             GnssSvIdConfig svIdConfig = {};
             svIdConfig.size = sizeof(GnssSvIdConfig);
 
             for (GnssSvIdInfo it : *blacklistedSvIds) {
+                LOC_LOGv("constellation %d, sv id %f", (int) it.constellation, it.svId);
                 GnssSvTypesMask svTypeMask = (GnssSvTypesMask) 0;
                 uint64_t* svMaskPtr = NULL;
                 GnssSvId initialSvId = 0;
@@ -120,6 +122,11 @@ bool LocationIntegrationApi::configConstellations(
                         svMaskPtr = nullptr;
                     }
                     break;
+                case GNSS_CONSTELLATION_TYPE_NAVIC:
+                    svTypeMask = (GnssSvTypesMask) GNSS_SV_TYPES_MASK_NAVIC_BIT;
+                    svMaskPtr = &svIdConfig.navicBlacklistSvMask;
+                    initialSvId = GNSS_SV_CONFIG_NAVIC_INITIAL_SV_ID;
+                break;
                 default:
                     break;
                 }
@@ -150,13 +157,15 @@ bool LocationIntegrationApi::configConstellations(
                      "bds blacklist mask =0x%" PRIx64 ", "
                      "gal blacklist mask =0x%" PRIx64 ",\n"
                      "sbas blacklist mask =0x%" PRIx64 ", ",
+                     "Navic blacklist mask =0x%" PRIx64 ", ",
                      svTypeConfig.enabledSvTypesMask,
                      svTypeConfig.blacklistedSvTypesMask,
                      svIdConfig.gloBlacklistSvMask,
                      svIdConfig.qzssBlacklistSvMask,
                      svIdConfig.bdsBlacklistSvMask,
                      svIdConfig.galBlacklistSvMask,
-                     svIdConfig.sbasBlacklistSvMask);
+                     svIdConfig.sbasBlacklistSvMask,
+                     svIdConfig.navicBlacklistSvMask);
             mApiImpl->configConstellations(svTypeConfig, svIdConfig);
             retVal = true;
         }
@@ -171,6 +180,8 @@ bool LocationIntegrationApi::configConstellations(
 bool LocationIntegrationApi::configConstrainedTimeUncertainty(
         bool enable, float tuncThreshold, uint32_t energyBudget) {
     if (mApiImpl) {
+        LOC_LOGd("enable %d, tuncThreshold %f, energyBudget %u",
+                 enable, tuncThreshold, energyBudget);
         mApiImpl->configConstrainedTimeUncertainty(
                 enable, tuncThreshold, energyBudget);
         return true;
@@ -183,6 +194,7 @@ bool LocationIntegrationApi::configConstrainedTimeUncertainty(
 bool LocationIntegrationApi::configPositionAssistedClockEstimator(bool enable) {
 
     if (mApiImpl) {
+        LOC_LOGd("enable %d", enable);
         mApiImpl->configPositionAssistedClockEstimator(enable);
         return true;
     } else {
@@ -207,6 +219,7 @@ bool LocationIntegrationApi::deleteAllAidingData() {
 
 bool LocationIntegrationApi::deleteAidingData(AidingDataDeletionMask aidingDataMask) {
     if (mApiImpl) {
+        LOC_LOGd("aiding data mask 0x%x", aidingDataMask);
         GnssAidingData aidingData = {};
         aidingData.deleteAll = false;
         aidingData.sv.svTypeMask = GNSS_AIDING_DATA_SV_TYPE_MASK_ALL;
@@ -248,8 +261,9 @@ bool LocationIntegrationApi::configLeverArm(const LeverArmParamsMap& configInfo)
                 params->forwardOffsetMeters = it->second.forwardOffsetMeters;
                 params->sidewaysOffsetMeters = it->second.sidewaysOffsetMeters;
                 params->upOffsetMeters = it->second.upOffsetMeters;
-                LOC_LOGd("mask 0x%x, %f %f %f", mask,  params->forwardOffsetMeters,
-                       params->sidewaysOffsetMeters, params->upOffsetMeters);
+                LOC_LOGd("mask 0x%x, forward %f, sidways %f, up %f",
+                         mask, params->forwardOffsetMeters,
+                         params->sidewaysOffsetMeters, params->upOffsetMeters);
             }
         }
         mApiImpl->configLeverArm(halLeverArmConfigInfo);
@@ -263,6 +277,7 @@ bool LocationIntegrationApi::configLeverArm(const LeverArmParamsMap& configInfo)
 bool LocationIntegrationApi::configRobustLocation(bool enable, bool enableForE911) {
 
     if (mApiImpl) {
+        LOC_LOGd("enable %f, enableForE911 %d", enable, enableForE911);
         mApiImpl->configRobustLocation(enable, enableForE911);
         return true;
     } else {
@@ -284,6 +299,7 @@ bool LocationIntegrationApi::getRobustLocationConfig() {
 
 bool LocationIntegrationApi::configMinGpsWeek(uint16_t minGpsWeek) {
     if (mApiImpl && minGpsWeek != 0) {
+        LOC_LOGd("min gps week %u", minGpsWeek);
         return (mApiImpl->configMinGpsWeek(minGpsWeek) == 0);
     } else {
         LOC_LOGe ("NULL mApiImpl");
@@ -296,6 +312,53 @@ bool LocationIntegrationApi::getMinGpsWeek() {
         return (mApiImpl->getMinGpsWeek() == 0);
     } else {
         LOC_LOGe ("NULL mApiImpl or callback");
+        return false;
+    }
+}
+
+bool LocationIntegrationApi::configBodyToSensorMountParams(
+        const BodyToSensorMountParams& b2sParams) {
+    if (mApiImpl) {
+        LOC_LOGd("roll offset %f, pitch offset %f, yaw offset %f, offset unc %f",
+                 b2sParams.rollOffset, b2sParams.pitchOffset, b2sParams.yawOffset,
+                 b2sParams.offsetUnc);
+        ::BodyToSensorMountParams halB2sParams = {};
+        halB2sParams.rollOffset  = b2sParams.rollOffset;
+        halB2sParams.pitchOffset = b2sParams.pitchOffset;
+        halB2sParams.yawOffset   = b2sParams.yawOffset;
+        halB2sParams.offsetUnc   = b2sParams.offsetUnc;
+        mApiImpl->configBodyToSensorMountParams(halB2sParams);
+        return true;
+    } else {
+        LOC_LOGe ("NULL mApiImpl");
+        return false;
+    }
+}
+
+bool LocationIntegrationApi::configMinSvElevation(uint8_t minSvElevation) {
+    if (mApiImpl) {
+        if (minSvElevation <= 90) {
+            LOC_LOGd("min sv elevation %u", minSvElevation);
+            GnssConfig gnssConfig = {};
+            gnssConfig.flags = GNSS_CONFIG_FLAGS_MIN_SV_ELEVATION_BIT;
+            gnssConfig.minSvElevation = minSvElevation;
+            mApiImpl->configMinSvElevation(minSvElevation);
+            return true;
+        } else {
+            LOC_LOGe("invalid minSvElevation: %u, valid range is [0, 90]", minSvElevation);
+            return false;
+        }
+    } else {
+        LOC_LOGe ("NULL mApiImpl");
+        return false;
+    }
+}
+
+bool LocationIntegrationApi::getMinSvElevation() {
+    if (mApiImpl) {
+        return (mApiImpl->getMinSvElevation() == 0);
+    } else {
+        LOC_LOGe ("NULL mApiImpl");
         return false;
     }
 }
