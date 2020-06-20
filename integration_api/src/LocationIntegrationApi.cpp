@@ -267,5 +267,15 @@ bool LocationIntegrationApi::getRobustLocationConfig() {
     }
 }
 
+bool LocationIntegrationApi::udpateSystemConfiguration(
+        const SystemConfiguration& systemConfiguration) {
+    if (mApiImpl) {
+        return (mApiImpl->updateSystemConfiguration(systemConfiguration) == 0);
+    } else {
+        LOC_LOGe ("NULL mApiImpl");
+        return false;
+    }
+}
+
 } // namespace location_integration
 

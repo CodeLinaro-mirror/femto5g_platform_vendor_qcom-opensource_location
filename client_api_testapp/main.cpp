@@ -71,6 +71,7 @@ static sem_t sem_pingcbreceived;
 #define CONFIG_LEVER_ARM   "configLeverArm"
 #define CONFIG_ROBUST_LOCATION  "configRobustLocation"
 #define GET_ROBUST_LOCATION_CONFIG "getRobustLocationConfig"
+#define UPDATE_SYSTEM_CONFIGATION "updateSystemConfiguration"
 
 // debug utility
 static uint64_t getTimestamp() {
@@ -210,6 +211,8 @@ static void printHelp() {
     printf("%s: config lever arm\n", CONFIG_LEVER_ARM);
     printf("%s: config robust location\n", CONFIG_ROBUST_LOCATION);
     printf("%s: get robust location config\n", GET_ROBUST_LOCATION_CONFIG);
+    printf("%s: update system configuration for gnssSignal/sensorInput/powerStatus\n",
+           UPDATE_SYSTEM_CONFIGATION);
 }
 
 void setRequiredPermToRunAsLocClient()
@@ -328,6 +331,52 @@ void parseLeverArm (char* buf, LeverArmParamsMap &leverArmMap) {
         leverArmMap.emplace(type, leverArm);
         token = strtok_r(NULL, " ", &save);
     }
+}
+
+void parseSystemConfig(char* buf, SystemConfiguration & sysConfig) {
+    static char *save = nullptr;
+    char* token = strtok_r(buf, " ", &save); // skip first one of "updateSystemConfiguration"
+    printf("%s gnssSignal x", UPDATE_SYSTEM_CONFIGATION);
+    printf("%s sensorInput x", UPDATE_SYSTEM_CONFIGATION);
+    printf("%s powerStatus x", UPDATE_SYSTEM_CONFIGATION);
+    do {
+        token = strtok_r(NULL, " ", &save);
+        if (token == NULL) {
+            printf("missing parameter\n");
+            break;
+        }
+        if (strncmp(token, "gnssSignal", strlen("gnssSignal")) == 0) {
+            sysConfig.configType = SYSTEM_CONFIG_TYPE_GNSS_SIGNAL_LEVEL;
+        } else if (strncmp(token, "sensorInput", strlen("sensorInput")) == 0) {
+            sysConfig.configType = SYSTEM_CONFIG_TYPE_VEHICLE_SENSOR_CONFIG_INPUT;
+        } else if (strncmp(token, "powerStatus", strlen("powerStatus")) == 0){
+            sysConfig.configType = SYSTEM_CONFIG_TYPE_POWER_CONTINUITY_STATUS;
+        } else {
+            printf("unknow parameter %s\n", token);
+            break;
+        }
+
+        token = strtok_r(NULL, " ", &save);
+        if (token == NULL) {
+            printf("missing parameter\n");
+            break;
+        }
+        int value = atoi(token);
+
+        if (sysConfig.configType == SYSTEM_CONFIG_TYPE_GNSS_SIGNAL_LEVEL) {
+            sysConfig.systemConfigurationInfo.gnssSignalLevel = (GnssSignalLevel) value;
+            printf("gnss signal level %d\n", sysConfig.systemConfigurationInfo.gnssSignalLevel);
+        } else if (sysConfig.configType == SYSTEM_CONFIG_TYPE_VEHICLE_SENSOR_CONFIG_INPUT) {
+            sysConfig.systemConfigurationInfo.sensorConfigInput =
+                    (VehicleSensorConfigurationInput) value;
+            printf("sensor input %d\n", sysConfig.systemConfigurationInfo.sensorConfigInput);
+        } else if (sysConfig.configType = SYSTEM_CONFIG_TYPE_POWER_CONTINUITY_STATUS) {
+             sysConfig.systemConfigurationInfo.powerContinuityStatus =
+                    (PowerSupplyContiniuityStatus)value;
+             printf("power status %d\n", sysConfig.systemConfigurationInfo.powerContinuityStatus);
+        }
+
+    } while (0);
 }
 
 /******************************************************************************
@@ -456,6 +505,11 @@ int main(int argc, char *argv[]) {
         } else if (strncmp(buf, GET_ROBUST_LOCATION_CONFIG,
                            strlen(GET_ROBUST_LOCATION_CONFIG)) == 0) {
             pIntClient->getRobustLocationConfig();
+        } else if (strncmp(buf, UPDATE_SYSTEM_CONFIGATION,
+                           strlen(UPDATE_SYSTEM_CONFIGATION)) == 0) {
+            SystemConfiguration sysConfig = {};
+            parseSystemConfig(buf, sysConfig);
+            pIntClient->udpateSystemConfiguration(sysConfig);
         } else {
             int command = buf[0];
             switch(command) {
