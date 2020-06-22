@@ -1,4 +1,4 @@
-/* Copyright (c) 2019 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2019-2020 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -39,7 +39,11 @@
 #include <semaphore.h>
 #include <loc_pla.h>
 #include <loc_cfg.h>
-#include <unordered_map>
+#ifdef NO_UNORDERED_SET_OR_MAP
+    #include <map>
+#else
+    #include <unordered_map>
+#endif
 
 #include <LocationClientApi.h>
 #include <LocationIntegrationApi.h>
@@ -64,7 +68,15 @@ static sem_t sem_pingcbreceived;
 #define CONFIG_SV          "configSV"
 #define MULTI_CONFIG_SV    "multiConfigSV"
 #define DELETE_ALL         "deleteAll"
+#define DELETE_EPH         "deleteEph"
 #define CONFIG_LEVER_ARM   "configLeverArm"
+#define CONFIG_ROBUST_LOCATION  "configRobustLocation"
+#define GET_ROBUST_LOCATION_CONFIG "getRobustLocationConfig"
+#define CONFIG_MIN_GPS_WEEK "configMinGpsWeek"
+#define GET_MIN_GPS_WEEK    "getMinGpsWeek"
+#define CONFIG_B2S_PARAMS   "configB2sParams"
+#define CONFIG_MIN_SV_ELEVATION "configMinSvElevation"
+#define GET_MIN_SV_ELEVATION    "getMinSvElevation"
 
 // debug utility
 static uint64_t getTimestamp() {
@@ -179,7 +191,24 @@ static void onConfigResponseCb(location_integration::LocConfigTypeEnum    reques
     printf("<<< onConfigResponseCb, type %d, err %d\n", requestType, response);
 }
 
+static void onGetRobustLocationConfigCb(RobustLocationConfig robustLocationConfig) {
+    printf("<<< onGetRobustLocationConfigCb, valid flags 0x%x, enabled %d, enabledForE911 %d, "
+           "version (major %u, minor %u)\n",
+           robustLocationConfig.validMask, robustLocationConfig.enabled,
+           robustLocationConfig.enabledForE911, robustLocationConfig.version.major,
+           robustLocationConfig.version.minor);
+}
+
+static void onGetMinGpsWeekCb(uint16_t minGpsWeek) {
+    printf("<<< onGetMinGpsWeekCb, minGpsWeek %d\n", minGpsWeek);
+}
+
+static void onGetMinSvElevationCb(uint8_t minSvElevation) {
+    printf("<<< onGetMinSvElevationCb, minSvElevationAngleSetting: %d\n", minSvElevation);
+}
+
 static void printHelp() {
+    printf("\n************* options *************\n");
     printf("g: Gnss report session with 1000 ms interval\n");
     printf("u: Update a session with 2000 ms interval\n");
     printf("m: Interleaving fix session with 1000 and 2000 ms interval, change every 3 seconds\n");
@@ -187,15 +216,23 @@ static void printHelp() {
     printf("p: Ping test\n");
     printf("q: Quit\n");
     printf("r: delete client\n");
-    printf("%s tuncThreshold energyBudget: enable tunc\n", ENABLE_TUNC);
-    printf("%s: disable tunc\n", DISABLE_TUNC);
+    printf("%s tuncThreshold energyBudget: enable TUNC\n", ENABLE_TUNC);
+    printf("%s: disable TUNC\n", DISABLE_TUNC);
     printf("%s: enable PACE\n", ENABLE_PACE);
     printf("%s: disable PACE\n", DISABLE_PACE);
     printf("%s: reset sv config to default\n", RESET_SV_CONFIG);
     printf("%s: configure sv \n", CONFIG_SV);
     printf("%s: mulitple config SV \n", MULTI_CONFIG_SV);
     printf("%s: delete all aiding data\n", DELETE_ALL);
+    printf("%s: delete ephemeris data\n", DELETE_EPH);
     printf("%s: config lever arm\n", CONFIG_LEVER_ARM);
+    printf("%s: config robust location\n", CONFIG_ROBUST_LOCATION);
+    printf("%s: get robust location config\n", GET_ROBUST_LOCATION_CONFIG);
+    printf("%s: set min gps week\n", CONFIG_MIN_GPS_WEEK);
+    printf("%s: get min gps week\n", GET_MIN_GPS_WEEK);
+    printf("%s: config b2s params\n", CONFIG_B2S_PARAMS);
+    printf("%s: set min sv elevation angle\n", CONFIG_MIN_SV_ELEVATION);
+    printf("%s: get min sv elevation angle\n", GET_MIN_SV_ELEVATION);
 }
 
 void setRequiredPermToRunAsLocClient()
@@ -213,12 +250,13 @@ void setRequiredPermToRunAsLocClient()
         // Get current set of supplementary groups.
         memset(appGrpsIds, 0, sizeof(appGrpsIds));
         numGrpIds = getgroups(LOC_PROCESS_MAX_NUM_GROUPS, appGrpsIds);
-        if (numGrpIds == -1) {
+        if(numGrpIds == -1) {
             printf("Could not find groups. ngroups:%d\n", numGrpIds);
+            numGrpIds = 0;
         }
         else {
             printf("Curr num_groups = %d, Current GIDs: ", numGrpIds);
-            for (i=0; i<numGrpIds; i++) {
+            for(i=0; i<numGrpIds; i++) {
                 printf("%d ", appGrpsIds[i]);
             }
         }
@@ -231,23 +269,24 @@ void setRequiredPermToRunAsLocClient()
             printf("Diag Group id = %d", appGrpsIds[numGrpIds]);
             numGrpIds++;
             i = setgroups(numGrpIds, appGrpsIds);
-            if (i == -1) {
+            if(i == -1) {
                 printf("Could not set groups. errno:%d, %s", errno, strerror(errno));
             } else {
                 printf("Total of %d groups set for test app", numGrpIds);
             }
         }
-        if (-1 == setgid(GID_LOCCLIENT)) {
+        if(-1 == setgid(GID_LOCCLIENT)) {
             printf("%s:%d]: Error: setgid GID_LOCCLIENT failed. %s\n",
                      __func__, __LINE__, strerror(errno));
         }
-        if (-1 == setuid(UID_LOCCLIENT)) {
+        if(-1 == setuid(UID_LOCCLIENT)) {
             printf("%s:%d]: Error: setuid UID_LOCCLIENT failed. %s\n",
                      __func__, __LINE__, strerror(errno));
         }
     } else {
         printf("Test app started as user: %d", getuid());
     }
+
 #endif// USE_GLIB
 }
 
@@ -314,6 +353,41 @@ void parseLeverArm (char* buf, LeverArmParamsMap &leverArmMap) {
     }
 }
 
+void parseB2sParams (char* buf, BodyToSensorMountParams& b2sParams) {
+    static char *save = nullptr;
+    char* token = strtok_r(buf, " ", &save); // skip first one of "configB2sParams"
+    do {
+        token = strtok_r(NULL, " ", &save);
+        if (token == NULL) {
+            printf("missing roll offset\n");
+            break;
+        }
+        b2sParams.rollOffset = atof(token);
+
+        token = strtok_r(NULL, " ", &save);
+        if (token == NULL) {
+            printf("missing pitch offset\n");
+            break;
+        }
+        b2sParams.pitchOffset = atof(token);
+
+        token = strtok_r(NULL, " ", &save);
+        if (token == NULL) {
+            printf("missing yaw offset\n");
+            break;
+        }
+        b2sParams.yawOffset = atof(token);
+
+        token = strtok_r(NULL, " ", &save);
+        if (token == NULL) {
+            printf("missing offset uncertainty\n");
+            break;
+        }
+        b2sParams.offsetUnc = atof(token);
+    } while (0);
+}
+
+
 /******************************************************************************
 Main function
 ******************************************************************************/
@@ -341,6 +415,11 @@ int main(int argc, char *argv[]) {
     LocIntegrationCbs intCbs;
 
     intCbs.configCb = LocConfigCb(onConfigResponseCb);
+    intCbs.getRobustLocationConfigCb =
+            LocConfigGetRobustLocationConfigCb(onGetRobustLocationConfigCb);
+    intCbs.getMinGpsWeekCb = LocConfigGetMinGpsWeekCb(onGetMinGpsWeekCb);
+    intCbs.getMinSvElevationCb = LocConfigGetMinSvElevationCb(onGetMinSvElevationCb);
+
     LocConfigPriorityMap priorityMap;
     location_integration::LocationIntegrationApi* pIntClient =
             new LocationIntegrationApi(priorityMap, intCbs);
@@ -362,6 +441,7 @@ int main(int argc, char *argv[]) {
                 printf("failed to create integration client\n");
                 break;
             }
+            sleep(1); // wait for capability callback if you don't like sleep
         }
 
         if (strncmp(buf, DISABLE_TUNC, strlen(DISABLE_TUNC)) == 0) {
@@ -389,6 +469,8 @@ int main(int argc, char *argv[]) {
             pIntClient->configPositionAssistedClockEstimator(true);
         } else if (strncmp(buf, DELETE_ALL, strlen(DELETE_ALL)) == 0) {
             pIntClient->deleteAllAidingData();
+        } else if (strncmp(buf, DELETE_EPH, strlen(DELETE_EPH)) == 0) {
+            pIntClient->deleteAidingData(AIDING_DATA_DELETION_EPHEMERIS);
         } else if (strncmp(buf, RESET_SV_CONFIG, strlen(RESET_SV_CONFIG)) == 0) {
             pIntClient->configConstellations(nullptr);
         } else if (strncmp(buf, CONFIG_SV, strlen(CONFIG_SV)) == 0) {
@@ -416,6 +498,56 @@ int main(int argc, char *argv[]) {
             LeverArmParamsMap configInfo;
             parseLeverArm(buf, configInfo);
             pIntClient->configLeverArm(configInfo);
+        } else if (strncmp(buf, CONFIG_ROBUST_LOCATION, strlen(CONFIG_ROBUST_LOCATION)) == 0) {
+            // get enable and enableForE911
+            static char *save = nullptr;
+            bool enable = false;
+            bool enableForE911 = false;
+            // skip first argument of configRobustLocation
+            char* token = strtok_r(buf, " ", &save);
+            token = strtok_r(NULL, " ", &save);
+            if (token != NULL) {
+                enable = (atoi(token) == 1);
+                token = strtok_r(NULL, " ", &save);
+                if (token != NULL) {
+                    enableForE911 = (atoi(token) == 1);
+                }
+            }
+            printf("enable %d, enableForE911 %d\n", enable, enableForE911);
+            pIntClient->configRobustLocation(enable, enableForE911);
+        } else if (strncmp(buf, GET_ROBUST_LOCATION_CONFIG,
+                           strlen(GET_ROBUST_LOCATION_CONFIG)) == 0) {
+            pIntClient->getRobustLocationConfig();
+        } else if (strncmp(buf, CONFIG_MIN_GPS_WEEK, strlen(CONFIG_MIN_GPS_WEEK)) == 0) {
+            static char *save = nullptr;
+            uint16_t gpsWeekNum = 0;
+            // skip first argument of configMinGpsWeek
+            char* token = strtok_r(buf, " ", &save);
+            token = strtok_r(NULL, " ", &save);
+            if (token != NULL) {
+                gpsWeekNum = (uint16_t) atoi(token);
+            }
+            printf("gps week num %d\n", gpsWeekNum);
+            pIntClient->configMinGpsWeek(gpsWeekNum);
+        } else if (strncmp(buf, GET_MIN_GPS_WEEK, strlen(GET_MIN_GPS_WEEK)) == 0) {
+            pIntClient->getMinGpsWeek();
+        } else if (strncmp(buf, CONFIG_B2S_PARAMS, strlen(CONFIG_B2S_PARAMS)) == 0) {
+            BodyToSensorMountParams b2sParams = {};
+            parseB2sParams(buf, b2sParams);
+            pIntClient->configBodyToSensorMountParams(b2sParams);
+        } else if (strncmp(buf, CONFIG_MIN_SV_ELEVATION, strlen(CONFIG_MIN_SV_ELEVATION)) == 0) {
+            static char *save = nullptr;
+            uint8_t minSvElevation = 0;
+            // skip first argument of configMinSvElevation
+            char* token = strtok_r(buf, " ", &save);
+            token = strtok_r(NULL, " ", &save);
+            if (token != NULL) {
+                minSvElevation = (uint16_t) atoi(token);
+            }
+            printf("min Sv elevation %d\n", minSvElevation);
+            pIntClient->configMinSvElevation(minSvElevation);
+        } else if (strncmp(buf, GET_MIN_SV_ELEVATION, strlen(GET_MIN_SV_ELEVATION)) == 0) {
+            pIntClient->getMinSvElevation();
         } else {
             int command = buf[0];
             switch(command) {

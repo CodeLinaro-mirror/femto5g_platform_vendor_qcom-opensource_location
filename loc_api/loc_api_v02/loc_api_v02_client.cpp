@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2016, 2018-2019, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2016, 2018-2020, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -343,6 +343,11 @@ static const locClientEventIndTableStructT locClientEventIndTable[]= {
   { QMI_LOC_LOCATION_REQUEST_NOTIFICATION_IND_V02,
     sizeof(qmiLocLocationRequestNotificationIndMsgT_v02),
     QMI_LOC_LOCATION_REQUEST_NOTIFICATION_IND_V02},
+
+  // XTRA config query request
+  { QMI_LOC_EVENT_QUERY_XTRA_INFO_REQ_IND_V02,
+    sizeof(qmiLocEventQueryXtraInfoReqIndMsgT_v02),
+    QMI_LOC_EVENT_MASK_QUERY_XTRA_INFO_V02},
 };
 
 /* table to relate the respInd Id with its size */
@@ -756,7 +761,25 @@ static const locClientRespIndTableStructT locClientRespIndTable[]= {
      sizeof(qmiLocQueryGNSSEnergyConsumedIndMsgT_v02) },
 
    { QMI_LOC_INJECT_PLATFORM_POWER_STATE_IND_V02,
-     sizeof(qmiLocInjectPlatformPowerStateIndMsgT_v02) }
+     sizeof(qmiLocInjectPlatformPowerStateIndMsgT_v02) },
+
+   { QMI_LOC_SET_ROBUST_LOCATION_CONFIG_IND_V02,
+     sizeof(qmiLocGenReqStatusIndMsgT_v02) },
+
+   { QMI_LOC_GET_ROBUST_LOCATION_CONFIG_IND_V02,
+     sizeof(qmiLocGetRobustLocationConfigIndMsgT_v02) },
+
+   { QMI_LOC_SET_MIN_GPS_WEEK_NUMBER_IND_V02,
+     sizeof(qmiLocGenReqStatusIndMsgT_v02) },
+
+   { QMI_LOC_GET_MIN_GPS_WEEK_NUMBER_IND_V02,
+     sizeof(qmiLocGetMinGpsWeekNumberIndMsgT_v02) },
+
+   { QMI_LOC_SET_PARAMETER_IND_V02,
+     sizeof(qmiLocGenReqStatusIndMsgT_v02) },
+
+   { QMI_LOC_GET_PARAMETER_IND_V02,
+     sizeof(qmiLocGetParameterIndMsgT_v02) },
 };
 
 
@@ -1255,7 +1278,6 @@ bool validateRequest(
 {
   bool noPayloadFlag = false;
 
-  LOC_LOGV("%s:%d]: reqId = %d\n", __func__, __LINE__, reqId);
   switch(reqId)
   {
     case QMI_LOC_INFORM_CLIENT_REVISION_REQ_V02:
@@ -1817,6 +1839,36 @@ bool validateRequest(
         break;
     }
 
+    case QMI_LOC_SET_ROBUST_LOCATION_CONFIG_REQ_V02:
+    {
+        *pOutLen = sizeof(qmiLocSetRobustLocationReqMsgT_v02);
+        break;
+    }
+
+    case QMI_LOC_INJECT_ENV_AIDING_REQ_V02:
+    {
+        *pOutLen = sizeof(qmiLocEventInjectEnvAidingReqMsgT_v02);
+        break;
+    }
+
+    case QMI_LOC_SET_MIN_GPS_WEEK_NUMBER_REQ_V02:
+    {
+        *pOutLen = sizeof(qmiLocSetMinGpsWeekNumberReqMsgT_v02);
+        break;
+    }
+
+    case QMI_LOC_SET_PARAMETER_REQ_V02:
+    {
+        *pOutLen = sizeof(qmiLocSetParameterReqMsgT_v02);
+        break;
+    }
+
+    case QMI_LOC_GET_PARAMETER_REQ_V02:
+    {
+        *pOutLen = sizeof(qmiLocGetParameterReqMsgT_v02);
+        break;
+    }
+
     // ALL requests with no payload
     case QMI_LOC_GET_SERVICE_REVISION_REQ_V02:
     case QMI_LOC_GET_FIX_CRITERIA_REQ_V02:
@@ -1840,14 +1892,15 @@ bool validateRequest(
     case QMI_LOC_QUERY_OTB_ACCUMULATED_DISTANCE_REQ_V02:
     case QMI_LOC_GET_BLACKLIST_SV_REQ_V02:
     case QMI_LOC_GET_CONSTELLATION_CONTROL_REQ_V02:
+    case QMI_LOC_GET_ROBUST_LOCATION_CONFIG_REQ_V02:
+    case QMI_LOC_GET_MIN_GPS_WEEK_NUMBER_REQ_V02:
     {
       noPayloadFlag = true;
       break;
     }
 
     default:
-      LOC_LOGW("%s:%d]: Error unknown reqId=%d\n", __func__, __LINE__,
-                    reqId);
+      LOC_LOGw("Error unknown reqId=%d", reqId);
       return false;
   }
   if(true == noPayloadFlag)
@@ -1860,8 +1913,7 @@ bool validateRequest(
     //set dummy pointer for request union
     *ppOutData = (void*) reqPayload.pInformClientRevisionReq;
   }
-  LOC_LOGV("%s:%d]: reqId=%d, len = %d\n", __func__, __LINE__,
-                reqId, *pOutLen);
+  LOC_LOGv("reqId=%d, len = %d", reqId, *pOutLen);
   return true;
 }
 

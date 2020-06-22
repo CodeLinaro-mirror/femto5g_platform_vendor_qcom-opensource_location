@@ -64,6 +64,11 @@ static inline void waitForDir(const char* dirName) {
 int main(int argc, char *argv[])
 {
     configParamToRead configParamRead = {};
+#if FEATURE_AUTOMOTIVE
+    // enable auto start by default with 100 ms TBF
+    configParamRead.autoStartGnss = 1;
+    configParamRead.gnssSessionTbfMs = 100;
+#endif
 
     const loc_param_s_type configTable[] =
     {
@@ -73,16 +78,11 @@ int main(int argc, char *argv[])
         {"DELETE_ALL_ON_ENGINE_MASK", &configParamRead.posEngineMask, NULL, 'n'}
     };
 
-#if FEATURE_AUTOMOTIVE
-    // enable auto start by default with 100 ms TBF
-    configParamRead.autoStartGnss = 1;
-    configParamRead.gnssSessionTbfMs = 100;
-#endif
-
     // read configuration file
     UTIL_READ_CONF(LOC_PATH_GPS_CONF, configTable);
 
     LOC_LOGi("location hal daemon - ver %s", HAL_DAEMON_VERSION);
+    loc_boot_kpi_marker("L - Location Probe Start");
 
     waitForDir(SOCKET_DIR_LOCATION);
     waitForDir(SOCKET_LOC_CLIENT_DIR);
@@ -106,7 +106,7 @@ int main(int argc, char *argv[])
             LOC_PROCESS_MAX_NUM_GROUPS, ' ');
 
     int numGrpIds=0;
-    for (int i=0; i<numGrps; i++) {
+    for(int i=0; i<numGrps; i++) {
         struct group* grp = getgrnam(splitGrpString[i]);
         if (grp) {
             groupIds[numGrpIds] = grp->gr_gid;
@@ -115,7 +115,7 @@ int main(int argc, char *argv[])
         }
     }
     if (0 != numGrpIds) {
-        if (-1 == setgroups(numGrpIds, groupIds)) {
+        if(-1 == setgroups(numGrpIds, groupIds)) {
             LOC_LOGe("Error: setgroups failed %s", strerror(errno));
         }
     }
@@ -132,16 +132,16 @@ int main(int argc, char *argv[])
         struct __user_cap_header_struct cap_hdr = {};
         cap_hdr.version = _LINUX_CAPABILITY_VERSION;
         cap_hdr.pid = getpid();
-        if (prctl(PR_SET_KEEPCAPS, 1) < 0) {
+        if(prctl(PR_SET_KEEPCAPS, 1) < 0) {
             LOC_LOGe("Error: prctl failed. %s", strerror(errno));
         }
 
         // Set the group id first and then set the effective userid, to gps.
-        if (-1 == setgid(GID_GPS)) {
+        if(-1 == setgid(GID_GPS)) {
             LOC_LOGe("Error: setgid failed. %s", strerror(errno));
         }
         // Set user id
-        if (-1 == setuid(UID_GPS)) {
+        if(-1 == setuid(UID_GPS)) {
             LOC_LOGe("Error: setuid failed. %s", strerror(errno));
         }
 
@@ -150,7 +150,7 @@ int main(int argc, char *argv[])
         cap_data.permitted = (1 << CAP_NET_BIND_SERVICE) | (1 << CAP_NET_ADMIN);
         cap_data.effective = cap_data.permitted;
         LOC_LOGv("cap_data.permitted: %d", (int)cap_data.permitted);
-        if (capset(&cap_hdr, &cap_data)) {
+        if(capset(&cap_hdr, &cap_data)) {
             LOC_LOGe("Error: capset failed. %s", strerror(errno));
         }
 #endif
@@ -167,7 +167,7 @@ int main(int argc, char *argv[])
     pStartDgnssApiService =
             (StartDgnssApiServiceApi*)dlGetSymFromLib(libhandle, libName,
                                                       "startDgnssApiService");
-    if (nullptr != pStartDgnssApiService){
+    if(nullptr != pStartDgnssApiService){
         pStartDgnssApiService();
     }
 

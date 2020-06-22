@@ -1,4 +1,4 @@
-/* Copyright (c) 2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018-2020 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -29,7 +29,6 @@
 #ifndef LOCATIONAPISERVICE_H
 #define LOCATIONAPISERVICE_H
 
-#include <unordered_map>
 #include <string>
 #include <mutex>
 
@@ -44,6 +43,12 @@
 #include <LocationApiMsg.h>
 
 #include <LocHalDaemonClientHandler.h>
+
+#ifdef NO_UNORDERED_SET_OR_MAP
+    #include <map>
+#else
+    #include <unordered_map>
+#endif
 
 #undef LOG_TAG
 #define LOG_TAG "LocSvc_HalDaemon"
@@ -135,8 +140,11 @@ private:
 
     void pingTest(LocAPIPingTestReqMsg*);
 
-    inline void gnssUpdateConfig(GnssConfig config) {
-        mLocationControlApi->gnssUpdateConfig(config);
+    inline uint32_t gnssUpdateConfig(const GnssConfig& config) {
+        uint32_t* sessioIds =  mLocationControlApi->gnssUpdateConfig(config);
+        // in our usage, we only configure one setting at a time,
+        // so we have only one sessionId
+        return *sessioIds;
     }
 
     inline void gnssDeleteAidingData(GnssAidingData& data) {
@@ -146,6 +154,7 @@ private:
     // Location control API callback
     void onControlResponseCallback(LocationError err, uint32_t id);
     void onControlCollectiveResponseCallback(size_t count, LocationError *errs, uint32_t *ids);
+    void onGnssConfigCallback(uint32_t sessionId, const GnssConfig& config);
     void onGnssEnergyConsumedCb(uint64_t totalEnergyConsumedSinceFirstBoot);
 
     // Location configuration API requests
@@ -158,6 +167,16 @@ private:
     void configAidingDataDeletion(
             LocConfigAidingDataDeletionReqMsg* pMsg);
     void configLeverArm(const LocConfigLeverArmReqMsg* pMsg);
+    void configRobustLocation(const LocConfigRobustLocationReqMsg* pMsg);
+    void configMinGpsWeek(const LocConfigMinGpsWeekReqMsg* pMsg);
+    void configB2sMountParams(const LocConfigB2sMountParamsReqMsg* pMsg);
+    void configMinSvElevation(const LocConfigMinSvElevationReqMsg* pMsg);
+
+    // Location configuration API get/read requests
+    void getGnssConfig(const LocAPIMsgHeader* pReqMsg,
+                       GnssConfigFlagsBits configFlag);
+
+    // Location configuration API util routines
     void addConfigRequestToMap(uint32_t sessionId,
                                const LocAPIMsgHeader* pMsg);
 
@@ -179,8 +198,6 @@ private:
         std::string clientname(socketName);
         return getClient(clientname);
     }
-
-    void checkEnableGnss();
 
     GnssInterface* getGnssInterface();
     // OSFramework instance
@@ -210,6 +227,7 @@ private:
 
     // Configration
     const uint32_t mAutoStartGnss;
+
     PowerStateType  mPowerState;
 };
 
