@@ -60,6 +60,7 @@ typedef struct {
     uint32_t gnssSessionTbfMs;
     uint32_t deleteAllBeforeAutoStart;
     uint32_t posEngineMask;
+    uint32_t positionMode;
 } configParamToRead;
 
 
@@ -222,6 +223,7 @@ private:
 
     // Configration
     const uint32_t mAutoStartGnss;
+    GnssSuplMode   mPositionMode;
 
     PowerStateType  mPowerState;
 };
