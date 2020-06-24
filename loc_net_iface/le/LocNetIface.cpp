@@ -169,6 +169,7 @@ void LocNetIface::subscribeWithQcmap() {
     if (ret == false) {
         LOC_LOGE("Failed to enable mobileap, qcmapErr %d", qcmapErr);
     }
+    mIsMobileApEnabled = true;
     /* Invoke WLAN status registration
      * WWAN is by default registered */
     ret = mQcmapClientPtr->RegisterForWLANStatusIND(&qcmapErr, true);
@@ -407,18 +408,15 @@ void LocNetIface::handleQcmapCallback(
     /* Notify observers */
     if (stationModeIndData.station_mode_status == QCMAP_MSGR_STATION_MODE_CONNECTED_V01) {
         mLocNetBackHaulState = LOC_NET_CONN_STATE_CONNECTED;
-        mLocNetBackHaulType = LOC_NET_CONN_TYPE_WLAN;
-        notifyCurrentNetworkInfo(false);
     } else if (stationModeIndData.station_mode_status ==
                 QCMAP_MSGR_STATION_MODE_DISCONNECTED_V01) {
         mLocNetBackHaulState = LOC_NET_CONN_STATE_DISCONNECTED;
-        mLocNetBackHaulType = LOC_NET_CONN_TYPE_WLAN;
-        notifyCurrentNetworkInfo(false);
     } else {
         LOC_LOGE("Unsupported station mode status %d", stationModeIndData.station_mode_status);
         mLocNetBackHaulState = LOC_NET_CONN_STATE_INVALID;
-        mLocNetBackHaulType = LOC_NET_CONN_TYPE_INVALID;
     }
+    mLocNetBackHaulType = LOC_NET_CONN_TYPE_WLAN;
+    notifyCurrentNetworkInfo(false);
 }
 
 void LocNetIface::handleQcmapCallback(qcmap_msgr_wwan_status_ind_msg_v01 &wwanStatusIndData) {
@@ -431,18 +429,15 @@ void LocNetIface::handleQcmapCallback(qcmap_msgr_wwan_status_ind_msg_v01 &wwanSt
     if (wwanStatusIndData.wwan_status ==
             QCMAP_MSGR_WWAN_STATUS_CONNECTED_V01) {
         mLocNetBackHaulState = LOC_NET_CONN_STATE_CONNECTED;
-        mLocNetBackHaulType = LOC_NET_CONN_TYPE_WWAN_INTERNET;
-        notifyCurrentNetworkInfo(false);
     } else if (wwanStatusIndData.wwan_status ==
             QCMAP_MSGR_WWAN_STATUS_DISCONNECTED_V01) {
         mLocNetBackHaulState = LOC_NET_CONN_STATE_DISCONNECTED;
-        mLocNetBackHaulType = LOC_NET_CONN_TYPE_WWAN_INTERNET;
-        notifyCurrentNetworkInfo(false);
     } else {
         LOC_LOGW("Unsupported wwan status %d", wwanStatusIndData.wwan_status);
         mLocNetBackHaulState = LOC_NET_CONN_STATE_INVALID;
-        mLocNetBackHaulType = LOC_NET_CONN_TYPE_INVALID;
     }
+    mLocNetBackHaulType = LOC_NET_CONN_TYPE_WWAN_INTERNET;
+    notifyCurrentNetworkInfo(false);
 }
 #endif
 
