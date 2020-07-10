@@ -2074,7 +2074,7 @@ enum loc_api_adapter_err LocApiV02 :: setNMEATypesSync(uint32_t typesMask)
 
 /* set the configuration for LTE positioning profile (LPP) */
 LocationError
-LocApiV02::setLPPConfigSync(GnssConfigLppProfile profile)
+LocApiV02::setLPPConfigSync(GnssConfigLppProfileMask profileMask)
 {
   LocationError err = LOCATION_ERROR_SUCCESS;
   locClientStatusEnumType result = eLOC_CLIENT_SUCCESS;
@@ -2082,27 +2082,23 @@ LocApiV02::setLPPConfigSync(GnssConfigLppProfile profile)
   qmiLocSetProtocolConfigParametersReqMsgT_v02 lpp_config_req;
   qmiLocSetProtocolConfigParametersIndMsgT_v02 lpp_config_ind;
 
-  LOC_LOGD("%s:%d]: lpp profile = %u",  __func__, __LINE__, profile);
+  LOC_LOGD("%s:%d]: lpp profile = %u",  __func__, __LINE__, profileMask);
 
   memset(&lpp_config_req, 0, sizeof(lpp_config_req));
   memset(&lpp_config_ind, 0, sizeof(lpp_config_ind));
 
   lpp_config_req.lppConfig_valid = 1;
-  switch (profile) {
-    case GNSS_CONFIG_LPP_PROFILE_USER_PLANE:
-      lpp_config_req.lppConfig = QMI_LOC_LPP_CONFIG_ENABLE_USER_PLANE_V02;
-      break;
-    case GNSS_CONFIG_LPP_PROFILE_CONTROL_PLANE:
-      lpp_config_req.lppConfig = QMI_LOC_LPP_CONFIG_ENABLE_CONTROL_PLANE_V02;
-      break;
-    case GNSS_CONFIG_LPP_PROFILE_USER_PLANE_AND_CONTROL_PLANE:
-      lpp_config_req.lppConfig = QMI_LOC_LPP_CONFIG_ENABLE_USER_PLANE_V02 |
-                                 QMI_LOC_LPP_CONFIG_ENABLE_CONTROL_PLANE_V02;
-      break;
-    case GNSS_CONFIG_LPP_PROFILE_RRLP_ON_LTE:
-    default:
-      lpp_config_req.lppConfig = 0;
-      break;
+  if (profileMask & GNSS_CONFIG_LPP_PROFILE_USER_PLANE_BIT) {
+      lpp_config_req.lppConfig |= QMI_LOC_LPP_CONFIG_ENABLE_USER_PLANE_V02;
+  }
+  if (profileMask & GNSS_CONFIG_LPP_PROFILE_CONTROL_PLANE_BIT) {
+      lpp_config_req.lppConfig |= QMI_LOC_LPP_CONFIG_ENABLE_CONTROL_PLANE_V02;
+  }
+  if (profileMask & GNSS_CONFIG_LPP_PROFILE_USER_PLANE_OVER_NR5G_SA_BIT) {
+      lpp_config_req.lppConfig |= QMI_LOC_LPP_CONFIG_ENABLE_USER_PLANE_OVER_NR5G_SA_V02;
+  }
+  if (profileMask & GNSS_CONFIG_LPP_PROFILE_CONTROL_PLANE_OVER_NR5G_SA_BIT) {
+      lpp_config_req.lppConfig |= QMI_LOC_LPP_CONFIG_ENABLE_CONTROL_PLANE_OVER_NR5G_SA_V02;
   }
 
   req_union.pSetProtocolConfigParametersReq = &lpp_config_req;
@@ -5130,14 +5126,10 @@ void LocApiV02::setGnssBiases() {
         measData = &mGnssMeasurements->gnssMeasNotification.measurements[i];
         switch (measData->gnssSignalType) {
         case GNSS_SIGNAL_GPS_L1CA:
-            if (mTimeBiases.flags & BIAS_GPSL1_VALID) {
-                measData->fullInterSignalBiasNs = mTimeBiases.gpsL1;
-                measData->flags |= GNSS_MEASUREMENTS_DATA_FULL_ISB_BIT;
-            }
-            if (mTimeBiases.flags & BIAS_GPSL1_UNC_VALID) {
-                measData->fullInterSignalBiasUncertaintyNs = mTimeBiases.gpsL1Unc;
-                measData->flags |= GNSS_MEASUREMENTS_DATA_FULL_ISB_UNCERTAINTY_BIT;
-            }
+            measData->fullInterSignalBiasNs = 0.0;
+            measData->flags |= GNSS_MEASUREMENTS_DATA_FULL_ISB_BIT;
+            measData->fullInterSignalBiasUncertaintyNs = 0.0;
+            measData->flags |= GNSS_MEASUREMENTS_DATA_FULL_ISB_UNCERTAINTY_BIT;
             break;
 
         case GNSS_SIGNAL_GPS_L5:
@@ -5185,7 +5177,7 @@ void LocApiV02::setGnssBiases() {
             }
             if (tempFlagUnc == (mTimeBiases.flags & tempFlagUnc)) {
                 measData->fullInterSignalBiasUncertaintyNs =
-                        mTimeBiases.gpsL1Unc - mTimeBiases.galE1Unc + mTimeBiases.galE1_galE5aUnc;
+                        mTimeBiases.gpsL1Unc + mTimeBiases.galE1Unc + mTimeBiases.galE1_galE5aUnc;
                 measData->flags |= GNSS_MEASUREMENTS_DATA_FULL_ISB_UNCERTAINTY_BIT;
             }
             break;
@@ -5225,7 +5217,7 @@ void LocApiV02::setGnssBiases() {
             }
             if (tempFlagUnc == (mTimeBiases.flags & tempFlagUnc)) {
                 measData->fullInterSignalBiasUncertaintyNs =
-                        mTimeBiases.gpsL1Unc - mTimeBiases.bdsB1Unc + mTimeBiases.bdsB1_bdsB1cUnc;
+                        mTimeBiases.gpsL1Unc + mTimeBiases.bdsB1Unc + mTimeBiases.bdsB1_bdsB1cUnc;
                 measData->flags |= GNSS_MEASUREMENTS_DATA_FULL_ISB_UNCERTAINTY_BIT;
             }
             break;
@@ -5252,7 +5244,7 @@ void LocApiV02::setGnssBiases() {
             }
             if (tempFlagUnc == (mTimeBiases.flags & tempFlagUnc)) {
                 measData->fullInterSignalBiasUncertaintyNs =
-                        mTimeBiases.gpsL1Unc - mTimeBiases.bdsB1Unc + mTimeBiases.bdsB1_bdsB2aUnc;
+                        mTimeBiases.gpsL1Unc + mTimeBiases.bdsB1Unc + mTimeBiases.bdsB1_bdsB2aUnc;
                 measData->flags |= GNSS_MEASUREMENTS_DATA_FULL_ISB_UNCERTAINTY_BIT;
             }
             break;
@@ -6184,18 +6176,25 @@ bool LocApiV02 :: convertGnssMeasurements(
 
     // accumulatedDeltaRangeM
     if (gnss_measurement_info.validMask & QMI_LOC_SV_CARRIER_PHASE_VALID_V02) {
-        double carrierPhase = gnss_measurement_info.carrierPhase;
+        measurementData.carrierPhase = gnss_measurement_info.carrierPhase;
+        measurementData.flags |= GNSS_MEASUREMENTS_DATA_CARRIER_PHASE_BIT;
         if ((validMeasStatus & QMI_LOC_MASK_MEAS_STATUS_LP_VALID_V02) &&
             (validMeasStatus & QMI_LOC_MASK_MEAS_STATUS_LP_POS_VALID_V02)) {
-            carrierPhase += 0.5;
+            measurementData.carrierPhase += 0.5;
         }
         measurementData.adrMeters =
-            (SPEED_OF_LIGHT / measurementData.carrierFrequencyHz) * carrierPhase;
+            (SPEED_OF_LIGHT / measurementData.carrierFrequencyHz) * measurementData.carrierPhase;
         LOC_LOGv("carrierPhase = %.2f adrMeters = %.2f",
-                 carrierPhase,
+                 measurementData.carrierPhase,
                  measurementData.adrMeters);
     } else {
         measurementData.adrMeters = 0.0;
+    }
+
+    // carrierPhaseUncertainty
+    if (1 == svMeas.carrierPhaseUncValid) {
+        measurementData.carrierPhaseUncertainty = svMeas.carrierPhaseUnc;
+        measurementData.flags |= GNSS_MEASUREMENTS_DATA_CARRIER_PHASE_UNCERTAINTY_BIT;
     }
 
     // accumulatedDeltaRangeUncertaintyM
@@ -6299,6 +6298,12 @@ bool LocApiV02 :: convertGnssMeasurements(
         LOC_LOGv("adrStateMask = 0x%02x", measurementData.adrStateMask);
     }
 
+    // cycleSlipCount
+    if (1 == svMeas.cycleSlipCountValid) {
+        measurementData.cycleSlipCount = svMeas.cycleSlipCount;
+        measurementData.flags |= GNSS_MEASUREMENTS_DATA_CYCLE_SLIP_COUNT_BIT;
+    }
+
     // multipath_indicator
     measurementData.multipathIndicator = GNSS_MEASUREMENTS_MULTIPATH_INDICATOR_UNKNOWN;
 
@@ -6383,7 +6388,8 @@ bool LocApiV02 :: convertGnssMeasurements(
 
     // intersignal bias
     if (gnss_measurement_report_ptr.gnssSignalType_valid &&
-        gnss_measurement_report_ptr.systemTime_valid) {
+        (gnss_measurement_report_ptr.systemTime_valid ||
+         gnss_measurement_report_ptr.gloTime_valid)) {
         measurementData.gnssSignalType =
                 convertQmiGnssSignalType(gnss_measurement_report_ptr.gnssSignalType);
     }
@@ -7939,22 +7945,6 @@ LocApiV02::convertSuplVersion(const uint32_t suplVersion)
         case 0x00010000:
         default:
             return GNSS_CONFIG_SUPL_VERSION_1_0_0;
-    }
-}
-
-GnssConfigLppProfile
-LocApiV02::convertLppProfile(const uint32_t lppProfile)
-{
-    switch (lppProfile) {
-        case 1:
-            return GNSS_CONFIG_LPP_PROFILE_USER_PLANE;
-        case 2:
-            return GNSS_CONFIG_LPP_PROFILE_CONTROL_PLANE;
-        case 3:
-            return GNSS_CONFIG_LPP_PROFILE_USER_PLANE_AND_CONTROL_PLANE;
-        case 0:
-        default:
-            return GNSS_CONFIG_LPP_PROFILE_RRLP_ON_LTE;
     }
 }
 
