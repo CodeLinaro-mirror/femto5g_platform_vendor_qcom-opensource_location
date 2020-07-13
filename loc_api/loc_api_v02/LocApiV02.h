@@ -197,6 +197,8 @@ private:
   timeBiases mTimeBiases;
   GnssMeasurementsNotification m1HzMeasurementsNotify;
   qmiLocPlatformPowerStateEnumT_v02 mPlatformPowerState;
+  uint64_t mHlosQtimer1, mHlosQtimer2;
+  uint32_t mRefFCount;
 
   /* Convert event mask from loc eng to loc_api_v02 format */
   static locClientEventMaskType convertLocClientEventMask(LOC_API_ADAPTER_EVENT_MASK_T mask);
@@ -377,6 +379,8 @@ private:
 
   void reportPowerStateChangeInfo(
         const qmiLocPlatformPowerStateChangedIndMsgT_v02 *pPowerStateChangedInfo);
+
+  void reportLatencyInfo(const qmiLocLatencyInformationIndMsgT_v02* pLocLatencyInfo);
 
 protected:
   virtual enum loc_api_adapter_err
