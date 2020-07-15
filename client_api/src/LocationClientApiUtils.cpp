@@ -340,6 +340,9 @@ void populateClientDiagLocation(clientDiagGnssLocationStructType* diagGnssLocPtr
             (clientDiagLocOutputEngineType) gnssLocation.locOutputEngType;
     diagGnssLocPtr->locOutputEngMask =
             (clientDiagPositioningEngineMask) gnssLocation.locOutputEngMask;
+
+    diagGnssLocPtr->drSolutionStatusMask =
+            (clientDiagDrSolutionStatusMask) gnssLocation.drSolutionStatusMask;
 }
 
 void populateClientDiagMeasurements(clientDiagGnssMeasurementsStructType* diagGnssMeasPtr,

@@ -463,7 +463,7 @@ static GnssLocation parseLocationInfo(const ::GnssLocationInfoNotification &halL
 
     GnssLocation locationInfo;
     ::Location halLocation = halLocationInfo.location;
-    uint32_t flags = 0;
+    uint64_t flags = 0;
     locationInfo.timestamp = halLocation.timestamp;
     locationInfo.latitude = halLocation.latitude;
     locationInfo.longitude = halLocation.longitude;
@@ -618,6 +618,10 @@ static GnssLocation parseLocationInfo(const ::GnssLocationInfoNotification &halL
         flags |= GNSS_LOCATION_INFO_CONFORMITY_INDEX_BIT;
     }
 
+    if (::GNSS_LOCATION_INFO_DR_SOLUTION_STATUS_MASK_BIT & halLocationInfo.flags) {
+        flags |= GNSS_LOCATION_INFO_DR_SOLUTION_STATUS_MASK_BIT;
+    }
+
     locationInfo.gnssInfoFlags = (GnssLocationInfoFlagMask)flags;
     locationInfo.altitudeMeanSeaLevel = halLocationInfo.altitudeMeanSeaLevel;
     locationInfo.pdop = halLocationInfo.pdop;
@@ -649,6 +653,7 @@ static GnssLocation parseLocationInfo(const ::GnssLocationInfoNotification &halL
     locationInfo.conformityIndex = halLocationInfo.conformityIndex;
 
     parseGnssMeasUsageInfo(halLocationInfo, locationInfo.measUsageInfo);
+    locationInfo.drSolutionStatusMask = (DrSolutionStatusMask) halLocationInfo.drSolutionStatusMask;
 
     flags = 0;
     if (::LOCATION_SBAS_CORRECTION_IONO_BIT & halLocationInfo.navSolutionMask) {
