@@ -374,15 +374,8 @@ void LocHalDaemonClientHandler::cleanup() {
     // remote client that is no longer reachable
     mIpcSender = nullptr;
 
-    // check whether this is client from external AP,
-    // mName for client on external ap is fully-qualified path name ending with
-    // "serviceid.instanceid"
-    if (strncmp(mName.c_str(), EAP_LOC_CLIENT_DIR,
-                sizeof(EAP_LOC_CLIENT_DIR)-1) == 0 ) {
-        LOC_LOGv("removed file %s", mName.c_str());
-        if (0 != remove(mName.c_str())) {
-            LOC_LOGe("<-- failed to remove file %s", mName.c_str());
-        }
+    if (0 != remove(mName.c_str())) {
+        LOC_LOGe("<-- failed to remove file %s error %s", mName.c_str(), strerror(errno));
     }
 
     if (mLocationApi) {
@@ -491,6 +484,7 @@ void LocHalDaemonClientHandler::onCollectiveResponseCallback(
     }
     memset(msg, 0, msglen);
     LocAPICollectiveRespMsg *pmsg = reinterpret_cast<LocAPICollectiveRespMsg*>(msg);
+    pmsg->msgVersion = LOCATION_REMOTE_API_MSG_VERSION;
     strlcpy(pmsg->mSocketName, SERVICE_NAME, MAX_SOCKET_PATHNAME_LENGTH);
     pmsg->collectiveRes.size = msglen;
     pmsg->collectiveRes.count = count;
@@ -688,6 +682,7 @@ void LocHalDaemonClientHandler::onBatchingCb(size_t count, Location* location,
         LocAPIBatchingIndMsg *pmsg = reinterpret_cast<LocAPIBatchingIndMsg*>(msg);
         strlcpy(pmsg->mSocketName, SERVICE_NAME, MAX_SOCKET_PATHNAME_LENGTH);
         pmsg->msgId = E_LOCAPI_BATCHING_MSG_ID;
+        pmsg->msgVersion = LOCATION_REMOTE_API_MSG_VERSION;
         pmsg->batchNotification.size = msglen;
         pmsg->batchNotification.count = count;
         pmsg->batchNotification.status = BATCHING_STATUS_POSITION_AVAILABE;
@@ -749,6 +744,7 @@ void LocHalDaemonClientHandler::onGeofenceBreachCb(GeofenceBreachNotification gf
         LocAPIGeofenceBreachIndMsg *pmsg = reinterpret_cast<LocAPIGeofenceBreachIndMsg*>(msg);
         strlcpy(pmsg->mSocketName, SERVICE_NAME, MAX_SOCKET_PATHNAME_LENGTH);
         pmsg->msgId = E_LOCAPI_GEOFENCE_BREACH_MSG_ID;
+        pmsg->msgVersion = LOCATION_REMOTE_API_MSG_VERSION;
         pmsg->gfBreachNotification.size = msglen;
         pmsg->gfBreachNotification.count = gfBreachNotif.count;
         pmsg->gfBreachNotification.timestamp = gfBreachNotif.timestamp;
@@ -876,6 +872,7 @@ void LocHalDaemonClientHandler::onGnssNmeaCb(GnssNmeaNotification notification) 
         LocAPINmeaIndMsg *pmsg = reinterpret_cast<LocAPINmeaIndMsg*>(msg);
         strlcpy(pmsg->mSocketName, SERVICE_NAME, MAX_SOCKET_PATHNAME_LENGTH);
         pmsg->msgId = E_LOCAPI_NMEA_MSG_ID;
+        pmsg->msgVersion = LOCATION_REMOTE_API_MSG_VERSION;
         pmsg->gnssNmeaNotification.size = msglen;
         pmsg->gnssNmeaNotification.timestamp = notification.timestamp;
         pmsg->gnssNmeaNotification.length = notification.length;

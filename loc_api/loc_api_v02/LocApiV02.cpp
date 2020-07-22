@@ -632,10 +632,8 @@ void LocApiV02 :: startFix(const LocPosMode& fixCriteria, LocApiResponse *adapte
   memset (&set_mode_ind, 0, sizeof(set_mode_ind));
 
   LOC_LOGV("%s:%d]: start \n", __func__, __LINE__);
-  if (false == mIsFirstStartFixReq) {
-    loc_boot_kpi_marker("L - LocApiV02 start Fix session");
-    mIsFirstStartFixReq = true;
-  }
+  loc_boot_kpi_marker("L - LocApiV02 startFix, tbf %d", fixCriteria.min_interval);
+  mIsFirstFinalFixReported = false;
   fixCriteria.logv();
 
   mInSession = true;
@@ -802,6 +800,7 @@ void LocApiV02 :: stopFix(LocApiResponse *adapterResponse)
   qmiLocStopReqMsgT_v02 stop_msg;
 
   LOC_LOGD(" %s:%d]: stop called \n", __func__, __LINE__);
+  loc_boot_kpi_marker("L - LocApiV02 stop Fix session");
 
   memset(&stop_msg, 0, sizeof(stop_msg));
 
@@ -2642,6 +2641,17 @@ void LocApiV02 :: reportPosition (
         LOC_LOGV("%s:%d jammerIndicator is present len=%d",
                  __func__, __LINE__,
                  location_report_ptr->jammerIndicatorList_len);
+        /* msInWeek is used to indicate if jammer indicator is present in this message.
+           The appropriate action will be taken in GnssAdapter
+           There are three cases as follows:
+           1. jammer is not present (old modem image that doesn't support this) then
+              msInWeek is set above, has a value >=0 and it is used in GnssAdapter to
+              validate when parsing jammer value from NMEA debug message
+           2. jammer is present and at least one satellite has a valid value, then
+              msInWeek is -1
+           3. jammer is present, but the values for all satellites are invalid
+              (GNSS_INVALID_JAMMER_IND) then msInWeek is -2 */
+        msInWeek = -2;
         for (uint32_t i = 1; i < location_report_ptr->jammerIndicatorList_len; i++) {
             dataNotify.gnssDataMask[i-1] = 0;
             dataNotify.agc[i-1] = 0.0;
@@ -3426,6 +3436,7 @@ void  LocApiV02 :: reportSv (
         num_svs_max = std::min((uint32_t)QMI_LOC_MAX_SV_USED_LIST_LENGTH_V02,
                                 gnss_report_ptr->svList_len);
     }
+    num_svs_max = std::min(num_svs_max, GNSS_SV_MAX);
 
     SvNotify.size = sizeof(GnssSvNotification);
     if (gnss_report_ptr->gnssSignalTypeList_valid) {
@@ -5396,17 +5407,32 @@ void LocApiV02 :: reportGnssMeasurementData(
     static bool bGPSreceived = false;
     static int msInWeek = -1;
     static bool bAgcIsPresent = false;
+    uint8_t maxSubSeqNum = 0;
+    uint8_t subSeqNum = 0;
 
-    LOC_LOGd("SeqNum: %d, MaxMsgNum: %d",
-        gnss_measurement_report_ptr.seqNum,
-        gnss_measurement_report_ptr.maxMessageNum);
+    if (gnss_measurement_report_ptr.maxSubSeqNum_valid &&
+        gnss_measurement_report_ptr.subSeqNum_valid) {
+        maxSubSeqNum = gnss_measurement_report_ptr.maxSubSeqNum;
+        subSeqNum = gnss_measurement_report_ptr.subSeqNum;
+    } else {
+        maxSubSeqNum = 0;
+        subSeqNum = 0;
+    }
 
-    if (gnss_measurement_report_ptr.seqNum > gnss_measurement_report_ptr.maxMessageNum) {
+    LOC_LOGd("SeqNum: %d, MaxMsgNum: %d, "
+             "SubSeqNum: %d, MaxSubMsgNum: %d",
+             gnss_measurement_report_ptr.seqNum,
+             gnss_measurement_report_ptr.maxMessageNum,
+             subSeqNum,
+             maxSubSeqNum);
+
+    if (gnss_measurement_report_ptr.seqNum > gnss_measurement_report_ptr.maxMessageNum ||
+        subSeqNum > maxSubSeqNum) {
         LOC_LOGe("Invalid seqNum, do not proceed");
         return;
     }
 
-    if (1 == gnss_measurement_report_ptr.seqNum)
+    if (1 == gnss_measurement_report_ptr.seqNum && subSeqNum <= 1)
     {
         bGPSreceived = false;
         msInWeek = -1;
@@ -5484,14 +5510,14 @@ void LocApiV02 :: reportGnssMeasurementData(
     }
     // the GPS clock time reading
     if (eQMI_LOC_SV_SYSTEM_GPS_V02 == gnss_measurement_report_ptr.system &&
-        false == bGPSreceived) {
+        subSeqNum <= 1 && false == bGPSreceived) {
         bGPSreceived = true;
         msInWeek = convertGnssClock(measurementsNotify.clock,
                                     gnss_measurement_report_ptr);
     }
 
-    if (gnss_measurement_report_ptr.maxMessageNum == gnss_measurement_report_ptr.seqNum
-            && measurementsNotify.count != 0 && true == bGPSreceived) {
+    if (gnss_measurement_report_ptr.maxMessageNum == gnss_measurement_report_ptr.seqNum &&
+        maxSubSeqNum == subSeqNum && measurementsNotify.count != 0 && true == bGPSreceived) {
         // calling the base
         if (bAgcIsPresent) {
             /* If we can get AGC from QMI LOC there is no need to get it from NMEA */
@@ -6777,6 +6803,7 @@ LocationError LocApiV02::setParameterSync(const GnssConfig & gnssConfig) {
         req.paramType = eQMI_LOC_PARAMETER_TYPE_MINIMUM_SV_ELEVATION_V02;
         req.minSvElevation_valid = 1;
         req.minSvElevation = gnssConfig.minSvElevation;
+        LOC_LOGd("set min sv elevation to %d", req.minSvElevation);
     }
 
     if (req.paramType != eQMI_LOC_PARAMETER_TYPE_RESERVED_V02) {
@@ -6795,6 +6822,8 @@ LocationError LocApiV02::setParameterSync(const GnssConfig & gnssConfig) {
             } else {
                 err = LOCATION_ERROR_GENERAL_FAILURE;
             }
+        } else {
+            err = LOCATION_ERROR_SUCCESS;
         }
     }
 
@@ -7156,6 +7185,9 @@ LocNavSolutionMask LocApiV02 :: convertNavSolutionMask(
 
    if (mask & QMI_LOC_NAV_MASK_CORRECTION_DGNSS_V02)
       locNavMask |= LOC_NAV_MASK_DGNSS_CORRECTION;
+
+   if (mask & QMI_LOC_NAV_MASK_ONLY_SBAS_CORRECTED_SV_USED_V02)
+      locNavMask |= LOC_NAV_MASK_ONLY_SBAS_CORRECTED_SV_USED;
 
    return locNavMask;
 }
