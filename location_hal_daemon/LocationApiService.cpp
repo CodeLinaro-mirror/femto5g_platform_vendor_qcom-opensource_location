@@ -125,7 +125,8 @@ LocationApiService::LocationApiService(const configParamToRead & configParamRead
 
     mLocationControlId(0),
     mAutoStartGnss(configParamRead.autoStartGnss),
-    mPowerState (POWER_STATE_UNKNOWN)
+    mPowerState(POWER_STATE_UNKNOWN),
+    mPositionMode((GnssSuplMode)configParamRead.positionMode)
 #ifdef POWERMANAGER_ENABLED
     ,mPowerEventObserver(nullptr)
 #endif
@@ -135,6 +136,7 @@ LocationApiService::LocationApiService(const configParamToRead & configParamRead
     LOC_LOGd("GnssSessionTbfMs=%u", configParamRead.gnssSessionTbfMs);
     LOC_LOGd("DeleteAllBeforeAutoStart=%u", configParamRead.deleteAllBeforeAutoStart);
     LOC_LOGd("DeleteAllOnEnginesMask=%u", configParamRead.posEngineMask);
+    LOC_LOGd("PositionMode=%u", configParamRead.positionMode);
 
     // create Location control API
     mControlCallabcks.size = sizeof(mControlCallabcks);
@@ -196,6 +198,7 @@ LocationApiService::LocationApiService(const configParamToRead & configParamRead
         locationOption.size = sizeof(locationOption);
         locationOption.minInterval = configParamRead.gnssSessionTbfMs;
         locationOption.minDistance = 0;
+        locationOption.mode = mPositionMode;
 
         pClient->startTracking(locationOption);
         pClient->mTracking = true;
@@ -480,6 +483,17 @@ void LocationApiService::processClientMsg(const char* data, uint32_t length) {
             getGnssConfig(pMsg, GNSS_CONFIG_FLAGS_ROBUST_LOCATION_BIT);
             break;
         }
+
+        case E_INTAPI_UPDATE_SYSTEM_CONFIGURATION_MSG_ID: {
+            if (sizeof(LocConfigUpdateSystemConfigurationMsg) != length) {
+                LOC_LOGe("invalid LocConfigUpdateSystemConfigurationMsg");
+                break;
+            }
+            updateDreOfSystemConfig(
+                    reinterpret_cast<LocConfigUpdateSystemConfigurationMsg*> (pMsg));
+            break;
+        }
+
         default: {
             LOC_LOGe("Unknown message");
             break;
@@ -557,7 +571,11 @@ void LocationApiService::startTracking(LocAPIStartTrackingReqMsg *pMsg) {
         return;
     }
 
-    if (!pClient->startTracking(pMsg->locOptions)) {
+    LocationOptions locationOption = pMsg->locOptions;
+    // set the mode according to the master position mode
+    locationOption.mode = mPositionMode;
+
+    if (!pClient->startTracking(locationOption)) {
         LOC_LOGe("Failed to start session");
         return;
     }
@@ -636,7 +654,10 @@ void LocationApiService::updateTrackingOptions(LocAPIUpdateTrackingOptionsReqMsg
 
     LocHalDaemonClientHandler* pClient = getClient(pMsg->mSocketName);
     if (pClient) {
-        pClient->updateTrackingOptions(pMsg->locOptions);
+        LocationOptions locationOption = pMsg->locOptions;
+        // set the mode according to the master position mode
+        locationOption.mode = mPositionMode;
+        pClient->updateTrackingOptions(locationOption);
         pClient->mPendingMessages.push(E_LOCAPI_UPDATE_TRACKING_OPTIONS_MSG_ID);
     }
 
@@ -1036,6 +1057,26 @@ void LocationApiService::getGnssConfig(const LocAPIMsgHeader* pReqMsg,
     // if sessionId is 0, e.g.: error callback will be delivered
     // by addConfigRequestToMap
     addConfigRequestToMap(sessionId, pReqMsg);
+}
+
+void LocationApiService::updateDreOfSystemConfig(
+        const LocConfigUpdateSystemConfigurationMsg* pMsg) {
+    if (!pMsg) {
+        return;
+    }
+    std::lock_guard<std::mutex> lock(mMutex);
+    LOC_LOGi(">-- updateDreOfSystemConfig");
+    GnssInterface* gnssInterface = getGnssInterface();
+    if (gnssInterface) {
+        uint32_t sessionId = gnssInterface->updateDreOfSystemConfig(pMsg->mSystemConfiguration);
+        addConfigRequestToMap(sessionId, pMsg);
+    } else {
+        LOC_LOGe(">-- GnssInterface is null");
+        LocHalDaemonClientHandler* pClient = getClient(pMsg->mSocketName);
+        if (pClient) {
+            pClient->onControlResponseCb(LOCATION_ERROR_GENERAL_FAILURE, pMsg->msgId);
+        }
+    }
 }
 
 void LocationApiService::addConfigRequestToMap(

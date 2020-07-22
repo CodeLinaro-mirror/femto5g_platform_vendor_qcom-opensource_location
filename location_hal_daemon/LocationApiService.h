@@ -60,6 +60,7 @@ typedef struct {
     uint32_t gnssSessionTbfMs;
     uint32_t deleteAllBeforeAutoStart;
     uint32_t posEngineMask;
+    uint32_t positionMode;
 } configParamToRead;
 
 
@@ -165,6 +166,7 @@ private:
             LocConfigAidingDataDeletionReqMsg* pMsg);
     void configLeverArm(const LocConfigLeverArmReqMsg* pMsg);
     void configRobustLocation(const LocConfigRobustLocationReqMsg* pMsg);
+    void updateDreOfSystemConfig(const LocConfigUpdateSystemConfigurationMsg* pMsg);
 
     // Location configuration API get/read requests
     void getGnssConfig(const LocAPIMsgHeader* pReqMsg,
@@ -221,6 +223,7 @@ private:
 
     // Configration
     const uint32_t mAutoStartGnss;
+    GnssSuplMode   mPositionMode;
 
     PowerStateType  mPowerState;
 };

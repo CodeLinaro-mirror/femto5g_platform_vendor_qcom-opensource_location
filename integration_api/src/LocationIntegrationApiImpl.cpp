@@ -64,6 +64,9 @@ static LocConfigTypeEnum getLocConfigTypeFromMsgId(ELocMsgID  msgId) {
     case E_INTAPI_GET_ROBUST_LOCATION_CONFIG_RESP_MSG_ID:
         configType = GET_ROBUST_LOCATION_CONFIG;
         break;
+    case E_INTAPI_UPDATE_SYSTEM_CONFIGURATION_MSG_ID:
+        configType = UPDATE_SYSTEM_CONFIGUAITON;
+        break;
     default:
         break;
     }
@@ -120,7 +123,8 @@ LocationIntegrationApiImpl::LocationIntegrationApiImpl(LocIntegrationCbs& integr
         mTuncConfigInfo{},
         mPaceConfigInfo{},
         mSVConfigInfo{},
-        mLeverArmConfigInfo{} {
+        mLeverArmConfigInfo{},
+        mSysConfigInfo{} {
     if (integrationClientAllowed() == false) {
         return;
     }
@@ -256,6 +260,7 @@ void IpcListener::onListenerReady() {
             case E_INTAPI_CONFIG_LEVER_ARM_MSG_ID:
             case E_INTAPI_CONFIG_ROBUST_LOCATION_MSG_ID:
             case E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID:
+            case E_INTAPI_UPDATE_SYSTEM_CONFIGURATION_MSG_ID:
             {
                 if (sizeof(LocAPIGenericRespMsg) != mMsgData.length()) {
                     LOC_LOGw("payload size does not match for message with id: %d",
@@ -469,7 +474,6 @@ uint32_t LocationIntegrationApiImpl::configLeverArm(
     return 0;
 }
 
-
 uint32_t LocationIntegrationApiImpl::configRobustLocation(
         bool enable, bool enableForE911) {
     struct ConfigRobustLocationReq : public LocMsg {
@@ -525,6 +529,67 @@ uint32_t LocationIntegrationApiImpl::getRobustLocationConfig() {
     return 0;
 }
 
+uint32_t LocationIntegrationApiImpl::updateSystemConfiguration(
+        const SystemConfiguration& sysConfig) {
+
+    struct UdpateSystemConfigurationReq : public LocMsg {
+        UdpateSystemConfigurationReq(LocationIntegrationApiImpl* apiImpl,
+                                     ::SystemConfiguration halSysConfig) :
+                mApiImpl(apiImpl),
+                mHalSysConfig(halSysConfig){}
+        virtual ~UdpateSystemConfigurationReq() {}
+
+        void proc() const {
+            if (mHalSysConfig.configType == SYSTEM_CONFIG_TYPE_GNSS_SIGNAL_LEVEL) {
+                mApiImpl->mSysConfigInfo.gnssSignalLevelValid = true;
+                mApiImpl->mSysConfigInfo.gnssSignalLevel = mHalSysConfig;
+            } else if (mHalSysConfig.configType == SYSTEM_CONFIG_TYPE_POWER_CONTINUITY_STATUS) {
+                mApiImpl->mSysConfigInfo.powerContinuityStatusValid = true;
+                mApiImpl->mSysConfigInfo.powerContinuityStatus = mHalSysConfig;
+            } else if (mHalSysConfig.configType == SYSTEM_CONFIG_TYPE_VEHICLE_SENSOR_CONFIG_INPUT) {
+                mApiImpl->mSysConfigInfo.sensorConfigInputValid = true;
+                mApiImpl->mSysConfigInfo.sensorConfigInput = mHalSysConfig;
+            } else {
+                return;
+            }
+            LocConfigUpdateSystemConfigurationMsg msg(
+                    mApiImpl->mSocketName, mHalSysConfig);
+            mApiImpl->sendConfigMsgToHalDaemon(UPDATE_SYSTEM_CONFIGUAITON,
+                                               reinterpret_cast<uint8_t*>(&msg),
+                                               sizeof(msg));
+        }
+        LocationIntegrationApiImpl* mApiImpl;
+        ::SystemConfiguration mHalSysConfig;
+    };
+
+    ::SystemConfiguration halSysConfig = {};
+    switch (sysConfig.configType) {
+    case SYSTEM_CONFIG_TYPE_VEHICLE_SENSOR_CONFIG_INPUT:
+        halSysConfig.configType = ::SYSTEM_CONFIG_TYPE_VEHICLE_SENSOR_CONFIG_INPUT;
+        halSysConfig.systemConfigurationInfo.sensorConfigInput = (::VehicleSensorConfigurationInput)
+                sysConfig.systemConfigurationInfo.sensorConfigInput;
+        LOC_LOGd("sensor config %d", sysConfig.systemConfigurationInfo.sensorConfigInput);
+        break;
+    case SYSTEM_CONFIG_TYPE_GNSS_SIGNAL_LEVEL:
+        halSysConfig.configType = ::SYSTEM_CONFIG_TYPE_GNSS_SIGNAL_LEVEL;
+        halSysConfig.systemConfigurationInfo.gnssSignalLevel = (::GnssSignalLevel)
+                sysConfig.systemConfigurationInfo.gnssSignalLevel;
+        LOC_LOGd("gnss signal level %d", halSysConfig.systemConfigurationInfo.gnssSignalLevel);
+        break;
+    case SYSTEM_CONFIG_TYPE_POWER_CONTINUITY_STATUS:
+        halSysConfig.configType = ::SYSTEM_CONFIG_TYPE_POWER_CONTINUITY_STATUS;
+        halSysConfig.systemConfigurationInfo.powerContinuityStatus = (::PowerSupplyContiniuityStatus)
+                sysConfig.systemConfigurationInfo.powerContinuityStatus;
+        LOC_LOGd("gnss signal level %d", halSysConfig.systemConfigurationInfo.gnssSignalLevel);
+        break;
+    default:
+        LOC_LOGe("invalid system config");
+        return 1;
+    }
+        mMsgTask->sendMsg(new (nothrow) UdpateSystemConfigurationReq(this, halSysConfig));
+        return 0;
+}
+
 void LocationIntegrationApiImpl::sendConfigMsgToHalDaemon(
         LocConfigTypeEnum configType, uint8_t* pMsg,
         size_t msgSize, bool invokeResponseCb) {
@@ -578,6 +643,7 @@ void LocationIntegrationApiImpl::processHalReadyMsg() {
     sendClientRegMsgToHalDaemon();
 
     // send cached configuration to hal daemon
+    // as a general rule, NV setting on modem does not need to be resent
     if (mSVConfigInfo.isValid) {
         LocConfigSvConstellationReqMsg msg(mSocketName,
                                            mSVConfigInfo.resetToDeFault,
@@ -614,6 +680,25 @@ void LocationIntegrationApiImpl::processHalReadyMsg() {
                                           mRobustLocationConfigInfo.enable,
                                           mRobustLocationConfigInfo.enableForE911);
         sendConfigMsgToHalDaemon(CONFIG_ROBUST_LOCATION,
+                                 reinterpret_cast<uint8_t*>(&msg),
+                                 sizeof(msg));
+    }
+    if (mSysConfigInfo.gnssSignalLevelValid) {
+        LocConfigUpdateSystemConfigurationMsg msg(mSocketName, mSysConfigInfo.gnssSignalLevel);
+        sendConfigMsgToHalDaemon(UPDATE_SYSTEM_CONFIGUAITON,
+                                 reinterpret_cast<uint8_t*>(&msg),
+                                 sizeof(msg));
+    }
+    if (mSysConfigInfo.powerContinuityStatusValid) {
+        LocConfigUpdateSystemConfigurationMsg msg(mSocketName,
+                                                  mSysConfigInfo.powerContinuityStatus);
+        sendConfigMsgToHalDaemon(UPDATE_SYSTEM_CONFIGUAITON,
+                                 reinterpret_cast<uint8_t*>(&msg),
+                                 sizeof(msg));
+    }
+    if (mSysConfigInfo.sensorConfigInputValid) {
+        LocConfigUpdateSystemConfigurationMsg msg(mSocketName, mSysConfigInfo.sensorConfigInput);
+        sendConfigMsgToHalDaemon(UPDATE_SYSTEM_CONFIGUAITON,
                                  reinterpret_cast<uint8_t*>(&msg),
                                  sizeof(msg));
     }

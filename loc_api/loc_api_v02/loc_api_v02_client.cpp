@@ -235,6 +235,11 @@ static const locClientEventIndTableStructT locClientEventIndTable[]= {
      sizeof(qmiLocEventGnssSvMeasInfoIndMsgT_v02),
      QMI_LOC_EVENT_MASK_GNSS_MEASUREMENT_REPORT_V02 },
 
+    //GNSS Sap Ins Params Indication
+    { QMI_LOC_EVENT_SAP_INS_PARAMETERS_IND_V02,
+      sizeof(qmiLocSapInsParamsIndMsgT_v02),
+      QMI_LOC_EVENT_MASK_SAP_INS_PARAMETERS_REPORT_V02 },
+
     //GNSS Measurement Indication
    { QMI_LOC_EVENT_SV_POLYNOMIAL_REPORT_IND_V02,
     sizeof(qmiLocEventGnssSvPolyIndMsgT_v02),

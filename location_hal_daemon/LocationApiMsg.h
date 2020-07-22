@@ -226,6 +226,9 @@ enum ELocMsgID {
     // integration API config retrieval request/response
     E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID  = 300,
     E_INTAPI_GET_ROBUST_LOCATION_CONFIG_RESP_MSG_ID  = 301,
+
+    // integration API update position engine of system status
+    E_INTAPI_UPDATE_SYSTEM_CONFIGURATION_MSG_ID = 400,
 };
 
 typedef uint32_t LocationCallbacksMask;
@@ -798,6 +801,18 @@ struct LocConfigGetRobustLocationConfigRespMsg: LocAPIMsgHeader
             GnssConfigRobustLocation robustLoationConfig) :
         LocAPIMsgHeader(name, E_INTAPI_GET_ROBUST_LOCATION_CONFIG_RESP_MSG_ID),
         mRobustLoationConfig(robustLoationConfig) { }
+};
+
+/******************************************************************************
+IPC message structure - Location Integration API update system config message
+******************************************************************************/
+struct LocConfigUpdateSystemConfigurationMsg: LocAPIMsgHeader
+{
+    SystemConfiguration mSystemConfiguration;
+    inline LocConfigUpdateSystemConfigurationMsg(
+            const char* name, const SystemConfiguration& systemConfiguration) :
+        LocAPIMsgHeader(name, E_INTAPI_UPDATE_SYSTEM_CONFIGURATION_MSG_ID),
+        mSystemConfiguration(systemConfiguration) { }
 };
 
 /******************************************************************************
