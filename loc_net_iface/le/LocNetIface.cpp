@@ -775,14 +775,14 @@ bool LocNetIface::setupWwanCall() {
             mDsiHandle, DSI_CALL_INFO_IP_VERSION, &callParams);
 
     /* Send the call setup request */
+    mIsDsiStartCallPending = true;
     ret = dsi_start_data_call(mDsiHandle);
     if (ret != DSI_SUCCESS) {
-
+        mIsDsiStartCallPending = false;
         LOC_LOGE("DSI_START_DATA_CALL FAILED, err %d", ret);
         return false;
     }
 
-    mIsDsiStartCallPending = true;
     LOC_LOGI("Data call START request sent successfully to DSI");
     return true;
 }
@@ -796,12 +796,6 @@ bool LocNetIface::stopWwanCall() {
         LOC_LOGW("Already stop pending, no-op");
         return true;
     }
-    if (mIsDsiStartCallPending) {
-        LOC_LOGE("Start attempt pending, can't stop now !");
-        /* When start completes and DS callback is received, we will
-         * notify the client. So no need to notify now. */
-        return false;
-    }
     if (!mIsDsiCallUp) {
         LOC_LOGE("No ongoing data call to stop");
         if (mWwanCallStatusCb != NULL) {
@@ -809,20 +803,19 @@ bool LocNetIface::stopWwanCall() {
                     mWwanCbUserDataPtr, LOC_NET_WWAN_CALL_EVT_CLOSE_SUCCESS,
                     getApnNameFromConfig(), getIpTypeFromConfig());
         }
-        return true;
     }
 
     /* Stop the call */
     LOC_LOGD("Stopping data call with handle %p", mDsiHandle);
 
+    mIsDsiStopCallPending = true;
     int ret = dsi_stop_data_call(mDsiHandle);
     if (ret != DSI_SUCCESS) {
-
+        mIsDsiStopCallPending = false;
         LOC_LOGE("dsi_stop_data_call() returned err %d", ret);
         return false;
     }
 
-    mIsDsiStopCallPending = true;
     LOC_LOGI("Data call STOP request sent to DS");
     return true;
 }
