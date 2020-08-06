@@ -34,6 +34,30 @@
 #include <functional>
 #include <memory>
 
+// DEPRECATION - BACKWARD COMPATIBILITY SECTION
+#define GnssLocationPosTechMask LocationTechnologyMask
+#define LOCATION_POS_TECH_DEFAULT_BIT \
+         0
+#define LOCATION_POS_TECH_SATELLITE_BIT \
+         LOCATION_TECHNOLOGY_GNSS_BIT
+#define LOCATION_POS_TECH_CELLID_BIT \
+         LOCATION_TECHNOLOGY_CELL_BIT
+#define LOCATION_POS_TECH_WIFI_BIT \
+         LOCATION_TECHNOLOGY_WIFI_BIT
+#define LOCATION_POS_TECH_SENSORS_BIT \
+         LOCATION_TECHNOLOGY_SENSORS_BIT
+#define LOCATION_POS_TECH_REFERENCE_LOCATION_BIT \
+         LOCATION_TECHNOLOGY_REFERENCE_LOCATION_BIT
+#define LOCATION_POS_TECH_INJECTED_COARSE_POSITION_BIT \
+        LOCATION_TECHNOLOGY_INJECTED_COARSE_POSITION_BIT
+#define LOCATION_POS_TECH_AFLT_BIT \
+         LOCATION_TECHNOLOGY_AFLT_BIT
+#define LOCATION_POS_TECH_HYBRID_BIT \
+         LOCATION_TECHNOLOGY_HYBRID_BIT
+#define LOCATION_POS_TECH_PPE_BIT \
+         LOCATION_TECHNOLOGY_PPE_BIT
+// DEPRECATION - BACKWARD COMPATIBILITY SECTION
+
 using std::string;
 
 namespace location_client
@@ -126,16 +150,30 @@ enum LocationFlagsMask {
 enum LocationTechnologyMask {
     /** GNSS-based technology was used to calculate
      *  Location. <br/>   */
-    LOCATION_TECHNOLOGY_GNSS_BIT     = (1<<0),
+    LOCATION_TECHNOLOGY_GNSS_BIT                     = (1<<0),
     /** Cell-based technology was used to calculate
      *  Location. <br/>   */
-    LOCATION_TECHNOLOGY_CELL_BIT     = (1<<1),
+    LOCATION_TECHNOLOGY_CELL_BIT                     = (1<<1),
     /** WiFi-based technology was used to calculate
      *  Location. <br/>   */
-    LOCATION_TECHNOLOGY_WIFI_BIT     = (1<<2),
+    LOCATION_TECHNOLOGY_WIFI_BIT                     = (1<<2),
     /** Sensor-based technology was used to calculate
      *  Location. <br/>   */
-    LOCATION_TECHNOLOGY_SENSORS_BIT  = (1<<3)
+    LOCATION_TECHNOLOGY_SENSORS_BIT                  = (1<<3),
+    /**  Reference location was used to calculate Location.
+     *   <br/> */
+    LOCATION_TECHNOLOGY_REFERENCE_LOCATION_BIT       = (1<<4),
+    /** Coarse position injected into the location engine
+     *  was used to calculate Location.  <br/>   */
+    LOCATION_TECHNOLOGY_INJECTED_COARSE_POSITION_BIT = (1<<5),
+    /** AFLT was used to calculate Location. <br/>   */
+    LOCATION_TECHNOLOGY_AFLT_BIT                     = (1<<6),
+    /** GNSS and network-provided measurements were
+     *  used to calculate Location. <br/>   */
+    LOCATION_TECHNOLOGY_HYBRID_BIT                   = (1<<7),
+    /** Precise position engine was used to calculate
+     *  Location. <br/>   */
+    LOCATION_TECHNOLOGY_PPE_BIT                      = (1<<8)
 };
 
 /** Specify the set of navigation solutions that contribute
@@ -168,42 +206,6 @@ enum GnssLocationNavSolutionMask {
     /** Only SBAS corrected SVs was used to calculate
         GnssLocation. <br/> */
     LOCATION_NAV_CORRECTION_ONLY_SBAS_CORRECTED_SV_USED_BIT = (1<<8)
-};
-
-/**
- *  Specify the set of technologies that contribute to
- *  GnssLocation. <br/>
- */
-enum GnssLocationPosTechMask {
-    /** Technology used to generate GnssLocation
-     *  is unknown. <br/>   */
-    LOCATION_POS_TECH_DEFAULT_BIT                  = 0,
-    /** Satellites-based technology was used to generate
-     *  GnssLocation. <br/>   */
-    LOCATION_POS_TECH_SATELLITE_BIT                = (1<<0),
-    /** Cell towers were used to generate
-     *  GnssLocation. <br/>   */
-    LOCATION_POS_TECH_CELLID_BIT                   = (1<<1),
-    /** Wi-Fi access points were used to generate
-     *  GnssLocation. <br/>   */
-    LOCATION_POS_TECH_WIFI_BIT                     = (1<<2),
-    /** Sensors were used to generate
-     *  GnssLocation. <br/>   */
-    LOCATION_POS_TECH_SENSORS_BIT                  = (1<<3),
-    /**  Reference location was used to generate GnssLocation.
-     *   <br/> */
-    LOCATION_POS_TECH_REFERENCE_LOCATION_BIT       = (1<<4),
-    /** Coarse position injected into the location engine was used to
-     *  generate GnssLocation.  <br/>   */
-    LOCATION_POS_TECH_INJECTED_COARSE_POSITION_BIT = (1<<5),
-    /** AFLT was used to generate GnssLocation. <br/>   */
-    LOCATION_POS_TECH_AFLT_BIT                     = (1<<6),
-    /** GNSS and network-provided measurements were used to generate
-     *  GnssLocation. <br/>   */
-    LOCATION_POS_TECH_HYBRID_BIT                   = (1<<7),
-    /** Precise position engine was used to generate
-     *  GnssLocation. <br/>   */
-    LOCATION_POS_TECH_PPE_BIT                      = (1<<8)
 };
 
 /** Specify the valid fields in
@@ -585,7 +587,7 @@ struct GnssLocationSvUsedInPosition {
     uint64_t galSvUsedIdsMask;
     /** ISpecify the set of SVs from BEIDOU constellation that are
      *  used to compute the position. <br/>
-     *  Bit 0 to Bit 36 corresponds to BDS SV id 201 to 263.
+     *  Bit 0 to Bit 62 corresponds to BDS SV id 201 to 263.
      *  <br/> */
     uint64_t bdsSvUsedIdsMask;
     /** Specify the set of SVs from QZSS constellation that are used
@@ -600,7 +602,7 @@ struct GnssLocationSvUsedInPosition {
     uint64_t navicSvUsedIdsMask;
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
-    string toString();
+    string toString() const;
 };
 
 /** Specify the SV measurements that are used to calculate
@@ -617,7 +619,7 @@ struct GnssMeasUsageInfo {
     GnssSignalTypeMask gnssSignalType;
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
-    string toString();
+    string toString() const;
 };
 
 /** Specify device body frame parameters. <br/>   */
@@ -676,7 +678,7 @@ struct GnssLocationPositionDynamics {
     float           yawRateUnc;
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
-    string toString();
+    string toString() const;
 };
 
 /** Specify none-Glonass GNSS system time info. */
@@ -719,7 +721,7 @@ struct GnssSystemTimeStructType {
     uint32_t numClockResets;
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
-    string toString();
+    string toString() const;
 };
 
 /** Specify Glonass system time info. <br/>   */
@@ -756,7 +758,7 @@ struct GnssGloTimeStructType {
     uint32_t numClockResets;
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
-    string toString();
+    string toString() const;
 };
 
 /** Union to hold GNSS system time from different
@@ -776,7 +778,7 @@ union SystemTimeStructUnion {
     GnssSystemTimeStructType navicSystemTime;
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
-    string toString();
+    string toString() const;
 };
 
 /**  GNSS system time in GnssLocation. <br/>
@@ -790,7 +792,7 @@ struct GnssSystemTime {
     SystemTimeStructUnion u;
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
-    string toString();
+    string toString() const;
 };
 
 /** Specify the set of engines whose position reports are
@@ -880,7 +882,7 @@ struct Location {
     LocationTechnologyMask techMask;
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
-    string toString();
+    string toString() const;
 };
 
 /** Specify latitude, longitude and altitude info of location.
@@ -969,7 +971,7 @@ struct GnssLocation : public Location {
      *  report. <br/>   */
     GnssLocationNavSolutionMask  navSolutionMask;
     /** Position technology used in computing this fix. */
-    GnssLocationPosTechMask      posTechMask;
+    LocationTechnologyMask       posTechMask;
     /** Body frame dynamics info. <br/>   */
     GnssLocationPositionDynamics bodyFrameData;
     /** GNSS system time when this position is calculated. <br/>  */
@@ -1022,7 +1024,7 @@ struct GnssLocation : public Location {
             eastVelocityStdDeviation(0.0f), upVelocityStdDeviation(0.0f),
             numSvUsedInPosition(0), svUsedInPosition({}),
             navSolutionMask((GnssLocationNavSolutionMask)0),
-            posTechMask((GnssLocationPosTechMask)0),
+            posTechMask((LocationTechnologyMask)0),
             bodyFrameData({}),
             gnssSystemTime({}), measUsageInfo(), leapSeconds(0),
             timeUncMs(0.0f), calibrationConfidencePercent(0),
@@ -1035,7 +1037,7 @@ struct GnssLocation : public Location {
     }
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
-    string toString();
+    string toString() const;
 };
 
 /** GNSS SV report that comes when clients registers for
@@ -1083,7 +1085,7 @@ struct GnssSv {
     double basebandCarrierToNoiseDbHz;
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
-    string toString();
+    string toString() const;
 };
 
 /** Specify the GNSS signal type and RF band for jammer info and
@@ -1175,7 +1177,7 @@ struct GnssData {
     double        agc[GNSS_MAX_NUMBER_OF_SIGNAL_TYPES];
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
-    string toString();
+    string toString() const;
 };
 
 /** Specify valid fields in
@@ -1420,7 +1422,7 @@ struct GnssMeasurementsData {
     uint8_t cycleSlipCount;
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
-    string toString();
+    string toString() const;
 };
 
 /** Specify GNSS measurements clock. <br/>
@@ -1456,7 +1458,7 @@ struct GnssMeasurementsClock {
     uint32_t hwClockDiscontinuityCount;
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
-    string toString();
+    string toString() const;
 };
 
 /** Specify GNSS measurements clock and data. <br/>   */
@@ -1467,7 +1469,7 @@ struct GnssMeasurements {
     std::vector<GnssMeasurementsData> measurements;
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
-    string toString();
+    string toString() const;
 };
 
 /** Specify the valid fields in LeapSecondSystemInfo. <br/> */
@@ -1504,7 +1506,7 @@ struct LeapSecondChangeInfo {
     uint8_t leapSecondsAfterChange;
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
-    string toString();
+    string toString() const;
 };
 
 /** Specify leap second system info, including current leap
@@ -1539,7 +1541,7 @@ struct LeapSecondSystemInfo {
     LeapSecondChangeInfo  leapSecondChangeInfo;
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
-    string toString();
+    string toString() const;
 };
 
 /** Specify the set of valid fields in
@@ -1566,7 +1568,7 @@ struct LocationSystemInfo {
     LeapSecondSystemInfo   leapSecondSysInfo;
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
-    string toString();
+    string toString() const;
 };
 
 enum BatchingStatus {
