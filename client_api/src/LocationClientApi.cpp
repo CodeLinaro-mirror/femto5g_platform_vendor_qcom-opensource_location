@@ -349,6 +349,7 @@ void LocationClientApi::addGeofences(std::vector<Geofence>& geofences,
             std::shared_ptr<GeofenceImpl> gfImpl(new GeofenceImpl(&geofences[i]));
             gfImpl->bindGeofence(&geofences[i]);
             mApiImpl->mLastAddedClientIds.push_back(gfImpl->getClientId());
+            LOC_LOGd("Geofence LastAddedClientId: %d", gfImpl->getClientId());
             mApiImpl->addGeofenceMap(mApiImpl->mLastAddedClientIds[i], geofences[i]);
         }
 
@@ -371,6 +372,7 @@ void LocationClientApi::removeGeofences(std::vector<Geofence>& geofences) {
                 return;
             }
             gfIds[i] = geofences[i].mGeofenceImpl->getClientId();
+            LOC_LOGd("removeGeofences id : %d", gfIds[i]);
         }
         if (!mApiImpl->checkGeofenceMap(geofences.size(), gfIds)) {
             LOC_LOGe ("Wrong geofence IDs");
@@ -401,6 +403,7 @@ void LocationClientApi::modifyGeofences(std::vector<Geofence>& geofences) {
                 return;
             }
             gfIds[i] = geofences[i].mGeofenceImpl->getClientId();
+            LOC_LOGd("modifyGeofences id : %d", gfIds[i]);
         }
         if (!mApiImpl->checkGeofenceMap(geofences.size(), gfIds)) {
             LOC_LOGe ("Wrong geofence IDs");
@@ -428,6 +431,7 @@ void LocationClientApi::pauseGeofences(std::vector<Geofence>& geofences) {
                 return;
             }
             gfIds[i] = geofences[i].mGeofenceImpl->getClientId();
+            LOC_LOGd("pauseGeofences id : %d", gfIds[i]);
         }
         if (!mApiImpl->checkGeofenceMap(geofences.size(), gfIds)) {
             LOC_LOGe ("Wrong geofence IDs");
@@ -453,6 +457,7 @@ void LocationClientApi::resumeGeofences(std::vector<Geofence>& geofences) {
                 return;
             }
             gfIds[i] = geofences[i].mGeofenceImpl->getClientId();
+            LOC_LOGd("resumeGeofences id : %d", gfIds[i]);
         }
         if (!mApiImpl->checkGeofenceMap(geofences.size(), gfIds)) {
             LOC_LOGe ("Wrong geofence IDs");
@@ -541,7 +546,12 @@ DECLARE_TBL(LocationTechnologyMask) = {
     {LOCATION_TECHNOLOGY_GNSS_BIT, "GNSS"},
     {LOCATION_TECHNOLOGY_CELL_BIT, "CELL"},
     {LOCATION_TECHNOLOGY_WIFI_BIT, "WIFI"},
-    {LOCATION_TECHNOLOGY_SENSORS_BIT, "SENSOR"}
+    {LOCATION_TECHNOLOGY_SENSORS_BIT, "SENSOR"},
+    {LOCATION_TECHNOLOGY_REFERENCE_LOCATION_BIT, "REF_LOC"},
+    {LOCATION_TECHNOLOGY_INJECTED_COARSE_POSITION_BIT, "CPI"},
+    {LOCATION_TECHNOLOGY_AFLT_BIT, "AFLT"},
+    {LOCATION_TECHNOLOGY_HYBRID_BIT, "HYBRID"},
+    {LOCATION_TECHNOLOGY_PPE_BIT, "PPE"}
 };
 // GnssLocationNavSolutionMask
 DECLARE_TBL(GnssLocationNavSolutionMask) = {
@@ -555,18 +565,6 @@ DECLARE_TBL(GnssLocationNavSolutionMask) = {
     {LOCATION_NAV_CORRECTION_RTK_FIXED_BIT, "NAV_CORR_RTK_FIXED"},
     {LOCATION_NAV_CORRECTION_ONLY_SBAS_CORRECTED_SV_USED_BIT,
             "NAV_CORR_ONLY_SBAS_CORRECTED_SV_USED"}
-};
-// GnssLocationPosTechMask
-DECLARE_TBL(GnssLocationPosTechMask) = {
-    {LOCATION_POS_TECH_SATELLITE_BIT, "SATELLITE"},
-    {LOCATION_POS_TECH_CELLID_BIT, "CELLID"},
-    {LOCATION_POS_TECH_WIFI_BIT, "WIFI"},
-    {LOCATION_POS_TECH_SENSORS_BIT, "SENSORS"},
-    {LOCATION_POS_TECH_REFERENCE_LOCATION_BIT, "REF_LOC"},
-    {LOCATION_POS_TECH_INJECTED_COARSE_POSITION_BIT, "CPI"},
-    {LOCATION_POS_TECH_AFLT_BIT, "AFLT"},
-    {LOCATION_POS_TECH_HYBRID_BIT, "HYBRID"},
-    {LOCATION_POS_TECH_PPE_BIT, "PPE"}
 };
 // GnssLocationPosDataMask
 DECLARE_TBL(GnssLocationPosDataMask) = {
@@ -640,6 +638,16 @@ DECLARE_TBL(GnssSvType) = {
     {GNSS_SV_TYPE_GALILEO, "GAL"},
     {GNSS_SV_TYPE_NAVIC, "NAVIC"}
 };
+// Gnss_LocSvSystemEnumType
+DECLARE_TBL(Gnss_LocSvSystemEnumType) = {
+    {GNSS_LOC_SV_SYSTEM_GPS,     "GPS"},
+    {GNSS_LOC_SV_SYSTEM_GALILEO, "GAL"},
+    {GNSS_LOC_SV_SYSTEM_SBAS,    "SBAS"},
+    {GNSS_LOC_SV_SYSTEM_GLONASS, "GLO"},
+    {GNSS_LOC_SV_SYSTEM_BDS,     "BDS"},
+    {GNSS_LOC_SV_SYSTEM_QZSS,    "QZSS"},
+    {GNSS_LOC_SV_SYSTEM_NAVIC,   "NAVIC"}
+};
 // GnssLocationInfoFlagMask
 DECLARE_TBL(GnssLocationInfoFlagMask) = {
     {GNSS_LOCATION_INFO_ALTITUDE_MEAN_SEA_LEVEL_BIT, "ALT_SEA_LEVEL"},
@@ -680,27 +688,6 @@ DECLARE_TBL(LocationReliability) = {
     {LOCATION_RELIABILITY_LOW, "LOW"},
     {LOCATION_RELIABILITY_MEDIUM, "MED"},
     {LOCATION_RELIABILITY_HIGH, "HI"}
-};
-// Gnss_LocSvSystemEnumType
-static const GnssSvType convertSvSysToType(Gnss_LocSvSystemEnumType sys) {
-    switch (sys) {
-    case GNSS_LOC_SV_SYSTEM_GPS:
-        return GNSS_SV_TYPE_GPS;
-    case GNSS_LOC_SV_SYSTEM_GALILEO:
-        return GNSS_SV_TYPE_GALILEO;
-    case GNSS_LOC_SV_SYSTEM_SBAS:
-        return GNSS_SV_TYPE_SBAS;
-    case GNSS_LOC_SV_SYSTEM_GLONASS:
-        return GNSS_SV_TYPE_GLONASS;
-    case GNSS_LOC_SV_SYSTEM_BDS:
-        return GNSS_SV_TYPE_BEIDOU;
-    case GNSS_LOC_SV_SYSTEM_QZSS:
-        return GNSS_SV_TYPE_QZSS;
-    case GNSS_LOC_SV_SYSTEM_NAVIC:
-        return GNSS_SV_TYPE_NAVIC;
-    default:
-        return GNSS_SV_TYPE_UNKNOWN;
-    }
 };
 // GnssSystemTimeStructTypeFlags
 DECLARE_TBL(GnssSystemTimeStructTypeFlags) = {
@@ -828,7 +815,7 @@ DECLARE_TBL(LocationSystemInfoMask) = {
     {LOC_SYS_INFO_LEAP_SECOND, "LEAP_SEC"}
 };
 
-string GnssLocationSvUsedInPosition::toString() {
+string GnssLocationSvUsedInPosition::toString() const {
     string out;
     out.reserve(256);
 
@@ -854,23 +841,18 @@ string GnssLocationSvUsedInPosition::toString() {
     return out;
 }
 
-string GnssMeasUsageInfo::toString() {
+string GnssMeasUsageInfo::toString() const {
     string out;
     out.reserve(256);
 
-    auto tmp = gnssConstellation;
-    // temporarily change gnssConstellation's value to converted value so we could use FIELDVAL_ENUM
-    gnssConstellation = (decltype(gnssConstellation))convertSvSysToType(gnssConstellation);
-    out += FIELDVAL_ENUM(gnssConstellation, GnssSvType_tbl);
-    // now change gnssConstellation to its original value
-    gnssConstellation = tmp;
+    out += FIELDVAL_ENUM(gnssConstellation, Gnss_LocSvSystemEnumType_tbl);
     out += FIELDVAL_DEC(gnssSvId);
     out += FIELDVAL_MASK(gnssSignalType, GnssSignalTypeMask_tbl);
 
     return out;
 }
 
-string GnssLocationPositionDynamics::toString() {
+string GnssLocationPositionDynamics::toString() const {
     string out;
     out.reserve(256);
 
@@ -897,7 +879,7 @@ string GnssLocationPositionDynamics::toString() {
     return out;
 }
 
-string GnssSystemTimeStructType::toString() {
+string GnssSystemTimeStructType::toString() const {
     string out;
     out.reserve(256);
 
@@ -912,7 +894,7 @@ string GnssSystemTimeStructType::toString() {
     return out;
 }
 
-string GnssGloTimeStructType::toString() {
+string GnssGloTimeStructType::toString() const {
     string out;
     out.reserve(256);
 
@@ -928,7 +910,7 @@ string GnssGloTimeStructType::toString() {
     return out;
 }
 
-string GnssSystemTime::toString() {
+string GnssSystemTime::toString() const {
     switch (gnssSystemTimeSrc) {
     case GNSS_LOC_SV_SYSTEM_GPS:
         return u.gpsSystemTime.toString();
@@ -947,7 +929,7 @@ string GnssSystemTime::toString() {
     }
 }
 
-string Location::toString() {
+string Location::toString() const {
     string out;
     out.reserve(256);
 
@@ -967,7 +949,7 @@ string Location::toString() {
     return out;
 }
 
-string GnssLocation::toString() {
+string GnssLocation::toString() const {
     string out;
     out.reserve(1024);
 
@@ -996,7 +978,6 @@ string GnssLocation::toString() {
     out += FIELDVAL_DEC(numSvUsedInPosition);
     out += svUsedInPosition.toString();
     out += FIELDVAL_MASK(navSolutionMask, GnssLocationNavSolutionMask_tbl);
-    out += FIELDVAL_MASK(posTechMask, GnssLocationPosTechMask_tbl);
     out += bodyFrameData.toString();
     out += gnssSystemTime.toString();
 
@@ -1020,7 +1001,7 @@ string GnssLocation::toString() {
     return out;
 }
 
-string GnssSv::toString() {
+string GnssSv::toString() const {
     string out;
     out.reserve(256);
 
@@ -1037,7 +1018,7 @@ string GnssSv::toString() {
     return out;
 }
 
-string GnssData::toString() {
+string GnssData::toString() const {
     string out;
     out.reserve(4096);
 
@@ -1051,7 +1032,7 @@ string GnssData::toString() {
     return out;
 }
 
-string GnssMeasurementsData::toString() {
+string GnssMeasurementsData::toString() const {
     string out;
     out.reserve(256);
 
@@ -1084,7 +1065,7 @@ string GnssMeasurementsData::toString() {
     return out;
 }
 
-string GnssMeasurementsClock::toString() {
+string GnssMeasurementsClock::toString() const {
     string out;
     out.reserve(256);
 
@@ -1102,7 +1083,7 @@ string GnssMeasurementsClock::toString() {
     return out;
 }
 
-string GnssMeasurements::toString() {
+string GnssMeasurements::toString() const {
     string out;
     // (number of GnssMeasurementsData in the vector + GnssMeasurementsClock) * 256
     out.reserve((measurements.size() + 1) << 8);
@@ -1115,7 +1096,7 @@ string GnssMeasurements::toString() {
     return out;
 }
 
-string LeapSecondChangeInfo::toString() {
+string LeapSecondChangeInfo::toString() const {
     string out;
     out.reserve(256);
 
@@ -1126,7 +1107,7 @@ string LeapSecondChangeInfo::toString() {
     return out;
 }
 
-string LeapSecondSystemInfo::toString() {
+string LeapSecondSystemInfo::toString() const {
     string out;
     out.reserve(256);
 
@@ -1136,7 +1117,7 @@ string LeapSecondSystemInfo::toString() {
     return out;
 }
 
-string LocationSystemInfo::toString() {
+string LocationSystemInfo::toString() const {
     string out;
     out.reserve(256);
 
