@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022, 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022, 2023-2024 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -693,8 +693,10 @@ void LocApiV02 :: startFix(const LocPosMode& fixCriteria, LocApiResponse *adapte
   memset (&set_mode_ind, 0, sizeof(set_mode_ind));
 
   LOC_LOGV("%s:%d]: start \n", __func__, __LINE__);
-  loc_boot_kpi_marker("L - LocApiV02 startFix, tbf %d", fixCriteria.min_interval);
-  mIsFirstFinalFixReported = false;
+  // BOOT KPI marker, print only once for a session
+  if (false == mInSession) {
+      loc_boot_kpi_marker("L - LocApiV02 startFix, tbf %d", fixCriteria.min_interval);
+  }
   fixCriteria.logv();
 
   mInSession = true;
@@ -873,6 +875,7 @@ void LocApiV02 :: stopFix(LocApiResponse *adapterResponse)
 
   status = locClientSendReq(QMI_LOC_STOP_REQ_V02, req_union);
 
+  mIsFirstFinalFixReported = false;
   mInSession = false;
   mPowerMode = GNSS_POWER_MODE_INVALID;
 
