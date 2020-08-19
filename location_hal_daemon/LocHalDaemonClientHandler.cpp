@@ -649,13 +649,13 @@ LocHalDaemonClientHandler - Location API callback functions
 void LocHalDaemonClientHandler::onCapabilitiesCallback(LocationCapabilitiesMask mask) {
 
     std::lock_guard<std::mutex> lock(LocationApiService::mMutex);
-    LOC_LOGd("--< onCapabilitiesCallback=0x%x", mask);
+    LOC_LOGd("--< onCapabilitiesCallback=0x%" PRIx64, mask);
 
     if (nullptr != mIpcSender) {
         // broadcast
         LocAPICapabilitiesIndMsg msg(SERVICE_NAME, mask);
         if (mask != mCapabilityMask) {
-            LOC_LOGd("mask old=0x%x new=0x%x", mCapabilityMask, mask);
+            LOC_LOGd("mask old=0x%" PRIx64" new=0x%" PRIx64, mCapabilityMask, mask);
             mCapabilityMask = mask;
             bool rc = sendMessage(msg);
             // purge this client if failed
@@ -664,6 +664,9 @@ void LocHalDaemonClientHandler::onCapabilitiesCallback(LocationCapabilitiesMask 
                 mService->deleteClientbyName(mName);
             }
         }
+    } else {
+        LOC_LOGe("mIpcSender is NULL or masks are same old=0x%" PRIx64" new=0x%" PRIx64,
+                mCapabilityMask, mask);
     }
 }
 
