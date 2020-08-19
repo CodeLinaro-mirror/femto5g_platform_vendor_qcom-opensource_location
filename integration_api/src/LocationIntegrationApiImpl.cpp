@@ -689,19 +689,14 @@ void LocationIntegrationApiImpl::processHalReadyMsg() {
                                  reinterpret_cast<uint8_t*>(&msg),
                                  sizeof(msg));
     }
-    if (mSysConfigInfo.powerContinuityStatusValid) {
-        LocConfigUpdateSystemConfigurationMsg msg(mSocketName,
-                                                  mSysConfigInfo.powerContinuityStatus);
-        sendConfigMsgToHalDaemon(UPDATE_SYSTEM_CONFIGUAITON,
-                                 reinterpret_cast<uint8_t*>(&msg),
-                                 sizeof(msg));
-    }
     if (mSysConfigInfo.sensorConfigInputValid) {
         LocConfigUpdateSystemConfigurationMsg msg(mSocketName, mSysConfigInfo.sensorConfigInput);
         sendConfigMsgToHalDaemon(UPDATE_SYSTEM_CONFIGUAITON,
                                  reinterpret_cast<uint8_t*>(&msg),
                                  sizeof(msg));
     }
+    // do not send down power status when hal daemon restarts as the power
+    // status is only valid for short duration
 }
 
 void LocationIntegrationApiImpl::addConfigReq(LocConfigTypeEnum configType) {
