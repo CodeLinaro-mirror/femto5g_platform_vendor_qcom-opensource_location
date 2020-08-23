@@ -45,6 +45,8 @@
 using namespace std;
 
 #define MAX_GEOFENCE_COUNT (200)
+#define MAINT_TIMER_INTERVAL_MSEC (60000)
+#define AUTO_START_CLIENT_NAME "default"
 
 typedef void* (getLocationInterface)();
 typedef void  (createOSFramework)();
@@ -125,7 +127,9 @@ LocationApiService::LocationApiService(const configParamToRead & configParamRead
 
     mLocationControlId(0),
     mAutoStartGnss(configParamRead.autoStartGnss),
-    mPowerState (POWER_STATE_UNKNOWN)
+    mPowerState(POWER_STATE_UNKNOWN),
+    mPositionMode((GnssSuplMode)configParamRead.positionMode),
+    mMaintTimer(this)
 #ifdef POWERMANAGER_ENABLED
     ,mPowerEventObserver(nullptr)
 #endif
@@ -135,6 +139,7 @@ LocationApiService::LocationApiService(const configParamToRead & configParamRead
     LOC_LOGd("GnssSessionTbfMs=%u", configParamRead.gnssSessionTbfMs);
     LOC_LOGd("DeleteAllBeforeAutoStart=%u", configParamRead.deleteAllBeforeAutoStart);
     LOC_LOGd("DeleteAllOnEnginesMask=%u", configParamRead.posEngineMask);
+    LOC_LOGd("PositionMode=%u", configParamRead.positionMode);
 
     // create Location control API
     mControlCallabcks.size = sizeof(mControlCallabcks);
@@ -173,6 +178,8 @@ LocationApiService::LocationApiService(const configParamToRead & configParamRead
     // Create OSFramework and IzatManager instance
     createOSFrameworkInstance();
 
+    mMaintTimer.start(MAINT_TIMER_INTERVAL_MSEC, false);
+
     // create a default client if enabled by config
     if (mAutoStartGnss) {
         if ((configParamRead.deleteAllBeforeAutoStart) &&
@@ -180,22 +187,22 @@ LocationApiService::LocationApiService(const configParamToRead & configParamRead
             GnssAidingData aidingData = {};
             aidingData.deleteAll = true;
             aidingData.posEngineMask = configParamRead.posEngineMask;
-
-            gnssDeleteAidingData(aidingData);
+            mLocationControlApi->gnssDeleteAidingData(aidingData);
         }
 
         LOC_LOGd("--> Starting a default client...");
         LocHalDaemonClientHandler* pClient =
-                new LocHalDaemonClientHandler(this, "default", LOCATION_CLIENT_API);
-        mClients.emplace("default", pClient);
+                new LocHalDaemonClientHandler(this, AUTO_START_CLIENT_NAME, LOCATION_CLIENT_API);
+        mClients.emplace(AUTO_START_CLIENT_NAME, pClient);
 
         pClient->updateSubscription(
                 E_LOC_CB_GNSS_LOCATION_INFO_BIT | E_LOC_CB_GNSS_SV_BIT);
 
-        LocationOptions locationOption;
+        LocationOptions locationOption = {};
         locationOption.size = sizeof(locationOption);
         locationOption.minInterval = configParamRead.gnssSessionTbfMs;
         locationOption.minDistance = 0;
+        locationOption.mode = mPositionMode;
 
         pClient->startTracking(locationOption);
         pClient->mTracking = true;
@@ -338,52 +345,23 @@ void LocationApiService::processClientMsg(const char* data, uint32_t length) {
             break;
         }
         case E_LOCAPI_ADD_GEOFENCES_MSG_ID: {
-            if (sizeof(LocAPIAddGeofencesReqMsg) != length) {
-                LOC_LOGe("invalid message");
-                break;
-            }
             addGeofences(reinterpret_cast<LocAPIAddGeofencesReqMsg*>(pMsg));
             break;
         }
         case E_LOCAPI_REMOVE_GEOFENCES_MSG_ID: {
-            if (sizeof(LocAPIRemoveGeofencesReqMsg) != length) {
-                LOC_LOGe("invalid message");
-                break;
-            }
             removeGeofences(reinterpret_cast<LocAPIRemoveGeofencesReqMsg*>(pMsg));
             break;
         }
         case E_LOCAPI_MODIFY_GEOFENCES_MSG_ID: {
-            if (sizeof(LocAPIModifyGeofencesReqMsg) != length) {
-                LOC_LOGe("invalid message");
-                break;
-            }
             modifyGeofences(reinterpret_cast<LocAPIModifyGeofencesReqMsg*>(pMsg));
             break;
         }
         case E_LOCAPI_PAUSE_GEOFENCES_MSG_ID: {
-            if (sizeof(LocAPIPauseGeofencesReqMsg) != length) {
-                LOC_LOGe("invalid message");
-                break;
-            }
             pauseGeofences(reinterpret_cast<LocAPIPauseGeofencesReqMsg*>(pMsg));
             break;
         }
         case E_LOCAPI_RESUME_GEOFENCES_MSG_ID: {
-            if (sizeof(LocAPIResumeGeofencesReqMsg) != length) {
-                LOC_LOGe("invalid message");
-                break;
-            }
             resumeGeofences(reinterpret_cast<LocAPIResumeGeofencesReqMsg*>(pMsg));
-            break;
-        }
-        case E_LOCAPI_CONTROL_DELETE_AIDING_DATA_MSG_ID: {
-            if (sizeof(LocAPIDeleteAidingDataReqMsg) != length) {
-                LOC_LOGe("invalid message");
-                break;
-            }
-            gnssDeleteAidingData(reinterpret_cast
-                    <LocAPIDeleteAidingDataReqMsg*>(pMsg)->gnssAidingData);
             break;
         }
         case E_LOCAPI_CONTROL_UPDATE_NETWORK_AVAILABILITY_MSG_ID: {
@@ -443,6 +421,16 @@ void LocationApiService::processClientMsg(const char* data, uint32_t length) {
             break;
         }
 
+        case E_INTAPI_CONFIG_CONSTELLATION_SECONDARY_BAND_MSG_ID: {
+            if (sizeof(LocConfigConstellationSecondaryBandReqMsg) != length) {
+                LOC_LOGe("invalid LocConfigConstellationSecondaryBandReqMsg");
+                break;
+            }
+            configConstellationSecondaryBand(reinterpret_cast
+                    <LocConfigConstellationSecondaryBandReqMsg*>(pMsg));
+            break;
+        }
+
         case E_INTAPI_CONFIG_AIDING_DATA_DELETION_MSG_ID: {
             if (sizeof(LocConfigAidingDataDeletionReqMsg) != length) {
                 LOC_LOGe("invalid LocConfigAidingDataDeletionReqMsg");
@@ -479,12 +467,12 @@ void LocationApiService::processClientMsg(const char* data, uint32_t length) {
             break;
         }
 
-        case E_INTAPI_CONFIG_BODY_TO_SENSOR_MOUNT_PARAMS_MSG_ID: {
-            if (sizeof(LocConfigB2sMountParamsReqMsg) != length) {
-                LOC_LOGe("invalid LocConfigB2sMountParamsReqMsg");
+        case E_INTAPI_CONFIG_DEAD_RECKONING_ENGINE_MSG_ID: {
+            if (sizeof(LocConfigDrEngineParamsReqMsg) != length) {
+                LOC_LOGe("invalid LocConfigDrEngineParamsReqMsg");
                 break;
             }
-            configB2sMountParams(reinterpret_cast<LocConfigB2sMountParamsReqMsg*>(pMsg));
+            configDeadReckoningEngineParams(reinterpret_cast<LocConfigDrEngineParamsReqMsg*>(pMsg));
             break;
         }
 
@@ -523,8 +511,19 @@ void LocationApiService::processClientMsg(const char* data, uint32_t length) {
             getGnssConfig(pMsg, GNSS_CONFIG_FLAGS_MIN_SV_ELEVATION_BIT);
             break;
         }
+
+        case E_INTAPI_GET_CONSTELLATION_SECONDARY_BAND_CONFIG_REQ_MSG_ID: {
+            if (sizeof(LocConfigGetConstellationSecondaryBandConfigReqMsg) != length) {
+                LOC_LOGe("invalid LocConfigGetConstellationSecondaryBandConfigReqMsg");
+                break;
+            }
+            getConstellationSecondaryBandConfig(
+                    (const LocConfigGetConstellationSecondaryBandConfigReqMsg*) pMsg);
+            break;
+        }
+
         default: {
-            LOC_LOGe("Unknown message with id: ", pMsg->msgId);
+            LOC_LOGe("Unknown message with id: %d ", pMsg->msgId);
             break;
         }
     }
@@ -564,17 +563,7 @@ void LocationApiService::deleteClient(LocAPIClientDeregisterReqMsg *pMsg) {
 }
 
 void LocationApiService::deleteClientbyName(const std::string clientname) {
-    // We shall not hold the lock, as lock already held by the caller
-    //
-    // remove the client from the config request map
-    for (auto it = mConfigReqs.begin(); it != mConfigReqs.end();) {
-        if (strncmp(it->second.clientName.c_str(), clientname.c_str(),
-                   strlen (clientname.c_str())) == 0) {
-            it = mConfigReqs.erase(it);
-        } else {
-            ++it;
-        }
-    }
+    LOC_LOGi(">-- deleteClient client=%s", clientname.c_str());
 
     // delete this client from property db
     LocHalDaemonClientHandler* pClient = getClient(clientname);
@@ -585,8 +574,6 @@ void LocationApiService::deleteClientbyName(const std::string clientname) {
     }
     mClients.erase(clientname);
     pClient->cleanup();
-
-    LOC_LOGi(">-- deleteClient client=%s", clientname.c_str());
 }
 /******************************************************************************
 LocationApiService - implementation - tracking
@@ -600,7 +587,11 @@ void LocationApiService::startTracking(LocAPIStartTrackingReqMsg *pMsg) {
         return;
     }
 
-    if (!pClient->startTracking(pMsg->locOptions)) {
+    LocationOptions locationOption = pMsg->locOptions;
+    // set the mode according to the master position mode
+    locationOption.mode = mPositionMode;
+
+    if (!pClient->startTracking(locationOption)) {
         LOC_LOGe("Failed to start session");
         return;
     }
@@ -679,7 +670,10 @@ void LocationApiService::updateTrackingOptions(LocAPIUpdateTrackingOptionsReqMsg
 
     LocHalDaemonClientHandler* pClient = getClient(pMsg->mSocketName);
     if (pClient) {
-        pClient->updateTrackingOptions(pMsg->locOptions);
+        LocationOptions locationOption = pMsg->locOptions;
+        // set the mode according to the master position mode
+        locationOption.mode = mPositionMode;
+        pClient->updateTrackingOptions(locationOption);
         pClient->mPendingMessages.push(E_LOCAPI_UPDATE_TRACKING_OPTIONS_MSG_ID);
     }
 
@@ -701,7 +695,6 @@ void LocationApiService::updateNetworkAvailability(bool availability) {
 
 void LocationApiService::getGnssEnergyConsumed(const char* clientSocketName) {
 
-    std::lock_guard<std::mutex> lock(mMutex);
     LOC_LOGi(">-- getGnssEnergyConsumed by=%s", clientSocketName);
 
     GnssInterface* gnssInterface = getGnssInterface();
@@ -710,6 +703,7 @@ void LocationApiService::getGnssEnergyConsumed(const char* clientSocketName) {
         return;
     }
 
+    std::lock_guard<std::mutex> lock(mMutex);
     bool requestAlreadyPending = false;
     for (auto each : mClients) {
         if ((each.second != nullptr) &&
@@ -737,6 +731,26 @@ void LocationApiService::getGnssEnergyConsumed(const char* clientSocketName) {
             gnssInterface->getGnssEnergyConsumed(reportEnergyCb);
         }
     }
+}
+
+void LocationApiService::getConstellationSecondaryBandConfig(
+        const LocConfigGetConstellationSecondaryBandConfigReqMsg* pReqMsg) {
+
+    LOC_LOGi(">--getConstellationConfig");
+    GnssInterface* gnssInterface = getGnssInterface();
+    if (!gnssInterface) {
+        LOC_LOGe(">-- null GnssInterface");
+        return;
+    }
+
+    std::lock_guard<std::mutex> lock(mMutex);
+    // retrieve the constellation enablement/disablement config
+    // blacklisted SV info and secondary band config
+    uint32_t sessionId = gnssInterface-> gnssGetSecondaryBandConfig();
+
+    // if sessionId is 0, e.g.: error callback will be delivered
+    // by addConfigRequestToMap
+    addConfigRequestToMap(sessionId, pReqMsg);
 }
 
 /******************************************************************************
@@ -988,19 +1002,33 @@ void LocationApiService::configConstellations(const LocConfigSvConstellationReqM
     }
     std::lock_guard<std::mutex> lock(mMutex);
 
-    uint32_t sessionId = 0;
-    if (pMsg->mResetToDefault) {
-        sessionId = mLocationControlApi->resetConstellationConfig();
-    } else {
-        sessionId = mLocationControlApi->configConstellations(
-            pMsg->mSvTypeConfig, pMsg->mSvIdConfig);
-    }
+    uint32_t sessionId = mLocationControlApi->configConstellations(
+            pMsg->mConstellationEnablementConfig, pMsg->mBlacklistSvConfig);
 
-    LOC_LOGi(">-- reset: %d, enable constellations: 0x%" PRIx64 ", "
+    LOC_LOGe(">-- reset sv type config: %d, enable constellations: 0x%" PRIx64 ", "
              "blacklisted consteallations: 0x%" PRIx64 ", ",
-             pMsg->mResetToDefault,
-             pMsg->mSvTypeConfig.enabledSvTypesMask,
-             pMsg->mSvTypeConfig.blacklistedSvTypesMask);
+             (pMsg->mConstellationEnablementConfig.size == 0),
+             pMsg->mConstellationEnablementConfig.enabledSvTypesMask,
+             pMsg->mConstellationEnablementConfig.blacklistedSvTypesMask);
+    addConfigRequestToMap(sessionId, pMsg);
+}
+
+void LocationApiService::configConstellationSecondaryBand(
+        const LocConfigConstellationSecondaryBandReqMsg* pMsg) {
+
+    if (!pMsg) {
+        return;
+    }
+    std::lock_guard<std::mutex> lock(mMutex);
+
+    uint32_t sessionId = mLocationControlApi->configConstellationSecondaryBand(
+            pMsg->mSecondaryBandConfig);
+
+    LOC_LOGe(">-- secondary band size %d, enabled constellation: 0x%" PRIx64 ", "
+             "secondary band disabed constellation: 0x%" PRIx64 "",
+             pMsg->mSecondaryBandConfig.size,
+             pMsg->mSecondaryBandConfig.enabledSvTypesMask,
+             pMsg->mSecondaryBandConfig.blacklistedSvTypesMask);
     addConfigRequestToMap(sessionId, pMsg);
 }
 
@@ -1110,19 +1138,13 @@ void LocationApiService::getGnssConfig(const LocAPIMsgHeader* pReqMsg,
     addConfigRequestToMap(sessionId, pReqMsg);
 }
 
-void LocationApiService::configB2sMountParams(const LocConfigB2sMountParamsReqMsg* pMsg){
+void LocationApiService::configDeadReckoningEngineParams(const LocConfigDrEngineParamsReqMsg* pMsg){
     if (!pMsg) {
         return;
     }
     std::lock_guard<std::mutex> lock(mMutex);
-    LOC_LOGi(">-- client %s, b2s params roll offset: %f, pitch offset: %f, "
-             "yaw offset: %f, offset unc: %f",
-             pMsg->mSocketName, pMsg->mB2sParams.rollOffset,
-             pMsg->mB2sParams.pitchOffset, pMsg->mB2sParams.yawOffset,
-             pMsg->mB2sParams.offsetUnc);
-
-    uint32_t sessionId = mLocationControlApi->configBodyToSensorMountParams(
-            pMsg->mB2sParams);
+    uint32_t sessionId = mLocationControlApi->configDeadReckoningEngineParams(
+            pMsg->mDreConfig);
     addConfigRequestToMap(sessionId, pMsg);
 }
 
@@ -1297,5 +1319,57 @@ void LocationApiService::destroyOSFrameworkInstance() {
         (*getter)();
     } else {
         LOC_LOGe("dlGetSymFromLib failed for liblocationservice_glue.so");
+    }
+}
+
+void LocationApiService::performMaintenance() {
+    ClientNameIpcSenderMap   clientsToCheck;
+
+    // Hold the lock when we access global variable of mClients
+    // copy out the client name and shared_ptr of ipc sender for the clients.
+    // We do not use mClients directly or making a copy of mClients, as the
+    // client handler object can become invalid when the client gets
+    // deleted by the thread of LocationApiService.
+    {
+        std::lock_guard<std::mutex> lock(mMutex);
+        for (auto client : mClients) {
+            if (client.first.compare(AUTO_START_CLIENT_NAME) != 0) {
+                clientsToCheck.emplace(client.first, client.second->getIpcSender());
+            }
+        }
+    }
+
+    for (auto client : clientsToCheck) {
+        LocAPIPingTestReqMsg msg(SERVICE_NAME);
+        bool messageSent = LocIpc::send(*client.second, reinterpret_cast<const uint8_t*>(&msg),
+                                            sizeof(msg));
+        LOC_LOGd("send ping message returned %d for client %s", messageSent, client.first.c_str());
+        if (messageSent == false) {
+            LOC_LOGe("--< ping failed for client %s", client.first.c_str());
+            deleteClientbyName(client.first);
+        }
+    }
+
+    // after maintenace, start next timer
+    mMaintTimer.start(MAINT_TIMER_INTERVAL_MSEC, false);
+}
+
+
+// Maintenance timer to clean up resources when client exists without sending
+// out de-registration message
+void MaintTimer::timeOutCallback() {
+    LOC_LOGd("maint timer fired");
+
+    struct PerformMaintenanceReq : public LocMsg {
+        PerformMaintenanceReq(LocationApiService* locationApiService) :
+                mLocationApiService(locationApiService){}
+        virtual ~PerformMaintenanceReq() {}
+        void proc() const {
+            mLocationApiService->performMaintenance();
+        }
+        LocationApiService* mLocationApiService;
+    };
+    if (mMsgTask) {
+        mMsgTask->sendMsg(new (nothrow) PerformMaintenanceReq(mLocationApiService));
     }
 }

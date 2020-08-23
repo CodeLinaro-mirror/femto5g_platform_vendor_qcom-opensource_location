@@ -68,7 +68,7 @@ class SockNode {
     const string mNodePathnamePrefix;
 
 public:
-    enum Type { LOCAL, EAP, OTHER };
+    enum Type { Local, Eap, Other };
     SockNode(int32_t id1, int32_t mId2, const string&& prefix) :
             mId1(id1), mId2(mId2), mNodePathnamePrefix(prefix) {
     }
@@ -110,12 +110,12 @@ public:
             .append(1, '.').append(to_string(mId2));
     }
     inline Type getNodeType() const {
-        Type type = OTHER;
+        Type type = Other;
         if (mNodePathnamePrefix.compare(0, sizeof(SOCKET_LOC_CLIENT_DIR)-1,
                                         SOCKET_LOC_CLIENT_DIR) == 0) {
-            type = LOCAL;
+            type = Local;
         } else if (mNodePathnamePrefix.compare(0, sizeof(sEAP)-1, sEAP) == 0) {
-            type = EAP;
+            type = Eap;
         }
         return type;
     }
@@ -123,12 +123,15 @@ public:
         const string socket = getNodePathname();
         const char* sock = socket.c_str();
         switch (getNodeType()) {
-        case SockNode::LOCAL:
+        case SockNode::Local:
             return LocIpc::getLocIpcLocalSender(sock);
-        case SockNode::EAP:
+        case SockNode::Eap:
             if (createFsNode) {
-                if (nullptr == fopen(sock, "w")) {
-                    LOC_LOGe("<-- failed to open file %s", sock);
+                FILE * pFile = fopen(sock, "w");
+                if (nullptr == pFile) {
+                    LOC_LOGe("<-- failed to open file %s error: %s", sock, strerror(errno));
+                } else {
+                    fclose (pFile);
                 }
             }
             return LocIpc::getLocIpcQrtrSender(getId1(), getId2());
@@ -175,7 +178,7 @@ enum ELocMsgID {
 
     // control
     E_LOCAPI_CONTROL_UPDATE_CONFIG_MSG_ID = 9, // this message id has been deprecated
-    E_LOCAPI_CONTROL_DELETE_AIDING_DATA_MSG_ID = 10,
+    E_LOCAPI_CONTROL_DELETE_AIDING_DATA_MSG_ID = 10, // this message id has been deprecated
     E_LOCAPI_CONTROL_UPDATE_NETWORK_AVAILABILITY_MSG_ID = 11,
 
     // Position reports
@@ -225,8 +228,9 @@ enum ELocMsgID {
     E_INTAPI_CONFIG_LEVER_ARM_MSG_ID  = 204,
     E_INTAPI_CONFIG_ROBUST_LOCATION_MSG_ID  = 205,
     E_INTAPI_CONFIG_MIN_GPS_WEEK_MSG_ID  = 206,
-    E_INTAPI_CONFIG_BODY_TO_SENSOR_MOUNT_PARAMS_MSG_ID = 207,
+    E_INTAPI_CONFIG_DEAD_RECKONING_ENGINE_MSG_ID = 207,
     E_INTAPI_CONFIG_MIN_SV_ELEVATION_MSG_ID = 208,
+    E_INTAPI_CONFIG_CONSTELLATION_SECONDARY_BAND_MSG_ID  = 209,
 
     // integration API config retrieval request/response
     E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID  = 300,
@@ -237,6 +241,9 @@ enum ELocMsgID {
 
     E_INTAPI_GET_MIN_SV_ELEVATION_REQ_MSG_ID  = 304,
     E_INTAPI_GET_MIN_SV_ELEVATION_RESP_MSG_ID  = 305,
+
+    E_INTAPI_GET_CONSTELLATION_SECONDARY_BAND_CONFIG_REQ_MSG_ID = 306,
+    E_INTAPI_GET_CONSTELLATION_SECONDARY_BAND_CONFIG_RESP_MSG_ID = 307,
 };
 
 typedef uint32_t LocationCallbacksMask;
@@ -581,16 +588,6 @@ struct LocAPIResumeGeofencesReqMsg: LocAPIMsgHeader
 /******************************************************************************
 IPC message structure - control
 ******************************************************************************/
-// defintion for message with msg id of E_LOCAPI_CONTROL_DELETE_AIDING_DATA_MSG_ID
-struct LocAPIDeleteAidingDataReqMsg: LocAPIMsgHeader
-{
-    GnssAidingData gnssAidingData;
-
-    inline LocAPIDeleteAidingDataReqMsg(const char* name, GnssAidingData& data) :
-        LocAPIMsgHeader(name, E_LOCAPI_CONTROL_DELETE_AIDING_DATA_MSG_ID),
-        gnssAidingData(data) { }
-};
-
 struct LocAPIUpdateNetworkAvailabilityReqMsg: LocAPIMsgHeader
 {
     bool mAvailability;
@@ -773,18 +770,25 @@ struct LocConfigPositionAssistedClockEstimatorReqMsg: LocAPIMsgHeader
 
 struct LocConfigSvConstellationReqMsg: LocAPIMsgHeader
 {
-    bool mResetToDefault;
-    GnssSvTypeConfig mSvTypeConfig;
-    GnssSvIdConfig   mSvIdConfig;
+    GnssSvTypeConfig mConstellationEnablementConfig;
+    GnssSvIdConfig   mBlacklistSvConfig;
 
     inline LocConfigSvConstellationReqMsg(const char* name,
-                                          bool resetToDefault,
-                                          const GnssSvTypeConfig& svTypeConfig,
-                                          const GnssSvIdConfig& svIdConfig) :
+                                          const GnssSvTypeConfig& constellationEnablementConfig,
+                                          const GnssSvIdConfig& blacklistSvConfig) :
             LocAPIMsgHeader(name, E_INTAPI_CONFIG_SV_CONSTELLATION_MSG_ID),
-            mResetToDefault(resetToDefault),
-            mSvTypeConfig(svTypeConfig),
-            mSvIdConfig(svIdConfig){ }
+            mConstellationEnablementConfig(constellationEnablementConfig),
+            mBlacklistSvConfig(blacklistSvConfig) { }
+};
+
+struct LocConfigConstellationSecondaryBandReqMsg: LocAPIMsgHeader
+{
+    GnssSvTypeConfig mSecondaryBandConfig;
+
+    inline LocConfigConstellationSecondaryBandReqMsg(
+            const char* name, const GnssSvTypeConfig& secondaryBandConfig) :
+            LocAPIMsgHeader(name, E_INTAPI_CONFIG_CONSTELLATION_SECONDARY_BAND_MSG_ID),
+            mSecondaryBandConfig(secondaryBandConfig){ }
 };
 
 // defintion for message with msg id of E_LOCAPI_CONTROL_DELETE_AIDING_DATA_MSG_ID
@@ -830,13 +834,13 @@ struct LocConfigMinGpsWeekReqMsg: LocAPIMsgHeader
         mMinGpsWeek(minGpsWeek) { }
 };
 
-struct LocConfigB2sMountParamsReqMsg: LocAPIMsgHeader
+struct LocConfigDrEngineParamsReqMsg: LocAPIMsgHeader
 {
-    BodyToSensorMountParams mB2sParams;
-    inline LocConfigB2sMountParamsReqMsg(const char* name,
-                                         const BodyToSensorMountParams& b2sParams) :
-        LocAPIMsgHeader(name, E_INTAPI_CONFIG_BODY_TO_SENSOR_MOUNT_PARAMS_MSG_ID),
-        mB2sParams(b2sParams) { }
+    DeadReckoningEngineConfig mDreConfig;
+    inline LocConfigDrEngineParamsReqMsg(const char* name,
+                                         const DeadReckoningEngineConfig& dreConfig) :
+        LocAPIMsgHeader(name, E_INTAPI_CONFIG_DEAD_RECKONING_ENGINE_MSG_ID),
+        mDreConfig(dreConfig) { }
 };
 
 struct LocConfigMinSvElevationReqMsg: LocAPIMsgHeader
@@ -899,10 +903,26 @@ struct LocConfigGetMinSvElevationRespMsg: LocAPIMsgHeader
         mMinSvElevation(minSvElevation) { }
 };
 
+struct LocConfigGetConstellationSecondaryBandConfigReqMsg: LocAPIMsgHeader
+{
+    inline LocConfigGetConstellationSecondaryBandConfigReqMsg(const char* name) :
+        LocAPIMsgHeader(name, E_INTAPI_GET_CONSTELLATION_SECONDARY_BAND_CONFIG_REQ_MSG_ID) { }
+};
+
+struct LocConfigGetConstellationSecondaryBandConfigRespMsg: LocAPIMsgHeader
+{
+    GnssSvTypeConfig mSecondaryBandConfig;
+
+    inline LocConfigGetConstellationSecondaryBandConfigRespMsg(const char* name,
+                                                  GnssSvTypeConfig secondaryBandConfig) :
+        LocAPIMsgHeader(name, E_INTAPI_GET_CONSTELLATION_SECONDARY_BAND_CONFIG_RESP_MSG_ID),
+        mSecondaryBandConfig(secondaryBandConfig){ }
+};
+
 /******************************************************************************
 IPC message structure - ping
 ******************************************************************************/
-#define LOCATION_REMOTE_API_PINGTEST_SIZE (1024)
+#define LOCATION_REMOTE_API_PINGTEST_SIZE (4)
 
 struct LocAPIPingTestReqMsg: LocAPIMsgHeader
 {

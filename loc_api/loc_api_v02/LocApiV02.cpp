@@ -632,8 +632,10 @@ void LocApiV02 :: startFix(const LocPosMode& fixCriteria, LocApiResponse *adapte
   memset (&set_mode_ind, 0, sizeof(set_mode_ind));
 
   LOC_LOGV("%s:%d]: start \n", __func__, __LINE__);
-  loc_boot_kpi_marker("L - LocApiV02 startFix, tbf %d", fixCriteria.min_interval);
-  mIsFirstFinalFixReported = false;
+  // BOOT KPI marker, print only once for a session
+  if (false == mInSession) {
+      loc_boot_kpi_marker("L - LocApiV02 startFix, tbf %d", fixCriteria.min_interval);
+  }
   fixCriteria.logv();
 
   mInSession = true;
@@ -811,6 +813,7 @@ void LocApiV02 :: stopFix(LocApiResponse *adapterResponse)
 
   status = locClientSendReq(QMI_LOC_STOP_REQ_V02, req_union);
 
+  mIsFirstFinalFixReported = false;
   mInSession = false;
   mPowerMode = GNSS_POWER_MODE_INVALID;
 
@@ -961,6 +964,9 @@ void LocApiV02::injectPosition(const Location& location, bool onDemandCpi)
     if (LOCATION_HAS_ALTITUDE_BIT & location.flags) {
         injectPositionReq.altitudeWrtEllipsoid_valid = 1;
         injectPositionReq.altitudeWrtEllipsoid = location.altitude;
+        injectPositionReq.altSourceInfo_valid = 1;
+        injectPositionReq.altSourceInfo.source = eQMI_LOC_ALT_SRC_OTHER_V02;
+        injectPositionReq.altSourceInfo.linkage = eQMI_LOC_ALT_SRC_LINKAGE_FULLY_INTERDEPENDENT_V02;
     }
 
     if (LOCATION_HAS_VERTICAL_ACCURACY_BIT & location.flags) {
@@ -969,6 +975,9 @@ void LocApiV02::injectPosition(const Location& location, bool onDemandCpi)
         injectPositionReq.vertConfidence_valid = 1;
         injectPositionReq.vertConfidence = 68;
     }
+
+    injectPositionReq.positionSrc_valid = 1;
+    injectPositionReq.positionSrc = eQMI_LOC_POSITION_SRC_OTHER_V02;
 
     if (onDemandCpi) {
         injectPositionReq.onDemandCpi_valid = 1;
@@ -2641,6 +2650,17 @@ void LocApiV02 :: reportPosition (
         LOC_LOGV("%s:%d jammerIndicator is present len=%d",
                  __func__, __LINE__,
                  location_report_ptr->jammerIndicatorList_len);
+        /* msInWeek is used to indicate if jammer indicator is present in this message.
+           The appropriate action will be taken in GnssAdapter
+           There are three cases as follows:
+           1. jammer is not present (old modem image that doesn't support this) then
+              msInWeek is set above, has a value >=0 and it is used in GnssAdapter to
+              validate when parsing jammer value from NMEA debug message
+           2. jammer is present and at least one satellite has a valid value, then
+              msInWeek is -1
+           3. jammer is present, but the values for all satellites are invalid
+              (GNSS_INVALID_JAMMER_IND) then msInWeek is -2 */
+        msInWeek = -2;
         for (uint32_t i = 1; i < location_report_ptr->jammerIndicatorList_len; i++) {
             dataNotify.gnssDataMask[i-1] = 0;
             dataNotify.agc[i-1] = 0.0;
@@ -5396,17 +5416,32 @@ void LocApiV02 :: reportGnssMeasurementData(
     static bool bGPSreceived = false;
     static int msInWeek = -1;
     static bool bAgcIsPresent = false;
+    uint8_t maxSubSeqNum = 0;
+    uint8_t subSeqNum = 0;
 
-    LOC_LOGd("SeqNum: %d, MaxMsgNum: %d",
-        gnss_measurement_report_ptr.seqNum,
-        gnss_measurement_report_ptr.maxMessageNum);
+    if (gnss_measurement_report_ptr.maxSubSeqNum_valid &&
+        gnss_measurement_report_ptr.subSeqNum_valid) {
+        maxSubSeqNum = gnss_measurement_report_ptr.maxSubSeqNum;
+        subSeqNum = gnss_measurement_report_ptr.subSeqNum;
+    } else {
+        maxSubSeqNum = 0;
+        subSeqNum = 0;
+    }
 
-    if (gnss_measurement_report_ptr.seqNum > gnss_measurement_report_ptr.maxMessageNum) {
+    LOC_LOGd("SeqNum: %d, MaxMsgNum: %d, "
+             "SubSeqNum: %d, MaxSubMsgNum: %d",
+             gnss_measurement_report_ptr.seqNum,
+             gnss_measurement_report_ptr.maxMessageNum,
+             subSeqNum,
+             maxSubSeqNum);
+
+    if (gnss_measurement_report_ptr.seqNum > gnss_measurement_report_ptr.maxMessageNum ||
+        subSeqNum > maxSubSeqNum) {
         LOC_LOGe("Invalid seqNum, do not proceed");
         return;
     }
 
-    if (1 == gnss_measurement_report_ptr.seqNum)
+    if (1 == gnss_measurement_report_ptr.seqNum && subSeqNum <= 1)
     {
         bGPSreceived = false;
         msInWeek = -1;
@@ -5484,14 +5519,14 @@ void LocApiV02 :: reportGnssMeasurementData(
     }
     // the GPS clock time reading
     if (eQMI_LOC_SV_SYSTEM_GPS_V02 == gnss_measurement_report_ptr.system &&
-        false == bGPSreceived) {
+        subSeqNum <= 1 && false == bGPSreceived) {
         bGPSreceived = true;
         msInWeek = convertGnssClock(measurementsNotify.clock,
                                     gnss_measurement_report_ptr);
     }
 
-    if (gnss_measurement_report_ptr.maxMessageNum == gnss_measurement_report_ptr.seqNum
-            && measurementsNotify.count != 0 && true == bGPSreceived) {
+    if (gnss_measurement_report_ptr.maxMessageNum == gnss_measurement_report_ptr.seqNum &&
+        maxSubSeqNum == subSeqNum && measurementsNotify.count != 0 && true == bGPSreceived) {
         // calling the base
         if (bAgcIsPresent) {
             /* If we can get AGC from QMI LOC there is no need to get it from NMEA */
@@ -7390,10 +7425,13 @@ LocApiV02::setBlacklistSvSync(const GnssSvIdConfig& config)
 }
 
 void
-LocApiV02::setBlacklistSv(const GnssSvIdConfig& config)
+LocApiV02::setBlacklistSv(const GnssSvIdConfig& config, LocApiResponse* adapterResponse)
 {
-    sendMsg(new LocApiMsg([this, config] () {
-        setBlacklistSvSync(config);
+    sendMsg(new LocApiMsg([this, config, adapterResponse] () {
+        LocationError err = setBlacklistSvSync(config);
+        if (adapterResponse) {
+            adapterResponse->returnToSender(err);
+        }
     }));
 }
 
@@ -7575,22 +7613,7 @@ LocApiV02::reportGnssSvIdConfig(
 
     // Parse all fields
     GnssSvIdConfig config = {};
-    config.size = sizeof(GnssSvIdConfig);
-    if (ind.bds_persist_blacklist_sv_valid) {
-        config.bdsBlacklistSvMask = ind.bds_persist_blacklist_sv;
-    }
-    if (ind.gal_persist_blacklist_sv_valid) {
-        config.galBlacklistSvMask = ind.gal_persist_blacklist_sv;
-    }
-    if (ind.qzss_persist_blacklist_sv_valid) {
-        config.qzssBlacklistSvMask = ind.qzss_persist_blacklist_sv;
-    }
-    if (ind.glo_persist_blacklist_sv_valid) {
-        config.gloBlacklistSvMask = ind.glo_persist_blacklist_sv;
-    }
-    if (ind.navic_persist_blacklist_sv_valid) {
-       config.navicBlacklistSvMask = ind.navic_persist_blacklist_sv;
-    }
+    convertQmiBlacklistedSvConfigToGnssConfig(ind, config);
     // Pass on GnssSvConfig
     LocApiBase::reportGnssSvIdConfig(config);
 }
@@ -7686,6 +7709,200 @@ LocApiV02::convertToGnssSvTypeConfig(
                     ind.navic_status == eQMI_LOC_CONSTELLATION_DISABLED_NO_MEMORY_V02)) {
         config.blacklistedSvTypesMask |= GNSS_SV_TYPES_MASK_NAVIC_BIT;
     }
+}
+
+void LocApiV02::configConstellationMultiBand(const GnssSvTypeConfig& secondaryBandConfig,
+                                             LocApiResponse* adapterResponse) {
+
+    sendMsg(new LocApiMsg([this, secondaryBandConfig, adapterResponse] () {
+
+    LocationError err = LOCATION_ERROR_SUCCESS;
+    locClientStatusEnumType status = eLOC_CLIENT_FAILURE_GENERAL;
+    locClientReqUnionType req_union = {};
+
+    qmiLocSetMultibandConfigReqMsgT_v02 reqMsg = {};
+    qmiLocGenReqStatusIndMsgT_v02 genReqStatusIndMsg = {};
+
+    // Fill in the request details
+    reqMsg.secondaryGnssConfig_valid = true;
+    if (secondaryBandConfig.enabledSvTypesMask & GNSS_SV_TYPES_MASK_GPS_BIT) {
+        reqMsg.secondaryGnssConfig |= eQMI_SYSTEM_GPS_V02;
+    }
+    if (secondaryBandConfig.enabledSvTypesMask & GNSS_SV_TYPES_MASK_GLO_BIT) {
+        reqMsg.secondaryGnssConfig |= eQMI_SYSTEM_GLO_V02;
+    }
+    if (secondaryBandConfig.enabledSvTypesMask & GNSS_SV_TYPES_MASK_BDS_BIT) {
+        reqMsg.secondaryGnssConfig |= eQMI_SYSTEM_BDS_V02;
+    }
+    if (secondaryBandConfig.enabledSvTypesMask & GNSS_SV_TYPES_MASK_QZSS_BIT) {
+        reqMsg.secondaryGnssConfig |= eQMI_SYSTEM_QZSS_V02;
+    }
+    if (secondaryBandConfig.enabledSvTypesMask & GNSS_SV_TYPES_MASK_GAL_BIT) {
+        reqMsg.secondaryGnssConfig |= eQMI_SYSTEM_GAL_V02;
+    }
+    if (secondaryBandConfig.enabledSvTypesMask & GNSS_SV_TYPES_MASK_NAVIC_BIT) {
+        reqMsg.secondaryGnssConfig |= eQMI_SYSTEM_NAVIC_V02;
+    }
+
+    LOC_LOGd("hal secondary band enabled constellation: 0x%" PRIx64 ", "
+             "qmi secondary band disabed constellation: 0x%" PRIx64 "",
+             secondaryBandConfig.enabledSvTypesMask, reqMsg.secondaryGnssConfig);
+
+    // Update in request union
+    req_union.pSetMultibandConfigReq = &reqMsg;
+
+    // Send the request
+    status = loc_sync_send_req(clientHandle,
+                               QMI_LOC_SET_MULTIBAND_CONFIG_REQ_V02,
+                               req_union,
+                               LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
+                               QMI_LOC_SET_MULTIBAND_CONFIG_IND_V02,
+                               &genReqStatusIndMsg);
+    if (status != eLOC_CLIENT_SUCCESS ||
+            genReqStatusIndMsg.status != eQMI_LOC_SUCCESS_V02) {
+        LOC_LOGe("Config multiband failed. status: %s ind status %s",
+                 loc_get_v02_client_status_name(status),
+                 loc_get_v02_qmi_status_name(genReqStatusIndMsg.status));
+
+        if (status == eLOC_CLIENT_FAILURE_UNSUPPORTED ||
+                status == eLOC_CLIENT_FAILURE_INVALID_MESSAGE_ID) {
+            err = LOCATION_ERROR_NOT_SUPPORTED;
+        } else {
+            err = LOCATION_ERROR_GENERAL_FAILURE;
+        }
+    }
+
+    if (adapterResponse) {
+        adapterResponse->returnToSender(err);
+    }
+    }));
+}
+
+void LocApiV02::getConstellationMultiBandConfig(
+        uint32_t sessionId, LocApiResponse* adapterResponse) {
+
+    sendMsg(new LocApiMsg([this, sessionId, adapterResponse] () {
+
+    LocationError err = LOCATION_ERROR_SUCCESS;
+    locClientStatusEnumType status = eLOC_CLIENT_FAILURE_GENERAL;
+    locClientReqUnionType req_union = {};
+
+    qmiLocGetConstellationConfigIndMsgT_v02 getConstellationConfigInd = {};
+    qmiLocGetBlacklistSvIndMsgT_v02 getBlacklistSvConfigInd = {};
+    qmiLocGetMultibandConfigIndMsgT_v02 getMultibandConfigInd = {};
+    GnssConfig gnssConfig = {};
+
+    // get multiband config
+    status = locSyncSendReq(QMI_LOC_GET_MULTIBAND_CONFIG_REQ_V02,
+                            req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
+                            QMI_LOC_GET_MULTIBAND_CONFIG_IND_V02,
+                            &getMultibandConfigInd);
+    if ((status == eLOC_CLIENT_SUCCESS) && (getMultibandConfigInd.status == eQMI_LOC_SUCCESS_V02) &&
+            getMultibandConfigInd.secondaryGnssConfig_valid) {
+        convertQmiSecondaryConfigToGnssConfig(getMultibandConfigInd.secondaryGnssConfig,
+                                              gnssConfig.secondaryBandConfig);
+        gnssConfig.flags |= GNSS_CONFIG_FLAGS_CONSTELLATION_SECONDARY_BAND_BIT;
+    } else {
+        LOC_LOGe("Get multiband config failed. status: %s, ind status:%s",
+                 loc_get_v02_client_status_name(status),
+                 loc_get_v02_qmi_status_name(getMultibandConfigInd.status));
+
+        if (status == eLOC_CLIENT_FAILURE_UNSUPPORTED ||
+                status == eLOC_CLIENT_FAILURE_INVALID_MESSAGE_ID) {
+            err = LOCATION_ERROR_NOT_SUPPORTED;
+        } else {
+            err = LOCATION_ERROR_GENERAL_FAILURE;
+        }
+    }
+
+    if (gnssConfig.flags) {
+        LocApiBase::reportGnssConfig(sessionId, gnssConfig);
+    } else {
+        if (err != LOCATION_ERROR_NOT_SUPPORTED) {
+            err = LOCATION_ERROR_GENERAL_FAILURE;
+        }
+        adapterResponse->returnToSender(err);
+    }
+
+    LOC_LOGd("Exit. err: %u", err);
+    }));
+}
+
+
+void LocApiV02::convertQmiSecondaryConfigToGnssConfig(
+        qmiLocGNSSConstellEnumT_v02 qmiSecondaryBandConfig,
+        GnssSvTypeConfig& secondaryBandConfig) {
+
+    LOC_LOGd("qmi secondary band config: 0x%" PRIx64 "", qmiSecondaryBandConfig);
+    memset(&secondaryBandConfig, 0, sizeof(secondaryBandConfig));
+    secondaryBandConfig.size = sizeof(secondaryBandConfig);
+
+    if (qmiSecondaryBandConfig & eQMI_SYSTEM_GPS_V02) {
+        secondaryBandConfig.enabledSvTypesMask |= GNSS_SV_TYPES_MASK_GPS_BIT;
+    }
+    if (qmiSecondaryBandConfig & eQMI_SYSTEM_GLO_V02) {
+        secondaryBandConfig.enabledSvTypesMask |= GNSS_SV_TYPES_MASK_GLO_BIT;
+    }
+    if (qmiSecondaryBandConfig &eQMI_SYSTEM_BDS_V02) {
+        secondaryBandConfig.enabledSvTypesMask |= GNSS_SV_TYPES_MASK_BDS_BIT;
+    }
+    if (qmiSecondaryBandConfig & eQMI_SYSTEM_QZSS_V02) {
+        secondaryBandConfig.enabledSvTypesMask |= GNSS_SV_TYPES_MASK_QZSS_BIT;
+    }
+    if (qmiSecondaryBandConfig & eQMI_SYSTEM_GAL_V02) {
+        secondaryBandConfig.enabledSvTypesMask |= GNSS_SV_TYPES_MASK_GAL_BIT;
+    }
+    if (qmiSecondaryBandConfig & eQMI_SYSTEM_NAVIC_V02) {
+        secondaryBandConfig.enabledSvTypesMask |= GNSS_SV_TYPES_MASK_NAVIC_BIT;
+    }
+
+    secondaryBandConfig.blacklistedSvTypesMask =
+            (~secondaryBandConfig.enabledSvTypesMask & GNSS_SV_TYPES_MASK_ALL);
+}
+
+void LocApiV02::convertQmiBlacklistedSvConfigToGnssConfig(
+        const qmiLocGetBlacklistSvIndMsgT_v02& qmiBlacklistConfig,
+        GnssSvIdConfig& gnssBlacklistConfig) {
+
+    GnssSvIdConfig svConfig = {};
+    gnssBlacklistConfig.size = sizeof(gnssBlacklistConfig);
+
+    if (qmiBlacklistConfig.glo_persist_blacklist_sv_valid) {
+        gnssBlacklistConfig.gloBlacklistSvMask = qmiBlacklistConfig.glo_persist_blacklist_sv;
+    }
+
+    if (qmiBlacklistConfig.bds_persist_blacklist_sv_valid) {
+        gnssBlacklistConfig.bdsBlacklistSvMask = qmiBlacklistConfig.bds_persist_blacklist_sv;
+    }
+
+    if (qmiBlacklistConfig.qzss_persist_blacklist_sv_valid) {
+        gnssBlacklistConfig.qzssBlacklistSvMask = qmiBlacklistConfig.qzss_persist_blacklist_sv;
+    }
+
+    if (qmiBlacklistConfig.gal_persist_blacklist_sv_valid) {
+        gnssBlacklistConfig.galBlacklistSvMask = qmiBlacklistConfig.gal_persist_blacklist_sv;
+    }
+
+    if (qmiBlacklistConfig.sbas_persist_blacklist_sv_valid) {
+        gnssBlacklistConfig.sbasBlacklistSvMask = qmiBlacklistConfig.sbas_persist_blacklist_sv;
+    }
+
+    if (qmiBlacklistConfig.navic_persist_blacklist_sv_valid) {
+        gnssBlacklistConfig.navicBlacklistSvMask = qmiBlacklistConfig.navic_persist_blacklist_sv;
+    }
+
+    LOC_LOGd("%d %d %d %d %d %d , blacklist bds 0x%" PRIx64 ", "
+             "glo 0x%" PRIx64", qzss 0x%" PRIx64 ", "
+             "gal 0x%" PRIx64 ", sbas 0x%" PRIx64"",
+             qmiBlacklistConfig.glo_persist_blacklist_sv_valid,
+             qmiBlacklistConfig.bds_persist_blacklist_sv_valid,
+             qmiBlacklistConfig.qzss_persist_blacklist_sv_valid,
+             qmiBlacklistConfig.gal_persist_blacklist_sv_valid,
+             qmiBlacklistConfig.sbas_persist_blacklist_sv_valid,
+             qmiBlacklistConfig.navic_persist_blacklist_sv_valid,
+             gnssBlacklistConfig.bdsBlacklistSvMask, gnssBlacklistConfig.gloBlacklistSvMask,
+             gnssBlacklistConfig.qzssBlacklistSvMask, gnssBlacklistConfig.galBlacklistSvMask,
+             gnssBlacklistConfig.sbasBlacklistSvMask, gnssBlacklistConfig.navicBlacklistSvMask);
 }
 
 qmiLocPowerModeEnumT_v02 LocApiV02::convertPowerMode(GnssPowerMode powerMode)
