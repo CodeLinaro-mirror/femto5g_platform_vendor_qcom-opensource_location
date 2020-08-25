@@ -1,4 +1,4 @@
-/* Copyright (c) 2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018,2020 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -86,6 +86,7 @@ int main(int argc, char *argv[])
     }
 
     LOC_LOGi("location hal daemon - ver %s", HAL_DAEMON_VERSION);
+    loc_boot_kpi_marker("L - Location Probe Start");
 
     waitForDir(SOCKET_DIR_LOCATION);
     waitForDir(SOCKET_LOC_CLIENT_DIR);
@@ -98,9 +99,9 @@ int main(int argc, char *argv[])
     // set supplementary groups for sysvinit
     // For systemd, common supplementary groups are set via service files
     #ifdef POWERMANAGER_ENABLED
-        char groupNames[LOC_MAX_PARAM_NAME] = "gps radio diag powermgr locclient inet";
+        char groupNames[LOC_MAX_PARAM_NAME] = "gps radio diag powermgr locclient inet kmsg";
     #else
-        char groupNames[LOC_MAX_PARAM_NAME] = "gps radio diag locclient inet";
+        char groupNames[LOC_MAX_PARAM_NAME] = "gps radio diag locclient inet kmsg";
     #endif
 
     gid_t groupIds[LOC_PROCESS_MAX_NUM_GROUPS] = {};

@@ -194,7 +194,7 @@ LocationApiService::LocationApiService(const configParamToRead & configParamRead
         pClient->updateSubscription(
                 E_LOC_CB_GNSS_LOCATION_INFO_BIT | E_LOC_CB_GNSS_SV_BIT);
 
-        LocationOptions locationOption;
+        LocationOptions locationOption = {};
         locationOption.size = sizeof(locationOption);
         locationOption.minInterval = configParamRead.gnssSessionTbfMs;
         locationOption.minDistance = 0;
@@ -202,6 +202,7 @@ LocationApiService::LocationApiService(const configParamToRead & configParamRead
 
         pClient->startTracking(locationOption);
         pClient->mTracking = true;
+        loc_boot_kpi_marker("L - Auto Session Start");
         pClient->mPendingMessages.push(E_LOCAPI_START_TRACKING_MSG_ID);
     }
 
@@ -536,17 +537,7 @@ void LocationApiService::deleteClient(LocAPIClientDeregisterReqMsg *pMsg) {
 
 void LocationApiService::deleteClientbyName(const std::string clientname) {
     // We shall not hold the lock, as lock already held by the caller
-    //
-    // remove the client from the config request map
-    for (auto it = mConfigReqs.begin(); it != mConfigReqs.end();) {
-        if (strncmp(it->second.clientName.c_str(), clientname.c_str(),
-                   strlen (clientname.c_str())) == 0) {
-            it = mConfigReqs.erase(it);
-        } else {
-            ++it;
-        }
-    }
-
+   //
     // delete this client from property db
     LocHalDaemonClientHandler* pClient = getClient(clientname);
 

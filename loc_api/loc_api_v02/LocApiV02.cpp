@@ -261,7 +261,9 @@ LocApiV02 :: LocApiV02(LOC_API_ADAPTER_EVENT_MASK_T exMask,
     mQmiMask(0), mInSession(false), mPowerMode(GNSS_POWER_MODE_INVALID),
     mEngineOn(false), mMeasurementsStarted(false),
     mMasterRegisterNotSupported(false),
-    mSvMeasurementSet(nullptr)
+    mSvMeasurementSet(nullptr),
+    mIsFirstFinalFixReported(false),
+    mIsFirstStartFixReq(false)
 {
   // initialize loc_sync_req interface
   loc_sync_req_init();
@@ -630,6 +632,8 @@ void LocApiV02 :: startFix(const LocPosMode& fixCriteria, LocApiResponse *adapte
   memset (&set_mode_ind, 0, sizeof(set_mode_ind));
 
   LOC_LOGV("%s:%d]: start \n", __func__, __LINE__);
+  loc_boot_kpi_marker("L - LocApiV02 startFix, tbf %d", fixCriteria.min_interval);
+  mIsFirstFinalFixReported = false;
   fixCriteria.logv();
 
   mInSession = true;
@@ -796,6 +800,7 @@ void LocApiV02 :: stopFix(LocApiResponse *adapterResponse)
   qmiLocStopReqMsgT_v02 stop_msg;
 
   LOC_LOGD(" %s:%d]: stop called \n", __func__, __LINE__);
+  loc_boot_kpi_marker("L - LocApiV02 stop Fix session");
 
   memset(&stop_msg, 0, sizeof(stop_msg));
 
@@ -2665,7 +2670,11 @@ void LocApiV02 :: reportPosition (
     } else {
         LOC_LOGd("jammerIndicator is not present");
     }
-
+    if ((false == mIsFirstFinalFixReported) &&
+            (eQMI_LOC_SESS_STATUS_SUCCESS_V02 == location_report_ptr->sessionStatus)) {
+        loc_boot_kpi_marker("L - LocApiV02 First Final Fix");
+        mIsFirstFinalFixReported = true;
+    }
     if( (location_report_ptr->sessionStatus == eQMI_LOC_SESS_STATUS_SUCCESS_V02) ||
         (location_report_ptr->sessionStatus == eQMI_LOC_SESS_STATUS_IN_PROGRESS_V02)
         )
