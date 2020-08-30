@@ -905,6 +905,42 @@ public:
 };
 
 /******************************************************************************
+LocIpcQrtrWatcher override
+******************************************************************************/
+class IpcQrtrWatcher : public LocIpcQrtrWatcher {
+    const weak_ptr<IpcListener> mIpcListener;
+    const weak_ptr<LocIpcSender> mIpcSender;
+    LocIpcQrtrWatcher::ServiceStatus mKnownStatus;
+public:
+    inline IpcQrtrWatcher(shared_ptr<IpcListener>& listener, shared_ptr<LocIpcSender>& sender) :
+            LocIpcQrtrWatcher({LOCATION_CLIENT_API_QSOCKET_HALDAEMON_SERVICE_ID}),
+            mIpcListener(listener), mIpcSender(sender),
+            mKnownStatus(LocIpcQrtrWatcher::ServiceStatus::DOWN) {
+    }
+    inline virtual void onServiceStatusChange(int serviceId, int instanceId,
+            LocIpcQrtrWatcher::ServiceStatus status, const LocIpcSender& refSender) {
+        if (LOCATION_CLIENT_API_QSOCKET_HALDAEMON_SERVICE_ID == serviceId &&
+            LOCATION_CLIENT_API_QSOCKET_HALDAEMON_INSTANCE_ID == instanceId) {
+            if (mKnownStatus != status) {
+                mKnownStatus = status;
+                if (LocIpcQrtrWatcher::ServiceStatus::UP == status) {
+                    LOC_LOGv("case LocIpcQrtrWatcher::ServiceStatus::UP");
+                    auto sender = mIpcSender.lock();
+                    if (nullptr != sender) {
+                        sender->copyDestAddrFrom(refSender);
+                    }
+                    auto listener = mIpcListener.lock();
+                    if (nullptr != listener) {
+                        const LocAPIHalReadyIndMsg msg(SERVICE_NAME);
+                        listener->onReceive((const char*)&msg, sizeof(msg), nullptr);
+                    }
+                }
+            }
+        }
+    }
+};
+
+/******************************************************************************
 LocationClientApiImpl
 ******************************************************************************/
 
@@ -924,6 +960,7 @@ LocationClientApiImpl::LocationClientApiImpl(CapabilitiesCb capabitiescb) :
         mLastAddedClientIds({}),
         mCapabilitiesCb(capabitiescb),
         mResponseCb(nullptr),
+        mPositionSessionResponseCbPending(false),
         mLocationCb(nullptr),
         mGnssLocationCb(nullptr),
         mEngLocationsCb(nullptr),
@@ -973,18 +1010,19 @@ LocationClientApiImpl::LocationClientApiImpl(CapabilitiesCb capabitiescb) :
     SockNodeEap sock(LOCATION_CLIENT_API_QSOCKET_CLIENT_SERVICE_ID,
                      pid * 100 + mClientId);
     strlcpy(mSocketName, sock.getNodePathname().c_str(), sizeof(mSocketName));
-    unique_ptr<LocIpcRecver> recver = LocIpc::getLocIpcQrtrRecver(
-            make_shared<IpcListener>(*this, *mMsgTask, SockNode::Eap),
-            sock.getId1(), sock.getId2());
 
     // establish an ipc sender to the hal daemon
     mIpcSender = LocIpc::getLocIpcQrtrSender(LOCATION_CLIENT_API_QSOCKET_HALDAEMON_SERVICE_ID,
                                      LOCATION_CLIENT_API_QSOCKET_HALDAEMON_INSTANCE_ID);
     if (mIpcSender == nullptr) {
         LOC_LOGe("create sender socket failed for service id: %d instance id: %d",
-                LOCATION_CLIENT_API_QSOCKET_HALDAEMON_SERVICE_ID, LOCATION_CLIENT_API_QSOCKET_HALDAEMON_INSTANCE_ID);
+                 LOCATION_CLIENT_API_QSOCKET_HALDAEMON_SERVICE_ID,
+                 LOCATION_CLIENT_API_QSOCKET_HALDAEMON_INSTANCE_ID);
         return;
     }
+    shared_ptr<IpcListener> listener(make_shared<IpcListener>(*this, *mMsgTask, SockNode::Eap));
+    unique_ptr<LocIpcRecver> recver = LocIpc::getLocIpcQrtrRecver(listener,
+            sock.getId1(), sock.getId2(), make_shared<IpcQrtrWatcher>(listener, mIpcSender));
 #else
     // get clientId
     lock_guard<mutex> lock(mMutex);
@@ -997,8 +1035,6 @@ LocationClientApiImpl::LocationClientApiImpl(CapabilitiesCb capabitiescb) :
 
     SockNodeLocal sock(LOCATION_CLIENT_API, pid, mClientId);
     strlcpy(mSocketName, sock.getNodePathname().c_str(), sizeof(mSocketName));
-    unique_ptr<LocIpcRecver> recver = LocIpc::getLocIpcLocalRecver(
-            make_shared<IpcListener>(*this, *mMsgTask, SockNode::Local), mSocketName);
 
     // establish an ipc sender to the hal daemon
     mIpcSender = LocIpc::getLocIpcLocalSender(SOCKET_TO_LOCATION_HAL_DAEMON);
@@ -1006,6 +1042,8 @@ LocationClientApiImpl::LocationClientApiImpl(CapabilitiesCb capabitiescb) :
         LOC_LOGe("create sender socket failed %s", SOCKET_TO_LOCATION_HAL_DAEMON);
         return;
     }
+    unique_ptr<LocIpcRecver> recver = LocIpc::getLocIpcLocalRecver(
+            make_shared<IpcListener>(*this, *mMsgTask, SockNode::Local), mSocketName);
 #endif
 
     LOC_LOGd("listen on socket: %s", mSocketName);
@@ -1098,6 +1136,8 @@ void LocationClientApiImpl::updateCallbacks(LocationCallbacks& callbacks) {
                 mApiImpl(apiImpl), mCallBacks(callbacks) {}
         virtual ~UpdateCallbacksReq() {}
         void proc() const {
+            // set up the flag to indicate that responseCb is pending
+            mApiImpl->mPositionSessionResponseCbPending = true;
 
             //convert callbacks to callBacksMask
             LocationCallbacksMask callBacksMask = 0;
@@ -1208,9 +1248,7 @@ uint32_t LocationClientApiImpl::startTracking(TrackingOptions& option) {
                         mApiImpl, const_cast<TrackingOptions&>(mOption));
             } else {
                 LOC_LOGd(">>> StartTrackingReq - no change in option");
-                if (mApiImpl->mResponseCb) {
-                    mApiImpl->mResponseCb(LOCATION_RESPONSE_SUCCESS);
-                }
+                mApiImpl->invokePositionSessionResponseCb(LOCATION_RESPONSE_SUCCESS);
             }
         }
         LocationClientApiImpl* mApiImpl;
@@ -1793,6 +1831,15 @@ void LocationClientApiImpl::pingTest(PingTestCb pingTestCallback) {
     return;
 }
 
+void LocationClientApiImpl::invokePositionSessionResponseCb(LocationResponse responseCode) {
+    if (mPositionSessionResponseCbPending) {
+        if (nullptr != mResponseCb) {
+            mResponseCb(responseCode);
+        }
+        mPositionSessionResponseCbPending = false;
+    }
+}
+
 /******************************************************************************
 LocationClientApiImpl -ILocIpcListener
 ******************************************************************************/
@@ -1850,14 +1897,6 @@ void IpcListener::onReceive(const char* data, uint32_t length,
                              pMsg->msgId);
                 }
 
-                // when hal daemon crashes, we need to find the new node/port
-                // when remote socket api is used
-                // this code can not be moved to inside of onListenerReady as
-                // onListenerReady can be invoked from other places
-                if (mApiImpl.mIpcSender != nullptr) {
-                    mApiImpl.mIpcSender->informRecverRestarted();
-                }
-
                 // location hal deamon has restarted, need to set this
                 // flag to false to prevent messages to be sent to hal
                 // before registeration completes
@@ -1878,10 +1917,10 @@ void IpcListener::onReceive(const char* data, uint32_t length,
                     LOC_LOGw("payload size does not match for message with id: %d",
                              pMsg->msgId);
                 }
-                const LocAPIGenericRespMsg* pRespMsg = (LocAPIGenericRespMsg*)(pMsg);
-                LocationResponse response = parseLocationError(pRespMsg->err);
-                if (mApiImpl.mResponseCb) {
-                    mApiImpl.mResponseCb(response);
+                if (pMsg->msgId != E_LOCAPI_STOP_TRACKING_MSG_ID) {
+                    const LocAPIGenericRespMsg* pRespMsg = (LocAPIGenericRespMsg*)(pMsg);
+                    LocationResponse response = parseLocationError(pRespMsg->err);
+                    mApiImpl.invokePositionSessionResponseCb(response);
                 }
                 break;
             }
