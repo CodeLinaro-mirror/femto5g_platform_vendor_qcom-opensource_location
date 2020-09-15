@@ -761,6 +761,9 @@ typedef union
             *pQueryGNSSEnergyConsumedReq;
     /*QMI_LOC_QUERY_GNSS_ENERGY_CONSUMED_REQ_V02*/
 
+    qmiLocSetMinGpsWeekNumberReqMsgT_v02
+            *pSetMinGpsWeekReq;
+    /*QMI_LOC_SET_MIN_GPS_WEEK_NUMBER_REQ_V02*/
 }locClientReqUnionType;
 
 
