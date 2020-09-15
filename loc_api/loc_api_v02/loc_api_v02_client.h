@@ -727,6 +727,10 @@ typedef union
 
     const qmiLocInjectSrnApDataReqMsgT_v02 *pInjectSrnApDataReq;
     /*QMI_LOC_INJECT_SRN_AP_DATA_REQ_V02*/
+
+    qmiLocSetMinGpsWeekNumberReqMsgT_v02
+            *pSetMinGpsWeekReq;
+    /*QMI_LOC_SET_MIN_GPS_WEEK_NUMBER_REQ_V02*/
 }locClientReqUnionType;
 
 
