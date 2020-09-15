@@ -277,6 +277,8 @@ public:
   virtual void setPositionAssistedClockEstimatorMode(bool enabled,
                                                      LocApiResponse *adapterResponse=nullptr);
   virtual LocationError getGnssEnergyConsumed();
+  virtual int configMinGpsWeek(uint16_t minGpsWeek);
+  virtual uint16_t getMinGpsWeek();
 
   /*
     Returns
