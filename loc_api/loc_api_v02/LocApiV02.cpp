@@ -4284,6 +4284,7 @@ int LocApiV02 :: setGpsLock(LOC_GPS_LOCK_MASK lockMask)
     LOC_LOGD("%s:%d]: exit\n", __func__, __LINE__);
     return ret;
 }
+
 /*
   Returns
   Current value of GPS Lock on success
@@ -4325,6 +4326,63 @@ int LocApiV02 :: getGpsLock()
     }
     LOC_LOGD("%s:%d]: Exit\n", __func__, __LINE__);
     return ret;
+}
+
+int LocApiV02::configMinGpsWeek(uint16_t minGpsWeek) {
+
+    LOC_LOGd("Enter. minGpsWeek %d", minGpsWeek);
+
+    qmiLocSetMinGpsWeekNumberReqMsgT_v02 req = {};
+    qmiLocGenReqStatusIndMsgT_v02 ind = {};
+    locClientStatusEnumType status;
+    locClientReqUnionType req_union = {};
+    int ret = 0;
+
+    req.minGpsWeekNumber = minGpsWeek;
+    req_union.pSetMinGpsWeekReq = &req;
+
+    status = loc_sync_send_req(clientHandle,
+                               QMI_LOC_SET_MIN_GPS_WEEK_NUMBER_REQ_V02,
+                               req_union, LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
+                               QMI_LOC_SET_MIN_GPS_WEEK_NUMBER_IND_V02,
+                               &ind);
+    if (status != eLOC_CLIENT_SUCCESS || ind.status != eQMI_LOC_SUCCESS_V02) {
+        LOC_LOGe("failed. status: %s, ind status:%s",
+                 loc_get_v02_client_status_name(status),
+                 loc_get_v02_qmi_status_name(ind.status));
+        ret = -1;
+    }
+    LOC_LOGD("%s:%d]: exit\n", __func__, __LINE__);
+    return ret;
+}
+
+// on error: return 0
+// on success: return > 0
+uint16_t LocApiV02 :: getMinGpsWeek()
+{
+    locClientStatusEnumType status = eLOC_CLIENT_FAILURE_GENERAL;
+    locClientReqUnionType req_union = {};
+    qmiLocGetMinGpsWeekNumberIndMsgT_v02 getInd = {};
+    uint16_t minGpsWeek = 0;
+
+    LOC_LOGD("%s:%d]: Enter\n", __func__, __LINE__);
+    status = loc_sync_send_req(clientHandle,
+                               QMI_LOC_GET_MIN_GPS_WEEK_NUMBER_REQ_V02,
+                               req_union, LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
+                               QMI_LOC_GET_MIN_GPS_WEEK_NUMBER_IND_V02,
+                               &getInd);
+
+    if ((status == eLOC_CLIENT_SUCCESS) && (getInd.status == eQMI_LOC_SUCCESS_V02) &&
+            getInd.minGpsWeekNumber_valid) {
+        minGpsWeek = getInd.minGpsWeekNumber;
+        LOC_LOGd("min GPS week is: ", getInd.minGpsWeekNumber);
+    }else {
+        LOC_LOGe("failed. status: %s, ind status:%s",
+                 loc_get_v02_client_status_name(status),
+                 loc_get_v02_qmi_status_name(getInd.status));
+    }
+
+    return minGpsWeek;
 }
 
 enum loc_api_adapter_err LocApiV02:: setXtraVersionCheck(enum xtra_version_check check)
@@ -4586,6 +4644,7 @@ void LocApiV02 :: cacheGnssMeasurementSupport()
 
     LOC_LOGV("%s:%d]: mGnssMeasurementSupported is %d\n", __func__, __LINE__, mGnssMeasurementSupported);
 }
+
 
 void LocApiV02 ::
 handleWwanZppFixIndication(const qmiLocGetAvailWwanPositionIndMsgT_v02& zpp_ind)

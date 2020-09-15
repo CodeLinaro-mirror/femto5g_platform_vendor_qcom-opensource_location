@@ -639,7 +639,13 @@ static const locClientRespIndTableStructT locClientRespIndTable[]= {
 
    // SRN Ap data inject
    { QMI_LOC_INJECT_SRN_AP_DATA_IND_V02,
-     sizeof(qmiLocInjectSrnApDataIndMsgT_v02) }
+     sizeof(qmiLocInjectSrnApDataIndMsgT_v02) },
+
+   { QMI_LOC_SET_MIN_GPS_WEEK_NUMBER_IND_V02,
+     sizeof(qmiLocGenReqStatusIndMsgT_v02) },
+
+   { QMI_LOC_GET_MIN_GPS_WEEK_NUMBER_IND_V02,
+     sizeof(qmiLocGetMinGpsWeekNumberIndMsgT_v02) },
 };
 
 
@@ -1567,6 +1573,12 @@ static bool validateRequest(
     case QMI_LOC_INJECT_SRN_AP_DATA_REQ_V02:
     {
         *pOutLen = sizeof(qmiLocInjectSrnApDataReqMsgT_v02);
+        break;
+    }
+
+    case QMI_LOC_SET_MIN_GPS_WEEK_NUMBER_REQ_V02:
+    {
+        *pOutLen = sizeof(qmiLocSetMinGpsWeekNumberReqMsgT_v02);
         break;
     }
 
