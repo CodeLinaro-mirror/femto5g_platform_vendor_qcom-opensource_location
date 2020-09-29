@@ -4573,6 +4573,12 @@ void LocApiV02 :: reportAtlRequest(
 
     if (server_request_ptr->apnTypeMask_valid) {
         apnTypeMask = convertQmiLocApnTypeMask(server_request_ptr->apnTypeMask);
+    } else {
+        // Incase we did not receive apntypeMask for SUPL
+        // from modem explicity handling that here for older code
+        if (LOC_AGPS_TYPE_SUPL == agpsType) {
+            apnTypeMask |= LOC_APN_TYPE_MASK_SUPL;
+        }
     }
     LOC_LOGd("handle=%d agpsType=0x%X apnTypeMask=0x%X",
         connHandle, agpsType, apnTypeMask);
