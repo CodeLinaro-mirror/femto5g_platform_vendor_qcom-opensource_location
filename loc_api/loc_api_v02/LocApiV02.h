@@ -243,6 +243,8 @@ public:
   virtual void closeDataCall();
   virtual void releaseDataServiceClient();
   virtual int setGpsLock(LOC_GPS_LOCK_MASK lock);
+  virtual int configMinGpsWeek(uint16_t minGpsWeek);
+  virtual uint16_t getMinGpsWeek();
 
   /*
     Returns
