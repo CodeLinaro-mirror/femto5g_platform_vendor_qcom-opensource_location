@@ -37,6 +37,7 @@
 #include <log_util.h>
 #include <LocIpc.h>
 #include <LocationDataTypes.h>
+#include <errno.h>
 
 /******************************************************************************
 Constants
@@ -46,7 +47,8 @@ Constants
 // Maximum fully qualified path(including the file name)
 // for the location remote API service and client socket name
 #define MAX_SOCKET_PATHNAME_LENGTH (128)
-
+#define MAX_PROGRAM_NAME_LENGTH     (32)
+#define SERVICE_NAME "locapiservice"
 #define LOCATION_CLIENT_SESSION_ID_INVALID (0)
 
 #define LOCATION_CLIENT_API_QSOCKET_HALDAEMON_SERVICE_ID    (5001)
@@ -59,8 +61,6 @@ Constants
 
 using namespace std;
 using namespace loc_util;
-
-static const char SERVICE_NAME[] = "locapiservice";
 
 class SockNode {
     const int32_t mId1;
@@ -119,21 +119,13 @@ public:
         }
         return type;
     }
-    inline shared_ptr<LocIpcSender> createSender(bool createFsNode = false) {
+    inline shared_ptr<LocIpcSender> createSender() {
         const string socket = getNodePathname();
         const char* sock = socket.c_str();
         switch (getNodeType()) {
         case SockNode::Local:
             return LocIpc::getLocIpcLocalSender(sock);
         case SockNode::Eap:
-            if (createFsNode) {
-                FILE * pFile = fopen(sock, "w");
-                if (nullptr == pFile) {
-                    LOC_LOGe("<-- failed to open file %s error: %s", sock, strerror(errno));
-                } else {
-                    fclose (pFile);
-                }
-            }
             return LocIpc::getLocIpcQrtrSender(getId1(), getId2());
         default:
             return nullptr;
@@ -149,13 +141,37 @@ enum ClientType {
 class SockNodeLocal : public SockNode {
 public:
     SockNodeLocal(ClientType type, int32_t pid, int32_t tid) :
-        SockNode(pid, tid, (LOCATION_CLIENT_API == type) ? s_CLIENTAPI_LOCAL : s_INTAPI_LOCAL) {}
+        SockNode(pid, tid, getSockNodeLocalPrefix(type)) {}
+
+    inline static string getSockNodeLocalPrefix(ClientType type) {
+
+        int program_name_length = strlen(program_invocation_short_name);
+        if (program_name_length > MAX_PROGRAM_NAME_LENGTH) {
+            program_name_length = MAX_PROGRAM_NAME_LENGTH;
+        }
+        if (LOCATION_CLIENT_API == type) {
+            return string(s_CLIENTAPI_LOCAL).append(1, '_').
+                    append(program_invocation_short_name, program_name_length);
+        } else {
+            return string(s_INTAPI_LOCAL).append(1, '_').
+                    append(program_invocation_short_name, program_name_length);
+        }
+    }
 };
 
 class SockNodeEap : public SockNode {
 public:
     SockNodeEap(int32_t service, int32_t instance) :
-        SockNode(service, instance, sEAP) {}
+        SockNode(service, instance, getSockNodeEapPrefix()) {}
+
+    inline static string getSockNodeEapPrefix() {
+        int program_name_length = strlen (program_invocation_short_name);
+        if (program_name_length > MAX_PROGRAM_NAME_LENGTH) {
+            program_name_length = MAX_PROGRAM_NAME_LENGTH;
+        }
+        return string(sEAP).append(1, '_').
+                append(program_invocation_short_name, program_name_length);
+    }
 };
 
 /******************************************************************************
@@ -354,11 +370,11 @@ struct LocAPIMsgHeader
     inline bool isValidMsg(uint32_t msgSize) {
         bool msgValid = true;
         if (msgSize < sizeof(LocAPIMsgHeader)) {
-            LOC_LOGe("payload size %d smaller than minimum payload size %d",
+            LOC_LOGv("payload size %d smaller than minimum payload size %d",
                      msgSize, sizeof(LocAPIMsgHeader));
              msgValid = false;
         } else if (msgVersion != LOCATION_REMOTE_API_MSG_VERSION) {
-            LOC_LOGe("msg id %d, msg version %d not matching with expected version %d",
+            LOC_LOGv("msg id %d, msg version %d not matching with expected version %d",
                      msgId, msgVersion, LOCATION_REMOTE_API_MSG_VERSION);
              msgValid = false;
         }
@@ -372,7 +388,7 @@ struct LocAPIMsgHeader
                           sizeof(SOCKET_LOC_CLIENT_DIR)-1) != 0) &&
                  (strncmp(mSocketName, EAP_LOC_CLIENT_DIR,
                           sizeof(EAP_LOC_CLIENT_DIR)-1) != 0))) {
-            LOC_LOGe("msg not from expected client");
+            LOC_LOGv("msg not from expected client");
             msgValid = false;
         }
 
