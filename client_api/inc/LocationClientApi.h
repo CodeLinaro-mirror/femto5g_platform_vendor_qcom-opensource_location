@@ -173,7 +173,13 @@ enum LocationTechnologyMask {
     LOCATION_TECHNOLOGY_HYBRID_BIT                   = (1<<7),
     /** Precise position engine was used to calculate
      *  Location. <br/>   */
-    LOCATION_TECHNOLOGY_PPE_BIT                      = (1<<8)
+    LOCATION_TECHNOLOGY_PPE_BIT                      = (1<<8),
+    /** Vehicular data was used to calculate
+     *  Location. <br/>   */
+    LOCATION_TECHNOLOGY_VEH_BIT                      = (1<<9),
+    /** Visual data was used to calculate
+     *  Location. <br/>   */
+    LOCATION_TECHNOLOGY_VIS_BIT                      = (1<<10)
 };
 
 /** Specify the set of navigation solutions that contribute
@@ -463,6 +469,9 @@ enum GnssLocationInfoFlagMask {
     /** GnssLocation has valid GnssLocation::drSolutionStatusMask.
      *  <br/>   */
     GNSS_LOCATION_INFO_DR_SOLUTION_STATUS_MASK_BIT      = (1ULL<<32),
+    /** GnssLocation has valid GnssLocation::altitudeAssumed.
+     *  <br/> */
+    GNSS_LOCATION_INFO_ALTITUDE_ASSUMED_BIT             = (1ULL<<33),
 };
 
 /** Specify the reliability level of
@@ -821,6 +830,11 @@ enum LocReqEngineTypeMask {
       for the tracking session. <br/>
     */
     LOC_REQ_ENGINE_PPE_BIT   = (1<<2),
+    /** Mask to indicate that the client requests unmodified VPE
+      position via registering location_client::EngineLocationsCb
+      for the tracking session. <br/>
+    */
+    LOC_REQ_ENGINE_VPE_BIT  = (1<<3)
 };
 
 /** Specify the position engine type that produced GnssLocation. <br/> */
@@ -834,6 +848,8 @@ enum LocOutputEngineType {
     LOC_OUTPUT_ENGINE_SPE   = 1,
     /** This is the unmodified fix from PPE engine. <br/> */
     LOC_OUTPUT_ENGINE_PPE   = 2,
+    /** This is the unmodified fix from VPE engine. <br/> */
+    LOC_OUTPUT_ENGINE_VPE  = 3,
     /** This is the entry count of this enum. <br/>   */
     LOC_OUTPUT_ENGINE_COUNT,
 };
@@ -847,7 +863,9 @@ enum PositioningEngineMask {
     /** Mask for dead reckoning position engine. <br/>   */
     DEAD_RECKONING_ENGINE       = (1 << 1),
     /** Mask for precise position engine. <br/>   */
-    PRECISE_POSITIONING_ENGINE  = (1 << 2)
+    PRECISE_POSITIONING_ENGINE  = (1 << 2),
+    /** Mask for vpe engine. <br/>   */
+    VP_POSITIONING_ENGINE       = (1 << 3)
 };
 
 /** Specify the location info received by client via
@@ -1029,6 +1047,12 @@ struct GnssLocation : public Location {
     float enuVelocityVRPBased[3];
     /** Dead reckoning position engine status.  <br/> */
     DrSolutionStatusMask drSolutionStatusMask;
+    /** When this field is valid, it will indicates whether altitude
+     *  is assumed or calculated. <br/>
+     *  false: Altitude is calculated. <br/>
+     *  true:  Altitude is assumed; there may not be enough
+     *         satellites to determine the precise altitude. <br/> */
+    bool altitudeAssumed;
 
     /* Default constructor to initalize GnssLocation structure */
     inline GnssLocation() :
@@ -1054,7 +1078,8 @@ struct GnssLocation : public Location {
             conformityIndex(0.0f),
             llaVRPBased({}),
             enuVelocityVRPBased{0.0f, 0.0f, 0.0f},
-            drSolutionStatusMask((DrSolutionStatusMask)0) {
+            drSolutionStatusMask((DrSolutionStatusMask)0),
+            altitudeAssumed(false) {
     }
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
