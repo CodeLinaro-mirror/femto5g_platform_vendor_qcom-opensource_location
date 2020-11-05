@@ -29,8 +29,6 @@
 #ifndef LOCATION_INTEGRATION_API_H
 #define LOCATION_INTEGRATION_API_H
 
-#include <loc_pla.h>
-
 #ifdef NO_UNORDERED_SET_OR_MAP
     #include <map>
 #else
@@ -75,6 +73,9 @@ enum LocConfigTypeEnum{
     CONFIG_MIN_SV_ELEVATION = 9,
     /** Config the output nmea sentence types. <br/> */
     CONFIG_OUTPUT_NMEA_TYPES = 10,
+    /** Config user consent to use GTP terrestrial positioning
+     *  service. <br/> */
+    CONFIG_USER_CONSENT_TERRESTRIAL_POSITIONING = 12,
 
     /** Get configuration regarding robust location setting used by
      *  the GNSS standard position engine (SPE).  <br/> */
@@ -190,10 +191,11 @@ struct LeverArmParams {
     /** Offset along the vehicle forward axis, in unit of meters
      *  <br/> */
     float forwardOffsetMeters;
-    /** Offset along the vehicle starboard axis, in unit of
-     *  meters <br/> */
+    /** Offset along the vehicle starboard axis, in unit of meters.
+     *  Left side offset is negative, and right side offset is
+     *  positive. <br/> */
     float sidewaysOffsetMeters;
-    /** Offset along the vehicle up axis, in unit of meters <br/> */
+    /** Offset along the vehicle up axis, in unit of meters. <br/> */
     float upOffsetMeters;
 };
 
@@ -418,8 +420,8 @@ struct RobustLocationConfig {
  *  callback will be invoked for successful processing of
  *  getRobustLocationConfig(). <br/>
  *
- *  In order to receive the robust location configuration, user
- *  shall instantiate the callback and pass it to the
+ *  In order to receive the robust location configuration,
+ *  client shall instantiate the callback and pass it to the
  *  LocationIntegrationApi constructor and then invoke
  *  getRobustLocationConfig(). <br/> */
 typedef std::function<void(
@@ -1044,6 +1046,35 @@ public:
                 further processing. <br/>
     */
     bool configOutputNmeaTypes(NmeaTypesMask enabledNmeaTypes);
+
+
+    /** @brief
+        Set client consent to use terrestrial positioning. <br/>
+
+        Client must call this API with userConsent set to true in order
+        to retrieve terrestrial position via
+        LocationClientApi::getSingleTerrestrialPosition(). <br/>
+
+        The consent will remain effective across power cycles, until
+        this API is called with a different value.  <br/>
+
+        @param
+        true: client agrees to the privacy entailed when using terrestrial
+        positioning.
+        false: client does not agree to the privacy entailed when using
+        terrestrial positioning. Due to this, client will not be able to
+        retrieve terrestrial position.
+
+        @return true, if client constent has been accepted for further processing.
+                When returning true, LocConfigCb() will be invoked to deliver
+                asynchronous processing status. <br/>
+
+        @return false, if client constent has not been accepted for further
+                processing. When returning false, no further processing
+                will be performed and LocConfigCb() will not be invoked.
+                <br/>
+    */
+    bool setUserConsentForTerrestrialPositioning(bool userConsent);
 
 private:
     LocationIntegrationApiImpl* mApiImpl;

@@ -1,4 +1,4 @@
-/* Copyright (c) 2019-2020 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2019-2021 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -87,6 +87,11 @@ typedef struct {
     GnssNmeaTypesMask enabledNmeaTypes;
 } NmeaConfigInfo;
 
+typedef struct {
+    bool isValid;
+    bool userConsent;
+} GtpUserConsentConfigInfo;
+
 class IpcListener;
 
 class LocationIntegrationApiImpl : public ILocationControlAPI {
@@ -123,6 +128,8 @@ public:
     uint32_t getMinSvElevation();
 
     uint32_t configOutputNmeaTypes(GnssNmeaTypesMask enabledNmeaTypes) override;
+
+    uint32_t setUserConsentForTerrestrialPositioning(bool userConsent);
 
 private:
     ~LocationIntegrationApiImpl();
@@ -161,6 +168,8 @@ private:
     RobustLocationConfigInfo mRobustLocationConfigInfo;
     DeadReckoningEngineConfigInfo mDreConfigInfo;
     NmeaConfigInfo                mNmeaConfigInfo;
+    GtpUserConsentConfigInfo      mGtpUserConsentConfigInfo;
+
     LocConfigReqCntMap       mConfigReqCntMap;
     LocIntegrationCbs        mIntegrationCbs;
 

@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018-2021, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -161,6 +161,10 @@ public:
     void pingTest(PingTestCb pingTestCallback);
     void invokePositionSessionResponseCb(LocationResponse responseCode);
 
+    void getSingleTerrestrialPos(uint32_t timeoutMsec, TerrestrialTechMask techMask,
+                                 float horQoS, LocationCb terrestrialPositionCallback,
+                                 ResponseCb responseCallback);
+
 private:
     ~LocationClientApiImpl();
     void capabilitesCallback(ELocMsgID  msgId, const void* msgData);
@@ -210,6 +214,10 @@ private:
 
     LocationSystemInfoCb    mLocationSysInfoCb;
     ResponseCb              mLocationSysInfoResponseCb;
+
+    // Terrestrial fix callback
+    LocationCb              mSingleTerrestrialPosCb;
+    ResponseCb              mSingleTerrestrialPosRespCb;
 
     MsgTask*                   mMsgTask;
 

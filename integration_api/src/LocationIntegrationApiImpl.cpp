@@ -1,4 +1,4 @@
-/* Copyright (c) 2019-2020 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2019-2021 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -73,6 +73,9 @@ static LocConfigTypeEnum getLocConfigTypeFromMsgId(ELocMsgID  msgId) {
         break;
     case E_INTAPI_CONFIG_OUTPUT_NMEA_TYPES_MSG_ID:
         configType = CONFIG_OUTPUT_NMEA_TYPES;
+        break;
+    case E_INTAPI_CONFIG_USER_CONSENT_TERRESTRIAL_POSITIONING_MSG_ID:
+        configType = CONFIG_USER_CONSENT_TERRESTRIAL_POSITIONING;
         break;
     case E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID:
     case E_INTAPI_GET_ROBUST_LOCATION_CONFIG_RESP_MSG_ID:
@@ -183,7 +186,7 @@ LocationIntegrationApiImpl::LocationIntegrationApiImpl(LocIntegrationCbs& integr
         mLeverArmConfigInfo{},
         mRobustLocationConfigInfo{},
         mDreConfigInfo{},
-        mNmeaConfigInfo{} {
+        mGtpUserConsentConfigInfo{} {
     if (integrationClientAllowed() == false) {
         return;
     }
@@ -342,6 +345,7 @@ void IpcListener::onReceive(const char* data, uint32_t length,
             case E_INTAPI_CONFIG_DEAD_RECKONING_ENGINE_MSG_ID:
             case E_INTAPI_CONFIG_MIN_SV_ELEVATION_MSG_ID:
             case E_INTAPI_CONFIG_OUTPUT_NMEA_TYPES_MSG_ID:
+            case E_INTAPI_CONFIG_USER_CONSENT_TERRESTRIAL_POSITIONING_MSG_ID:
             case E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID:
             case E_INTAPI_GET_MIN_GPS_WEEK_REQ_MSG_ID:
             case E_INTAPI_GET_MIN_SV_ELEVATION_REQ_MSG_ID:
@@ -776,6 +780,30 @@ uint32_t LocationIntegrationApiImpl::configOutputNmeaTypes(
     return 0;
 }
 
+uint32_t LocationIntegrationApiImpl::setUserConsentForTerrestrialPositioning(bool userConsent) {
+    struct SetUserConsentReq : public LocMsg {
+        SetUserConsentReq(LocationIntegrationApiImpl* apiImpl,
+                          bool userConsent) :
+                mApiImpl(apiImpl), mUserConsent(userConsent) {}
+        virtual ~SetUserConsentReq() {}
+        void proc() const {
+            string pbStr;
+            mApiImpl->mGtpUserConsentConfigInfo.isValid = true;
+            mApiImpl->mGtpUserConsentConfigInfo.userConsent = mUserConsent;
+            LocConfigUserConsentTerrestrialPositioningReqMsg msg(
+                    mApiImpl->mSocketName, mUserConsent);
+            mApiImpl->sendConfigMsgToHalDaemon(CONFIG_USER_CONSENT_TERRESTRIAL_POSITIONING,
+                    reinterpret_cast<uint8_t*>(&msg), sizeof(msg));
+        }
+
+        LocationIntegrationApiImpl* mApiImpl;
+        bool mUserConsent;
+    };
+
+    mMsgTask->sendMsg(new (nothrow) SetUserConsentReq(this, userConsent));
+    return 0;
+}
+
 void LocationIntegrationApiImpl::sendConfigMsgToHalDaemon(
         LocConfigTypeEnum configType, uint8_t* pMsg,
         size_t msgSize, bool invokeResponseCb) {
@@ -872,6 +900,15 @@ void LocationIntegrationApiImpl::processHalReadyMsg() {
     if (mNmeaConfigInfo.isValid) {
          LocConfigOutputNmeaTypesReqMsg msg(mSocketName, mNmeaConfigInfo.enabledNmeaTypes);
          sendConfigMsgToHalDaemon(CONFIG_OUTPUT_NMEA_TYPES,
+                                  reinterpret_cast<uint8_t*>(&msg),
+                                  sizeof(msg));
+    }
+
+    if (mGtpUserConsentConfigInfo.isValid) {
+        string pbStr;
+        LocConfigUserConsentTerrestrialPositioningReqMsg msg(
+                    mSocketName, mGtpUserConsentConfigInfo.userConsent);
+        sendConfigMsgToHalDaemon(CONFIG_USER_CONSENT_TERRESTRIAL_POSITIONING,
                                   reinterpret_cast<uint8_t*>(&msg),
                                   sizeof(msg));
     }

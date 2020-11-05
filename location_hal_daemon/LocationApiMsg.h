@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018-2021, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -233,6 +233,10 @@ enum ELocMsgID {
     // Measurement reports
     E_LOCAPI_MEAS_MSG_ID = 30,
 
+    // Terrestria fix request/response msg
+    E_LOCAPI_GET_SINGLE_TERRESTRIAL_POS_REQ_MSG_ID = 31,
+    E_LOCAPI_GET_SINGLE_TERRESTRIAL_POS_RESP_MSG_ID = 32,
+
     // ping
     E_LOCAPI_PINGTEST_MSG_ID = 99,
 
@@ -247,6 +251,7 @@ enum ELocMsgID {
     E_INTAPI_CONFIG_DEAD_RECKONING_ENGINE_MSG_ID = 207,
     E_INTAPI_CONFIG_MIN_SV_ELEVATION_MSG_ID = 208,
     E_INTAPI_CONFIG_OUTPUT_NMEA_TYPES_MSG_ID = 209,
+    E_INTAPI_CONFIG_USER_CONSENT_TERRESTRIAL_POSITIONING_MSG_ID = 211,
 
     // integration API config retrieval request/response
     E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID  = 300,
@@ -616,6 +621,29 @@ struct LocAPIGetGnssEnergyConsumedReqMsg: LocAPIMsgHeader
         LocAPIMsgHeader(name, E_LOCAPI_GET_GNSS_ENGERY_CONSUMED_MSG_ID) { }
 };
 
+struct LocAPIGetSingleTerrestrialPosReqMsg: LocAPIMsgHeader
+{
+    uint32_t            mTimeoutMsec;
+    TerrestrialTechMask mTechMask;
+    float               mHorQoS;
+
+    inline LocAPIGetSingleTerrestrialPosReqMsg(
+            const char* name, uint32_t timeoutMsec, TerrestrialTechMask techMask, float horQoS) :
+        LocAPIMsgHeader(name, E_LOCAPI_GET_SINGLE_TERRESTRIAL_POS_REQ_MSG_ID),
+        mTimeoutMsec(timeoutMsec), mTechMask(techMask), mHorQoS(horQoS) { }
+};
+
+struct LocAPIGetSingleTerrestrialPosRespMsg: LocAPIMsgHeader
+{
+    LocationError mErrorCode;
+    Location      mLocation;
+
+    inline LocAPIGetSingleTerrestrialPosRespMsg(
+            const char* name, LocationError errorCode, Location location) :
+        LocAPIMsgHeader(name, E_LOCAPI_GET_SINGLE_TERRESTRIAL_POS_RESP_MSG_ID),
+        mErrorCode(errorCode), mLocation(location) { }
+};
+
 /******************************************************************************
 IPC message structure - indications
 ******************************************************************************/
@@ -732,7 +760,7 @@ struct LocAPIMeasIndMsg : LocAPIMsgHeader
         gnssMeasurementsNotification(measurementsNotification) { }
 };
 
-// defintion for message with msg id of E_LOCAPI_GET_TOTAL_ENGERY_CONSUMED_BY_GPS_ENGINE_MSG_ID
+// defintion for message with msg id of E_LOCAPI_GET_GNSS_ENGERY_CONSUMED_MSG_ID
 struct LocAPIGnssEnergyConsumedIndMsg: LocAPIMsgHeader
 {
     uint64_t totalGnssEnergyConsumedSinceFirstBoot;
@@ -867,6 +895,16 @@ struct LocConfigOutputNmeaTypesReqMsg: LocAPIMsgHeader
             const char* name, GnssNmeaTypesMask enabledNmeaTypes) :
         LocAPIMsgHeader(name, E_INTAPI_CONFIG_OUTPUT_NMEA_TYPES_MSG_ID),
         mEnabledNmeaTypes(enabledNmeaTypes) { }
+};
+
+struct LocConfigUserConsentTerrestrialPositioningReqMsg: LocAPIMsgHeader
+{
+    bool mUserConsent;
+
+    inline LocConfigUserConsentTerrestrialPositioningReqMsg(
+            const char* name, bool userConsent) :
+        LocAPIMsgHeader(name, E_INTAPI_CONFIG_USER_CONSENT_TERRESTRIAL_POSITIONING_MSG_ID),
+        mUserConsent(userConsent) { }
 };
 
 /******************************************************************************
