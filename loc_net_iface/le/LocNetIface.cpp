@@ -41,7 +41,6 @@
  * Used for QCMAP registration */
 LocNetIface* LocNetIface::sLocNetIfaceInstance = NULL;
 
-
 void LocNetIface::subscribe (
         const std::list<DataItemId>& itemListToSubscribe) {
 

@@ -17,7 +17,9 @@ AM_CPPFLAGS = -std=c++11
 libloc_net_iface_la_SOURCES = \
      LocNetIfaceBase.cpp \
      LocNetIfaceAgps.cpp \
-     le/LocNetIface.cpp
+     le/LocNetIface.cpp \
+     le/LocNetExtIface.cpp \
+     le/LocNetIfaceGlue.cpp
 
 if USE_GLIB
 libloc_net_iface_la_CFLAGS = -DUSE_GLIB $(AM_CFLAGS) @GLIB_CFLAGS@
@@ -38,7 +40,8 @@ libloc_net_iface_la_LIBADD += -lqcmap_client -ldsi_netctrl -ldataitems
 library_include_HEADERS = \
     LocNetIfaceBase.h \
     LocNetIfaceAgps.h \
-    le/LocNetIface.h
+    le/LocNetIface.h \
+    le/LocNetExtIface.h
 
 #Create and Install libraries
 lib_LTLIBRARIES = libloc_net_iface.la
