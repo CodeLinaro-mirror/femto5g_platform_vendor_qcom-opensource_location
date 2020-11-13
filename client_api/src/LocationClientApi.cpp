@@ -827,6 +827,13 @@ DECLARE_TBL(DrSolutionStatusMask) = {
     {DR_SOLUTION_STATUS_VEHICLE_SENSOR_SPEED_INPUT_USED, "VEHICLE_SENSOR_SPEED_INPUT_USED"}
 };
 
+// LocSessionStatus
+DECLARE_TBL(LocSessionStatus) = {
+    {LOC_SESS_SUCCESS, "LOC_SESS_SUCCESS"},
+    {LOC_SESS_INTERMEDIATE, "LOC_SESS_INTERMEDIATE"},
+    {LOC_SESS_FAILURE, "LOC_SESS_FAILURE" }
+};
+
 string GnssLocationSvUsedInPosition::toString() const {
     string out;
     out.reserve(256);
@@ -1023,6 +1030,7 @@ string GnssLocation::toString() const {
     out += FIELDVAL_DEC(enuVelocityVRPBased[1]);
     out += FIELDVAL_DEC(enuVelocityVRPBased[2]);
     out += FIELDVAL_MASK(drSolutionStatusMask, DrSolutionStatusMask_tbl);
+    out += FIELDVAL_MASK(sessionStatus, LocSessionStatus_tbl);
 
     return out;
 }
