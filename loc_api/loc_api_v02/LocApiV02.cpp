@@ -4835,6 +4835,18 @@ void  LocApiV02 :: reportSvPolynomial (
         svPolynomial.navicTgdL5 = gnss_sv_poly_ptr->navicTgdL5;
     }
 
+    if (1 == gnss_sv_poly_ptr->bdsTgdB1c_valid)
+    {
+        svPolynomial.is_valid |= ULP_GNSS_SV_POLY_BIT_BDS_TGD_B1C;
+        svPolynomial.bdsTgdB1c = gnss_sv_poly_ptr->bdsTgdB1c;
+    }
+
+    if (1 == gnss_sv_poly_ptr->bdsIscB1c_valid)
+    {
+        svPolynomial.is_valid |= ULP_GNSS_SV_POLY_BIT_BDS_ISC_B1C;
+        svPolynomial.bdsIscB1c = gnss_sv_poly_ptr->bdsIscB1c;
+    }
+
 
     LocApiBase::reportSvPolynomial(svPolynomial);
 
