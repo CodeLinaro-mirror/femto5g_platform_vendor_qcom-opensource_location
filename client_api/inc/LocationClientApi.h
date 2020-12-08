@@ -64,7 +64,8 @@ namespace location_client
 {
 class Geofence;
 
-enum LocationCapabilitiesMask {
+typedef uint64_t LocationCapabilitiesMask;
+enum ELocationCapabilitiesMask {
     /** LocationClientApi can support time-based tracking session
      *  via LocationClientApi::startPositionSession(uint32_t,
      *  LocReqEngineTypeMask, const EngineReportCbs&, ResponseCb)
@@ -94,6 +95,55 @@ enum LocationCapabilitiesMask {
     /** LocationClientApi can support trip batching via
      *  LocationClientApi::startTripBatchingSession(). <br/>   */
     LOCATION_CAPS_OUTDOOR_TRIP_BATCHING_BIT         = (1<<5),
+    /** LocationClientApi can support receiving GnssMeasurements
+     *  data in GnssMeasurementsCb when LocationClientApi is in
+     *  a positioning session.. <br/>   */
+    LOCATION_CAPS_GNSS_MEASUREMENTS_BIT             = (1<<6),
+    /** LocationIntegrationApi can support configure constellations
+     *  via LocationIntegrationApi::configConstellations.  <br/>   */
+     LOCATION_CAPS_CONSTELLATION_ENABLEMENT_BIT      = (1<<7),
+    /** Modem supports Carrier Phase for Precise Positioning
+     *  Measurement Engine (PPME).
+     *  This is a Standalone Feature.  <br/>   */
+    LOCATION_CAPS_CARRIER_PHASE_BIT                 = (1<<8),
+    /** Modem supports SV Polynomial for tightly coupled
+     *  external DR support.
+     *  This is a Standalone Feature.  <br/>   */
+    LOCATION_CAPS_SV_POLYNOMIAL_BIT                 = (1<<9),
+    /** Modem supports GNSS Single Frequency feature.
+     *  This is a Standalone Feature.  <br/>   */
+    LOCATION_CAPS_QWES_GNSS_SINGLE_FREQUENCY        = (1<<10),
+    /** Modem supports GNSS Multi Frequency feature. Multi
+     *  Frequency enables Single frequency also.  <br/>   */
+    LOCATION_CAPS_QWES_GNSS_MULTI_FREQUENCY         = (1<<11),
+    /** This mask indicates VEPP license bundle is enabled.
+     *  VEPP bundle include Carrier Phase and SV Polynomial
+     *  features.  <br/>   */
+    LOCATION_CAPS_QWES_VPE                          = (1<<12),
+    /** This mask indicates support for CV2X Location basic
+     *  features. This bundle includes features for GTS Time
+     *  & Freq, C-TUNC (Constrained Time uncertainity.
+     *  LocationIntegrationApi can support setting of C-TUNC
+     *  via configConstrainedTimeUncertainty. <br/> */
+    LOCATION_CAPS_QWES_CV2X_LOCATION_BASIC          = (1<<13),
+    /** This mask indicates support for CV2X Location premium
+     *  features. This bundle includes features for CV2X Location
+     *  Basic features, QDR3 feature, and PACE. (Position
+     *  Assisted Clock Estimator.
+     *  LocationIntegrationApi can support setting of C-TUNC
+     *  via configPositionAssistedClockEstimator. <br/> */
+    LOCATION_CAPS_QWES_CV2X_LOCATION_PREMIUM        = (1<<14),
+    /** This mask indicates that PPE (Precise Positioning Engine)
+     *  library is enabled or Precise Positioning Framework (PPF)
+     *  is available. This bundle includes features for Carrier
+     *  Phase and SV Ephermeris.  <br/>   */
+    LOCATION_CAPS_QWES_PPE                          = (1<<15),
+    /** This mask indicates QDR2_C license bundle is enabled.
+     *  This bundle includes features for SV Polynomial. <br/> */
+    LOCATION_CAPS_QWES_QDR2                         = (1<<16),
+    /** This mask indicates QDR3_C license bundle is enabled.
+     *  This bundle includes features for SV Polynomial. <br/> */
+    LOCATION_CAPS_QWES_QDR3                         = (1<<17),
 };
 
 /**
@@ -173,7 +223,13 @@ enum LocationTechnologyMask {
     LOCATION_TECHNOLOGY_HYBRID_BIT                   = (1<<7),
     /** Precise position engine was used to calculate
      *  Location. <br/>   */
-    LOCATION_TECHNOLOGY_PPE_BIT                      = (1<<8)
+    LOCATION_TECHNOLOGY_PPE_BIT                      = (1<<8),
+    /** Vehicular data was used to calculate
+     *  Location. <br/>   */
+    LOCATION_TECHNOLOGY_VEH_BIT                      = (1<<9),
+    /** Visual data was used to calculate
+     *  Location. <br/>   */
+    LOCATION_TECHNOLOGY_VIS_BIT                      = (1<<10)
 };
 
 /** Specify the set of navigation solutions that contribute
@@ -463,6 +519,11 @@ enum GnssLocationInfoFlagMask {
     /** GnssLocation has valid GnssLocation::drSolutionStatusMask.
      *  <br/>   */
     GNSS_LOCATION_INFO_DR_SOLUTION_STATUS_MASK_BIT      = (1ULL<<32),
+    /** GnssLocation has valid GnssLocation::altitudeAssumed.
+     *  <br/> */
+    GNSS_LOCATION_INFO_ALTITUDE_ASSUMED_BIT             = (1ULL<<33),
+    /** GnssLocation has valid GnssLocation::sessionStatus. <br/> */
+    GNSS_LOCATION_INFO_SESSION_STATUS_BIT               = (1ULL<<34),
 };
 
 /** Specify the reliability level of
@@ -821,6 +882,11 @@ enum LocReqEngineTypeMask {
       for the tracking session. <br/>
     */
     LOC_REQ_ENGINE_PPE_BIT   = (1<<2),
+    /** Mask to indicate that the client requests unmodified VPE
+      position via registering location_client::EngineLocationsCb
+      for the tracking session. <br/>
+    */
+    LOC_REQ_ENGINE_VPE_BIT  = (1<<3)
 };
 
 /** Specify the position engine type that produced GnssLocation. <br/> */
@@ -834,6 +900,8 @@ enum LocOutputEngineType {
     LOC_OUTPUT_ENGINE_SPE   = 1,
     /** This is the unmodified fix from PPE engine. <br/> */
     LOC_OUTPUT_ENGINE_PPE   = 2,
+    /** This is the unmodified fix from VPE engine. <br/> */
+    LOC_OUTPUT_ENGINE_VPE  = 3,
     /** This is the entry count of this enum. <br/>   */
     LOC_OUTPUT_ENGINE_COUNT,
 };
@@ -847,7 +915,9 @@ enum PositioningEngineMask {
     /** Mask for dead reckoning position engine. <br/>   */
     DEAD_RECKONING_ENGINE       = (1 << 1),
     /** Mask for precise position engine. <br/>   */
-    PRECISE_POSITIONING_ENGINE  = (1 << 2)
+    PRECISE_POSITIONING_ENGINE  = (1 << 2),
+    /** Mask for vpe engine. <br/>   */
+    VP_POSITIONING_ENGINE       = (1 << 3)
 };
 
 /** Specify the location info received by client via
@@ -917,6 +987,17 @@ enum DrSolutionStatusMask {
     /** Vehicle sensor speed input was used by the DR position
      *  engine. <br/> */
     DR_SOLUTION_STATUS_VEHICLE_SENSOR_SPEED_INPUT_USED     = (1<<1),
+};
+
+/** Specify the session status. <br/> */
+enum LocSessionStatus {
+    /** Session is successful. <br/> */
+    LOC_SESS_SUCCESS      = 0,
+    /** Session is still in progress, the reported has not yet
+    achieved the needed criteria. <br/>*/
+    LOC_SESS_INTERMEDIATE = 1,
+    /** Session has failed. <br/>*/
+    LOC_SESS_FAILURE      = 2,
 };
 
 /** Specify the location info received by client via
@@ -1029,6 +1110,15 @@ struct GnssLocation : public Location {
     float enuVelocityVRPBased[3];
     /** Dead reckoning position engine status.  <br/> */
     DrSolutionStatusMask drSolutionStatusMask;
+    /** When this field is valid, it will indicates whether altitude
+     *  is assumed or calculated. <br/>
+     *  false: Altitude is calculated. <br/>
+     *  true:  Altitude is assumed; there may not be enough
+     *         satellites to determine the precise altitude. <br/> */
+    bool altitudeAssumed;
+    /** Indicates whether session is success, failure or
+     *  intermediate. <br/> */
+    LocSessionStatus sessionStatus;
 
     /* Default constructor to initalize GnssLocation structure */
     inline GnssLocation() :
@@ -1054,7 +1144,8 @@ struct GnssLocation : public Location {
             conformityIndex(0.0f),
             llaVRPBased({}),
             enuVelocityVRPBased{0.0f, 0.0f, 0.0f},
-            drSolutionStatusMask((DrSolutionStatusMask)0) {
+            drSolutionStatusMask((DrSolutionStatusMask)0),
+            altitudeAssumed(false), sessionStatus(LOC_SESS_FAILURE) {
     }
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
@@ -2351,6 +2442,24 @@ public:
         */
     void updateLocationSystemInfoListener(LocationSystemInfoCb locSystemInfoCallback,
                                           ResponseCb responseCallback);
+
+
+    /** @brief
+        Get the year of Hardware information.<br/>
+        This information is available after CapabilitiesCb is invoked.<br/>
+        @return The year of Hardware.<br/>
+                0, if the year of Hardware information is not available.
+    */
+    uint16_t getYearOfHw();
+
+    /** @brief
+        Returns the feature capability corresponding to mask as a string
+        for easy inference of features supported. <br/>
+
+        @param capabMask
+        Mask of Location capabilities from LocationCapabilitiesMask. <br/>
+    */
+    static string capabilitiesToString(LocationCapabilitiesMask capabMask);
 
 private:
     /** Internal implementation for LocationClientApi */

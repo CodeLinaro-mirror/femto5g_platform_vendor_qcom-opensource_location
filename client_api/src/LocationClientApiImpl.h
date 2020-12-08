@@ -38,6 +38,7 @@
 #include <LocationClientApi.h>
 #include <MsgTask.h>
 #include <LocationApiMsg.h>
+#include <LocationApiPbMsgConv.h>
 #include <LCAReportLoggerUtil.h>
 #ifdef NO_UNORDERED_SET_OR_MAP
     #include <set>
@@ -160,11 +161,15 @@ public:
 
     void pingTest(PingTestCb pingTestCallback);
     void invokePositionSessionResponseCb(LocationResponse responseCode);
+    inline uint16_t getYearOfHw() {return mYearOfHw;}
 
 private:
     ~LocationClientApiImpl();
     void capabilitesCallback(ELocMsgID  msgId, const void* msgData);
     void updateTrackingOptionsSync(LocationClientApiImpl* pImpl, TrackingOptions& option);
+
+    // protobuf conversion util class
+    LocationApiPbMsgConv mPbufMsgConv;
 
     // internal session parameter
     static uint32_t         mClientIdGenerator;
@@ -185,6 +190,8 @@ private:
     BatchingOptions            mBatchingOptions;
     LocationCapabilitiesMask   mCapsMask;
     bool                       mPositionSessionResponseCbPending;
+    //Year of HW information, 0 is invalid
+    uint16_t                   mYearOfHw;
 
     // callbacks
     CapabilitiesCb          mCapabilitiesCb;
