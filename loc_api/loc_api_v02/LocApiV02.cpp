@@ -9172,7 +9172,7 @@ LocApiV02::getBatchedLocationsSync(size_t count)
                      __func__, entriesGotInTotal - entriesToReadInTotal);
             // we got one extra location added during modem read, so one location will
             // be out of order and needs to be found and put in order
-            int64_t currentTimeStamp = pLocationsFromModem[entriesToReadInTotal].timestamp;
+            uint64_t currentTimeStamp = pLocationsFromModem[entriesToReadInTotal].timestamp;
             for (int i=entriesToReadInTotal-1; i >= 0; i--) {
                 // find the out of order location
                 if (currentTimeStamp < pLocationsFromModem[i].timestamp) {
