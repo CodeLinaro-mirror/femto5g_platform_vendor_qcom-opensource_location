@@ -133,7 +133,7 @@ int LocAPICapabilitiesIndMsg::serializeToProtobuf(string& protoStr) {
 
     // >>>> PBLocAPICapabilitiesIndMsg conversion
     // Bitwise OR of PBLocationCapabilitiesMask
-    // uint32 capabilitiesMask = 1;
+    // uint64 capabilitiesMask = 1;
     pbLocApiCapabInd.set_capabilitiesmask(
             pLocApiPbMsgConv->getPBMaskForLocationCapabilitiesMask(capabilitiesMask));
 
@@ -1537,6 +1537,11 @@ int LocConfigSvConstellationReqMsg::serializeToProtobuf(string& protoStr) {
         return 0;
     }
 
+    // bool mResetToDefault = 3;
+    // size field in constellationEnablementConfig to 0 to indicate to restore to modem default
+    bool resetToDefault = (0 == mConstellationEnablementConfig.size);
+    pbLocConfSvConst.set_mresettodefault(resetToDefault);
+
     string pbStr;
     if (!pbLocConfSvConst.SerializeToString(&pbStr)) {
         LOC_LOGe("SerializeToString on pbLocConfSvConst failed!");
@@ -1877,6 +1882,49 @@ int LocConfigMinSvElevationReqMsg::serializeToProtobuf(string& protoStr) {
     }
     return protoStr.size();
 }
+
+// Convert LocConfigEngineRunStateReqMsg -> PBLocConfigEngineRunStateReqMsg
+int LocConfigEngineRunStateReqMsg::serializeToProtobuf(string& protoStr) {
+    PBLocAPIMsgHeader pLocApiMsgHdr;
+    PBLocConfigEngineRunStateReqMsg pbLocConfEngineRunState;
+
+    if (nullptr == pLocApiPbMsgConv) {
+        LOC_LOGe("pLocApiPbMsgConv is null!");
+        return 0;
+    }
+    // string      mSocketName = 1;
+    pLocApiMsgHdr.set_msocketname(mSocketName);
+    // PBELocMsgID  msgId = 2;
+    pLocApiMsgHdr.set_msgid(pLocApiPbMsgConv->getPBEnumForELocMsgID(msgId));
+    // uint32   msgVersion = 3;
+    pLocApiMsgHdr.set_msgversion(msgVersion);
+
+    // >>>> PBLocConfigEngineRunStateReqMsg conversion
+    // PBLocApiPositioningEngineMask mEngType = 1;
+    pbLocConfEngineRunState.set_mengtype((::PBLocApiPositioningEngineMask)
+            pLocApiPbMsgConv->getPBMaskForPositioningEngineMask(mEngType));
+    // PBLocEngineRunState mEngState = 2;
+    pbLocConfEngineRunState.set_mengstate((::PBLocEngineRunState)
+            pLocApiPbMsgConv->getPBEnumForLocEngineRunState(mEngState));
+
+    string pbStr;
+    if (!pbLocConfEngineRunState.SerializeToString(&pbStr)) {
+        LOC_LOGe("SerializeToString on pbLocConfEngineRunState failed!");
+        return 0;
+    }
+    // bytes       payload = 4;
+    pLocApiMsgHdr.set_payload(pbStr);
+
+    // uint32   payloadSize = 5;
+    pLocApiMsgHdr.set_payloadsize(sizeof(LocConfigEngineRunStateReqMsg));
+
+    if (!pLocApiMsgHdr.SerializeToString(&protoStr)) {
+        LOC_LOGe("SerializeToString on pLocApiMsgHdr failed!");
+        return 0;
+    }
+    return protoStr.size();
+}
+
 
 // Convert LocConfigGetRobustLocationConfigReqMsg -> PBLocConfigGetRobustLocationConfigReqMsg
 int LocConfigGetRobustLocationConfigReqMsg::serializeToProtobuf(string& protoStr) {
@@ -2284,7 +2332,7 @@ LocAPICapabilitiesIndMsg::LocAPICapabilitiesIndMsg(const char* name,
         return;
     }
     // >>>> PBLocAPICapabilitiesIndMsg conversion
-    // uint32 capabilitiesMask = 1;
+    // uint64 capabilitiesMask = 1;
     capabilitiesMask = pLocApiPbMsgConv->getLocationCapabilitiesMaskFromPB(
             pbLocApiCapInd.capabilitiesmask());
 }
@@ -2704,6 +2752,15 @@ LocConfigSvConstellationReqMsg::LocConfigSvConstellationReqMsg(const char* name,
     // PBGnssSvIdConfig   mBlacklistSvConfig = 2;
     pLocApiPbMsgConv->pbConvertToGnssSvIdConfig(pbConfigSvConstReqMsg.mblacklistsvconfig(),
             mBlacklistSvConfig);
+    // bool mResetToDefault = 3;
+    if (pbConfigSvConstReqMsg.mresettodefault()) {
+        // set size field in constellationEnablementConfig to 0 to indicate
+        // to restore to modem default
+        mConstellationEnablementConfig.size = 0;
+    } else {
+        mConstellationEnablementConfig.size = sizeof(GnssSvTypeConfig);
+    }
+    mBlacklistSvConfig.size = sizeof(GnssSvIdConfig);
 }
 
 // Decode PBLocConfigConstellationSecondaryBandReqMsg -> LocConfigConstellationSecondaryBandReqMsg
@@ -2800,6 +2857,19 @@ LocConfigMinSvElevationReqMsg::LocConfigMinSvElevationReqMsg(const char* name,
     // uint32 mMinSvElevation = 1;
     mMinSvElevation = pbConfigMinSvElevReqMsg.mminsvelevation();
     LOC_LOGd("LocApiPB: MinSv Elev: %u", mMinSvElevation);
+}
+
+// Decode PBLocConfigEngineRunStateReqMsg -> LocConfigEngineRunStateReqMsg
+LocConfigEngineRunStateReqMsg::LocConfigEngineRunStateReqMsg(const char* name,
+            const PBLocConfigEngineRunStateReqMsg &pbConfigEngineRunStateReqMsg,
+            const LocationApiPbMsgConv *pbMsgConv):
+        LocAPIMsgHeader(name, E_INTAPI_CONFIG_ENGINE_RUN_STATE_MSG_ID, pbMsgConv) {
+    // >>>> PBLocConfigEngineRunStateReqMsg conversion
+    mEngType = (PositioningEngineMask) pLocApiPbMsgConv->getEnumForPBPositioningEngineMask(
+            pbConfigEngineRunStateReqMsg.mengtype());
+    mEngState = (LocEngineRunState) pLocApiPbMsgConv->getEnumForPBLocEngineRunState(
+            pbConfigEngineRunStateReqMsg.mengstate());
+    LOC_LOGd("LocApiPB: eng type %d, eng state %d", mEngType, mEngState);
 }
 
 // Decode PBLocConfigGetRobustLocationConfigRespMsg -> LocConfigGetRobustLocationConfigRespMsg
