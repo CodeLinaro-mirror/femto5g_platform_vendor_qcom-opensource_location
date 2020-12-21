@@ -49,8 +49,6 @@ using namespace std;
 #define AUTO_START_CLIENT_NAME "default"
 
 typedef void* (getLocationInterface)();
-typedef void  (createOSFramework)();
-typedef void  (destroyOSFramework)();
 
 /******************************************************************************
 LocationApiService - static members
@@ -177,9 +175,6 @@ LocationApiService::LocationApiService(const configParamToRead & configParamRead
     }
 #endif
 
-    // Create OSFramework and IzatManager instance
-    createOSFrameworkInstance();
-
     mMaintTimer.start(MAINT_TIMER_INTERVAL_MSEC, false);
 
     // create a default client if enabled by config
@@ -234,9 +229,6 @@ LocationApiService::~LocationApiService() {
         LOC_LOGd(">-- deleted client [%s]", each.first.c_str());
         each.second->cleanup();
     }
-
-    // Destroy OSFramework instance
-    destroyOSFrameworkInstance();
 
     // delete location contorol API handle
     mLocationControlApi->disable(mLocationControlId);
@@ -561,6 +553,18 @@ void LocationApiService::processClientMsg(const char* data, uint32_t length) {
             break;
         }
 
+        case E_INTAPI_CONFIG_ENGINE_RUN_STATE_MSG_ID: {
+            PBLocConfigEngineRunStateReqMsg pbLocConfEngineRunState;
+            if (0 == pbLocConfEngineRunState.ParseFromString(pbLocApiMsg.payload())) {
+                LOC_LOGe("Failed to parse pbLocConfEngineRunState from payload!!");
+                return;
+            }
+            LocConfigEngineRunStateReqMsg msg(sockName.c_str(),
+                                              pbLocConfEngineRunState,
+                                              &mPbufMsgConv);
+            configEngineRunState(reinterpret_cast<LocConfigEngineRunStateReqMsg*>(&msg));
+            break;
+        }
         case E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID: {
             getGnssConfig(&locApiMsg, GNSS_CONFIG_FLAGS_ROBUST_LOCATION_BIT);
             break;
@@ -1178,6 +1182,19 @@ void LocationApiService::configMinSvElevation(const LocConfigMinSvElevationReqMs
     addConfigRequestToMap(sessionId, pMsg);
 }
 
+void LocationApiService::configEngineRunState(const LocConfigEngineRunStateReqMsg* pMsg) {
+    if (!pMsg) {
+        return;
+    }
+    std::lock_guard<std::mutex> lock(mMutex);
+
+    LOC_LOGi(">-- client %s, eng type 0x%x, eng state %d",
+             pMsg->mSocketName, pMsg->mEngType, pMsg->mEngState);
+    uint32_t sessionId =
+            mLocationControlApi->configEngineRunState(pMsg->mEngType, pMsg->mEngState);
+    addConfigRequestToMap(sessionId, pMsg);
+}
+
 void LocationApiService::getGnssConfig(const LocAPIMsgHeader* pReqMsg,
                                        GnssConfigFlagsBits configFlag) {
 
@@ -1359,30 +1376,6 @@ GnssInterface* LocationApiService::getGnssInterface() {
         }
     }
     return gnssInterface;
-}
-
-// Create OSFramework instance
-void LocationApiService::createOSFrameworkInstance() {
-    void* libHandle = nullptr;
-    createOSFramework* getter = (createOSFramework*)dlGetSymFromLib(libHandle,
-            "liblocationservice_glue.so", "createOSFramework");
-    if (getter != nullptr) {
-        (*getter)();
-    } else {
-        LOC_LOGe("dlGetSymFromLib failed for liblocationservice_glue.so");
-    }
-}
-
-// Destroy OSFramework instance
-void LocationApiService::destroyOSFrameworkInstance() {
-    void* libHandle = nullptr;
-    destroyOSFramework* getter = (destroyOSFramework*)dlGetSymFromLib(libHandle,
-            "liblocationservice_glue.so", "destroyOSFramework");
-    if (getter != nullptr) {
-        (*getter)();
-    } else {
-        LOC_LOGe("dlGetSymFromLib failed for liblocationservice_glue.so");
-    }
 }
 
 void LocationApiService::performMaintenance() {
