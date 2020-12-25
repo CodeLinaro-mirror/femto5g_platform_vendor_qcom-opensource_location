@@ -480,11 +480,11 @@ public:
     // LocationCallbacksMask to PBLocationCallbacksMask
     uint32_t getPBMaskForLocationCallbacksMask(const uint32_t &locCbMask) const;
     // LocationCapabilitiesMask to PBLocationCapabilitiesMask
-    uint32_t getPBMaskForLocationCapabilitiesMask(const uint32_t &locCapabMask) const;
+    uint64_t getPBMaskForLocationCapabilitiesMask(const uint64_t &locCapabMask) const;
 
     // **** helper function for mask conversion from protobuf masks to normal rigid values
     // PBLocationCapabilitiesMask to LocationCapabilitiesMask
-    uint32_t getLocationCapabilitiesMaskFromPB(const uint32_t &pbLocCapabMask) const;
+    uint64_t getLocationCapabilitiesMaskFromPB(const uint64_t &pbLocCapabMask) const;
     // PBLocationCallbacksMask to LocationCallbacksMask
     uint32_t getLocationCallbacksMaskFromPB(const uint32_t &pbLocCbMask) const;
 
@@ -641,6 +641,8 @@ private:
             const GnssMeasurementsMultipathIndicator &gnssMeasMultiPathIndic) const;
     PBLocApiGnss_LocSvSystemEnumType getPBEnumForGnssLocSvSystem(
             const Gnss_LocSvSystemEnumType &gnssLocSvSysEnumType) const;
+    // PBLocationSessionStatus from/to loc_sess_status
+    PBLocationSessionStatus getPBEnumForLocSessionStatus(const loc_sess_status &status) const;
 
     // ** Special enum conversion
     // GnssSvType to PBLocApiGnss_LocSvSystemEnumType
@@ -716,6 +718,7 @@ private:
             const PBLocApiGnss_LocSvSystemEnumType &pbGnssLocSvSysEnumType) const;
     LocOutputEngineType getEnumForPBLocOutputEngineType(
             const PBLocApiOutputEngineType &pbLocOpEngType) const;
+    loc_sess_status getLocSessionStatusFromPB(const PBLocationSessionStatus &pbStatus) const;
 
     // ** Special enum conversion
     // PBLocApiGnss_LocSvSystemEnumType to GnssSvType
