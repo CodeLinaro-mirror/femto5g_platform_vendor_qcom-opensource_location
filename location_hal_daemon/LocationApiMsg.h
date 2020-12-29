@@ -246,6 +246,7 @@ enum ELocMsgID {
     E_INTAPI_CONFIG_MIN_GPS_WEEK_MSG_ID  = 206,
     E_INTAPI_CONFIG_DEAD_RECKONING_ENGINE_MSG_ID = 207,
     E_INTAPI_CONFIG_MIN_SV_ELEVATION_MSG_ID = 208,
+    E_INTAPI_CONFIG_OUTPUT_NMEA_TYPES_MSG_ID = 209,
 
     // integration API config retrieval request/response
     E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID  = 300,
@@ -856,6 +857,16 @@ struct LocConfigMinSvElevationReqMsg: LocAPIMsgHeader
                                          uint8_t minSvElevation) :
         LocAPIMsgHeader(name, E_INTAPI_CONFIG_MIN_SV_ELEVATION_MSG_ID),
         mMinSvElevation(minSvElevation) { }
+};
+
+struct LocConfigOutputNmeaTypesReqMsg: LocAPIMsgHeader
+{
+    GnssNmeaTypesMask mEnabledNmeaTypes;
+
+    inline LocConfigOutputNmeaTypesReqMsg(
+            const char* name, GnssNmeaTypesMask enabledNmeaTypes) :
+        LocAPIMsgHeader(name, E_INTAPI_CONFIG_OUTPUT_NMEA_TYPES_MSG_ID),
+        mEnabledNmeaTypes(enabledNmeaTypes) { }
 };
 
 /******************************************************************************

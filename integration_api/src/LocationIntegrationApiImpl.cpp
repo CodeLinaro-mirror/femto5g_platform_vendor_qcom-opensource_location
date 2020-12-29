@@ -71,6 +71,9 @@ static LocConfigTypeEnum getLocConfigTypeFromMsgId(ELocMsgID  msgId) {
     case E_INTAPI_CONFIG_MIN_SV_ELEVATION_MSG_ID:
         configType = CONFIG_MIN_SV_ELEVATION;
         break;
+    case E_INTAPI_CONFIG_OUTPUT_NMEA_TYPES_MSG_ID:
+        configType = CONFIG_OUTPUT_NMEA_TYPES;
+        break;
     case E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID:
     case E_INTAPI_GET_ROBUST_LOCATION_CONFIG_RESP_MSG_ID:
         configType = GET_ROBUST_LOCATION_CONFIG;
@@ -179,7 +182,8 @@ LocationIntegrationApiImpl::LocationIntegrationApiImpl(LocIntegrationCbs& integr
         mSVConfigInfo{},
         mLeverArmConfigInfo{},
         mRobustLocationConfigInfo{},
-        mDreConfigInfo{} {
+        mDreConfigInfo{},
+        mNmeaConfigInfo{} {
     if (integrationClientAllowed() == false) {
         return;
     }
@@ -337,6 +341,7 @@ void IpcListener::onReceive(const char* data, uint32_t length,
             case E_INTAPI_CONFIG_MIN_GPS_WEEK_MSG_ID:
             case E_INTAPI_CONFIG_DEAD_RECKONING_ENGINE_MSG_ID:
             case E_INTAPI_CONFIG_MIN_SV_ELEVATION_MSG_ID:
+            case E_INTAPI_CONFIG_OUTPUT_NMEA_TYPES_MSG_ID:
             case E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID:
             case E_INTAPI_GET_MIN_GPS_WEEK_REQ_MSG_ID:
             case E_INTAPI_GET_MIN_SV_ELEVATION_REQ_MSG_ID:
@@ -747,6 +752,30 @@ uint32_t LocationIntegrationApiImpl::getMinSvElevation() {
     return 0;
 }
 
+uint32_t LocationIntegrationApiImpl::configOutputNmeaTypes(
+        GnssNmeaTypesMask enabledNmeaTypes) {
+    struct ConfigOutputNmeaReq : public LocMsg {
+        ConfigOutputNmeaReq(LocationIntegrationApiImpl* apiImpl,
+                            GnssNmeaTypesMask enabledNmeaTypes) :
+                mApiImpl(apiImpl), mEnabledNmeaTypes(enabledNmeaTypes) {}
+        virtual ~ConfigOutputNmeaReq() {}
+        void proc() const {
+            mApiImpl->mNmeaConfigInfo.isValid = true;
+            mApiImpl->mNmeaConfigInfo.enabledNmeaTypes = mEnabledNmeaTypes;
+            LocConfigOutputNmeaTypesReqMsg msg(mApiImpl->mSocketName, mEnabledNmeaTypes);
+            mApiImpl->sendConfigMsgToHalDaemon(CONFIG_OUTPUT_NMEA_TYPES,
+                                               reinterpret_cast<uint8_t*>(&msg),
+                                               sizeof(msg));
+        }
+
+        LocationIntegrationApiImpl* mApiImpl;
+        GnssNmeaTypesMask mEnabledNmeaTypes;
+    };
+
+    mMsgTask->sendMsg(new (nothrow) ConfigOutputNmeaReq(this, enabledNmeaTypes));
+    return 0;
+}
+
 void LocationIntegrationApiImpl::sendConfigMsgToHalDaemon(
         LocConfigTypeEnum configType, uint8_t* pMsg,
         size_t msgSize, bool invokeResponseCb) {
@@ -838,6 +867,13 @@ void LocationIntegrationApiImpl::processHalReadyMsg() {
         sendConfigMsgToHalDaemon(CONFIG_DEAD_RECKONING_ENGINE,
                                  reinterpret_cast<uint8_t*>(&msg),
                                  sizeof(msg));
+    }
+
+    if (mNmeaConfigInfo.isValid) {
+         LocConfigOutputNmeaTypesReqMsg msg(mSocketName, mNmeaConfigInfo.enabledNmeaTypes);
+         sendConfigMsgToHalDaemon(CONFIG_OUTPUT_NMEA_TYPES,
+                                  reinterpret_cast<uint8_t*>(&msg),
+                                  sizeof(msg));
     }
 }
 
