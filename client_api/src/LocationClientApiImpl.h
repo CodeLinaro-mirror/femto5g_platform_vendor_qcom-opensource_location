@@ -43,6 +43,8 @@
 #ifdef NO_UNORDERED_SET_OR_MAP
     #include <set>
     #include <map>
+    #define unordered_set set
+    #define unordered_map map
 #else
     #include <unordered_set>
     #include <unordered_map>
@@ -163,6 +165,10 @@ public:
     void invokePositionSessionResponseCb(LocationResponse responseCode);
     inline uint16_t getYearOfHw() {return mYearOfHw;}
 
+    void getSingleTerrestrialPos(uint32_t timeoutMsec, TerrestrialTechMask techMask,
+                                 float horQoS, LocationCb terrestrialPositionCallback,
+                                 ResponseCb responseCallback);
+
 private:
     ~LocationClientApiImpl();
     void capabilitesCallback(ELocMsgID  msgId, const void* msgData);
@@ -217,6 +223,10 @@ private:
 
     LocationSystemInfoCb    mLocationSysInfoCb;
     ResponseCb              mLocationSysInfoResponseCb;
+
+    // Terrestrial fix callback
+    LocationCb              mSingleTerrestrialPosCb;
+    ResponseCb              mSingleTerrestrialPosRespCb;
 
     MsgTask*                   mMsgTask;
 
