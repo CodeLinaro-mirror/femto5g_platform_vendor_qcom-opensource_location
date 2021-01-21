@@ -49,6 +49,8 @@ using namespace std;
 #define AUTO_START_CLIENT_NAME "default"
 
 typedef void* (getLocationInterface)();
+typedef void  (createOSFramework)();
+typedef void  (destroyOSFramework)();
 
 /******************************************************************************
 LocationApiService - static members
@@ -179,6 +181,9 @@ LocationApiService::LocationApiService(const configParamToRead & configParamRead
     }
 #endif
 
+    // Create OSFramework and IzatManager instance
+    createOSFrameworkInstance();
+
     mMaintTimer.start(MAINT_TIMER_INTERVAL_MSEC, false);
 
     // create a default client if enabled by config
@@ -237,6 +242,9 @@ LocationApiService::~LocationApiService() {
         LOC_LOGd(">-- deleted client [%s]", each.first.c_str());
         each.second->cleanup();
     }
+
+    // Destroy OSFramework instance
+    destroyOSFrameworkInstance();
 
     // delete location contorol API handle
     mLocationControlApi->disable(mLocationControlId);
@@ -594,6 +602,17 @@ void LocationApiService::processClientMsg(const char* data, uint32_t length) {
                     sockName.c_str(), pbMsg, &mPbufMsgConv);
             configUserConsentTerrestrialPositioning(reinterpret_cast
                     <LocConfigUserConsentTerrestrialPositioningReqMsg*>(&msg));
+            break;
+        }
+
+        case E_INTAPI_CONFIG_OUTPUT_NMEA_TYPES_MSG_ID: {
+            PBLocConfigOutputNmeaTypesReqMsg pbMsg;
+            if (0 == pbMsg.ParseFromString(pbLocApiMsg.payload())) {
+                LOC_LOGe("Failed to parse PBLocConfigOutputNmeaTypesReqMsg from payload!!");
+                return;
+            }
+            LocConfigOutputNmeaTypesReqMsg msg(sockName.c_str(), pbMsg, &mPbufMsgConv);
+            configOutputNmeaTypes(reinterpret_cast<LocConfigOutputNmeaTypesReqMsg*>(&msg));
             break;
         }
 
@@ -1269,6 +1288,17 @@ void LocationApiService::configUserConsentTerrestrialPositioning(
     addConfigRequestToMap(sessionId, pMsg);
 }
 
+void LocationApiService::configOutputNmeaTypes(const LocConfigOutputNmeaTypesReqMsg* pMsg) {
+    if (!pMsg) {
+        return;
+    }
+    std::lock_guard<std::mutex> lock(mMutex);
+
+    LOC_LOGi(">-- client %s, mEnabledNmeaTypes 0x%x",  pMsg->mSocketName, pMsg->mEnabledNmeaTypes);
+    uint32_t sessionId = mLocationControlApi->configOutputNmeaTypes(pMsg->mEnabledNmeaTypes);
+    addConfigRequestToMap(sessionId, pMsg);
+}
+
 void LocationApiService::getGnssConfig(const LocAPIMsgHeader* pReqMsg,
                                        GnssConfigFlagsBits configFlag) {
 
@@ -1481,6 +1511,30 @@ GnssInterface* LocationApiService::getGnssInterface() {
         }
     }
     return gnssInterface;
+}
+
+// Create OSFramework instance
+void LocationApiService::createOSFrameworkInstance() {
+    void* libHandle = nullptr;
+    createOSFramework* getter = (createOSFramework*)dlGetSymFromLib(libHandle,
+        "liblocationservice_glue.so", "createOSFramework");
+    if (getter != nullptr) {
+        (*getter)();
+    } else {
+        LOC_LOGe("dlGetSymFromLib failed for liblocationservice_glue.so");
+    }
+}
+
+// Destroy OSFramework instance
+void LocationApiService::destroyOSFrameworkInstance() {
+    void* libHandle = nullptr;
+    destroyOSFramework* getter = (destroyOSFramework*)dlGetSymFromLib(libHandle,
+        "liblocationservice_glue.so", "destroyOSFramework");
+    if (getter != nullptr) {
+        (*getter)();
+    } else {
+        LOC_LOGe("dlGetSymFromLib failed for liblocationservice_glue.so");
+    }
 }
 
 void LocationApiService::performMaintenance() {

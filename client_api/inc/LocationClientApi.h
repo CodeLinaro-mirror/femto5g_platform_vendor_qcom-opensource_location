@@ -1169,7 +1169,10 @@ struct GnssSv {
      *   SV Range for supported constellation is specified as below:
      *   <br/>
      *    - For GPS:     1 to 32 <br/>
-     *    - For GLONASS: 65 to 96 <br/>
+     *    - For GLONASS: 65 to 96 or FCN+104
+     *                   [65, 96] if orbital slot number(OSN) is known
+     *                   [97, 110] as frequency channel number(FCN) [-7, 6] plus 104
+     *                   i.e. encode FCN -7 as 97, 0 as 104, 6 as 110 <br/>
      *    - For SBAS:    120 to 158 and 183 to 191 <br/>
      *    - For QZSS:    193 to 197 <br/>
      *    - For BDS:     201 to 263 <br/>
@@ -1202,6 +1205,9 @@ struct GnssSv {
      *  This field is valid if gnssSvOptionsMask has
      *  GNSS_SV_OPTIONS_HAS_GNSS_SIGNAL_TYPE_BIT. <br/> */
     GnssSignalTypeMask gnssSignalTypeMask;
+    /** GLONASS frequency channel number
+     * <br/> */
+    uint16_t gloFrequency;
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
     string toString() const;
@@ -2198,8 +2204,9 @@ public:
         requirement. <br/>
 
         For this phase, only 0 will be accepted. None-zero
-        horizontal accuracy requirement will not be supported and
-        API call will return false. <br/>
+        horizontal accuracy requirement will not be supported
+        responseCb if not null will get invoked with
+        LOCATION_RESPONSE_PARAM_INVALID. <br/>
 
         @param terrestrialPositionCallback
         callback to receive terrestrial position. Some fields in

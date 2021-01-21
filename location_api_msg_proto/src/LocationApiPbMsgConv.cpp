@@ -210,6 +210,9 @@ ELocMsgID LocationApiPbMsgConv::getEnumForPBELocMsgID(const PBELocMsgID &pbLocMs
         case PB_E_INTAPI_CONFIG_USER_CONSENT_TERRESTRIAL_POSITIONING_MSG_ID:
             eLocMsgId = E_INTAPI_CONFIG_USER_CONSENT_TERRESTRIAL_POSITIONING_MSG_ID;
             break;
+        case PB_E_INTAPI_CONFIG_OUTPUT_NMEA_TYPES_MSG_ID:
+            eLocMsgId = E_INTAPI_CONFIG_OUTPUT_NMEA_TYPES_MSG_ID;
+            break;
         case PB_E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID:
             eLocMsgId = E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID;
             break;
@@ -481,6 +484,93 @@ uint32_t LocationApiPbMsgConv::getPBMaskForTerrestrialTechMask(
     return pbTerrestrialTechMask;
 }
 
+// HAL NMEA types mask from PB format
+uint32_t LocationApiPbMsgConv::getNmeaTypesMaskFromPB(
+        const uint32_t &pbNmeaTypesMask) const {
+
+    uint32_t nmeaTypesMask = NMEA_TYPE_NONE;
+    if (pbNmeaTypesMask & PB_NMEA_TYPE_GGA) {
+        nmeaTypesMask |= NMEA_TYPE_GGA;
+    }
+    if (pbNmeaTypesMask & PB_NMEA_TYPE_RMC) {
+        nmeaTypesMask |= NMEA_TYPE_RMC;
+    }
+    if (pbNmeaTypesMask & PB_NMEA_TYPE_GSA) {
+        nmeaTypesMask |= NMEA_TYPE_GSA;
+    }
+    if (pbNmeaTypesMask & PB_NMEA_TYPE_VTG) {
+        nmeaTypesMask |= NMEA_TYPE_VTG;
+    }
+    if (pbNmeaTypesMask & PB_NMEA_TYPE_GNS) {
+        nmeaTypesMask |= NMEA_TYPE_GNS;
+    }
+    if (pbNmeaTypesMask & PB_NMEA_TYPE_DTM) {
+        nmeaTypesMask |= NMEA_TYPE_DTM;
+    }
+    if (pbNmeaTypesMask & PB_NMEA_TYPE_GPGSV) {
+        nmeaTypesMask |= NMEA_TYPE_GPGSV;
+    }
+    if (pbNmeaTypesMask & PB_NMEA_TYPE_GLGSV) {
+        nmeaTypesMask |= NMEA_TYPE_GLGSV;
+    }
+    if (pbNmeaTypesMask & PB_NMEA_TYPE_GAGSV) {
+        nmeaTypesMask |= NMEA_TYPE_GAGSV;
+    }
+    if (pbNmeaTypesMask & PB_NMEA_TYPE_GQGSV) {
+        nmeaTypesMask |= NMEA_TYPE_GQGSV;
+    }
+    if (pbNmeaTypesMask & PB_NMEA_TYPE_GBGSV) {
+        nmeaTypesMask |= NMEA_TYPE_GBGSV;
+    }
+    if (pbNmeaTypesMask & PB_NMEA_TYPE_GIGSV) {
+        nmeaTypesMask |= NMEA_TYPE_GIGSV;
+    }
+    return nmeaTypesMask;
+}
+
+// PB NMEA types mask from HAL format
+uint32_t LocationApiPbMsgConv::getPBMaskForNmeaTypesMask(
+        const uint32_t& nmeaTypesMask) const {
+    uint32_t pbNmeaTypesMask = PB_NMEA_TYPE_INVALID;
+
+    if (nmeaTypesMask & NMEA_TYPE_GGA) {
+        pbNmeaTypesMask |= PB_NMEA_TYPE_GGA;
+    }
+    if (nmeaTypesMask & NMEA_TYPE_RMC) {
+        pbNmeaTypesMask |= PB_NMEA_TYPE_RMC;
+    }
+    if (nmeaTypesMask & NMEA_TYPE_GSA) {
+        pbNmeaTypesMask |= PB_NMEA_TYPE_GSA;
+    }
+    if (nmeaTypesMask & NMEA_TYPE_VTG) {
+        pbNmeaTypesMask |= PB_NMEA_TYPE_VTG;
+    }
+    if (nmeaTypesMask & NMEA_TYPE_GNS) {
+        pbNmeaTypesMask |= PB_NMEA_TYPE_GNS;
+    }
+    if (nmeaTypesMask & NMEA_TYPE_DTM) {
+        pbNmeaTypesMask |= PB_NMEA_TYPE_DTM;
+    }
+    if (nmeaTypesMask & NMEA_TYPE_GPGSV) {
+        pbNmeaTypesMask |= PB_NMEA_TYPE_GPGSV;
+    }
+    if (nmeaTypesMask & NMEA_TYPE_GLGSV) {
+        pbNmeaTypesMask |= PB_NMEA_TYPE_GLGSV;
+    }
+    if (nmeaTypesMask & NMEA_TYPE_GAGSV) {
+        pbNmeaTypesMask |= PB_NMEA_TYPE_GAGSV;
+    }
+    if (nmeaTypesMask & NMEA_TYPE_GQGSV) {
+        pbNmeaTypesMask |= PB_NMEA_TYPE_GQGSV;
+    }
+    if (nmeaTypesMask & NMEA_TYPE_GBGSV) {
+        pbNmeaTypesMask |= PB_NMEA_TYPE_GBGSV;
+    }
+    if (nmeaTypesMask & NMEA_TYPE_GIGSV) {
+        pbNmeaTypesMask |= PB_NMEA_TYPE_GIGSV;
+    }
+    return pbNmeaTypesMask;
+}
 
 // PBLocApiGnss_LocSvSystemEnumType to GnssSvType
 GnssSvType LocationApiPbMsgConv::getGnssSvTypeFromPBGnssLocSvSystemEnumType(
@@ -654,6 +744,9 @@ PBELocMsgID LocationApiPbMsgConv::getPBEnumForELocMsgID(const ELocMsgID &eLocMsg
             break;
         case E_INTAPI_CONFIG_USER_CONSENT_TERRESTRIAL_POSITIONING_MSG_ID:
             pbLocMsgId = PB_E_INTAPI_CONFIG_USER_CONSENT_TERRESTRIAL_POSITIONING_MSG_ID;
+            break;
+        case E_INTAPI_CONFIG_OUTPUT_NMEA_TYPES_MSG_ID:
+            pbLocMsgId = PB_E_INTAPI_CONFIG_OUTPUT_NMEA_TYPES_MSG_ID;
             break;
         case E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID:
             pbLocMsgId = PB_E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID;
@@ -3899,10 +3992,14 @@ int LocationApiPbMsgConv::convertGnssSvToPB(const GnssSv &gnssSv,
     // uint32 gnssSignalTypeMask = 8;  - Bitwise OR of PBGnssSignalTypeMask
     pbGnssSv->set_gnsssignaltypemask(getPBMaskForGnssSignalTypeMask(gnssSv.gnssSignalTypeMask));
 
+    // uint32 gloFrequency = 10;
+    pbGnssSv->set_glofrequency(gnssSv.gloFrequency);
+
     LocApiPb_LOGd("LocApiPB: gnssSv - SvId:%d, SvType:%d, CNo:%f, Elev:%f, Azi:%f, SvOptMask:%x, "\
-            "CarrierFreq:%f, SignalTypeMask:%x", gnssSv.svId, gnssSv.type, gnssSv.cN0Dbhz,
-            gnssSv.elevation, gnssSv.azimuth, gnssSv.gnssSvOptionsMask, gnssSv.carrierFrequencyHz,
-            gnssSv.gnssSignalTypeMask);
+            "CarrierFreq:%f, SignalTypeMask:%x, gloFrequency:%d",
+            gnssSv.svId, gnssSv.type, gnssSv.cN0Dbhz, gnssSv.elevation,
+            gnssSv.azimuth, gnssSv.gnssSvOptionsMask,
+            gnssSv.carrierFrequencyHz, gnssSv.gnssSignalTypeMask, gnssSv.gloFrequency);
     return 0;
 }
 
@@ -4550,10 +4647,15 @@ int LocationApiPbMsgConv::pbConvertToGnssSvNotif(const PBLocApiGnssSvNotificatio
         // uint32 gnssSignalTypeMask = 8; - PBGnssSignalTypeMask
         gnssSvNotif.gnssSvs[i].gnssSignalTypeMask =
                 getGnssSignalTypeMaskFromPB(pPbGnssSv.gnsssignaltypemask());
-        LocApiPb_LOGd("LocApiPB: gnssSv[%d] - SvId:%d, CNo:%f, SvOptMask:%x, SignalTypeMask:%x",
+
+        // uint32 gloFrequency = 10;
+        gnssSvNotif.gnssSvs[i].gloFrequency = pPbGnssSv.glofrequency();
+        LocApiPb_LOGd("LocApiPB: gnssSv[%d] - SvId:%d, CNo:%f, SvOptMask:%x, SignalTypeMask:%x, "\
+                "gloFrequency:%d",
                 i, gnssSvNotif.gnssSvs[i].svId, gnssSvNotif.gnssSvs[i].cN0Dbhz,
                 gnssSvNotif.gnssSvs[i].gnssSvOptionsMask,
-                gnssSvNotif.gnssSvs[i].gnssSignalTypeMask);
+                gnssSvNotif.gnssSvs[i].gnssSignalTypeMask,
+                gnssSvNotif.gnssSvs[i].gloFrequency);
     }
     return 0;
 }
@@ -4739,6 +4841,8 @@ int LocationApiPbMsgConv::pbConvertToGnssAidingData(const PBAidingData &pbGnssAi
 
     // uint32 gnssAidingDataSvMask = 2; - bitwise OR of PBLocApiGnssAidingDataSvMask
     gnssAidData.sv.svMask = getGnssAidingDataSvMaskFromPB(pbGnssAidData.gnssaidingdatasvmask());
+    // set sv type mask
+    gnssAidData.sv.svTypeMask = GNSS_AIDING_DATA_SV_TYPE_MASK_ALL;
 
     // uint32 dreAidingDataMask = 3;- PBDrEngineAidingDataMask
     gnssAidData.dreAidingDataMask = getDrEngineAidingDataMaskFromPB(

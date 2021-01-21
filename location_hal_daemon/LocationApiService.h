@@ -241,6 +241,7 @@ private:
     void configEngineRunState(const LocConfigEngineRunStateReqMsg* pMsg);
     void configUserConsentTerrestrialPositioning(
             LocConfigUserConsentTerrestrialPositioningReqMsg* pMsg);
+    void configOutputNmeaTypes(const LocConfigOutputNmeaTypesReqMsg* pMsg);
 
     // Location configuration API get/read requests
     void getGnssConfig(const LocAPIMsgHeader* pReqMsg,
@@ -272,6 +273,9 @@ private:
     }
 
     GnssInterface* getGnssInterface();
+    // OSFramework instance
+    void createOSFrameworkInstance();
+    void destroyOSFrameworkInstance();
 
 #ifdef POWERMANAGER_ENABLED
     // power event observer

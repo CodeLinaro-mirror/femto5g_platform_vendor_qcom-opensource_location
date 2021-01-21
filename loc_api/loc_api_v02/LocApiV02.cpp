@@ -3495,6 +3495,10 @@ void  LocApiV02 :: reportSv (
 
                 gnssSv_ref.size = sizeof(GnssSv);
                 gnssSv_ref.svId = sv_info_ptr->gnssSvId;
+                if (1 == gnss_report_ptr->expandedSvList_valid) {
+                    gnssSv_ref.gloFrequency = gnss_report_ptr->expandedSvList[i].gloFrequency;
+                }
+
                 switch (sv_info_ptr->system) {
                 case eQMI_LOC_SV_SYSTEM_GPS_V02:
                     gnssSv_ref.type = GNSS_SV_TYPE_GPS;
@@ -3508,11 +3512,13 @@ void  LocApiV02 :: reportSv (
                     gnssSv_ref.type = GNSS_SV_TYPE_SBAS;
                     break;
 
-                // Glonass in SV report comes in range of [1, 32],
-                // convert to [65, 96]
+                // Glonass in SV report comes in range of [1, 32] or 255,
+                // convert to [65, 96] or 255
                 case eQMI_LOC_SV_SYSTEM_GLONASS_V02:
                     gnssSv_ref.type = GNSS_SV_TYPE_GLONASS;
-                    gnssSv_ref.svId = sv_info_ptr->gnssSvId + GLO_SV_PRN_MIN - 1;
+                    if (!isGloSlotUnknown(sv_info_ptr->gnssSvId)) {
+                        gnssSv_ref.svId = sv_info_ptr->gnssSvId + GLO_SV_PRN_MIN - 1;
+                    }
                     break;
 
                 case eQMI_LOC_SV_SYSTEM_BDS_V02:
@@ -5250,8 +5256,27 @@ void LocApiV02 :: reportAtlRequest(
         apnTypeMask = convertQmiLocApnTypeMask(server_request_ptr->apnTypeMask);
     }
     LOC_LOGd("handle=%d agpsType=0x%X apnTypeMask=0x%X",
-        connHandle, agpsType, apnTypeMask);
-    requestATL(connHandle, agpsType, apnTypeMask);
+             connHandle, agpsType, apnTypeMask);
+
+    LocSubId agpsSubId = LOC_DEFAULT_SUB;
+    if (server_request_ptr->subId_valid) {
+        switch (server_request_ptr->subId) {
+        case eQMI_LOC_SYS_MODEM_AS_ID_1_V02:
+            agpsSubId = LOC_PRIMARY_SUB;
+            break;
+        case eQMI_LOC_SYS_MODEM_AS_ID_2_V02:
+            agpsSubId = LOC_SECONDARY_SUB;
+            break;
+        case eQMI_LOC_SYS_MODEM_AS_ID_3_V02:
+            agpsSubId = LOC_TERTIARY_SUB;
+            break;
+        default:
+            agpsSubId = LOC_DEFAULT_SUB;
+            break;
+        }
+    }
+    LOC_LOGd("agpsSubId=%d", agpsSubId);
+    requestATL(connHandle, agpsType, apnTypeMask, agpsSubId);
   }
   // service the ATL close request
   else if (server_request_ptr->requestType == eQMI_LOC_SERVER_REQUEST_CLOSE_V02)
