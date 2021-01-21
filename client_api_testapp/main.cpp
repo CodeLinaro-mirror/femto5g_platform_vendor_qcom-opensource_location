@@ -82,6 +82,7 @@ static uint32_t numGnssMeasurementsCb = 0;
 #define CONFIG_DR_ENGINE    "configDrEngine"
 #define CONFIG_MIN_SV_ELEVATION "configMinSvElevation"
 #define GET_MIN_SV_ELEVATION    "getMinSvElevation"
+#define CONFIG_NMEA_TYPES       "configOutputNmeaTypes"
 
 // debug utility
 static uint64_t getTimestamp() {
@@ -251,6 +252,7 @@ static void printHelp() {
     printf("%s: config DR engine\n", CONFIG_DR_ENGINE);
     printf("%s: set min sv elevation angle\n", CONFIG_MIN_SV_ELEVATION);
     printf("%s: get min sv elevation angle\n", GET_MIN_SV_ELEVATION);
+    printf("%s: config nmea types \n", CONFIG_NMEA_TYPES);
 }
 
 void setRequiredPermToRunAsLocClient()
@@ -737,6 +739,16 @@ int main(int argc, char *argv[]) {
             pIntClient->configMinSvElevation(minSvElevation);
         } else if (strncmp(buf, GET_MIN_SV_ELEVATION, strlen(GET_MIN_SV_ELEVATION)) == 0) {
             pIntClient->getMinSvElevation();
+        } else if (strncmp(buf, CONFIG_NMEA_TYPES, strlen(CONFIG_NMEA_TYPES)) == 0) {
+            static char *save = nullptr;
+            NmeaTypesMask nmeaTypes = (NmeaTypesMask) NMEA_TYPE_ALL;
+            char* token = strtok_r(buf, " ", &save);
+            token = strtok_r(NULL, " ", &save);
+            if (token != NULL) {
+                nmeaTypes = (NmeaTypesMask) strtoul(token, &save, 10);
+            }
+            printf("nmeaTypes 0x%x\n", nmeaTypes);
+            pIntClient->configOutputNmeaTypes(nmeaTypes);
         } else {
             int command = buf[0];
             switch(command) {

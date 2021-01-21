@@ -82,6 +82,11 @@ typedef struct {
     ::DeadReckoningEngineConfig dreConfig;
 } DeadReckoningEngineConfigInfo;
 
+typedef struct {
+    bool isValid;
+    GnssNmeaTypesMask enabledNmeaTypes;
+} NmeaConfigInfo;
+
 class IpcListener;
 
 class LocationIntegrationApiImpl : public ILocationControlAPI {
@@ -119,6 +124,8 @@ public:
 
     uint32_t configMinSvElevation(uint8_t minSvElevation);
     uint32_t getMinSvElevation();
+
+    uint32_t configOutputNmeaTypes(GnssNmeaTypesMask enabledNmeaTypes) override;
 
     uint32_t getConstellationSecondaryBandConfig();
 
@@ -160,7 +167,7 @@ private:
     LeverArmConfigInfo       mLeverArmConfigInfo;
     RobustLocationConfigInfo mRobustLocationConfigInfo;
     DeadReckoningEngineConfigInfo mDreConfigInfo;
-
+    NmeaConfigInfo                mNmeaConfigInfo;
     LocConfigReqCntMap       mConfigReqCntMap;
     LocIntegrationCbs        mIntegrationCbs;
 

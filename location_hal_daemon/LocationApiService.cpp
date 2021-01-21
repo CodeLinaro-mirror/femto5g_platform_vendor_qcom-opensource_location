@@ -479,6 +479,15 @@ void LocationApiService::processClientMsg(const char* data, uint32_t length) {
             break;
         }
 
+        case E_INTAPI_CONFIG_OUTPUT_NMEA_TYPES_MSG_ID: {
+            if (sizeof(LocConfigOutputNmeaTypesReqMsg) != length) {
+                LOC_LOGe("invalid LocConfigOutputNmeaTypesReqMsg");
+                break;
+            }
+            configOutputNmeaTypes(reinterpret_cast<LocConfigOutputNmeaTypesReqMsg*>(pMsg));
+            break;
+        }
+
         case E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID: {
             if (sizeof(LocConfigGetRobustLocationConfigReqMsg) != length) {
                 LOC_LOGe("invalid LocConfigGetRobustLocationConfigReqMsg");
@@ -1109,6 +1118,17 @@ void LocationApiService::configMinSvElevation(const LocConfigMinSvElevationReqMs
     gnssConfig.minSvElevation = pMsg->mMinSvElevation;
     uint32_t sessionId = gnssUpdateConfig(gnssConfig);
 
+    addConfigRequestToMap(sessionId, pMsg);
+}
+
+void LocationApiService::configOutputNmeaTypes(const LocConfigOutputNmeaTypesReqMsg* pMsg) {
+    if (!pMsg) {
+        return;
+    }
+    std::lock_guard<std::mutex> lock(mMutex);
+
+    LOC_LOGi(">-- client %s, mEnabledNmeaTypes 0x%x",  pMsg->mSocketName, pMsg->mEnabledNmeaTypes);
+    uint32_t sessionId = mLocationControlApi->configOutputNmeaTypes(pMsg->mEnabledNmeaTypes);
     addConfigRequestToMap(sessionId, pMsg);
 }
 
