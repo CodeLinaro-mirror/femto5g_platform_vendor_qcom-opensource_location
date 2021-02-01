@@ -1033,6 +1033,7 @@ string GnssSv::toString() const {
     out += FIELDVAL_MASK(gnssSvOptionsMask, GnssSvOptionsMask_tbl);
     out += FIELDVAL_DEC(carrierFrequencyHz);
     out += FIELDVAL_MASK(gnssSignalTypeMask, GnssSignalTypeMask_tbl);
+    out += FIELDVAL_DEC(gloFrequency);
 
     return out;
 }
