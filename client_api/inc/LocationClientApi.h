@@ -645,44 +645,50 @@ struct GnssLocationPositionDynamics {
      *  meters/second^2. <br/>   */
     float           vertAccel;
     /** Uncertainty of forward acceleration in body frame, in unit
-     *  of meters/second^2. <br/>   */
+     *  of meters/second^2. <br/>
+     *  Uncertainty is defined with 68% confidence level. <br/> */
     float           longAccelUnc;
     /** Uncertainty of side-ward acceleration in body frame, in unit
-     *  of meters/second^2. <br/>   */
+     *  of meters/second^2. <br/>
+     *  Uncertainty is defined with 68% confidence level. <br/>    */
     float           latAccelUnc;
     /** Uncertainty of vertical acceleration in body frame, in unit
-     *  of meters/second^2. <br/>   */
+     *  of meters/second^2. <br/>
+     *  Uncertainty is defined with 68% confidence level. <br/>   */
     float           vertAccelUnc;
     /** Body pitch, in unit of radians. <br/>   */
     float           pitch;
-    /** Uncertainty of body pitch, in unit of radians. <br/>   */
+    /** Uncertainty of body pitch, in unit of radians. <br/>
+     *  Uncertainty is defined with 68% confidence level. <br/>    */
     float           pitchUnc;
     /** Body pitch rate, in unit of radians/second.  <br/> */
     float           pitchRate;
-    /** Uncertainty of pitch rate, in unit of radians/second.  <br/> */
+    /** Uncertainty of pitch rate, in unit of radians/second.  <br/>
+     *  Uncertainty is defined with 68% confidence level. <br/>  */
     float           pitchRateUnc;
     /** Roll of body frame, clockwise is positive, in unit of
      *  radian.  <br/> */
     float           roll;
-    /** Uncertainty of roll, 68% confidence level, in unit of
-    radian. <br/>  */
+    /** Uncertainty of roll, in unit of radian. <br/>
+     *  Uncertainty is defined with 68% confidence level. <br/> */
     float           rollUnc;
     /** Roll rate of body frame, clockwise is
     positive, in unit of radian/second. <br/> */
     float           rollRate;
-    /** Uncertainty of roll rate, 68% confidence level, in unit of
-     *  radian/second. <br/>  */
+    /** Uncertainty of roll rate, in unit of radian/second. <br/>
+     *  Uncertainty is defined with 68% confidence level. <br/> */
     float           rollRateUnc;
     /** Yaw of body frame, clockwise is positive, in unit of
      *  radian. <br/> */
     float           yaw;
     /** Uncertainty of yaw, 68% confidence level, in unit of radian.
-     *  <br/> */
+     *  <br/>
+     *  Uncertainty is defined with 68% confidence level. <br/>  */
     float           yawUnc;
     /** Heading rate, in unit of radians/second. <br/>   */
     float           yawRate;
-    /** Uncertainty of heading rate, in unit of radians/second.
-     *  <br/> */
+    /** Uncertainty of heading rate, in unit of radians/second. <br/>
+     *  Uncertainty is defined with 68% confidence level. <br/>  */
     float           yawRateUnc;
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
@@ -877,14 +883,18 @@ struct Location {
     float speed;
     /** Bearing, in unit of degrees, range [0, 360) <br/>   */
     float bearing;
-    /** Horizontal accuracy, in unit of meters. <br/>   */
+    /** Horizontal accuracy, in unit of meters. <br/>
+     *  Uncertainty is defined with 68% confidence level. <br/> */
     float horizontalAccuracy;
-    /** Vertial accuracy, in uint of meters. <br/>   */
+    /** Vertial accuracy, in uint of meters. <br/>
+     *  Uncertainty is defined with 68% confidence level. <br/> */
     float verticalAccuracy;
-    /** Speed uncertainty, in unit meters/second. <br/>   */
+    /** Horizontal speed uncertainty, in unit meters/second. <br/>
+     *  Uncertainty is defined with 68% confidence level. <br/> */
     float speedAccuracy;
     /** Bearing uncertainty, in unit of degrees, range (0 to
-     *  359.999). <br/>   */
+     *  359.999). <br/>
+     *  Uncertainty is defined with 68% confidence level. <br/> */
     float bearingAccuracy;
     /** Sets of technology that contributed to the fix. <br/>   */
     LocationTechnologyMask techMask;
@@ -973,17 +983,22 @@ struct GnssLocation : public Location {
     /** Vertical reliability. <br/>   */
     LocationReliability verReliability;
     /** Horizontal elliptical accuracy semi-major axis, in unit of
-     *  meters. <br/>   */
+     *  meters. <br/>
+     *  Uncertainty is defined with 39% confidence level. <br/> */
     float horUncEllipseSemiMajor;
     /** Horizontal elliptical accuracy semi-minor axis, in unit of
-     *  meters. <br/>  <br/>   */
+     *  meters. <br/>
+     *  Uncertainty is defined with 39% confidence level. <br/> */
     float horUncEllipseSemiMinor;
     /** Horizontal elliptical accuracy azimuth, in unit of degrees,
-     *  range [0, 180]. <br/>   */
+     *  range [0, 180]. <br/>
+     *  Confidence for uncertianty is not specified. <br/> */
     float horUncEllipseOrientAzimuth;
-    /** North standard deviation, in unit of meters. <br/>   */
+    /** North standard deviation, in unit of meters. <br/>
+     *  Uncertainty is defined with 68% confidence level. <br/> */
     float northStdDeviation;
-    /** East standard deviation, in unit of meters. <br/>   */
+    /** East standard deviation, in unit of meters. <br/>
+     *  Uncertainty is defined with 68% confidence level. <br/> */
     float eastStdDeviation;
     /** North velocity, in unit of meters/sec. <br/>   */
     float northVelocity;
@@ -991,11 +1006,14 @@ struct GnssLocation : public Location {
     float eastVelocity;
     /** Up velocity, in unit of meters/sec. <br/>   */
     float upVelocity;
-    /** North velocity uncertainty, in unit of meters/sec. <br/>  */
+    /** North velocity uncertainty, in unit of meters/sec. <br/>
+     *  Uncertainty is defined with 68% confidence level. <br/> */
     float northVelocityStdDeviation;
-    /** East velocity uncertainty, in unit of meters/sec <br/>   */
+    /** East velocity uncertainty, in unit of meters/sec <br/>
+     *  Uncertainty is defined with 68% confidence level. <br/> */
     float eastVelocityStdDeviation;
-    /** Up velocity uncertainty, in unit of meters/sec. <br/>   */
+    /** Up velocity uncertainty, in unit of meters/sec. <br/>
+     *  Uncertainty is defined with 68% confidence level. <br/> */
     float upVelocityStdDeviation;
     /** Number of SV used in position report. <br/>   */
     uint16_t numSvUsedInPosition;
@@ -1015,7 +1033,11 @@ struct GnssLocation : public Location {
     /** Number of leap Seconds at time when this position is
      *  generated. */
     uint8_t leapSeconds;
-    /** Time uncertainty, in unit of milliseconds. <br/>   */
+    /** Time uncertainty, in unit of milliseconds. <br/>
+     *  For PVT report from SPE engine, confidence leve is at
+     *  99%. <br/>
+     *  For PVT reports from other engines, confidence level is
+     *  undefined. <br/> */
     float timeUncMs;
     /** Sensor calibration confidence percent, range [0, 100].
      *  <br/> */
