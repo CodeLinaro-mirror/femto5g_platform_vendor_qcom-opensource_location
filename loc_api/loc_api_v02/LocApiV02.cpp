@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2021, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -2824,10 +2824,13 @@ void LocApiV02 :: reportPosition (
            locationExtended.vert_unc = location_report_ptr->vertUnc;
         }
 
-        if (location_report_ptr->speedUnc_valid)
+        if (location_report_ptr->velUncEnu_valid)
         {
            locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_SPEED_UNC;
-           locationExtended.speed_unc = location_report_ptr->speedUnc;
+           locationExtended.speed_unc = sqrt(location_report_ptr->velUncEnu[0] *
+                                             location_report_ptr->velUncEnu[0] +
+                                             location_report_ptr->velUncEnu[1] *
+                                             location_report_ptr->velUncEnu[1]);
         }
         if (location_report_ptr->headingUnc_valid)
         {
@@ -4513,6 +4516,18 @@ void  LocApiV02 :: reportSvPolynomial (
         svPolynomial.navicTgdL5 = gnss_sv_poly_ptr->navicTgdL5;
     }
 
+    if (1 == gnss_sv_poly_ptr->bdsTgdB1c_valid)
+    {
+        svPolynomial.is_valid |= ULP_GNSS_SV_POLY_BIT_BDS_TGD_B1C;
+        svPolynomial.bdsTgdB1c = gnss_sv_poly_ptr->bdsTgdB1c;
+    }
+
+    if (1 == gnss_sv_poly_ptr->bdsIscB1c_valid)
+    {
+        svPolynomial.is_valid |= ULP_GNSS_SV_POLY_BIT_BDS_ISC_B1C;
+        svPolynomial.bdsIscB1c = gnss_sv_poly_ptr->bdsIscB1c;
+    }
+
 
     LocApiBase::reportSvPolynomial(svPolynomial);
 
@@ -5564,6 +5579,7 @@ void LocApiV02 :: reportGnssMeasurementData(
 
     static GnssMeasurementsNotification measurementsNotify = {};
 
+    static uint32_t prevRefFCount = 0;
     static bool bGPSreceived = false;
     static int msInWeek = -1;
     static bool bAgcIsPresent = false;
@@ -5579,12 +5595,12 @@ void LocApiV02 :: reportGnssMeasurementData(
         subSeqNum = 0;
     }
 
-    LOC_LOGd("SeqNum: %d, MaxMsgNum: %d, "
-             "SubSeqNum: %d, MaxSubMsgNum: %d",
+    LOC_LOGi("SeqNum: %d, MaxMsgNum: %d, "
+             "SubSeqNum: %d, MaxSubMsgNum: %d, refFCnt: %d",
              gnss_measurement_report_ptr.seqNum,
              gnss_measurement_report_ptr.maxMessageNum,
              subSeqNum,
-             maxSubSeqNum);
+             maxSubSeqNum, gnss_measurement_report_ptr.systemTimeExt.refFCount);
 
     if (gnss_measurement_report_ptr.seqNum > gnss_measurement_report_ptr.maxMessageNum ||
         subSeqNum > maxSubSeqNum) {
@@ -5599,6 +5615,16 @@ void LocApiV02 :: reportGnssMeasurementData(
         bAgcIsPresent = false;
         memset(&measurementsNotify, 0, sizeof(GnssMeasurementsNotification));
         measurementsNotify.size = sizeof(GnssMeasurementsNotification);
+    }
+    // populate nHz indication when subSeqNum is 1 or there is a refFCnt jump
+    if ((gnss_measurement_report_ptr.seqNum == 1 && subSeqNum <= 1) ||
+        (gnss_measurement_report_ptr.systemTimeExt.refFCount != prevRefFCount)) {
+        prevRefFCount = gnss_measurement_report_ptr.systemTimeExt.refFCount;
+        if (gnss_measurement_report_ptr.nHzMeasurement_valid &&
+                    gnss_measurement_report_ptr.nHzMeasurement) {
+            measurementsNotify.isNhz = true;
+        }
+        LOC_LOGi("isNhz: %d", measurementsNotify.isNhz);
     }
 
     // number of measurements
