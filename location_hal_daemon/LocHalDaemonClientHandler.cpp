@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018-2021, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -60,11 +60,11 @@ void LocHalDaemonClientHandler::updateSubscription(uint32_t mask) {
         onCollectiveResponseCallback(count, errs, ids);
     };
 
-    if (mSubscriptionMask & E_LOC_CB_DISTANCE_BASED_TRACKING_BIT) {
-        mCallbacks.trackingCb = [this](Location location) {
-            onTrackingCb(location);
-        };
-    }
+    // update optional callback - following four callbacks can be controlable
+    // tracking
+    mCallbacks.trackingCb = [this](Location location) {
+        onTrackingCb(location);
+    };
 
     // batching
     if (mSubscriptionMask & E_LOC_CB_BATCHING_BIT) {
@@ -94,7 +94,7 @@ void LocHalDaemonClientHandler::updateSubscription(uint32_t mask) {
     }
 
     // location info
-    if (mSubscriptionMask & (E_LOC_CB_GNSS_LOCATION_INFO_BIT | E_LOC_CB_SIMPLE_LOCATION_INFO_BIT)) {
+    if (mSubscriptionMask & E_LOC_CB_GNSS_LOCATION_INFO_BIT) {
         mCallbacks.gnssLocationInfoCb = [this](GnssLocationInfoNotification notification) {
             onGnssLocationInfoCb(notification);
         };
@@ -641,7 +641,7 @@ void LocHalDaemonClientHandler::onTrackingCb(Location location) {
     LOC_LOGd("--< onTrackingCb");
 
     if ((nullptr != mIpcSender) &&
-            (mSubscriptionMask & E_LOC_CB_DISTANCE_BASED_TRACKING_BIT)) {
+        (mSubscriptionMask & (E_LOC_CB_TRACKING_BIT | E_LOC_CB_SIMPLE_LOCATION_INFO_BIT))) {
         // broadcast
         LocAPILocationIndMsg msg(SERVICE_NAME, location);
         int rc = sendMessage(msg);
