@@ -172,6 +172,7 @@ private:
 
     // internal session parameter
     static uint32_t         mClientIdGenerator;
+    static uint32_t         mClientIdIndex;
     static mutex            mMutex;
     uint32_t                mClientId;
     uint32_t                mSessionId;
