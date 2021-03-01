@@ -1,5 +1,5 @@
 
-/* Copyright (c) 2017, 2020 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2017, 2020-2021 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -35,8 +35,10 @@
 /* LocNetIfaceAgps members */
 LocNetIface* LocNetIfaceAgps::sLocNetIfaceAgpsInternet = NULL;
 LocNetIface* LocNetIfaceAgps::sLocNetIfaceAgpsSupl = NULL;
+LocNetIface* LocNetIfaceAgps::sLocNetIfaceAgpsSuplEs = NULL;
 LocNetAgpsState LocNetIfaceAgps::sAgpsStateInternet = LOC_NET_AGPS_STATE_CLOSED;
 LocNetAgpsState LocNetIfaceAgps::sAgpsStateSupl = LOC_NET_AGPS_STATE_CLOSED;
+LocNetAgpsState LocNetIfaceAgps::sAgpsStateSuplEs = LOC_NET_AGPS_STATE_CLOSED;
 LocAgpsOpenResultCb LocNetIfaceAgps::sAgpsOpenResultCb = NULL;
 LocAgpsCloseResultCb LocNetIfaceAgps::sAgpsCloseResultCb = NULL;
 void* LocNetIfaceAgps::sUserDataPtr = NULL;
@@ -79,6 +81,16 @@ AgpsCbInfo& LocNetIfaceAgps_getAgpsCbInfo(
         LOC_LOGE("sLocNetIfaceAgpsSupl not NULL");
     }
 
+    if (LocNetIfaceAgps::sLocNetIfaceAgpsSuplEs == NULL) {
+        LocNetIfaceAgps::sLocNetIfaceAgpsSuplEs =
+                new LocNetIface(LOC_NET_CONN_TYPE_WWAN_EMERGENCY);
+        LocNetIfaceAgps::sLocNetIfaceAgpsSuplEs->registerWwanCallStatusCallback(
+                LocNetIfaceAgps::wwanStatusCallback,
+                LocNetIfaceAgps::sLocNetIfaceAgpsSuplEs);
+    } else {
+        LOC_LOGE("sLocNetIfaceAgpsSuplEs not NULL");
+    }
+
     /* Return our callback */
     LocNetIfaceAgps::sAgpsCbInfo.statusV4Cb = (void*)LocNetIfaceAgps::agpsStatusCb;
     return LocNetIfaceAgps::sAgpsCbInfo;
@@ -115,10 +127,22 @@ void LocNetIfaceAgps::agpsStatusCb(AGnssExtStatusIpV4 status){
             if (!sLocNetIfaceAgpsInternet->connectBackhaul(LOCNETIFACE_AGPS_CLIENT)) {
                 LOC_LOGE("Connect Backhaul failed");
                 wwanStatusCallback(
-                        sLocNetIfaceAgpsInternet,
+                    sLocNetIfaceAgpsInternet,
+                    LOC_NET_WWAN_CALL_EVT_OPEN_FAILED,
+                    NULL, LOC_NET_CONN_IP_TYPE_INVALID);
+                sAgpsStateInternet = LOC_NET_AGPS_STATE_CLOSED;
+            }
+        } else if (status.type == LOC_AGPS_TYPE_SUPL_ES) {
+
+            LOC_LOGV("REQUEST LOC_AGPS_TYPE_SUPL_ES");
+            sAgpsStateSuplEs = LOC_NET_AGPS_STATE_OPEN_PENDING;
+            if (!sLocNetIfaceAgpsSuplEs->setupWwanCall()) {
+                LOC_LOGE("Setup wwan ES call failed !");
+                wwanStatusCallback(
+                        sLocNetIfaceAgpsSuplEs,
                         LOC_NET_WWAN_CALL_EVT_OPEN_FAILED,
                         NULL, LOC_NET_CONN_IP_TYPE_INVALID);
-                sAgpsStateInternet = LOC_NET_AGPS_STATE_CLOSED;
+                sAgpsStateSuplEs = LOC_NET_AGPS_STATE_CLOSED;
             }
         } else {
 
@@ -150,6 +174,18 @@ void LocNetIfaceAgps::agpsStatusCb(AGnssExtStatusIpV4 status){
                         LOC_NET_WWAN_CALL_EVT_CLOSE_FAILED,
                         NULL, LOC_NET_CONN_IP_TYPE_INVALID);
                 sAgpsStateInternet = LOC_NET_AGPS_STATE_CLOSED;
+            }
+        } else if (status.type == LOC_AGPS_TYPE_SUPL_ES) {
+
+            LOC_LOGV("RELEASE LOC_AGPS_TYPE_SUPL_ES");
+            sAgpsStateSuplEs = LOC_NET_AGPS_STATE_CLOSE_PENDING;
+            if (!sLocNetIfaceAgpsSuplEs->stopWwanCall()) {
+                LOC_LOGE("Stop wwan call failed !");
+                wwanStatusCallback(
+                        sLocNetIfaceAgpsSuplEs,
+                        LOC_NET_WWAN_CALL_EVT_CLOSE_FAILED,
+                        NULL, LOC_NET_CONN_IP_TYPE_INVALID);
+                sAgpsStateSuplEs = LOC_NET_AGPS_STATE_CLOSED;
             }
         } else {
 
@@ -194,6 +230,10 @@ void LocNetIfaceAgps::wwanStatusCallback(
     else if (userDataPtr == (void*)sLocNetIfaceAgpsSupl) {
         agpsType = LOC_AGPS_TYPE_SUPL;
         agpsStatePtr = &sAgpsStateSupl;
+    }
+    else if (userDataPtr == (void*)sLocNetIfaceAgpsSuplEs) {
+        agpsType = LOC_AGPS_TYPE_SUPL_ES;
+        agpsStatePtr = &sAgpsStateSuplEs;
     }
     else {
         LOC_LOGE("Invalid user data ptr %p", userDataPtr);

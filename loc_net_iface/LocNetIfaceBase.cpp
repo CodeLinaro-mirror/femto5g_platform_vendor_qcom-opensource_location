@@ -1,4 +1,4 @@
-/* Copyright (c) 2017, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2017, 2021 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -129,6 +129,10 @@ void LocNetIfaceBase::fetchConfigItems(){
                 { "SUPL_APN",     &mApnName, NULL, 's' },
                 { "SUPL_IP_TYPE", &mIpType,  NULL, 'n' } };
         UTIL_READ_CONF(LOC_PATH_GPS_CONF, confItemsToFetchArray);
+
+    } else if (mLocNetConnType == LOC_NET_CONN_TYPE_WWAN_EMERGENCY) {
+        memset(mApnName, 0, LOC_MAX_PARAM_STRING);
+        mIpType = 10; //V4V6
 
     } else {
         LOC_LOGE("Invalid connType %d", mLocNetConnType);
