@@ -837,7 +837,7 @@ void LocHalDaemonClientHandler::onEngLocationsInfoCb(
         if (reportCount > 0 ) {
             LocAPIEngineLocationsInfoIndMsg msg(SERVICE_NAME, reportCount,
                                                 engineLocationInfoNotification);
-            bool rc = sendMessage((const uint8_t*)&msg, msg.getMsgSize());
+            bool rc = sendMessage((const uint8_t*)&msg, msg.getIpcMsgSize());
             // purge this client if failed
             if (!rc) {
                 LOC_LOGe("failed rc=%d purging client=%s", rc, mName.c_str());
@@ -946,7 +946,8 @@ void LocHalDaemonClientHandler::onGnssMeasurementsCb(GnssMeasurementsNotificatio
             (mSubscriptionMask & (E_LOC_CB_GNSS_MEAS_BIT | E_LOC_CB_GNSS_NHZ_MEAS_BIT))) {
         LocAPIMeasIndMsg msg(SERVICE_NAME, notification);
         LOC_LOGv("Sending meas message");
-        bool rc = sendMessage(msg);
+        // send only valid measurements over IPC
+        bool rc = sendMessage((uint8_t *)&msg, msg.getIpcMsgSize());
         // purge this client if failed
         if (!rc) {
             LOC_LOGe("failed rc=%d purging client=%s", rc, mName.c_str());
