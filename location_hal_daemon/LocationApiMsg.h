@@ -713,7 +713,7 @@ struct LocAPIEngineLocationsInfoIndMsg: LocAPIMsgHeader
         }
     }
 
-    inline uint32_t getMsgSize() const {
+    inline uint32_t getIpcMsgSize() const {
         return (sizeof(LocAPIEngineLocationsInfoIndMsg) -
                 (LOC_OUTPUT_ENGINE_COUNT - count) * sizeof(GnssLocationInfoNotification));
     }
@@ -759,6 +759,15 @@ struct LocAPIMeasIndMsg : LocAPIMsgHeader
         GnssMeasurementsNotification& measurementsNotification) :
         LocAPIMsgHeader(name, E_LOCAPI_MEAS_MSG_ID),
         gnssMeasurementsNotification(measurementsNotification) { }
+
+    inline size_t getIpcMsgSize () const {
+        size_t ipcMsgSize = sizeof(LocAPIMeasIndMsg);
+        // to get the size of ipc message that contains valid sv measurement,
+        // we substract away the memory that does not contain valid sv measurement
+        ipcMsgSize -= sizeof(GnssMeasurementsData) *
+                      (GNSS_MEASUREMENTS_MAX - gnssMeasurementsNotification.count);
+        return ipcMsgSize;
+    }
 };
 
 // defintion for message with msg id of E_LOCAPI_GET_GNSS_ENGERY_CONSUMED_MSG_ID

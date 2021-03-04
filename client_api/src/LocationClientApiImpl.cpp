@@ -2195,7 +2195,7 @@ void IpcListener::onReceive(const char* data, uint32_t length,
                     const LocAPIEngineLocationsInfoIndMsg* pEngLocationsInfoIndMsg =
                         (LocAPIEngineLocationsInfoIndMsg*)(pMsg);
 
-                    if (pEngLocationsInfoIndMsg->getMsgSize() != mMsgData.length()) {
+                    if (pEngLocationsInfoIndMsg->getIpcMsgSize() != mMsgData.length()) {
                         LOC_LOGw("payload size does not match for message with id: %d",
                         pMsg->msgId);
                     }
@@ -2285,7 +2285,8 @@ void IpcListener::onReceive(const char* data, uint32_t length,
             case E_LOCAPI_MEAS_MSG_ID:
             {
                 LOC_LOGd("<<< message = measurements");
-                if (sizeof(LocAPIMeasIndMsg) != mMsgData.length()) {
+                const LocAPIMeasIndMsg* pMeasIndMsg = (LocAPIMeasIndMsg*)(pMsg);
+                if (pMeasIndMsg->getIpcMsgSize() != mMsgData.length()) {
                     LOC_LOGw("payload size does not match for message with id: %d",
                         pMsg->msgId);
                 }
