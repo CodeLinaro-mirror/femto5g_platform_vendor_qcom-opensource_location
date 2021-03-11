@@ -101,16 +101,19 @@ enum LocationCapabilitiesMask {
  *  GnssSv. <br/>
  */
 enum GnssSvOptionsMask {
-    /** Ephemeris is available for this SV. <br/>   */
+    /** Ephemeris is available for this SV. <br/> */
     GNSS_SV_OPTIONS_HAS_EPHEMER_BIT             = (1<<0),
-    /** Almanac is available for this SV. <br/>   */
+    /** Almanac is available for this SV. <br/> */
     GNSS_SV_OPTIONS_HAS_ALMANAC_BIT             = (1<<1),
     /** This SV is used in the position fix. <br/>   */
     GNSS_SV_OPTIONS_USED_IN_FIX_BIT             = (1<<2),
     /** This SV has valid GnssSv::carrierFrequencyHz. <br/> */
     GNSS_SV_OPTIONS_HAS_CARRIER_FREQUENCY_BIT   = (1<<3),
-    /** This SV has valid GnssSv::gnssSignalTypeMask. <br/>   */
-    GNSS_SV_OPTIONS_HAS_GNSS_SIGNAL_TYPE_BIT    = (1<<4)
+    /** This SV has valid GnssSv::gnssSignalTypeMask. <br/> */
+    GNSS_SV_OPTIONS_HAS_GNSS_SIGNAL_TYPE_BIT    = (1<<4),
+    /** This SV has valid GnssSv::basebandCarrierToNoiseDbHz.
+     *  <br/> */
+    GNSS_SV_OPTIONS_HAS_BASEBAND_CARRIER_TO_NOISE_BIT = (1<<5)
 };
 
 /**
@@ -685,7 +688,11 @@ struct GnssLocationPositionDynamics {
      *  <br/>
      *  Uncertainty is defined with 68% confidence level. <br/>  */
     float           yawUnc;
-    /** Heading rate, in unit of radians/second. <br/>   */
+    /** Heading rate, in unit of radians/second. <br/>
+     *  Range: +/- pi (where pi is ~3.14159). <br/>
+     *  The positive value is clockwise and negative value is
+     *  anti-clockwise. <br/>
+     */
     float           yawRate;
     /** Uncertainty of heading rate, in unit of radians/second. <br/>
      *  Uncertainty is defined with 68% confidence level. <br/>  */
@@ -1132,20 +1139,20 @@ struct GnssSv {
     GnssSvType type;
      /** Signal-to-noise ratio at antenna of the SV, in unit of
       * dB-Hz. <br/>
-      * This field is always valid.  <br/> */
+      * cN0Dbhz of 0.0 indicates that this field is unknown. <br/> */
     float cN0Dbhz;
-    /** Elevation of the SV, in unit of degrees. <br/> This field is
-     *  always valid.  <br/> */
+    /** Elevation of the SV, in unit of degrees. <br/>
+     *  This field is always valid.  <br/> */
     float elevation;
-    /** Azimuth of the SV, in unit of degrees. <br/> This field is
-     *  always valid.  <br/> */
+    /** Azimuth of the SV, in unit of degrees. <br/>
+     *  This field is always valid.  <br/> */
     float azimuth;
     /** Bitwise OR of GnssSvOptionsMask to specify additional
      *  info and valid fields in GnssSv. <br/>
      *  This field is always valid.  <br/>  */
     GnssSvOptionsMask gnssSvOptionsMask;
-    /** Carrier frequency of the signal tracked. <br/> This field is
-     *  valid if gnssSvOptionsMask has
+    /** Carrier frequency of the signal tracked. <br/>
+     *  This field is valid if gnssSvOptionsMask has
      *  GNSS_SV_OPTIONS_HAS_CARRIER_FREQUENCY_BIT set.  <br/> */
     float carrierFrequencyHz;
     /** GNSS signal type mask of the SV. <br/>
@@ -1153,8 +1160,15 @@ struct GnssSv {
      *  GNSS_SV_OPTIONS_HAS_GNSS_SIGNAL_TYPE_BIT. <br/> */
     GnssSignalTypeMask gnssSignalTypeMask;
     /** GLONASS frequency channel number, range is [1, 14].
-     * <br/> */
+     * <br/>
+     * This field is always valid if and only if sv type is of
+     * GLONASS. <br/> */
     uint16_t gloFrequency;
+   /** RF loss from antenna to baseband of the SV, in unit of
+     *  dB-Hz. <br/>
+     *  This field is valid if gnssSvOptionsMask has
+     *  GNSS_SV_OPTIONS_HAS_BASEBAND_CARRIER_TO_NOISE_BIT set. <br/> */
+    double basebandCarrierToNoiseDbHz;
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
     string toString() const;
