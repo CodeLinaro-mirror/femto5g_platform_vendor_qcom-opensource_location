@@ -1,4 +1,4 @@
-/* Copyright (c) 2017, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2017, 2021 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -61,10 +61,12 @@ public:
     /* LocNetIface instances for different clients */
     static LocNetIface* sLocNetIfaceAgpsInternet;
     static LocNetIface* sLocNetIfaceAgpsSupl;
+    static LocNetIface* sLocNetIfaceAgpsSuplEs;
 
     /* AGPS states */
     static LocNetAgpsState sAgpsStateInternet;
     static LocNetAgpsState sAgpsStateSupl;
+    static LocNetAgpsState sAgpsStateSuplEs;
 
     /* AGPS interface methods to be invoked on call setup/failure */
     static LocAgpsOpenResultCb sAgpsOpenResultCb;

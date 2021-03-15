@@ -1,4 +1,4 @@
-/* Copyright (c) 2017, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2017, 2021 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -583,12 +583,420 @@ void LocNetIface::notifyObserverForNetworkInfo(
             LocNetIfaceBase::sNotifyCbUserDataPtr, dataItemList);
 }
 
+/*This function is called to obtain a handle to the QMI WDS service*/
+ds_client_status_enum_type
+LocNetIface::ds_client_qmi_ctrl_point_init(qmi_client_type *p_wds_qmi_client)
+{
+    qmi_client_type wds_qmi_client, notifier = NULL;
+    ds_client_status_enum_type status = E_DS_CLIENT_SUCCESS;
+    qmi_service_info *p_service_info = NULL;
+    uint32_t num_services = 0, num_entries = 0;
+    qmi_client_error_type ret = QMI_NO_ERR;
+    unsigned char no_signal = 0;
+    qmi_client_os_params os_params;
+    int timeout = 0;
+
+    LOC_LOGv("Enter");
+
+    //Get service object for QMI_WDS service
+    qmi_idl_service_object_type ds_client_service_object = wds_get_service_object_v01();
+    if (NULL == ds_client_service_object) {
+        LOC_LOGe("wds_get_service_object_v01 failed");
+        status  = E_DS_CLIENT_FAILURE_INTERNAL;
+        goto err;
+    }
+
+    //get service addressing information
+    ret = qmi_client_get_service_list(ds_client_service_object, NULL, NULL, &num_services);
+    LOC_LOGv("qmi_client_get_service_list() first try ret %d, "
+        "num_services %d]", ret, num_services);
+    if (QMI_NO_ERR != ret) {
+        //Register for service notification
+        ret = qmi_client_notifier_init(ds_client_service_object, &os_params, &notifier);
+        if (QMI_NO_ERR != ret) {
+            LOC_LOGe("qmi_client_notifier_init failed %d", ret);
+            status = E_DS_CLIENT_FAILURE_INTERNAL;
+            goto err;
+        }
+
+        do {
+            QMI_CCI_OS_SIGNAL_CLEAR(&os_params);
+            ret = qmi_client_get_service_list(ds_client_service_object, NULL,
+                NULL, &num_services);
+            if (QMI_NO_ERR != ret) {
+                QMI_CCI_OS_SIGNAL_WAIT(&os_params, DS_CLIENT_SERVICE_TIMEOUT);
+                no_signal = QMI_CCI_OS_SIGNAL_TIMED_OUT(&os_params);
+                if (!no_signal)
+                    ret = qmi_client_get_service_list(ds_client_service_object, NULL,
+                        NULL, &num_services);
+            }
+            timeout += DS_CLIENT_SERVICE_TIMEOUT;
+            LOC_LOGv("qmi_client_get_service_list() returned ret: %d,"
+                "no_signal: %d, total timeout: %d", ret, no_signal, timeout);
+        } while ((timeout < DS_CLIENT_SERVICE_TIMEOUT_TOTAL) && no_signal && (ret != QMI_NO_ERR));
+    }
+
+    //Handle failure cases
+    if (0 == num_services || QMI_NO_ERR != ret) {
+        if (!no_signal) {
+            LOC_LOGe("qmi_client_get_service_list failed even though"
+                " service is up!  Error: %d", ret);
+            status = E_DS_CLIENT_FAILURE_INTERNAL;
+        }
+        else {
+            LOC_LOGe("qmi_client_get_service_list failed after retries"
+                " Error: %d", ret);
+            status = E_DS_CLIENT_FAILURE_TIMEOUT;
+        }
+        goto err;
+    }
+
+    LOC_LOGv("qmi_client_get_service_list succeeded");
+
+    //Success
+    p_service_info = (qmi_service_info *)malloc(num_services * sizeof(qmi_service_info));
+    if (NULL == p_service_info) {
+        LOC_LOGe("could not allocate memory for serviceInfo !!");
+        status = E_DS_CLIENT_FAILURE_INTERNAL;
+        goto err;
+    }
+    num_entries = num_services;
+
+    //Populate service info
+    ret = qmi_client_get_service_list(ds_client_service_object, p_service_info,
+        &num_entries, &num_services);
+    if (QMI_NO_ERR != ret) {
+        LOC_LOGe("qmi_client_get_service_list failed. ret: %d", ret);
+        status = E_DS_CLIENT_FAILURE_INTERNAL;
+        goto err;
+    }
+
+    //Initialize wds_qmi_client
+    LOC_LOGv("Initializing WDS client with qmi_client_init");
+    ret = qmi_client_init(&p_service_info[0], ds_client_service_object,
+        NULL, NULL, NULL, &wds_qmi_client);
+    if (QMI_NO_ERR != ret) {
+        LOC_LOGe("qmi_client_init Error. ret: %d",  ret);
+        status = E_DS_CLIENT_FAILURE_INTERNAL;
+        goto err;
+    }
+    LOC_LOGv("WDS client initialized with qmi_client_init");
+
+    //Store WDS QMI client handle in the parameter passed in
+    *p_wds_qmi_client = wds_qmi_client;
+
+    status = E_DS_CLIENT_SUCCESS;
+    LOC_LOGv("init success");
+
+    if (notifier) {
+        qmi_client_release(notifier);
+    }
+
+err:
+    if (p_service_info) {
+        free(p_service_info);
+    }
+
+    LOC_LOGv("Exit");
+    return status;
+}
+
+/*This function reads the error code from within the response struct*/
+ds_client_status_enum_type LocNetIface::ds_client_convert_qmi_response(
+        uint32_t req_id,
+        ds_client_resp_union_type *resp_union)
+{
+    ds_client_status_enum_type ret = E_DS_CLIENT_FAILURE_GENERAL;
+    LOC_LOGv("Enter");
+    switch (req_id)
+    {
+    case QMI_WDS_GET_PROFILE_LIST_REQ_V01 :
+    {
+        if (QMI_ERR_NONE_V01 != resp_union->p_get_profile_list_resp->resp.error) {
+            LOC_LOGe("Response error: %d",
+                     resp_union->p_get_profile_list_resp->resp.error);
+        }
+        else {
+            ret = E_DS_CLIENT_SUCCESS;
+        }
+    }
+    break;
+
+    case QMI_WDS_GET_PROFILE_SETTINGS_REQ_V01 :
+    {
+        if (QMI_ERR_NONE_V01 != resp_union->p_get_profile_setting_resp->resp.error) {
+            LOC_LOGe("Response error: %d",
+                     resp_union->p_get_profile_setting_resp->resp.error);
+        }
+        else {
+            ret = E_DS_CLIENT_SUCCESS;
+        }
+    }
+    break;
+
+    default:
+        LOC_LOGe("Unknown request ID");
+    }
+    LOC_LOGv("Exit");
+    return ret;
+}
+
+ds_client_status_enum_type LocNetIface::ds_client_send_qmi_sync_req(
+        qmi_client_type *ds_client_handle,
+        uint32_t req_id,
+        ds_client_resp_union_type *resp_union,
+        ds_client_req_union_type *req_union)
+{
+    uint32_t req_len = 0;
+    uint32_t resp_len = 0;
+    ds_client_status_enum_type ret = E_DS_CLIENT_SUCCESS;
+    qmi_client_error_type qmi_ret = QMI_NO_ERR;
+    LOC_LOGv("Enter");
+    switch (req_id)
+    {
+    case QMI_WDS_GET_PROFILE_LIST_REQ_V01 :
+    {
+        req_len = sizeof(wds_get_profile_list_req_msg_v01);
+        resp_len = sizeof(wds_get_profile_list_resp_msg_v01);
+        LOC_LOGv("req_id = GET_PROFILE_LIST_REQ");
+    }
+    break;
+
+    case QMI_WDS_GET_PROFILE_SETTINGS_REQ_V01 :
+    {
+        req_len = sizeof(wds_get_profile_settings_req_msg_v01);
+        resp_len = sizeof(wds_get_profile_settings_resp_msg_v01);
+        LOC_LOGv("req_id = GET_PROFILE_SETTINGS_REQ");
+    }
+    break;
+
+    default:
+        LOC_LOGe("Error unknown req_id=%d", req_id);
+        ret = E_DS_CLIENT_FAILURE_INVALID_PARAMETER;
+        goto err;
+    }
+
+    LOC_LOGv("req_id=%d, len = %d; resp_len= %d", req_id, req_len, resp_len);
+    //Send msg through QCCI
+    qmi_ret = qmi_client_send_msg_sync(
+            *ds_client_handle,
+            req_id,
+            (void *)req_union->p_get_profile_list_req,
+            req_len,
+            (void *)resp_union->p_get_profile_list_resp,
+            resp_len,
+            DS_CLIENT_SYNC_MSG_TIMEOUT);
+    LOC_LOGv("qmi_client_send_msg_sync returned: %d", qmi_ret);
+
+    if (QMI_NO_ERR != qmi_ret) {
+        ret = E_DS_CLIENT_FAILURE_INTERNAL;
+        goto err;
+    }
+
+    ret = ds_client_convert_qmi_response(req_id, resp_union);
+
+err:
+    LOC_LOGv("Exit");
+    return ret;
+}
+
+ds_client_status_enum_type LocNetIface::ds_client_get_profile_list(
+        qmi_client_type *ds_client_handle,
+        ds_client_resp_union_type *profile_list_resp_msg,
+        wds_profile_type_enum_v01 profile_type)
+{
+    ds_client_status_enum_type ret = E_DS_CLIENT_SUCCESS;
+    ds_client_req_union_type req_union;
+    LOC_LOGv("Enter");
+
+    req_union.p_get_profile_list_req = NULL;
+    req_union.p_get_profile_list_req = (wds_get_profile_list_req_msg_v01 *)
+            calloc(1, sizeof(wds_get_profile_list_req_msg_v01));
+    if (NULL == req_union.p_get_profile_list_req) {
+        LOC_LOGe("Could not allocate memory for wds_get_profile_list_req_msg_v01");
+        goto err;
+    }
+    //Populate required members of the request structure
+    req_union.p_get_profile_list_req->profile_type_valid = 1;
+    req_union.p_get_profile_list_req->profile_type = profile_type;
+    ret = ds_client_send_qmi_sync_req(ds_client_handle,
+                                      QMI_WDS_GET_PROFILE_LIST_REQ_V01,
+                                      profile_list_resp_msg, &req_union);
+    if (E_DS_CLIENT_SUCCESS != ret) {
+        LOC_LOGe("ds_client_send_qmi_req failed. ret: %d", ret);
+    }
+
+err:
+    LOC_LOGv("Exit");
+    if (req_union.p_get_profile_list_req) {
+        free(req_union.p_get_profile_list_req);
+    }
+    return ret;
+}
+
+/*This function obtains settings for the profile specified by
+the profileIdentifier*/
+ds_client_status_enum_type LocNetIface::ds_client_get_profile_settings(
+        qmi_client_type *ds_client_handle,
+        ds_client_resp_union_type *profile_settings_resp_msg,
+        wds_profile_identifier_type_v01 *profileIdentifier)
+{
+    ds_client_status_enum_type ret = E_DS_CLIENT_SUCCESS;
+    ds_client_req_union_type req_union;
+
+    LOC_LOGv("Enter");
+    //Since it's a union containing a pointer to a structure,
+    //following entities have the same address
+    //- req_union
+    //- req_union.p_get_profile_settings_req
+    //- req_union.p_get_profile_settings_req->profile
+    //so we can very well assign req_union = profileIdentifier
+    req_union.p_get_profile_settings_req =
+            (wds_get_profile_settings_req_msg_v01 *)profileIdentifier;
+    ret = ds_client_send_qmi_sync_req(ds_client_handle,
+                                      QMI_WDS_GET_PROFILE_SETTINGS_REQ_V01,
+                                      profile_settings_resp_msg, &req_union);
+    if (E_DS_CLIENT_SUCCESS != ret) {
+        LOC_LOGe("ds_client_send_qmi_req failed. ret: %d", ret);
+    }
+
+    LOC_LOGv("Exit");
+    return ret;
+}
+
+ds_client_status_enum_type LocNetIface::getEsProfileIndex(uint8_t& esProfileIndex)
+{
+    ds_client_status_enum_type ret = E_DS_CLIENT_FAILURE_GENERAL;
+    ds_client_resp_union_type profile_list_resp_msg;
+    ds_client_resp_union_type profile_settings_resp_msg;
+    wds_profile_identifier_type_v01 profileIdentifier;
+    qmi_client_type wds_qmi_client;
+    uint32_t i = 0;
+    bool esProfileIndexFound = false;
+
+    profile_list_resp_msg.p_get_profile_list_resp = NULL;
+    profile_settings_resp_msg.p_get_profile_setting_resp = NULL;
+
+    LOC_LOGv("Enter");
+
+    ret = ds_client_qmi_ctrl_point_init(&wds_qmi_client);
+    if (ret != E_DS_CLIENT_SUCCESS) {
+        LOC_LOGe("ds_client_qmi_ctrl_point_init failed. ret: %d", ret);
+        goto err;
+    }
+
+    //Allocate memory for the response msg to obtain a list of profiles
+    profile_list_resp_msg.p_get_profile_list_resp = (wds_get_profile_list_resp_msg_v01 *)
+            calloc(1, sizeof(wds_get_profile_list_resp_msg_v01));
+    if (NULL == profile_list_resp_msg.p_get_profile_list_resp) {
+        LOC_LOGe("Could not allocate memory for p_get_profile_list_resp");
+        ret = E_DS_CLIENT_FAILURE_NOT_ENOUGH_MEMORY;
+        goto err;
+    }
+
+    LOC_LOGv("Getting profile list");
+    ret = ds_client_get_profile_list(&wds_qmi_client,
+                                     &profile_list_resp_msg,
+                                     WDS_PROFILE_TYPE_3GPP_V01);
+    if (E_DS_CLIENT_SUCCESS != ret) {
+        LOC_LOGe("ds_client_get_profile_list failed. ret: %d", ret);
+        goto err;
+    }
+    LOC_LOGv("Got profile list; length = %d",
+        profile_list_resp_msg.p_get_profile_list_resp->profile_list_len);
+
+    //Allocate memory for the response msg to obtain profile settings
+    //We allocate memory for only one response msg and keep re-using it
+    profile_settings_resp_msg.p_get_profile_setting_resp =
+        (wds_get_profile_settings_resp_msg_v01 *)
+        calloc(1, sizeof(wds_get_profile_settings_resp_msg_v01));
+    if (NULL == profile_settings_resp_msg.p_get_profile_setting_resp) {
+        LOC_LOGe("Could not allocate memory for p_get_profile_setting_resp");
+        ret = E_DS_CLIENT_FAILURE_NOT_ENOUGH_MEMORY;
+        goto err;
+    }
+
+    //Loop over the list of profiles to find a profile that supports
+    //emergency calls
+    for (i = 0; i < profile_list_resp_msg.p_get_profile_list_resp->profile_list_len; i++) {
+        /*QMI_WDS_GET_PROFILE_SETTINGS_REQ requires an input data
+        structure that is of type wds_profile_identifier_type_v01
+        We have to fill that structure for each profile from the
+        info obtained from the profile list*/
+        //copy profile type
+        profileIdentifier.profile_type =
+            profile_list_resp_msg.p_get_profile_list_resp->profile_list[i].profile_type;
+        //copy profile index
+        profileIdentifier.profile_index =
+            profile_list_resp_msg.p_get_profile_list_resp->profile_list[i].profile_index;
+
+        ret = ds_client_get_profile_settings(&wds_qmi_client,
+            &profile_settings_resp_msg,
+            &profileIdentifier);
+        if (E_DS_CLIENT_SUCCESS != ret) {
+            LOC_LOGe("ds_client_get_profile_settings failed. ret: %d", ret);
+            goto err;
+        }
+        LOC_LOGd("Got profile setting for profile %d; name: %s", i,
+            profile_settings_resp_msg.p_get_profile_setting_resp->profile_name);
+
+        if (profile_settings_resp_msg.p_get_profile_setting_resp->support_emergency_calls_valid) {
+            if (profile_settings_resp_msg.p_get_profile_setting_resp->support_emergency_calls) {
+                LOC_LOGv("Found emergency profile in profile %d", i);
+                esProfileIndexFound = true;
+                esProfileIndex = profileIdentifier.profile_index;
+                if (profile_settings_resp_msg.p_get_profile_setting_resp->apn_name_valid) {
+                    LOC_LOGd("apn name: %s",
+                        profile_settings_resp_msg.p_get_profile_setting_resp->apn_name);
+                    setApnName(profile_settings_resp_msg.p_get_profile_setting_resp->apn_name);
+                } else {
+                    LOC_LOGd("apn name is not valid");
+                    setApnName("");
+                }
+                //Break out of for loop since we found the emergency profile
+                break;
+            } else {
+                LOC_LOGe("Emergency profile valid but not supported in profile: %d ", i);
+            }
+        }
+        //Since this struct is loaded with settings for the next profile,
+        //it is important to clear out the memory to avoid values/flags
+        //from being carried over
+        memset((void *)profile_settings_resp_msg.p_get_profile_setting_resp,
+            0, sizeof(wds_get_profile_settings_resp_msg_v01));
+    }
+
+    //Release qmi client handle
+    if (QMI_NO_ERR != qmi_client_release(wds_qmi_client)) {
+        LOC_LOGe("Could not release qmi client handle");
+        ret = E_DS_CLIENT_FAILURE_GENERAL;
+        goto err;
+    }
+
+    if (esProfileIndexFound) {
+        ret = E_DS_CLIENT_SUCCESS;
+    } else {
+        ret = E_DS_CLIENT_FAILURE_SERVICE_NOT_PRESENT;
+    }
+
+err:
+    if (profile_list_resp_msg.p_get_profile_list_resp) {
+        free(profile_list_resp_msg.p_get_profile_list_resp);
+    }
+    if (profile_settings_resp_msg.p_get_profile_setting_resp) {
+        free(profile_settings_resp_msg.p_get_profile_setting_resp);
+    }
+    LOC_LOGv("Exit");
+    return ret;
+}
+
 bool LocNetIface::setupWwanCall() {
 
     ENTRY_LOG();
 
     /* Validate call type requested */
-    if (mLocNetConnType != LOC_NET_CONN_TYPE_WWAN_SUPL) {
+    if (mLocNetConnType != LOC_NET_CONN_TYPE_WWAN_SUPL &&
+        mLocNetConnType != LOC_NET_CONN_TYPE_WWAN_EMERGENCY) {
         LOC_LOGE("Unsupported call type configured: %d", mLocNetConnType);
         return false;
     }
@@ -651,6 +1059,20 @@ bool LocNetIface::setupWwanCall() {
     callParams.num_val = DSI_RADIO_TECH_UNKNOWN;
     LOC_LOGD("DSI_CALL_INFO_TECH_PREF = DSI_RADIO_TECH_UNKNOWN");
     dsi_set_data_call_param(mDsiHandle, DSI_CALL_INFO_TECH_PREF, &callParams);
+
+    if (LOC_NET_CONN_TYPE_WWAN_EMERGENCY == mLocNetConnType) {
+        ds_client_status_enum_type ret = E_DS_CLIENT_FAILURE_GENERAL;
+        uint8_t esProfileIndex;
+        ret = getEsProfileIndex(esProfileIndex);
+        if (E_DS_CLIENT_SUCCESS != ret) {
+            LOC_LOGE("Could not get profile index for SUPL ES");
+        } else {
+            callParams.buf_val = NULL;
+            callParams.num_val = esProfileIndex;
+            dsi_set_data_call_param(
+                    mDsiHandle, DSI_CALL_INFO_UMTS_PROFILE_IDX, &callParams);
+        }
+    }
 
     /* APN from gps.conf
       As this is read using loc cfg routine, the buffer size
