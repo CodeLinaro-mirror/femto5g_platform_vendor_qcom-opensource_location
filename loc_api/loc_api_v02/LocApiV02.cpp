@@ -5732,7 +5732,9 @@ void LocApiV02 :: reportGnssMeasurementData(
         if (mADRdata.size() > 0) {
             auto front = mADRdata.begin();
             for (auto back = mADRdata.end(); front != back;) {
-                if (mCounter != front->counter) {
+                // Remove only either 1Hz or Nhz, not both
+                if ((mCounter != front->counter) &&
+                        (front->nHzMeasurement == gnss_measurement_report_ptr.nHzMeasurement)) {
                     --back;
                     swap(*front, *back);
                 } else {
@@ -6047,7 +6049,8 @@ bool LocApiV02 :: convertGnssMeasurements (GnssMeasurementsData& measurementData
                 (gnss_measurement_report_ptr.gnssSignalType == tempAdrData.gnssSignalType)) ||
                  (!gnss_measurement_report_ptr.gnssSignalType_valid &&
                     (0 == tempAdrData.gnssSignalType))) &&
-                gnss_measurement_info.gnssSvId == tempAdrData.gnssSvId) {
+                (gnss_measurement_info.gnssSvId == tempAdrData.gnssSvId) &&
+                (gnss_measurement_report_ptr.nHzMeasurement == tempAdrData.nHzMeasurement)) {
                 bFound = true;
                 break;
             }
@@ -6081,6 +6084,7 @@ bool LocApiV02 :: convertGnssMeasurements (GnssMeasurementsData& measurementData
             tempAdrData.counter = mCounter;
             tempAdrData.validMask = gnss_measurement_info.validMask;
             tempAdrData.cycleSlipCount = gnss_measurement_info.cycleSlipCount;
+            tempAdrData.nHzMeasurement = gnss_measurement_report_ptr.nHzMeasurement;
             *it = tempAdrData;
         } else {
             // now add the current satellite info to the vector
@@ -6094,6 +6098,7 @@ bool LocApiV02 :: convertGnssMeasurements (GnssMeasurementsData& measurementData
             tempAdrData.gnssSvId = gnss_measurement_info.gnssSvId;
             tempAdrData.validMask = gnss_measurement_info.validMask;
             tempAdrData.cycleSlipCount = gnss_measurement_info.cycleSlipCount;
+            tempAdrData.nHzMeasurement = gnss_measurement_report_ptr.nHzMeasurement;
             mADRdata.push_back(tempAdrData);
         }
 
