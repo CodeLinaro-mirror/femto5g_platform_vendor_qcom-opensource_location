@@ -145,6 +145,13 @@ bool LocationClientApi::startPositionSession(
     if (gnssReportCallbacks.gnssMeasurementsCallback) {
         callbacksOption.gnssMeasurementsCb = [](::GnssMeasurementsNotification n) {};
     }
+    if (gnssReportCallbacks.gnssNHzMeasurementsCallback) {
+        if (intervalInMs > 100) {
+            LOC_LOGe("nHz measurement not supported with TBF of %d", intervalInMs);
+        } else {
+            callbacksOption.gnssNHzMeasurementsCb = [](::GnssMeasurementsNotification n) {};
+        }
+    }
     mApiImpl->updateCallbacks(callbacksOption);
 
     // options
@@ -195,6 +202,13 @@ bool LocationClientApi::startPositionSession(
     }
     if (engReportCallbacks.gnssMeasurementsCallback) {
         callbacksOption.gnssMeasurementsCb = [](::GnssMeasurementsNotification n) {};
+    }
+    if (engReportCallbacks.gnssNHzMeasurementsCallback) {
+        if (intervalInMs > 100) {
+            LOC_LOGe("nHz measurement not supported with TBF of %d", intervalInMs);
+        } else {
+            callbacksOption.gnssNHzMeasurementsCb = [](::GnssMeasurementsNotification n) {};
+        }
     }
     mApiImpl->updateCallbacks(callbacksOption);
 
