@@ -5627,8 +5627,10 @@ bool LocApiV02 :: convertGnssMeasurements (GnssMeasurementsData& measurementData
 
     // svid
     measurementData.svId = gnss_measurement_info.gnssSvId;
+    measurementData.flags |= GNSS_MEASUREMENTS_DATA_SV_ID_BIT;
 
     // constellation
+    measurementData.svType = GNSS_SV_TYPE_UNKNOWN;
     switch (gnss_measurement_report_ptr.system)
     {
         case eQMI_LOC_SV_SYSTEM_GPS_V02:
@@ -5659,9 +5661,9 @@ bool LocApiV02 :: convertGnssMeasurements (GnssMeasurementsData& measurementData
             measurementData.svType = GNSS_SV_TYPE_NAVIC;
             break;
         default:
-            measurementData.svType = GNSS_SV_TYPE_UNKNOWN;
             break;
     }
+    measurementData.flags |= GNSS_MEASUREMENTS_DATA_SV_TYPE_BIT;
 
     // time_offset_ns
     if (0 != gnss_measurement_info.measLatency)
@@ -5723,6 +5725,9 @@ bool LocApiV02 :: convertGnssMeasurements (GnssMeasurementsData& measurementData
 
         measurementData.receivedSvTimeUncertaintyNs = (int64_t)gpsTowUncNs;
 
+        measurementData.flags |= (GNSS_MEASUREMENTS_DATA_STATE_BIT |
+                                  GNSS_MEASUREMENTS_DATA_RECEIVED_SV_TIME_BIT |
+                                  GNSS_MEASUREMENTS_DATA_RECEIVED_SV_TIME_UNCERTAINTY_BIT);
     } else if ((validMask & bitSynMask) == bitSynMask) {
         /* bit sync */
         measurementData.stateMask = GNSS_MEASUREMENTS_STATE_BIT_SYNC_BIT |
@@ -5733,6 +5738,9 @@ bool LocApiV02 :: convertGnssMeasurements (GnssMeasurementsData& measurementData
                   (double)gnss_measurement_info.svTimeSpeed.svTimeSubMs), 20) * 1e6);
         measurementData.receivedSvTimeUncertaintyNs = (int64_t)gpsTowUncNs;
 
+        measurementData.flags |= (GNSS_MEASUREMENTS_DATA_STATE_BIT |
+                                  GNSS_MEASUREMENTS_DATA_RECEIVED_SV_TIME_BIT |
+                                  GNSS_MEASUREMENTS_DATA_RECEIVED_SV_TIME_UNCERTAINTY_BIT);
     } else if (validMask & QMI_LOC_MASK_MEAS_STATUS_SM_VALID_V02) {
         /* code lock */
         measurementData.stateMask = GNSS_MEASUREMENTS_STATE_CODE_LOCK_BIT;
@@ -5741,15 +5749,20 @@ bool LocApiV02 :: convertGnssMeasurements (GnssMeasurementsData& measurementData
              (int64_t)((double)gnss_measurement_info.svTimeSpeed.svTimeSubMs * 1e6);
         measurementData.receivedSvTimeUncertaintyNs = (int64_t)gpsTowUncNs;
 
+        measurementData.flags |= (GNSS_MEASUREMENTS_DATA_STATE_BIT |
+                                  GNSS_MEASUREMENTS_DATA_RECEIVED_SV_TIME_BIT |
+                                  GNSS_MEASUREMENTS_DATA_RECEIVED_SV_TIME_UNCERTAINTY_BIT);
     } else {
         /* by default */
         measurementData.stateMask = GNSS_MEASUREMENTS_STATE_UNKNOWN_BIT;
         measurementData.receivedSvTimeNs = 0;
         measurementData.receivedSvTimeUncertaintyNs = 0;
+        measurementData.flags |= GNSS_MEASUREMENTS_DATA_STATE_BIT;
     }
 
     // carrierToNoiseDbHz
     measurementData.carrierToNoiseDbHz = gnss_measurement_info.CNo/10.0;
+    measurementData.flags |= GNSS_MEASUREMENTS_DATA_SIGNAL_TO_NOISE_RATIO_BIT;
 
     if (QMI_LOC_MASK_MEAS_STATUS_VELOCITY_FINE_V02 == (gnss_measurement_info.measurementStatus & QMI_LOC_MASK_MEAS_STATUS_VELOCITY_FINE_V02))
     {
@@ -5762,6 +5775,8 @@ bool LocApiV02 :: convertGnssMeasurements (GnssMeasurementsData& measurementData
 
         // pseudorangeRateUncertaintyMps
         measurementData.pseudorangeRateUncertaintyMps = gnss_measurement_info.fineSpeedUnc;
+        measurementData.flags |= (GNSS_MEASUREMENTS_DATA_PSEUDORANGE_RATE_BIT |
+                                  GNSS_MEASUREMENTS_DATA_PSEUDORANGE_RATE_UNCERTAINTY_BIT);
     }
     else
     {
@@ -5774,10 +5789,13 @@ bool LocApiV02 :: convertGnssMeasurements (GnssMeasurementsData& measurementData
 
         // pseudorangeRateUncertaintyMps
         measurementData.pseudorangeRateUncertaintyMps = gnss_measurement_info.svTimeSpeed.dopplerShiftUnc;
+        measurementData.flags |= (GNSS_MEASUREMENTS_DATA_PSEUDORANGE_RATE_BIT |
+                                  GNSS_MEASUREMENTS_DATA_PSEUDORANGE_RATE_UNCERTAINTY_BIT);
     }
 
     // accumulated_delta_range_state
     measurementData.adrStateMask = GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_UNKNOWN;
+    measurementData.flags |= GNSS_MEASUREMENTS_DATA_ADR_STATE_BIT;
 
     // carrier frequency
     if (gnss_measurement_report_ptr.gnssSignalType_valid) {
@@ -5802,6 +5820,7 @@ bool LocApiV02 :: convertGnssMeasurements (GnssMeasurementsData& measurementData
     }
     // multipath_indicator
     measurementData.multipathIndicator = GNSS_MEASUREMENTS_MULTIPATH_INDICATOR_UNKNOWN;
+    measurementData.flags |= GNSS_MEASUREMENTS_DATA_MULTIPATH_INDICATOR_BIT;
 
     // AGC
     if (gnss_measurement_report_ptr.jammerIndicator_valid) {
@@ -5823,6 +5842,12 @@ bool LocApiV02 :: convertGnssMeasurements (GnssMeasurementsData& measurementData
     } else {
         LOC_LOGv("AGC is not present");
         bAgcIsPresent = false;
+    }
+
+    if (gnss_measurement_report_ptr.gnssSignalType_valid) {
+        measurementData.gnssSignalType =
+                convertQmiGnssSignalType(gnss_measurement_report_ptr.gnssSignalType);
+        measurementData.flags |= GNSS_MEASUREMENTS_DATA_GNSS_SIGNAL_TYPE_BIT;
     }
 
     LOC_LOGv(" GNSS measurement raw data received from modem:"
@@ -5910,6 +5935,10 @@ int LocApiV02 :: convertGnssClock (GnssMeasurementsClock& clock,
         clock.hwClockDiscontinuityCount = localDiscCount;
         clock.timeUncertaintyNs = 0.0;
 
+        flags |= (GNSS_MEASUREMENTS_CLOCK_FLAGS_TIME_BIT |
+                  GNSS_MEASUREMENTS_CLOCK_FLAGS_TIME_UNCERTAINTY_BIT |
+                  GNSS_MEASUREMENTS_CLOCK_FLAGS_HW_CLOCK_DISCONTINUITY_COUNT_BIT);
+
         msInWeek = (int)gnss_measurement_info.systemTime.systemMsec;
         if (gnss_measurement_info.systemTime_valid) {
             uint16_t systemWeek = gnss_measurement_info.systemTime.systemWeek;
@@ -5944,6 +5973,12 @@ int LocApiV02 :: convertGnssClock (GnssMeasurementsClock& clock,
 
         flags |= (GNSS_MEASUREMENTS_CLOCK_FLAGS_DRIFT_BIT |
                   GNSS_MEASUREMENTS_CLOCK_FLAGS_DRIFT_UNCERTAINTY_BIT);
+    }
+
+    if ((1 == gnss_measurement_info.leapSecondInfo_valid) &&
+        (0 == gnss_measurement_info.leapSecondInfo.leapSecUnc)) {
+        clock.leapSecond = gnss_measurement_info.leapSecondInfo.leapSec;
+        flags |= GNSS_MEASUREMENTS_CLOCK_FLAGS_LEAP_SECOND_BIT ;
     }
 
     clock.flags = flags;
