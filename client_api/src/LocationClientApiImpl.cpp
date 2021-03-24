@@ -863,6 +863,8 @@ static GnssMeasurements parseGnssMeasurements(const ::GnssMeasurementsNotificati
         measurement.signalToNoiseRatioDb =
                 halGnssMeasurements.measurements[meas].signalToNoiseRatioDb;
         measurement.agcLevelDb = halGnssMeasurements.measurements[meas].agcLevelDb;
+        measurement.gnssSignalType =
+                parseGnssSignalType(halGnssMeasurements.measurements[meas].gnssSignalType);
 
         gnssMeasurements.measurements.push_back(measurement);
     }
