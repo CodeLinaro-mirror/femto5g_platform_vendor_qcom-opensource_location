@@ -147,6 +147,9 @@ private:
             qmiLocGNSSConstellEnumT_v02 qmiConstellationEnum,
             GnssConstellationTypeMask& constellationMask);
 
+  static GnssSignalTypeMask convertQmiGnssSignalType(
+        qmiLocGnssSignalTypeMaskT_v02 qmiGnssSignalType);
+
   /* If Confidence value is less than 68%, then scale the accuracy value to 68%
      confidence.*/
   void scaleAccuracyTo68PercentConfidence(const uint8_t confidenceValue,
@@ -386,8 +389,6 @@ public:
   virtual GnssConfigLppProfile convertLppProfile(const uint32_t lppProfile);
   virtual GnssConfigLppeControlPlaneMask convertLppeCp(const uint32_t lppeControlPlaneMask);
   virtual GnssConfigLppeUserPlaneMask convertLppeUp(const uint32_t lppeUserPlaneMask);
-  virtual GnssSignalTypeMask convertQmiGnssSignalType(
-        qmiLocGnssSignalTypeMaskT_v02 qmiGnssSignalType);
 
   /* Requests for SV/Constellation Control */
   virtual LocationError setBlacklistSvSync(const GnssSvIdConfig& config);
