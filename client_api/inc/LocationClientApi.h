@@ -160,7 +160,10 @@ enum GnssSvOptionsMask {
     /** This SV has valid GnssSv::carrierFrequencyHz. <br/> */
     GNSS_SV_OPTIONS_HAS_CARRIER_FREQUENCY_BIT   = (1<<3),
     /** This SV has valid GnssSv::gnssSignalTypeMask. <br/>   */
-    GNSS_SV_OPTIONS_HAS_GNSS_SIGNAL_TYPE_BIT    = (1<<4)
+    GNSS_SV_OPTIONS_HAS_GNSS_SIGNAL_TYPE_BIT    = (1<<4),
+    /** This SV has valid GnssSv::basebandCarrierToNoiseDbHz.
+     *  <br/> */
+    GNSS_SV_OPTIONS_HAS_BASEBAND_CARRIER_TO_NOISE_BIT = (1<<5)
 };
 
 /**
@@ -1207,29 +1210,36 @@ struct GnssSv {
     GnssSvType type;
      /** Signal-to-noise ratio at antenna of the SV, in unit of
       * dB-Hz. <br/>
-      * This field is always valid.  <br/> */
+      * cN0Dbhz of 0.0 indicates that this field is unknown. <br/> */
     float cN0Dbhz;
-    /** Elevation of the SV, in unit of degrees. <br/> This field is
-     *  always valid.  <br/> */
+    /** Elevation of the SV, in unit of degrees. <br/>
+     *  This field is always valid.  <br/> */
     float elevation;
-    /** Azimuth of the SV, in unit of degrees. <br/> This field is
-     *  always valid.  <br/> */
+    /** Azimuth of the SV, in unit of degrees. <br/>
+     *  This field is always valid.  <br/> */
     float azimuth;
     /** Bitwise OR of GnssSvOptionsMask to specify additional
      *  info and valid fields in GnssSv. <br/>
      *  This field is always valid.  <br/>  */
     GnssSvOptionsMask gnssSvOptionsMask;
-    /** Carrier frequency of the signal tracked. <br/> This field is
-     *  valid if gnssSvOptionsMask has
+    /** Carrier frequency of the signal tracked. <br/>
+     *  This field is valid if gnssSvOptionsMask has
      *  GNSS_SV_OPTIONS_HAS_CARRIER_FREQUENCY_BIT set.  <br/> */
     float carrierFrequencyHz;
     /** GNSS signal type mask of the SV. <br/>
      *  This field is valid if gnssSvOptionsMask has
      *  GNSS_SV_OPTIONS_HAS_GNSS_SIGNAL_TYPE_BIT. <br/> */
     GnssSignalTypeMask gnssSignalTypeMask;
-    /** GLONASS frequency channel number
+    /** GLONASS frequency channel number, range is [1, 14].
+     * <br/>
+     * This field is always valid if and ony if sv is of GLONASS.
      * <br/> */
     uint16_t gloFrequency;
+   /** RF loss from antenna to baseband of the SV, in unit of
+     *  dB-Hz. <br/>
+     *  This field is valid if gnssSvOptionsMask has
+     *  GNSS_SV_OPTIONS_HAS_BASEBAND_CARRIER_TO_NOISE_BIT set. <br/> */
+    double basebandCarrierToNoiseDbHz;
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
     string toString() const;
@@ -1340,7 +1350,8 @@ enum GnssMeasurementsDataFlagsMask{
      *  GnssMeasurementsData::stateMask.  <br/>   */
     GNSS_MEASUREMENTS_DATA_STATE_BIT                        = (1<<2),
     /** GnssMeasurementsData has valid
-     *  GnssMeasurementsData::receivedSvTimeNs.  <br/>   */
+     *  GnssMeasurementsData::receivedSvTimeNs and
+     *  GnssMeasurementsData::receivedSvTimeSubNs.  <br/> */
     GNSS_MEASUREMENTS_DATA_RECEIVED_SV_TIME_BIT             = (1<<3),
     /** GnssMeasurementsData has valid
      *  GnssMeasurementsData::receivedSvTimeUncertaintyNs.  <br/> */
@@ -1505,8 +1516,19 @@ struct GnssMeasurementsData {
      *  GNSS measurement state. <br/>   */
     GnssMeasurementsStateMask stateMask;
     /** Received GNSS time of the week in nanoseconds when the
-     *  measurement was taken. <br/>   */
+     *  measurement was taken. <br/>
+     *  For sub nanoseconds part of the time, please refer to
+     *  of GnssMeasurementsData::receivedSvTimeSubNs. <br/>
+     *  Total time is: receivedSvTimeNs+receivedSvTimeSubNs. <br/>*/
     int64_t receivedSvTimeNs;
+
+    /** Sub nanoseconds portion of the received GNSS time of the
+     *  week when the measurement was taken. <br/>
+     *  For nanoseconds portion of the time, please refer to field
+     *  of GnssMeasurementsData::receivedSvTimeSubNs. <br/>
+     *  Total time is: receivedSvTimeNs+receivedSvTimeSubNs. <br/>*/
+    float receivedSvTimeSubNs;
+
     /** Satellite time. <br/>
      *  All SV times in the current measurement block are already
      *  propagated to a common reference time epoch, in unit of
@@ -1905,8 +1927,12 @@ struct GnssReportCbs {
     /** Callback to receive GnssData from modem GNSS engine.
      *  <br/> */
     GnssDataCb gnssDataCallback;
-    /** Callback to receive GnssMeasurements modem GNSS engine. <br/>  */
+    /** Callback to receive 1Hz GnssMeasurements from modem GNSS
+     *  engine. <br/> */
     GnssMeasurementsCb gnssMeasurementsCallback;
+    /** Callback to receive NHz GnssMeasurements from modem GNSS
+     *  engine. <br/> */
+    GnssMeasurementsCb gnssNHzMeasurementsCallback;
 };
 
 /** Specify the set of callbacks to receive the reports when
@@ -1932,9 +1958,12 @@ struct EngineReportCbs {
     /** Callback to receive GnssData from modem GNSS engine.
      *  <br/> */
     GnssDataCb gnssDataCallback;
-    /** Callback to receive GnssMeasurements from modem GNSS engine.
-     *  <br/> */
+    /** Callback to receive 1Hz GnssMeasurements from modem GNSS
+     *  engine. <br/> */
     GnssMeasurementsCb gnssMeasurementsCallback;
+    /** Callback to receive NHz GnssMeasurements from modem GNSS
+     *  engine. <br/> */
+    GnssMeasurementsCb gnssNHzMeasurementsCallback;
 };
 
 /**
@@ -2250,7 +2279,9 @@ public:
 
         @param responseCallback
         Callback to receive processing status, e.g.: success or
-        failure code: e.g.: timeout. <br/>
+        failure code: e.g.: timeout. If null responseCallback is
+        passed, client will not be informed of processing status,
+        e.g.:LOCATION_RESPONSE_PARAM_INVALID. <br/>
 
         When the processing status is LOCATION_RESPONSE_SUCCESS, the
         terrestrialPositionCallback will be invoked to deliver the

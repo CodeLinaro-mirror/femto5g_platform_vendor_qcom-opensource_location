@@ -827,11 +827,16 @@ static GnssSv parseGnssSv(const ::GnssSv &halGnssSv) {
     if (::GNSS_SV_OPTIONS_HAS_GNSS_SIGNAL_TYPE_BIT & halGnssSv.gnssSvOptionsMask) {
         gnssSvOptionsMask |= GNSS_SV_OPTIONS_HAS_GNSS_SIGNAL_TYPE_BIT;
     }
+    if (::GNSS_SV_OPTIONS_HAS_BASEBAND_CARRIER_TO_NOISE_BIT & halGnssSv.gnssSvOptionsMask) {
+        gnssSvOptionsMask |= GNSS_SV_OPTIONS_HAS_BASEBAND_CARRIER_TO_NOISE_BIT;
+    }
     gnssSv.gnssSvOptionsMask = (GnssSvOptionsMask)gnssSvOptionsMask;
 
     gnssSv.carrierFrequencyHz = halGnssSv.carrierFrequencyHz;
     gnssSv.gnssSignalTypeMask = parseGnssSignalType(halGnssSv.gnssSignalTypeMask);
     gnssSv.gloFrequency = halGnssSv.gloFrequency;
+    gnssSv.basebandCarrierToNoiseDbHz = halGnssSv.basebandCarrierToNoiseDbHz;
+
     return gnssSv;
 }
 
@@ -870,6 +875,8 @@ static GnssMeasurements parseGnssMeasurements(const ::GnssMeasurementsNotificati
         measurement.stateMask = (GnssMeasurementsStateMask)
                 halGnssMeasurements.measurements[meas].stateMask;
         measurement.receivedSvTimeNs = halGnssMeasurements.measurements[meas].receivedSvTimeNs;
+        measurement.receivedSvTimeSubNs =
+                halGnssMeasurements.measurements[meas].receivedSvTimeSubNs;
         measurement.receivedSvTimeUncertaintyNs =
                 halGnssMeasurements.measurements[meas].receivedSvTimeUncertaintyNs;
         measurement.carrierToNoiseDbHz =
@@ -1030,8 +1037,8 @@ public:
 LocationClientApiImpl
 ******************************************************************************/
 
-uint32_t  LocationClientApiImpl::mClientIdGenerator = LOCATION_CLIENT_SESSION_ID_INVALID;
-
+uint32_t LocationClientApiImpl::mClientIdGenerator = LOCATION_CLIENT_SESSION_ID_INVALID;
+uint32_t LocationClientApiImpl::mClientIdIndex = 0;
 mutex LocationClientApiImpl::mMutex;
 
 /******************************************************************************
@@ -1078,19 +1085,25 @@ LocationClientApiImpl::LocationClientApiImpl(CapabilitiesCb capabitiescb) :
     // Each client id is tracked via a bit in mClientIdGenerator,
     // which is 4 bytes now.
     lock_guard<mutex> lock(mMutex);
-    unsigned int clientIdMask = 1;
     // find a bit in the mClientIdGenerator that is not yet used
     // and use that as client id
     // client id will be from 1 to 32, as client id will be used to
     // set session id and 0 is reserved for LOCATION_CLIENT_SESSION_ID_INVALID
-    for (mClientId = 1; mClientId <= sizeof(mClientIdGenerator) * 8; mClientId++) {
-        if ((mClientIdGenerator & (1UL << (mClientId-1))) == 0) {
-            mClientIdGenerator |= (1UL << (mClientId-1));
+    mClientIdIndex++;
+    if (mClientIdIndex > 32) {
+        mClientIdIndex = 1;
+    }
+
+    uint32_t loopCnt = 0;
+    for (; loopCnt < sizeof(mClientIdGenerator) * 8; loopCnt++) {
+        if ((mClientIdGenerator & (1UL << (mClientIdIndex-1))) == 0) {
+            mClientIdGenerator |= (1UL << (mClientIdIndex-1));
+            mClientId = mClientIdIndex;
             break;
         }
     }
 
-    if (mClientId > sizeof(mClientIdGenerator) * 8) {
+    if (loopCnt >= sizeof(mClientIdGenerator) * 8) {
         LOC_LOGe("create Qsocket failed, already use up maximum of %d clients",
                  sizeof(mClientIdGenerator)*8);
         return;
@@ -1182,7 +1195,7 @@ void LocationClientApiImpl::destroy() {
             {
                 // get clientId
                 lock_guard<mutex> lock(mMutex);
-                mApiImpl->mClientIdGenerator &= ~(1UL << mApiImpl->mClientId);
+                mApiImpl->mClientIdGenerator &= ~(1UL << (mApiImpl->mClientId-1));
                 LOC_LOGd("client id generarator 0x%x, id %d",
                          mApiImpl->mClientIdGenerator, mApiImpl->mClientId);
             }
@@ -1220,12 +1233,14 @@ void LocationClientApiImpl::updateCallbackFunctions(const ClientCallbacks& cbs,
                 mApiImpl->mGnssNmeaCb         = mCbs.gnssreportcbs.gnssNmeaCallback;
                 mApiImpl->mGnssDataCb         = mCbs.gnssreportcbs.gnssDataCallback;
                 mApiImpl->mGnssMeasurementsCb = mCbs.gnssreportcbs.gnssMeasurementsCallback;
+                mApiImpl->mGnssNHzMeasurementsCb = mCbs.gnssreportcbs.gnssNHzMeasurementsCallback;
             } else if (REPORT_CB_ENGINE_INFO == mReportCbType) {
                 mApiImpl->mEngLocationsCb     = mCbs.engreportcbs.engLocationsCallback;
                 mApiImpl->mGnssSvCb           = mCbs.engreportcbs.gnssSvCallback;
                 mApiImpl->mGnssNmeaCb         = mCbs.engreportcbs.gnssNmeaCallback;
                 mApiImpl->mGnssDataCb         = mCbs.engreportcbs.gnssDataCallback;
                 mApiImpl->mGnssMeasurementsCb = mCbs.engreportcbs.gnssMeasurementsCallback;
+                mApiImpl->mGnssNHzMeasurementsCb = mCbs.engreportcbs.gnssNHzMeasurementsCallback;
             }
         }
         LocationClientApiImpl* mApiImpl;
@@ -1271,6 +1286,9 @@ void LocationClientApiImpl::updateCallbacks(LocationCallbacks& callbacks) {
             }
             if (mCallBacks.gnssMeasurementsCb) {
                 callBacksMask |= E_LOC_CB_GNSS_MEAS_BIT;
+            }
+            if (mCallBacks.gnssNHzMeasurementsCb) {
+                callBacksMask |= E_LOC_CB_GNSS_NHZ_MEAS_BIT;
             }
             // handle callbacks that are not related to a fix session
             if (mApiImpl->mLocationSysInfoCb) {
@@ -2515,9 +2533,7 @@ void IpcListener::onReceive(const char* data, uint32_t length,
             case E_LOCAPI_MEAS_MSG_ID:
             {
                 LOC_LOGd("<<< message = measurements");
-                if ((mApiImpl.mSessionId != LOCATION_CLIENT_SESSION_ID_INVALID) &&
-                    (mApiImpl.mCallbacksMask & E_LOC_CB_GNSS_MEAS_BIT)) {
-
+                if (mApiImpl.mSessionId != LOCATION_CLIENT_SESSION_ID_INVALID) {
                     PBLocAPIMeasIndMsg pbLocApiMeasIndMsg;
                     if (0 == pbLocApiMeasIndMsg.ParseFromString(pbLocApiMsg.payload())) {
                         LOC_LOGe("Failed to parse pbLocApiMeasIndMsg from payload!!");
@@ -2528,10 +2544,19 @@ void IpcListener::onReceive(const char* data, uint32_t length,
                     const LocAPIMeasIndMsg* pMeasIndMsg = (LocAPIMeasIndMsg*)(&msg);
                     GnssMeasurements gnssMeasurements =
                         parseGnssMeasurements(pMeasIndMsg->gnssMeasurementsNotification);
-                    if (mApiImpl.mGnssMeasurementsCb) {
-                        mApiImpl.mGnssMeasurementsCb(gnssMeasurements);
+                    if (gnssMeasurements.isNhz) {
+                        if ((mApiImpl.mCallbacksMask & E_LOC_CB_GNSS_NHZ_MEAS_BIT) &&
+                                (nullptr != mApiImpl.mGnssNHzMeasurementsCb)) {
+                            mApiImpl.mGnssNHzMeasurementsCb(gnssMeasurements);
+                            mApiImpl.mLogger.log(gnssMeasurements);
+                        }
+                    } else {
+                        if ((mApiImpl.mCallbacksMask & E_LOC_CB_GNSS_MEAS_BIT) &&
+                                (nullptr != mApiImpl.mGnssMeasurementsCb)) {
+                            mApiImpl.mGnssMeasurementsCb(gnssMeasurements);
+                            mApiImpl.mLogger.log(gnssMeasurements);
+                        }
                     }
-                    mApiImpl.mLogger.log(gnssMeasurements);
                 }
                 break;
             }

@@ -147,6 +147,13 @@ bool LocationClientApi::startPositionSession(
     if (gnssReportCallbacks.gnssMeasurementsCallback) {
         callbacksOption.gnssMeasurementsCb = [](::GnssMeasurementsNotification n) {};
     }
+    if (gnssReportCallbacks.gnssNHzMeasurementsCallback) {
+        if (intervalInMs > 100) {
+            LOC_LOGe("nHz measurement not supported with TBF of %d", intervalInMs);
+        } else {
+            callbacksOption.gnssNHzMeasurementsCb = [](::GnssMeasurementsNotification n) {};
+        }
+    }
     mApiImpl->updateCallbacks(callbacksOption);
 
     // options
@@ -198,6 +205,13 @@ bool LocationClientApi::startPositionSession(
     }
     if (engReportCallbacks.gnssMeasurementsCallback) {
         callbacksOption.gnssMeasurementsCb = [](::GnssMeasurementsNotification n) {};
+    }
+    if (engReportCallbacks.gnssNHzMeasurementsCallback) {
+        if (intervalInMs > 100) {
+            LOC_LOGe("nHz measurement not supported with TBF of %d", intervalInMs);
+        } else {
+            callbacksOption.gnssNHzMeasurementsCb = [](::GnssMeasurementsNotification n) {};
+        }
     }
     mApiImpl->updateCallbacks(callbacksOption);
 
@@ -574,7 +588,8 @@ DECLARE_TBL(GnssSvOptionsMask) = {
     {GNSS_SV_OPTIONS_HAS_ALMANAC_BIT, "ALM"},
     {GNSS_SV_OPTIONS_USED_IN_FIX_BIT, "USED_IN_FIX"},
     {GNSS_SV_OPTIONS_HAS_CARRIER_FREQUENCY_BIT, "CARRIER_FREQ"},
-    {GNSS_SV_OPTIONS_HAS_GNSS_SIGNAL_TYPE_BIT, "SIG_TYPES"}
+    {GNSS_SV_OPTIONS_HAS_GNSS_SIGNAL_TYPE_BIT, "SIG_TYPES"},
+    {GNSS_SV_OPTIONS_HAS_BASEBAND_CARRIER_TO_NOISE_BIT, "BASEBAND_CARRIER_TO_NOISE"}
 };
 // LocationFlagsMask
 DECLARE_TBL(LocationFlagsMask) = {
@@ -1098,6 +1113,7 @@ string GnssSv::toString() const {
     out += FIELDVAL_DEC(carrierFrequencyHz);
     out += FIELDVAL_MASK(gnssSignalTypeMask, GnssSignalTypeMask_tbl);
     out += FIELDVAL_DEC(gloFrequency);
+    out += FIELDVAL_DEC(basebandCarrierToNoiseDbHz);
 
     return out;
 }
@@ -1126,6 +1142,7 @@ string GnssMeasurementsData::toString() const {
     out += FIELDVAL_DEC(timeOffsetNs);
     out += FIELDVAL_MASK(stateMask, GnssMeasurementsStateMask_tbl);
     out += FIELDVAL_DEC(receivedSvTimeNs);
+    out += FIELDVAL_DEC(receivedSvTimeSubNs);
     out += FIELDVAL_DEC(receivedSvTimeUncertaintyNs);
     out += FIELDVAL_DEC(carrierToNoiseDbHz);
     out += FIELDVAL_DEC(pseudorangeRateMps);
