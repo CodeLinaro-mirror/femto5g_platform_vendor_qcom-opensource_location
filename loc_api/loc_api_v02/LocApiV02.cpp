@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -65,6 +65,8 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define LOG_NDEBUG 0
 #define LOG_TAG "LocSvc_ApiV02"
 
+#include <syslog.h>
+#undef LOG_PRI
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -321,7 +323,8 @@ LocApiV02 :: LocApiV02(LOC_API_ADAPTER_EVENT_MASK_T exMask,
     mIsFirstStartFixReq(false),
     mCounter(0),
     mMinInterval(1000),
-    mTimeBiases{}
+    mTimeBiases{},
+    mPlatformPowerState(eQMI_LOC_POWER_STATE_UNKNOWN_V02)
 {
   // initialize loc_sync_req interface
   loc_sync_req_init();
@@ -362,8 +365,12 @@ LocApiV02 :: open(LOC_API_ADAPTER_EVENT_MASK_T mask)
   LOC_API_ADAPTER_EVENT_MASK_T newMask = mask & ~mExcludedMask;
   locClientEventMaskType qmiMask = 0;
 
-  LOC_LOGd("%p Enter mMask: 0x%" PRIx64 "  mQmiMask: 0x%" PRIx64 " mExcludedMask: 0x%" PRIx64 "",
-           clientHandle, mMask, mQmiMask, mExcludedMask);
+  syslog(LOG_INFO, "%p loc_open: pid %d, enter mask 0x%" PRIx64 ", "
+         "mExcludedMask: 0x%" PRIx64", current mMask: 0x%" PRIx64 "  mQmiMask: 0x%" PRIx64"",
+         clientHandle, (uint32_t)getpid(), mask, mExcludedMask, mMask, mQmiMask);
+  LOC_LOGi("%p Enter mask 0x%" PRIx64 ", mExcludedMask: 0x%" PRIx64","
+           "mMask: 0x%" PRIx64 "  mQmiMask: 0x%" PRIx64"",
+           clientHandle, mask, mExcludedMask, mMask, mQmiMask);
 
   /* If the client is already open close it first */
   if(LOC_CLIENT_INVALID_HANDLE_VALUE == clientHandle)
@@ -534,7 +541,7 @@ LocApiV02 :: open(LOC_API_ADAPTER_EVENT_MASK_T mask)
   }
 
   if ((eLOC_CLIENT_SUCCESS == status) && (LOC_CLIENT_INVALID_HANDLE_VALUE != clientHandle)) {
-    qmiMask = convertMask(newMask);
+    qmiMask = convertLocClientEventMask(newMask);
 
     LOC_LOGd("clientHandle = %p mMask: 0x%" PRIx64 " Adapter mask: 0x%" PRIx64 " "
              "newMask: 0x%" PRIx64 " mQmiMask: 0x%" PRIx64 " qmiMask: 0x%" PRIx64 "",
@@ -545,10 +552,11 @@ LocApiV02 :: open(LOC_API_ADAPTER_EVENT_MASK_T mask)
     }
 
     if (newMask != mMask) {
+      mMask = newMask;
       locClientEventMaskType maskDiff = qmiMask ^ mQmiMask;
       // it is important to cap the mask here, because not all LocApi's
       // can enable the same bits, e.g. foreground and background.
-      registerEventMask(newMask);
+      registerEventMask(mMask);
       if (isMaster()) {
         /* Set the SV Measurement Constellation when Measurement Report or Polynomial report is set */
         /* Check if either measurement report or sv polynomial report bit is different in the new
@@ -574,14 +582,20 @@ LocApiV02 :: open(LOC_API_ADAPTER_EVENT_MASK_T mask)
 
 void LocApiV02 :: registerEventMask(LOC_API_ADAPTER_EVENT_MASK_T adapterMask)
 {
-    locClientEventMaskType qmiMask = adjustMaskIfNoSession(convertMask(adapterMask));
+    locClientEventMaskType qmiMask = adjustLocClientEventMask(
+         convertLocClientEventMask(adapterMask));
+
     if ((qmiMask != mQmiMask) &&
             (locClientRegisterEventMask(clientHandle, qmiMask, isMaster()))) {
         mQmiMask = qmiMask;
     }
-    LOC_LOGd("registerEventMask:  mMask: %" PRIu64 " mQmiMask=%" PRIu64 " qmiMask=%" PRIu64,
-                adapterMask, mQmiMask, qmiMask);
-    mMask = adapterMask;
+
+    syslog(LOG_INFO, "registerEventMask:  mMask: 0x%" PRIx64 " "
+           "mQmiMask=0x%" PRIx64 " qmiMask=0x%" PRIx64"",
+           adapterMask, mQmiMask, qmiMask);
+
+    LOC_LOGi("registerEventMask:  mMask: 0x%" PRIx64 " mQmiMask=0x%" PRIx64 " qmiMask=0x%" PRIx64"",
+            adapterMask, mQmiMask, qmiMask);
 }
 
 bool LocApiV02::sendRequestForAidingData(locClientEventMaskType qmiMask) {
@@ -637,7 +651,7 @@ bool LocApiV02::sendRequestForAidingData(locClientEventMaskType qmiMask) {
 
 }
 
-locClientEventMaskType LocApiV02 :: adjustMaskIfNoSession(locClientEventMaskType qmiMask)
+locClientEventMaskType LocApiV02 :: adjustLocClientEventMask(locClientEventMaskType qmiMask)
 {
     locClientEventMaskType oldQmiMask = qmiMask;
     if (!mInSession) {
@@ -654,8 +668,26 @@ locClientEventMaskType LocApiV02 :: adjustMaskIfNoSession(locClientEventMaskType
                                            QMI_LOC_EVENT_MASK_NEXT_LS_INFO_REPORT_V02;
         qmiMask = qmiMask & ~clearMask;
     }
-    LOC_LOGd("oldQmiMask=%" PRIu64 " qmiMask=%" PRIu64 " mInSession: %d",
-            oldQmiMask, qmiMask, mInSession);
+
+    // By default, every loc api client will need to registers for power state event
+    qmiMask |= QMI_LOC_EVENT_MASK_PLATFORM_POWER_STATE_CHANGED_V02;
+
+    if ((mPlatformPowerState == eQMI_LOC_POWER_STATE_SUSPENDED_V02) ||
+        (mPlatformPowerState == eQMI_LOC_POWER_STATE_SHUTDOWN_V02)) {
+        // device in suspended/shutdown state, clear the engine state mask
+        // to avoid wake up
+        qmiMask &= ~QMI_LOC_EVENT_MASK_ENGINE_STATE_V02;
+        syslog(LOG_INFO, "adjustLocClientEventMask, oldQmiMask=%" PRIu64 " "
+               "qmiMask=%" PRIu64 " mInSession: %d, power state %d, retry queue empty %d",
+               oldQmiMask, qmiMask, mInSession, mPlatformPowerState, mResenders.empty());
+    } else if (mResenders.empty() == false) {
+        qmiMask |= QMI_LOC_EVENT_MASK_ENGINE_STATE_V02;
+    }
+
+    LOC_LOGi("oldQmiMask=%" PRIu64 " qmiMask=%" PRIu64 " mInSession: %d, "
+             "power state %d, retry queue empty %d",
+             oldQmiMask, qmiMask, mInSession, mPlatformPowerState, mResenders.empty());
+
     return qmiMask;
 }
 
@@ -881,11 +913,8 @@ void LocApiV02 :: stopFix(LocApiResponse *adapterResponse)
   mInSession = false;
   mPowerMode = GNSS_POWER_MODE_INVALID;
 
-  // if engine on never happend, deregister events
-  // without waiting for Engine Off
-  if (!mEngineOn) {
-      registerEventMask(mMask);
-  }
+  // deregister events when session is stopped
+  registerEventMask(mMask);
 
   // free the memory used to assemble SV measurement from
   // different constellations and bands
@@ -2451,7 +2480,7 @@ LocApiV02::setLPPeProtocolUpSync(GnssConfigLppeUserPlaneMask lppeUP)
 }
 
 /* Convert event mask from loc eng to loc_api_v02 format */
-locClientEventMaskType LocApiV02 :: convertMask(
+locClientEventMaskType LocApiV02 :: convertLocClientEventMask(
   LOC_API_ADAPTER_EVENT_MASK_T mask)
 {
   locClientEventMaskType eventMask = 0;
@@ -5326,22 +5355,15 @@ void  LocApiV02 :: reportSystemInfo(
 void LocApiV02 :: reportEngineState (
     const qmiLocEventEngineStateIndMsgT_v02 *engine_state_ptr)
 {
-
-  LOC_LOGV("%s:%d]: state = %d\n", __func__, __LINE__,
-                 engine_state_ptr->engineState);
-
+  LOC_LOGd("state = %d\n", engine_state_ptr->engineState);
   struct MsgUpdateEngineState : public LocMsg {
       LocApiV02* mpLocApiV02;
       bool mEngineOn;
       inline MsgUpdateEngineState(LocApiV02* pLocApiV02, bool engineOn) :
                  LocMsg(), mpLocApiV02(pLocApiV02), mEngineOn(engineOn) {}
       inline virtual void proc() const {
-          // If EngineOn is true and InSession is false and Engine is just turned off,
-          // then unregister the gps tracking specific event masks
-          if (mpLocApiV02->mEngineOn && !mpLocApiV02->mInSession && !mEngineOn) {
-              mpLocApiV02->registerEventMask(mpLocApiV02->mMask);
-          }
           mpLocApiV02->mEngineOn = mEngineOn;
+          bool registerMaskNeeded = false;
 
           if (mEngineOn) {
               // if EngineOn and not InSession, then we have already stopped
@@ -5353,12 +5375,19 @@ void LocApiV02 :: reportEngineState (
           } else {
               mpLocApiV02->reportStatus(LOC_GPS_STATUS_SESSION_END);
               mpLocApiV02->reportStatus(LOC_GPS_STATUS_ENGINE_OFF);
-              mpLocApiV02->registerEventMask(mpLocApiV02->mMask);
               for (auto resender : mpLocApiV02->mResenders) {
                   LOC_LOGV("%s:%d]: resend failed command.", __func__, __LINE__);
                   resender();
               }
+              if (mpLocApiV02->mResenders.empty() == false) {
+                  registerMaskNeeded = true;
+              }
               mpLocApiV02->mResenders.clear();
+          }
+          if (registerMaskNeeded) {
+              // after flush the cached request queue, check whether we need to
+              // re-register with the event mask
+              mpLocApiV02->registerEventMask(mpLocApiV02->mMask);
           }
       }
   };
@@ -6713,7 +6742,12 @@ int LocApiV02 :: convertGnssClock (GnssMeasurementsClock& clock,
 void LocApiV02 :: eventCb(locClientHandleType /*clientHandle*/,
   uint32_t eventId, locClientEventIndUnionType eventPayload)
 {
-  LOC_LOGd("recevied event %s", loc_get_v02_event_name(eventId));
+  LOC_LOGd("event id = 0x%X, event name %s", eventId, loc_get_v02_event_name(eventId));
+  if ((mPlatformPowerState == eQMI_LOC_POWER_STATE_SUSPENDED_V02) ||
+            (mPlatformPowerState == eQMI_LOC_POWER_STATE_SHUTDOWN_V02)) {
+      syslog(LOG_INFO, "eventCb: event id = 0x%X, event name %s",
+             eventId, loc_get_v02_event_name(eventId));
+  }
 
   switch(eventId)
   {
@@ -6809,6 +6843,10 @@ void LocApiV02 :: eventCb(locClientHandleType /*clientHandle*/,
     // System info event regarding next leap second
     case QMI_LOC_SYSTEM_INFO_IND_V02:
       reportSystemInfo(eventPayload.pLocSystemInfoEvent);
+      break;
+
+    case QMI_LOC_EVENT_PLATFORM_POWER_STATE_CHANGED_IND_V02:
+      reportPowerStateChangeInfo(eventPayload.pPowerStateChangedIndMsg);
       break;
   }
 }
@@ -7297,7 +7335,7 @@ void LocApiV02 :: updatePowerState(PowerStateType powerState){
     locClientStatusEnumType status;
     locClientReqUnionType req_union;
 
-    LOC_LOGd("Enter. power state %d", powerState);
+    syslog(LOG_INFO, "updatePowerState: power state %d", powerState);
     qmiLocPlatformPowerStateEnumT_v02 qmiPowerState = eQMI_LOC_POWER_STATE_UNKNOWN_V02;
     switch (powerState) {
     case POWER_STATE_SUSPEND:
@@ -7321,7 +7359,7 @@ void LocApiV02 :: updatePowerState(PowerStateType powerState){
         req_union.pInjectPowerStateReq = &req;
 
         status = locSyncSendReq(QMI_LOC_INJECT_PLATFORM_POWER_STATE_REQ_V02,
-                                req_union, LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
+                                req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
                                 QMI_LOC_INJECT_PLATFORM_POWER_STATE_IND_V02,
                                 &ind);
         if(status != eLOC_CLIENT_SUCCESS || ind.status != eQMI_LOC_SUCCESS_V02) {
@@ -7334,6 +7372,34 @@ void LocApiV02 :: updatePowerState(PowerStateType powerState){
 
     LOC_LOGd("Exit. err: %u", err);
     }));
+}
+
+void LocApiV02::reportPowerStateChangeInfo(
+        const qmiLocPlatformPowerStateChangedIndMsgT_v02 *pPowerStateChangedInfo) {
+
+    struct MsgUpdatePowerState : public LocMsg {
+        LocApiV02* mpLocApiV02;
+        qmiLocPlatformPowerStateEnumT_v02 mNewPowerState;
+
+        inline MsgUpdatePowerState(LocApiV02* pLocApiV02,
+                                   qmiLocPlatformPowerStateEnumT_v02 newPowerState) :
+                LocMsg(), mpLocApiV02(pLocApiV02),
+                mNewPowerState(newPowerState) {}
+        inline virtual void proc() const {
+            mpLocApiV02->mPlatformPowerState = mNewPowerState;
+            mpLocApiV02->registerEventMask(mpLocApiV02->mMask);
+        }
+    };
+
+    syslog(LOG_INFO, "reportPowerStateChangeInfo, old state: %d %d, new state: %d, %d",
+             pPowerStateChangedInfo->powerStateOld_valid,
+             pPowerStateChangedInfo->powerStateOld,
+             pPowerStateChangedInfo->powerStateNew_valid,
+             pPowerStateChangedInfo->powerStateNew);
+
+    if (pPowerStateChangedInfo->powerStateNew_valid) {
+        sendMsg(new MsgUpdatePowerState(this, pPowerStateChangedInfo->powerStateNew));
+    }
 }
 
 void LocApiV02::configRobustLocation
@@ -7677,7 +7743,8 @@ locClientStatusEnumType LocApiV02::locSyncSendReq(uint32_t req_id,
     if (eLOC_CLIENT_FAILURE_ENGINE_BUSY == status ||
             (eLOC_CLIENT_SUCCESS == status && nullptr != ind_payload_ptr &&
             eQMI_LOC_ENGINE_BUSY_V02 == *((qmiLocStatusEnumT_v02*)ind_payload_ptr))) {
-        if (mResenders.empty() && ((mQmiMask & QMI_LOC_EVENT_MASK_ENGINE_STATE_V02) == 0)) {
+        if (mPlatformPowerState == eQMI_LOC_POWER_STATE_RESUME_V02 &&
+                mResenders.empty() && ((mQmiMask & QMI_LOC_EVENT_MASK_ENGINE_STATE_V02) == 0)) {
             locClientRegisterEventMask(clientHandle,
                                        mQmiMask | QMI_LOC_EVENT_MASK_ENGINE_STATE_V02, isMaster());
         }

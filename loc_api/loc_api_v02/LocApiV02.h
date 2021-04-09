@@ -28,7 +28,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -196,9 +196,10 @@ private:
   std::vector<adrData>  mADRdata;
   timeBiases mTimeBiases;
   GnssMeasurementsNotification m1HzMeasurementsNotify;
+  qmiLocPlatformPowerStateEnumT_v02 mPlatformPowerState;
 
   /* Convert event mask from loc eng to loc_api_v02 format */
-  static locClientEventMaskType convertMask(LOC_API_ADAPTER_EVENT_MASK_T mask);
+  static locClientEventMaskType convertLocClientEventMask(LOC_API_ADAPTER_EVENT_MASK_T mask);
 
   /* Convert GPS LOCK from LocationAPI format to QMI format */
   static qmiLocLockEnumT_v02 convertGpsLockFromAPItoQMI(GnssConfigGpsLock lock);
@@ -350,7 +351,7 @@ private:
 
   void registerEventMask(LOC_API_ADAPTER_EVENT_MASK_T adapterMask);
   bool sendRequestForAidingData(locClientEventMaskType qmiMask);
-  locClientEventMaskType adjustMaskIfNoSession(locClientEventMaskType qmiMask);
+  locClientEventMaskType adjustLocClientEventMask(locClientEventMaskType qmiMask);
   bool cacheGnssMeasurementSupport();
   void registerMasterClient();
   int getGpsLock(uint8_t subType);
@@ -373,6 +374,9 @@ private:
 
   bool isTOAValid(const qmiLocEventPositionReportIndMsgT_v02 *location_report_ptr,
           const GnssMeasurementsNotification *pOneHzMeasurements);
+
+  void reportPowerStateChangeInfo(
+        const qmiLocPlatformPowerStateChangedIndMsgT_v02 *pPowerStateChangedInfo);
 
 protected:
   virtual enum loc_api_adapter_err
