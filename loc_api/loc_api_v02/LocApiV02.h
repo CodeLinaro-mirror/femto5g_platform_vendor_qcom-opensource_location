@@ -170,9 +170,10 @@ private:
   uint32_t mMinInterval;
   std::vector<adrData>  mADRdata;
   timeBiases mTimeBiases;
+  qmiLocPlatformPowerStateEnumT_v02 mPlatformPowerState;
 
   /* Convert event mask from loc eng to loc_api_v02 format */
-  static locClientEventMaskType convertMask(LOC_API_ADAPTER_EVENT_MASK_T mask);
+  static locClientEventMaskType convertLocClientEventMask(LOC_API_ADAPTER_EVENT_MASK_T mask);
 
   /* Convert GPS LOCK from LocationAPI format to QMI format */
   static qmiLocLockEnumT_v02 convertGpsLockFromAPItoQMI(GnssConfigGpsLock lock);
@@ -326,7 +327,7 @@ private:
 
   void registerEventMask(LOC_API_ADAPTER_EVENT_MASK_T adapterMask);
   bool sendRequestForAidingData(locClientEventMaskType qmiMask);
-  locClientEventMaskType adjustMaskIfNoSession(locClientEventMaskType qmiMask);
+  locClientEventMaskType adjustLocClientEventMask(locClientEventMaskType qmiMask);
   bool cacheGnssMeasurementSupport();
   void registerMasterClient();
   int getGpsLock(uint8_t subType);
@@ -345,6 +346,9 @@ private:
   void wifiStatusInformSync();
 
   void reportLatencyInfo(const qmiLocLatencyInformationIndMsgT_v02* pLocLatencyInfo);
+
+  void reportPowerStateChangeInfo(
+        const qmiLocPlatformPowerStateChangedIndMsgT_v02 *pPowerStateChangedInfo);
 
 protected:
   virtual enum loc_api_adapter_err
