@@ -352,6 +352,11 @@ static const locClientEventIndTableStructT locClientEventIndTable[]= {
   { QMI_LOC_EVENT_QUERY_XTRA_INFO_REQ_IND_V02,
     sizeof(qmiLocEventQueryXtraInfoReqIndMsgT_v02),
     QMI_LOC_EVENT_MASK_QUERY_XTRA_INFO_V02},
+
+  // platform power state event ind
+  { QMI_LOC_EVENT_PLATFORM_POWER_STATE_CHANGED_IND_V02,
+    sizeof(qmiLocPlatformPowerStateChangedIndMsgT_v02),
+    QMI_LOC_EVENT_PLATFORM_POWER_STATE_CHANGED_IND_V02},
 };
 
 /* table to relate the respInd Id with its size */
