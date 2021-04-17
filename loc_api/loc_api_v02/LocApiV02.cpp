@@ -2760,7 +2760,7 @@ void LocApiV02 :: reportPosition (
         locationExtended.tech_mask = convertPosTechMask(location_report_ptr->technologyMask);
 
         //Mark the location source as from GNSS
-        location.gpsLocation.flags |= LOCATION_HAS_SOURCE_INFO;
+        location.gpsLocation.flags |= LOC_GPS_LOCATION_HAS_SOURCE_INFO;
         location.position_source = ULP_LOCATION_IS_FROM_GNSS;
 
         if (location_report_ptr->spoofReportMask_valid)
@@ -3257,6 +3257,18 @@ void LocApiV02 :: reportPosition (
                     GPS_LOCATION_EXTENDED_HAS_DGNSS_DATA_AGE;
             locationExtended.dgnssDataAgeMsec =
                     location_report_ptr->dgnssDataAgeMsec;
+        }
+
+        if (location_report_ptr->systemTick_valid &&
+            location_report_ptr->systemTickUnc_valid) {
+            /* deal with Qtimer for ElapsedRealTimeNanos */
+            location.gpsLocation.flags |= LOC_GPS_LOCATION_HAS_ELAPSED_REAL_TIME;
+            location.gpsLocation.elapsedRealTime = location_report_ptr->systemTick;
+
+            /* Uncertainty on HLOS time is 0, so the uncertainty of the difference
+               is the uncertainty of the Qtimer in the modem */
+            location.gpsLocation.elapsedRealTimeUnc =
+                    qTimerTicksToNanos((double)location_report_ptr->systemTickUnc);
         }
 
         LOC_LOGv("report position mask: 0x%" PRIx64 ", dgnss info: 0x%x %d %d %d %d,",
@@ -4548,39 +4560,25 @@ void LocApiV02 :: reportAtlRequest(
 {
   uint32_t connHandle = server_request_ptr->connHandle;
 
-  if(server_request_ptr->requestType == eQMI_LOC_SERVER_REQUEST_OPEN_V02 )
+  if (server_request_ptr->requestType == eQMI_LOC_SERVER_REQUEST_OPEN_V02)
   {
     LocAGpsType agpsType = LOC_AGPS_TYPE_ANY;
     LocApnTypeMask apnTypeMask = 0;
 
-    // Check if bearer type indicates WLAN
-    if (server_request_ptr->bearerType_valid) {
-        switch(server_request_ptr->bearerType) {
-        case eQMI_LOC_BEARER_TYPE_WLAN_V02:
-            agpsType = LOC_AGPS_TYPE_WIFI;
-            break;
-        default:
-            break;
-        }
-    }
-
-    // Check the WWAN Type
-    if (LOC_AGPS_TYPE_ANY == agpsType) {
-        switch(server_request_ptr->wwanType)
-        {
-        case eQMI_LOC_WWAN_TYPE_INTERNET_V02:
-          agpsType = LOC_AGPS_TYPE_WWAN_ANY;
-          break;
-        case eQMI_LOC_WWAN_TYPE_AGNSS_V02:
-          agpsType = LOC_AGPS_TYPE_SUPL;
-          break;
-        case eQMI_LOC_WWAN_TYPE_AGNSS_EMERGENCY_V02:
-          agpsType = LOC_AGPS_TYPE_SUPL_ES;
-          break;
-        default:
-          agpsType = LOC_AGPS_TYPE_WWAN_ANY;
-          break;
-        }
+    switch (server_request_ptr->wwanType)
+    {
+      case eQMI_LOC_WWAN_TYPE_INTERNET_V02:
+        agpsType = LOC_AGPS_TYPE_WWAN_ANY;
+        break;
+      case eQMI_LOC_WWAN_TYPE_AGNSS_V02:
+        agpsType = LOC_AGPS_TYPE_SUPL;
+        break;
+      case eQMI_LOC_WWAN_TYPE_AGNSS_EMERGENCY_V02:
+        agpsType = LOC_AGPS_TYPE_SUPL_ES;
+        break;
+      default:
+        agpsType = LOC_AGPS_TYPE_WWAN_ANY;
+        break;
     }
 
     if (server_request_ptr->apnTypeMask_valid) {
@@ -5008,6 +5006,21 @@ void LocApiV02::reportGnssMeasurementData(
 
     if (gnss_measurement_report_ptr.maxMessageNum == gnss_measurement_report_ptr.seqNum) {
         LOC_LOGv("Report the measurements to the upper layer");
+        if (gnss_measurement_report_ptr.refCountTicks_valid &&
+            gnss_measurement_report_ptr.refCountTicksUnc_valid) {
+            /* deal with Qtimer for ElapsedRealTimeNanos */
+
+            mGnssMeasurements->gnssMeasNotification.clock.flags |=
+                    GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_BIT;
+
+            mGnssMeasurements->gnssMeasNotification.clock.elapsedRealTime =
+                    gnss_measurement_report_ptr.refCountTicks;
+
+            /* Uncertainty on HLOS time is 0, so the uncertainty of the difference
+            is the uncertainty of the Qtimer in the modem */
+             mGnssMeasurements->gnssMeasNotification.clock.elapsedRealTimeUnc =
+                    qTimerTicksToNanos((double)gnss_measurement_report_ptr.refCountTicksUnc);
+        }
         reportSvMeasurementInternal();
         resetSvMeasurementReport();
         // set up flag to indicate that no new info in mGnssMeasurements
