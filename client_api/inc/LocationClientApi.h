@@ -1178,6 +1178,8 @@ struct GnssSv {
      *  GNSS_SV_OPTIONS_HAS_GNSS_SIGNAL_TYPE_BIT. <br/> */
     GnssSignalTypeMask gnssSignalTypeMask;
     /** GLONASS frequency channel number, range is [1, 14].
+     * <br/>
+     * This field is always valid if and only if sv is of GLONASS.
      * <br/> */
     uint16_t gloFrequency;
     /** Method to print the struct to human readable form, for logging.
@@ -1338,6 +1340,16 @@ enum GnssMeasurementsDataFlagsMask{
     /** GnssMeasurementsData has valid
      *  GnssMeasurementsData::gnssSignalType. <br/> */
     GNSS_MEASUREMENTS_DATA_GNSS_SIGNAL_TYPE_BIT             = (1<<18),
+    /** GnssMeasurementsData has valid
+     *  GnssMeasurementsData::basebandCarrierToNoiseDbHz. <br/> */
+    GNSS_MEASUREMENTS_DATA_BASEBAND_CARRIER_TO_NOISE_BIT    = (1<<19),
+    /** GnssMeasurementsData has valid
+     *  GnssMeasurementsData::fullInterSignalBiasNs. <br/> */
+    GNSS_MEASUREMENTS_DATA_FULL_ISB_BIT                     = (1<<20),
+    /** GnssMeasurementsData has valid
+     *  GnssMeasurementsData::fullInterSignalBiasUncertaintyNs.
+     *  <br/> */
+    GNSS_MEASUREMENTS_DATA_FULL_ISB_UNCERTAINTY_BIT         = (1<<21),
 };
 
 /** Specify GNSS measurement state in
@@ -1501,6 +1513,22 @@ struct GnssMeasurementsData {
     double agcLevelDb;
     /** Signal type of the measurement.  <br/> */
     GnssSignalTypeMask gnssSignalType;
+    /** Carrier-to-noise ratio of the signal measured at baseband,
+     *  in unit of dB-Hz. <br/>
+     *  This field is valid if GnssMeasurementsData::flags has
+     *  GNSS_MEASUREMENTS_DATA_BASEBAND_CARRIER_TO_NOISE_BIT set.
+     *  <br/> */
+    double basebandCarrierToNoiseDbHz;
+    /** The full inter-signal bias (ISB) in nanoseconds. <br/>
+     *  This value is the sum of the estimated receiver-side and the
+     *  space-segment-side inter-system bias, inter-frequency bias
+     *  and inter-code bias. <br/>
+     */
+    double fullInterSignalBiasNs;
+    /** 1-sigma uncertainty associated with the full inter-signal
+     *  bias in nanoseconds. <br/>   */
+    double fullInterSignalBiasUncertaintyNs;
+
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
     string toString() const;
