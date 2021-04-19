@@ -824,7 +824,11 @@ DECLARE_TBL(GnssMeasurementsDataFlagsMask) = {
     {GNSS_MEASUREMENTS_DATA_CARRIER_PHASE_UNCERTAINTY_BIT, "carrierPhaseUncertainty"},
     {GNSS_MEASUREMENTS_DATA_MULTIPATH_INDICATOR_BIT, "multipathIndicator"},
     {GNSS_MEASUREMENTS_DATA_SIGNAL_TO_NOISE_RATIO_BIT, "signalToNoiseRatioDb"},
-    {GNSS_MEASUREMENTS_DATA_AUTOMATIC_GAIN_CONTROL_BIT, "agcLevelDb"}
+    {GNSS_MEASUREMENTS_DATA_AUTOMATIC_GAIN_CONTROL_BIT, "agcLevelDb"},
+    {GNSS_MEASUREMENTS_DATA_GNSS_SIGNAL_TYPE_BIT, "gnssSignalType"},
+    {GNSS_MEASUREMENTS_DATA_BASEBAND_CARRIER_TO_NOISE_BIT, "basebandCarrierToNoiseDbHz"},
+    {GNSS_MEASUREMENTS_DATA_FULL_ISB_BIT, "fullInterSignalBiasNs"},
+    {GNSS_MEASUREMENTS_DATA_FULL_ISB_UNCERTAINTY_BIT, "fullInterSignalBiasUncertaintyNs"},
 };
 // GnssMeasurementsStateMask
 DECLARE_TBL(GnssMeasurementsStateMask) = {
@@ -1158,6 +1162,9 @@ string GnssMeasurementsData::toString() const {
     out += FIELDVAL_DEC(signalToNoiseRatioDb);
     out += FIELDVAL_DEC(agcLevelDb);
     out += FIELDVAL_MASK(gnssSignalType, GnssSignalTypeMask_tbl);
+    out += FIELDVAL_DEC(basebandCarrierToNoiseDbHz);
+    out += FIELDVAL_DEC(fullInterSignalBiasNs);
+    out += FIELDVAL_DEC(fullInterSignalBiasUncertaintyNs);
 
     return out;
 }
