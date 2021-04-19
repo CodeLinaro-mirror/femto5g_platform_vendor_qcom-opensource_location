@@ -262,7 +262,8 @@ LocApiV02 :: LocApiV02(LOC_API_ADAPTER_EVENT_MASK_T exMask,
     mMasterRegisterNotSupported(false),
     mSvMeasurementSet(nullptr),
     mIsFirstFinalFixReported(false),
-    mIsFirstStartFixReq(false)
+    mIsFirstStartFixReq(false),
+    mTimeBiases{}
 {
   // initialize loc_sync_req interface
   loc_sync_req_init();
@@ -3741,6 +3742,14 @@ void  LocApiV02 :: reportSvMeasurement (
         getInterSystemTimeBias("gpsGloInterSystemBias",
                                svMeasSetHead.gpsGloInterSystemBias, interSystemBias);
         svMeasSetHead.flags |= GNSS_SV_MEAS_HEADER_HAS_GPS_GLO_INTER_SYSTEM_BIAS;
+        if (interSystemBias->validMask & QMI_LOC_SYS_TIME_BIAS_VALID_V02) {
+            mTimeBiases.gpsL1_gloG1 = interSystemBias->timeBias * 1000000;
+            mTimeBiases.flags |= BIAS_GPSL1_GLOG1_VALID;
+        }
+        if (interSystemBias->validMask & QMI_LOC_SYS_TIME_BIAS_UNC_VALID_V02) {
+            mTimeBiases.gpsL1_gloG1Unc = interSystemBias->timeBiasUnc * 1000000;
+            mTimeBiases.flags |= BIAS_GPSL1_GLOG1_UNC_VALID;
+        }
     }
 
     if (1 == gnss_raw_measurement_ptr->gpsBdsInterSystemBias_valid) {
@@ -3750,6 +3759,14 @@ void  LocApiV02 :: reportSvMeasurement (
         getInterSystemTimeBias("gpsBdsInterSystemBias",
                                svMeasSetHead.gpsBdsInterSystemBias, interSystemBias);
         svMeasSetHead.flags |= GNSS_SV_MEAS_HEADER_HAS_GPS_BDS_INTER_SYSTEM_BIAS;
+        if (interSystemBias->validMask & QMI_LOC_SYS_TIME_BIAS_VALID_V02) {
+            mTimeBiases.gpsL1_bdsB1 = interSystemBias->timeBias * 1000000;
+            mTimeBiases.flags |= BIAS_GPSL1_BDSB1_VALID;
+        }
+        if (interSystemBias->validMask & QMI_LOC_SYS_TIME_BIAS_UNC_VALID_V02) {
+            mTimeBiases.gpsL1_bdsB1Unc = interSystemBias->timeBiasUnc * 1000000;
+            mTimeBiases.flags |= BIAS_GPSL1_BDSB1_UNC_VALID;
+        }
     }
 
     if (1 == gnss_raw_measurement_ptr->gpsGalInterSystemBias_valid) {
@@ -3759,6 +3776,15 @@ void  LocApiV02 :: reportSvMeasurement (
         getInterSystemTimeBias("gpsGalInterSystemBias",
                                svMeasSetHead.gpsGalInterSystemBias, interSystemBias);
         svMeasSetHead.flags |= GNSS_SV_MEAS_HEADER_HAS_GPS_GAL_INTER_SYSTEM_BIAS;
+
+        if (interSystemBias->validMask & QMI_LOC_SYS_TIME_BIAS_VALID_V02) {
+            mTimeBiases.gpsL1_galE1 = interSystemBias->timeBias * 1000000;
+            mTimeBiases.flags |= BIAS_GPSL1_GALE1_VALID;
+        }
+        if (interSystemBias->validMask & QMI_LOC_SYS_TIME_BIAS_UNC_VALID_V02) {
+            mTimeBiases.gpsL1_galE1Unc = interSystemBias->timeBiasUnc * 1000000;
+            mTimeBiases.flags |= BIAS_GPSL1_GALE1_UNC_VALID;
+        }
     }
 
     if (1 == gnss_raw_measurement_ptr->bdsGloInterSystemBias_valid) {
@@ -3794,6 +3820,17 @@ void  LocApiV02 :: reportSvMeasurement (
         getInterSystemTimeBias("gpsNavicInterSystemBias",
             svMeasSetHead.gpsNavicInterSystemBias, interSystemBias);
         svMeasSetHead.flags |= GNSS_SV_MEAS_HEADER_HAS_GPS_NAVIC_INTER_SYSTEM_BIAS;
+
+        if (interSystemBias->validMask &
+            QMI_LOC_SYS_TIME_BIAS_VALID_V02) {
+            mTimeBiases.gpsL1_navic = interSystemBias->timeBias * 1000000;
+            mTimeBiases.flags |= BIAS_GPSL1_NAVIC_VALID;
+        }
+        if (interSystemBias->validMask & QMI_LOC_SYS_TIME_BIAS_UNC_VALID_V02) {
+            mTimeBiases.gpsL1_navicUnc = interSystemBias->timeBiasUnc * 1000000;
+            mTimeBiases.flags |= BIAS_GPSL1_NAVIC_UNC_VALID;
+        }
+
     }
 
     if (1 == gnss_raw_measurement_ptr->galNavicInterSystemBias_valid) {
@@ -3826,6 +3863,15 @@ void  LocApiV02 :: reportSvMeasurement (
         getInterSystemTimeBias("gpsL1L5TimeBias",
                                svMeasSetHead.gpsL1L5TimeBias, interSystemBias);
         svMeasSetHead.flags |= GNSS_SV_MEAS_HEADER_HAS_GPSL1L5_TIME_BIAS;
+        if (interSystemBias->validMask & QMI_LOC_SYS_TIME_BIAS_VALID_V02) {
+            mTimeBiases.gpsL1_gpsL5 = interSystemBias->timeBias * 1000000;
+            mTimeBiases.flags |= BIAS_GPSL1_GPSL5_VALID;
+        }
+        if (interSystemBias->validMask & QMI_LOC_SYS_TIME_BIAS_UNC_VALID_V02) {
+            mTimeBiases.gpsL1_gpsL5Unc = interSystemBias->timeBiasUnc * 1000000;
+            mTimeBiases.flags |= BIAS_GPSL1_GPSL5_UNC_VALID;
+        }
+
     }
 
     if (1 == gnss_raw_measurement_ptr->GalE1E5aTimeBias_valid) {
@@ -3835,6 +3881,15 @@ void  LocApiV02 :: reportSvMeasurement (
         getInterSystemTimeBias("galE1E5aTimeBias",
                                svMeasSetHead.galE1E5aTimeBias, interSystemBias);
         svMeasSetHead.flags |= GNSS_SV_MEAS_HEADER_HAS_GALE1E5A_TIME_BIAS;
+
+        if (interSystemBias->validMask & QMI_LOC_SYS_TIME_BIAS_VALID_V02) {
+            mTimeBiases.galE1_galE5a = interSystemBias->timeBias * 1000000;
+            mTimeBiases.flags |= BIAS_GALE1_GALE5A_VALID;
+        }
+        if (interSystemBias->validMask & QMI_LOC_SYS_TIME_BIAS_UNC_VALID_V02) {
+            mTimeBiases.galE1_galE5aUnc = interSystemBias->timeBiasUnc * 1000000;
+            mTimeBiases.flags |= BIAS_GALE1_GALE5A_UNC_VALID;
+        }
     }
 
     if (1 == gnss_raw_measurement_ptr->BdsB1iB2aTimeBias_valid) {
@@ -3844,6 +3899,14 @@ void  LocApiV02 :: reportSvMeasurement (
         getInterSystemTimeBias("bdsB1iB2aTimeBias",
                                svMeasSetHead.bdsB1iB2aTimeBias, interSystemBias);
         svMeasSetHead.flags |= GNSS_SV_MEAS_HEADER_HAS_BDSB1IB2A_TIME_BIAS;
+        if (interSystemBias->validMask & QMI_LOC_SYS_TIME_BIAS_VALID_V02) {
+            mTimeBiases.bdsB1_bdsB2a = interSystemBias->timeBias * 1000000;
+            mTimeBiases.flags |= BIAS_BDSB1_BDSB2A_VALID;
+        }
+        if (interSystemBias->validMask & QMI_LOC_SYS_TIME_BIAS_UNC_VALID_V02) {
+            mTimeBiases.bdsB1_bdsB2aUnc = interSystemBias->timeBiasUnc * 1000000;
+            mTimeBiases.flags |= BIAS_BDSB1_BDSB2A_UNC_VALID;
+        }
     }
 
     if (1 == gnss_raw_measurement_ptr->gloTime_valid) {
@@ -3887,18 +3950,42 @@ void  LocApiV02 :: reportSvMeasurement (
             systemTimeExtPtr = &svMeasSetHead.gpsSystemTimeExt;
             systemTimeFlags = GNSS_SV_MEAS_HEADER_HAS_GPS_SYSTEM_TIME;
             systemTimeExtFlags = GNSS_SV_MEAS_HEADER_HAS_GPS_SYSTEM_TIME_EXT;
+            if (gnss_raw_measurement_ptr->systemTime_valid) {
+                mTimeBiases.gpsL1 =
+                        gnss_raw_measurement_ptr->systemTime.systemClkTimeBias * 1000000;
+                mTimeBiases.gpsL1Unc =
+                        gnss_raw_measurement_ptr->systemTime.systemClkTimeUncMs * 1000000;
+                mTimeBiases.flags |= BIAS_GPSL1_VALID;
+                mTimeBiases.flags |= BIAS_GPSL1_UNC_VALID;
+            }
             break;
         case GNSS_LOC_SV_SYSTEM_GALILEO:
             systemTimePtr = &svMeasSetHead.galSystemTime;
             systemTimeExtPtr = &svMeasSetHead.galSystemTimeExt;
             systemTimeFlags = GNSS_SV_MEAS_HEADER_HAS_GAL_SYSTEM_TIME;
             systemTimeExtFlags = GNSS_SV_MEAS_HEADER_HAS_GAL_SYSTEM_TIME_EXT;
+            if (gnss_raw_measurement_ptr->systemTime_valid) {
+                mTimeBiases.galE1 =
+                        gnss_raw_measurement_ptr->systemTime.systemClkTimeBias * 1000000;
+                mTimeBiases.galE1Unc =
+                        gnss_raw_measurement_ptr->systemTime.systemClkTimeUncMs * 1000000;
+                mTimeBiases.flags |= BIAS_GALE1_VALID;
+                mTimeBiases.flags |= BIAS_GALE1_UNC_VALID;
+            }
             break;
         case GNSS_LOC_SV_SYSTEM_BDS:
             systemTimePtr = &svMeasSetHead.bdsSystemTime;
             systemTimeExtPtr = &svMeasSetHead.bdsSystemTimeExt;
             systemTimeFlags = GNSS_SV_MEAS_HEADER_HAS_BDS_SYSTEM_TIME;
             systemTimeExtFlags = GNSS_SV_MEAS_HEADER_HAS_BDS_SYSTEM_TIME_EXT;
+            if (gnss_raw_measurement_ptr->systemTime_valid) {
+                mTimeBiases.bdsB1 =
+                        gnss_raw_measurement_ptr->systemTime.systemClkTimeBias * 1000000;
+                mTimeBiases.bdsB1Unc =
+                        gnss_raw_measurement_ptr->systemTime.systemClkTimeUncMs * 1000000;
+                mTimeBiases.flags |= BIAS_BDSB1_VALID;
+                mTimeBiases.flags |= BIAS_BDSB1_UNC_VALID;
+            }
             break;
         case GNSS_LOC_SV_SYSTEM_QZSS:
             systemTimePtr = &svMeasSetHead.qzssSystemTime;
@@ -5419,6 +5506,151 @@ bool LocApiV02 :: convertNiNotifyVerifyType (
    return true;
 }
 
+void LocApiV02::setGnssBiases(GnssMeasurementsNotification& mGnssMeasurements) {
+    GnssMeasurementsData* measData;
+    uint64_t tempFlag, tempFlagUnc;
+
+    for (uint32_t i = 0; i < mGnssMeasurements.count; i++) {
+        measData = &mGnssMeasurements.measurements[i];
+        switch (measData->gnssSignalType) {
+        case GNSS_SIGNAL_GPS_L1CA:
+            measData->fullInterSignalBiasNs = 0.0;
+            measData->flags |= GNSS_MEASUREMENTS_DATA_FULL_ISB_BIT;
+            measData->fullInterSignalBiasUncertaintyNs = 0.0;
+            measData->flags |= GNSS_MEASUREMENTS_DATA_FULL_ISB_UNCERTAINTY_BIT;
+            break;
+
+        case GNSS_SIGNAL_GPS_L5:
+        case GNSS_SIGNAL_QZSS_L5:
+            if (mTimeBiases.flags & BIAS_GPSL1_GPSL5_VALID) {
+                measData->fullInterSignalBiasNs = mTimeBiases.gpsL1_gpsL5;
+                measData->flags |= GNSS_MEASUREMENTS_DATA_FULL_ISB_BIT;
+            }
+            if (mTimeBiases.flags & BIAS_GPSL1_GPSL5_UNC_VALID) {
+                measData->fullInterSignalBiasUncertaintyNs = mTimeBiases.gpsL1_gpsL5Unc;
+                measData->flags |= GNSS_MEASUREMENTS_DATA_FULL_ISB_UNCERTAINTY_BIT;
+            }
+            break;
+
+        case GNSS_SIGNAL_GLONASS_G1:
+            if (mTimeBiases.flags & BIAS_GPSL1_GLOG1_VALID) {
+                measData->fullInterSignalBiasNs = mTimeBiases.gpsL1_gloG1;
+                measData->flags |= GNSS_MEASUREMENTS_DATA_FULL_ISB_BIT;
+            }
+            if (mTimeBiases.flags & BIAS_GPSL1_GLOG1_UNC_VALID) {
+                measData->fullInterSignalBiasUncertaintyNs = mTimeBiases.gpsL1_gloG1Unc;
+                measData->flags |= GNSS_MEASUREMENTS_DATA_FULL_ISB_UNCERTAINTY_BIT;
+            }
+            break;
+
+        case GNSS_SIGNAL_GALILEO_E1:
+            if (mTimeBiases.flags & BIAS_GPSL1_GALE1_VALID) {
+                measData->fullInterSignalBiasNs = mTimeBiases.gpsL1_galE1;
+                measData->flags |= GNSS_MEASUREMENTS_DATA_FULL_ISB_BIT;
+            }
+            if (mTimeBiases.flags & BIAS_GPSL1_GALE1_UNC_VALID) {
+                measData->fullInterSignalBiasUncertaintyNs = mTimeBiases.gpsL1_galE1Unc;
+                measData->flags |= GNSS_MEASUREMENTS_DATA_FULL_ISB_UNCERTAINTY_BIT;
+            }
+            break;
+
+        case GNSS_SIGNAL_GALILEO_E5A:
+            tempFlag = BIAS_GPSL1_VALID | BIAS_GALE1_VALID | BIAS_GALE1_GALE5A_VALID;
+            tempFlagUnc =
+                    BIAS_GPSL1_UNC_VALID | BIAS_GALE1_UNC_VALID | BIAS_GALE1_GALE5A_UNC_VALID;
+            if (tempFlag == (mTimeBiases.flags & tempFlag)) {
+                measData->fullInterSignalBiasNs =
+                        -mTimeBiases.gpsL1 + mTimeBiases.galE1 + mTimeBiases.galE1_galE5a;
+                measData->flags |= GNSS_MEASUREMENTS_DATA_FULL_ISB_BIT;
+            }
+            if (tempFlagUnc == (mTimeBiases.flags & tempFlagUnc)) {
+                measData->fullInterSignalBiasUncertaintyNs =
+                        mTimeBiases.gpsL1Unc + mTimeBiases.galE1Unc + mTimeBiases.galE1_galE5aUnc;
+                measData->flags |= GNSS_MEASUREMENTS_DATA_FULL_ISB_UNCERTAINTY_BIT;
+            }
+            break;
+
+        case GNSS_SIGNAL_BEIDOU_B1I:
+            if (mTimeBiases.flags & BIAS_GPSL1_BDSB1_VALID) {
+                measData->fullInterSignalBiasNs = mTimeBiases.gpsL1_bdsB1;
+                measData->flags |= GNSS_MEASUREMENTS_DATA_FULL_ISB_BIT;
+            }
+            if (mTimeBiases.flags & BIAS_GPSL1_BDSB1_UNC_VALID) {
+                measData->fullInterSignalBiasUncertaintyNs = mTimeBiases.gpsL1_bdsB1Unc;
+                measData->flags |= GNSS_MEASUREMENTS_DATA_FULL_ISB_UNCERTAINTY_BIT;
+            }
+            break;
+
+        case GNSS_SIGNAL_QZSS_L1CA:
+        case GNSS_SIGNAL_QZSS_L1S:
+        case GNSS_SIGNAL_SBAS_L1:
+            if (mTimeBiases.flags & BIAS_GPSL1_VALID) {
+                measData->fullInterSignalBiasNs = 0;
+                measData->flags |= GNSS_MEASUREMENTS_DATA_FULL_ISB_BIT;
+            }
+            if (mTimeBiases.flags & BIAS_GPSL1_UNC_VALID) {
+                measData->fullInterSignalBiasUncertaintyNs = 0;
+                measData->flags |= GNSS_MEASUREMENTS_DATA_FULL_ISB_UNCERTAINTY_BIT;
+            }
+            break;
+
+        case GNSS_SIGNAL_BEIDOU_B1C:
+            tempFlag = BIAS_GPSL1_VALID | BIAS_BDSB1_VALID | BIAS_BDSB1_BDSB1C_VALID;
+            tempFlagUnc =
+                    BIAS_GPSL1_UNC_VALID | BIAS_BDSB1_UNC_VALID | BIAS_BDSB1_BDSB1C_UNC_VALID;
+            if (tempFlag == (mTimeBiases.flags & tempFlag)) {
+                measData->fullInterSignalBiasNs =
+                        -mTimeBiases.gpsL1 + mTimeBiases.bdsB1 + mTimeBiases.bdsB1_bdsB1c;
+                measData->flags |= GNSS_MEASUREMENTS_DATA_FULL_ISB_BIT;
+            }
+            if (tempFlagUnc == (mTimeBiases.flags & tempFlagUnc)) {
+                measData->fullInterSignalBiasUncertaintyNs =
+                        mTimeBiases.gpsL1Unc + mTimeBiases.bdsB1Unc + mTimeBiases.bdsB1_bdsB1cUnc;
+                measData->flags |= GNSS_MEASUREMENTS_DATA_FULL_ISB_UNCERTAINTY_BIT;
+            }
+            break;
+
+        case GNSS_SIGNAL_NAVIC_L5:
+            if (mTimeBiases.flags & BIAS_GPSL1_NAVIC_VALID) {
+                measData->fullInterSignalBiasNs = mTimeBiases.gpsL1_navic;
+                measData->flags |= GNSS_MEASUREMENTS_DATA_FULL_ISB_BIT;
+            }
+            if (mTimeBiases.flags & BIAS_GPSL1_NAVIC_UNC_VALID) {
+                measData->fullInterSignalBiasUncertaintyNs = mTimeBiases.gpsL1_navicUnc;
+                measData->flags |= GNSS_MEASUREMENTS_DATA_FULL_ISB_UNCERTAINTY_BIT;
+            }
+            break;
+
+        case GNSS_SIGNAL_BEIDOU_B2AQ:
+            tempFlag = BIAS_GPSL1_VALID | BIAS_BDSB1_VALID | BIAS_BDSB1_BDSB2A_VALID;
+            tempFlagUnc =
+                    BIAS_GPSL1_UNC_VALID | BIAS_BDSB1_UNC_VALID | BIAS_BDSB1_BDSB2A_UNC_VALID;
+            if (tempFlag == (mTimeBiases.flags & tempFlag)) {
+                measData->fullInterSignalBiasNs =
+                        -mTimeBiases.gpsL1 + mTimeBiases.bdsB1 + mTimeBiases.bdsB1_bdsB2a;
+                measData->flags |= GNSS_MEASUREMENTS_DATA_FULL_ISB_BIT;
+            }
+            if (tempFlagUnc == (mTimeBiases.flags & tempFlagUnc)) {
+                measData->fullInterSignalBiasUncertaintyNs =
+                        mTimeBiases.gpsL1Unc + mTimeBiases.bdsB1Unc + mTimeBiases.bdsB1_bdsB2aUnc;
+                measData->flags |= GNSS_MEASUREMENTS_DATA_FULL_ISB_UNCERTAINTY_BIT;
+            }
+            break;
+
+        /* not supported */
+        case GNSS_SIGNAL_GPS_L1C:
+        case GNSS_SIGNAL_GPS_L2:
+        case GNSS_SIGNAL_GLONASS_G2:
+        case GNSS_SIGNAL_GALILEO_E5B:
+        case GNSS_SIGNAL_QZSS_L2:
+        case GNSS_SIGNAL_BEIDOU_B2I:
+        case GNSS_SIGNAL_BEIDOU_B2AI:
+        default:
+            break;
+        }
+    }
+}
+
 /* convert and report GNSS measurement data to loc eng */
 void LocApiV02 :: reportGnssMeasurementData(
   const qmiLocEventGnssSvMeasInfoIndMsgT_v02& gnss_measurement_report_ptr)
@@ -5557,6 +5789,10 @@ void LocApiV02 :: reportGnssMeasurementData(
             /* If we can get AGC from QMI LOC there is no need to get it from NMEA */
             msInWeek = -1;
         }
+        setGnssBiases(measurementsNotify);
+        memset(&mTimeBiases, 0, sizeof(mTimeBiases));
+
+        LOC_LOGd("report %d sv in sv meas to the upper layers", measurementsNotify.count);
         LocApiBase::reportGnssMeasurementData(measurementsNotify, msInWeek);
     }
 }
@@ -5615,9 +5851,8 @@ bool LocApiV02 :: convertGnssMeasurements (GnssMeasurementsData& measurementData
 
     LOC_LOGV ("%s:%d]: entering\n", __func__, __LINE__);
 
-    qmiLocSVMeasurementStructT_v02 gnss_measurement_info;
-
-    gnss_measurement_info = gnss_measurement_report_ptr.svMeasurement[index];
+    const qmiLocSVMeasurementStructT_v02 &gnss_measurement_info =
+            gnss_measurement_report_ptr.svMeasurement[index];
 
     // size
     measurementData.size = sizeof(GnssMeasurementsData);
@@ -5648,6 +5883,7 @@ bool LocApiV02 :: convertGnssMeasurements (GnssMeasurementsData& measurementData
         case eQMI_LOC_SV_SYSTEM_GLONASS_V02:
             measurementData.svType = GNSS_SV_TYPE_GLONASS;
             measurementData.gloFrequency = gnss_measurement_info.gloFrequency;
+            measurementData.flags |= GNSS_MEASUREMENTS_DATA_GLO_FREQUENCY_BIT;
             break;
 
         case eQMI_LOC_SV_SYSTEM_BDS_V02:
@@ -5850,6 +6086,14 @@ bool LocApiV02 :: convertGnssMeasurements (GnssMeasurementsData& measurementData
         measurementData.flags |= GNSS_MEASUREMENTS_DATA_GNSS_SIGNAL_TYPE_BIT;
     }
 
+    // basebandCarrierToNoiseDbHz
+    measurementData.basebandCarrierToNoiseDbHz = 0.0;
+    if (measurementData.carrierToNoiseDbHz > gnss_measurement_info.gloRfLoss / 10.0) {
+        measurementData.basebandCarrierToNoiseDbHz = measurementData.carrierToNoiseDbHz -
+                gnss_measurement_info.gloRfLoss / 10.0;
+        measurementData.flags |= GNSS_MEASUREMENTS_DATA_BASEBAND_CARRIER_TO_NOISE_BIT;
+    }
+
     LOC_LOGv(" GNSS measurement raw data received from modem:"
              " Input => gnssSvId=%d CNo=%d measurementStatus=0x%04x%04x"
              "  dopplerShift=%f dopplerShiftUnc=%f fineSpeed=%f fineSpeedUnc=%f"
@@ -5858,7 +6102,7 @@ bool LocApiV02 :: convertGnssMeasurements (GnssMeasurementsData& measurementData
              " GNSS measurement data after conversion:"
              " Output => size=%zu svid=%d time_offset_ns=%f state=%d"
              "  received_sv_time_in_ns=%" PRIu64 " received_sv_time_uncertainty_in_ns=%" PRIu64
-             " c_n0_dbhz=%g"
+             " c_n0_dbhz=%g baseband_c_n0_dbhz=%.2f"
              "  pseudorange_rate_mps=%g pseudorange_rate_uncertainty_mps=%g"
              " carrierFrequencyHz=%.2f"
              " flags=0x%X",
@@ -5883,6 +6127,7 @@ bool LocApiV02 :: convertGnssMeasurements (GnssMeasurementsData& measurementData
              measurementData.receivedSvTimeNs,                                  // %PRIu64
              measurementData.receivedSvTimeUncertaintyNs,                       // %PRIu64
              measurementData.carrierToNoiseDbHz,                                // %g
+             measurementData.basebandCarrierToNoiseDbHz,                        // %g
              measurementData.pseudorangeRateMps,                                // %g
              measurementData.pseudorangeRateUncertaintyMps,                     // %g
              measurementData.carrierFrequencyHz,

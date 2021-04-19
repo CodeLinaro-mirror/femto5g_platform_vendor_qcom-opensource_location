@@ -819,6 +819,81 @@ static GnssData parseGnssData(const ::GnssDataNotification &halGnssData) {
     return gnssData;
 }
 
+static GnssMeasurementsDataFlagsMask parseGnssMeasDataValidityFlags(
+        const ::GnssMeasurementsDataFlagsMask halMeasDataFlags) {
+
+    uint32_t flags = 0;
+
+    if (::GNSS_MEASUREMENTS_DATA_SV_ID_BIT & halMeasDataFlags) {
+        flags |= GNSS_MEASUREMENTS_DATA_SV_ID_BIT;
+    }
+    if (::GNSS_MEASUREMENTS_DATA_SV_TYPE_BIT & halMeasDataFlags) {
+        flags |= GNSS_MEASUREMENTS_DATA_SV_TYPE_BIT;
+    }
+    if (::GNSS_MEASUREMENTS_DATA_STATE_BIT & halMeasDataFlags) {
+        flags |= GNSS_MEASUREMENTS_DATA_STATE_BIT;
+    }
+    if (::GNSS_MEASUREMENTS_DATA_RECEIVED_SV_TIME_BIT & halMeasDataFlags) {
+        flags |= GNSS_MEASUREMENTS_DATA_RECEIVED_SV_TIME_BIT;
+    }
+    if (::GNSS_MEASUREMENTS_DATA_RECEIVED_SV_TIME_UNCERTAINTY_BIT & halMeasDataFlags) {
+        flags |= GNSS_MEASUREMENTS_DATA_RECEIVED_SV_TIME_UNCERTAINTY_BIT;
+    }
+    if (::GNSS_MEASUREMENTS_DATA_CARRIER_TO_NOISE_BIT & halMeasDataFlags) {
+        flags |= GNSS_MEASUREMENTS_DATA_CARRIER_TO_NOISE_BIT;
+    }
+    if (::GNSS_MEASUREMENTS_DATA_PSEUDORANGE_RATE_BIT & halMeasDataFlags) {
+        flags |= GNSS_MEASUREMENTS_DATA_PSEUDORANGE_RATE_BIT;
+    }
+    if (::GNSS_MEASUREMENTS_DATA_PSEUDORANGE_RATE_UNCERTAINTY_BIT & halMeasDataFlags) {
+        flags |= GNSS_MEASUREMENTS_DATA_PSEUDORANGE_RATE_UNCERTAINTY_BIT;
+    }
+    if (::GNSS_MEASUREMENTS_DATA_ADR_STATE_BIT & halMeasDataFlags) {
+        flags |= GNSS_MEASUREMENTS_DATA_ADR_STATE_BIT;
+    }
+    if (::GNSS_MEASUREMENTS_DATA_ADR_BIT & halMeasDataFlags) {
+        flags |= GNSS_MEASUREMENTS_DATA_ADR_BIT;
+    }
+    if (::GNSS_MEASUREMENTS_DATA_ADR_UNCERTAINTY_BIT & halMeasDataFlags) {
+        flags |= GNSS_MEASUREMENTS_DATA_ADR_UNCERTAINTY_BIT;
+    }
+    if (::GNSS_MEASUREMENTS_DATA_CARRIER_FREQUENCY_BIT & halMeasDataFlags) {
+        flags |= GNSS_MEASUREMENTS_DATA_CARRIER_FREQUENCY_BIT;
+    }
+    if (::GNSS_MEASUREMENTS_DATA_CARRIER_CYCLES_BIT & halMeasDataFlags) {
+        flags |= GNSS_MEASUREMENTS_DATA_CARRIER_CYCLES_BIT;
+    }
+    if (::GNSS_MEASUREMENTS_DATA_CARRIER_PHASE_BIT & halMeasDataFlags) {
+        flags |= GNSS_MEASUREMENTS_DATA_CARRIER_PHASE_BIT;
+    }
+    if (::GNSS_MEASUREMENTS_DATA_CARRIER_PHASE_UNCERTAINTY_BIT & halMeasDataFlags) {
+        flags |= GNSS_MEASUREMENTS_DATA_CARRIER_PHASE_UNCERTAINTY_BIT;
+    }
+    if (::GNSS_MEASUREMENTS_DATA_MULTIPATH_INDICATOR_BIT & halMeasDataFlags) {
+        flags |= GNSS_MEASUREMENTS_DATA_MULTIPATH_INDICATOR_BIT;
+    }
+    if (::GNSS_MEASUREMENTS_DATA_SIGNAL_TO_NOISE_RATIO_BIT & halMeasDataFlags) {
+        flags |= GNSS_MEASUREMENTS_DATA_SIGNAL_TO_NOISE_RATIO_BIT;
+    }
+    if (::GNSS_MEASUREMENTS_DATA_AUTOMATIC_GAIN_CONTROL_BIT & halMeasDataFlags) {
+        flags |= GNSS_MEASUREMENTS_DATA_AUTOMATIC_GAIN_CONTROL_BIT;
+    }
+    if (::GNSS_MEASUREMENTS_DATA_BASEBAND_CARRIER_TO_NOISE_BIT & halMeasDataFlags) {
+        flags |= GNSS_MEASUREMENTS_DATA_BASEBAND_CARRIER_TO_NOISE_BIT;
+    }
+    if (::GNSS_MEASUREMENTS_DATA_GNSS_SIGNAL_TYPE_BIT & halMeasDataFlags) {
+        flags |= GNSS_MEASUREMENTS_DATA_GNSS_SIGNAL_TYPE_BIT;
+    }
+    if (::GNSS_MEASUREMENTS_DATA_FULL_ISB_BIT & halMeasDataFlags) {
+        flags |= GNSS_MEASUREMENTS_DATA_FULL_ISB_BIT ;
+    }
+    if (::GNSS_MEASUREMENTS_DATA_FULL_ISB_UNCERTAINTY_BIT & halMeasDataFlags) {
+        flags |= GNSS_MEASUREMENTS_DATA_FULL_ISB_UNCERTAINTY_BIT;
+    }
+
+    return (GnssMeasurementsDataFlagsMask) flags;
+}
+
 static GnssMeasurements parseGnssMeasurements(const ::GnssMeasurementsNotification
             &halGnssMeasurements) {
     GnssMeasurements gnssMeasurements = {};
@@ -827,7 +902,7 @@ static GnssMeasurements parseGnssMeasurements(const ::GnssMeasurementsNotificati
         GnssMeasurementsData measurement;
 
         measurement.flags = (GnssMeasurementsDataFlagsMask)
-                halGnssMeasurements.measurements[meas].flags;
+                parseGnssMeasDataValidityFlags(halGnssMeasurements.measurements[meas].flags);
         measurement.svId = halGnssMeasurements.measurements[meas].svId;
         measurement.svType =
                 (location_client::GnssSvType)halGnssMeasurements.measurements[meas].svType;
@@ -861,6 +936,13 @@ static GnssMeasurements parseGnssMeasurements(const ::GnssMeasurementsNotificati
         measurement.agcLevelDb = halGnssMeasurements.measurements[meas].agcLevelDb;
         measurement.gnssSignalType =
                 parseGnssSignalType(halGnssMeasurements.measurements[meas].gnssSignalType);
+
+        measurement.basebandCarrierToNoiseDbHz =
+               halGnssMeasurements.measurements[meas].basebandCarrierToNoiseDbHz;
+        measurement.fullInterSignalBiasNs =
+               halGnssMeasurements.measurements[meas].fullInterSignalBiasNs;
+        measurement.fullInterSignalBiasUncertaintyNs =
+               halGnssMeasurements.measurements[meas].fullInterSignalBiasUncertaintyNs;
 
         gnssMeasurements.measurements.push_back(measurement);
     }
