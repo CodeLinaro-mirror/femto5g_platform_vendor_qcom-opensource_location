@@ -954,7 +954,7 @@ void LocApiV02 ::
     location.flags |= LOCATION_HAS_ACCURACY_BIT;
     location.accuracy = accuracy;
 
-    struct timespec time_info_current;
+    struct timespec time_info_current = {};
     if(clock_gettime(CLOCK_REALTIME,&time_info_current) == 0) //success
     {
         location.timestamp = (time_info_current.tv_sec)*1e3 +
@@ -2546,7 +2546,7 @@ void LocApiV02 :: reportPosition (
     locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_OUTPUT_ENG_MASK;
     locationExtended.locOutputEngMask = STANDARD_POSITIONING_ENGINE;
 
-    struct timespec apTimestamp;
+    struct timespec apTimestamp = {};
     if( clock_gettime( CLOCK_BOOTTIME, &apTimestamp)== 0)
     {
        locationExtended.timeStamp.apTimeStamp.tv_sec = apTimestamp.tv_sec;
@@ -2686,7 +2686,7 @@ void LocApiV02 :: reportPosition (
         locationExtended.tech_mask = convertPosTechMask(location_report_ptr->technologyMask);
 
         //Mark the location source as from GNSS
-        location.gpsLocation.flags |= LOCATION_HAS_SOURCE_INFO;
+        location.gpsLocation.flags |= LOC_GPS_LOCATION_HAS_SOURCE_INFO;
         location.position_source = ULP_LOCATION_IS_FROM_GNSS;
 
         if (location_report_ptr->spoofReportMask_valid)
@@ -3452,7 +3452,7 @@ void  LocApiV02 :: reportSv (
 
                 LOC_LOGv("i:%d sv-id:%d count:%d sys:%d en:0x%" PRIx64,
                     i, sv_info_ptr->gnssSvId, SvNotify.count, sv_info_ptr->system,
-                    gnss_report_ptr->gnssSignalTypeList[SvNotify.count]);
+                    gnss_report_ptr->gnssSignalTypeList[i]);
 
                 GnssSv &gnssSv_ref = SvNotify.gnssSvs[SvNotify.count];
                 bool bSvIdIsValid = false;
@@ -3553,17 +3553,17 @@ void  LocApiV02 :: reportSv (
                             LOC_LOGv("gloFrequency = 0x%X", gloFrequency);
                         }
 
-                        if (gnss_report_ptr->gnssSignalTypeList[SvNotify.count] != 0) {
+                        if (gnss_report_ptr->gnssSignalTypeList[i] != 0) {
                             gnssSv_ref.carrierFrequencyHz =
                                     convertSignalTypeToCarrierFrequency(
-                                        gnss_report_ptr->gnssSignalTypeList[SvNotify.count],
+                                        gnss_report_ptr->gnssSignalTypeList[i],
                                         gloFrequency);
                             mask |= GNSS_SV_OPTIONS_HAS_CARRIER_FREQUENCY_BIT;
                             gnssSv_ref.gnssSignalTypeMask = convertQmiGnssSignalType(
-                                    gnss_report_ptr->gnssSignalTypeList[SvNotify.count]);
+                                    gnss_report_ptr->gnssSignalTypeList[i]);
                             LOC_LOGd("sv id %d, qmi signal type: 0x%" PRIx64 ", "
                                      "hal signal type: 0x%x", gnssSv_ref.svId,
-                                     gnss_report_ptr->gnssSignalTypeList[SvNotify.count],
+                                     gnss_report_ptr->gnssSignalTypeList[i],
                                      gnssSv_ref.gnssSignalTypeMask);
                         }
                     }
@@ -5412,7 +5412,7 @@ void LocApiV02 ::reportSvMeasurementInternal() {
             mGnssMeasurements->gnssSvMeasurementSet.svMeasSetHeader;
 
         // when we received the last sequence, timestamp the packet with AP time
-        struct timespec apTimestamp;
+        struct timespec apTimestamp = {};
         if (clock_gettime(CLOCK_BOOTTIME, &apTimestamp)== 0) {
             svMeasSetHead.apBootTimeStamp.apTimeStamp.tv_sec = apTimestamp.tv_sec;
             svMeasSetHead.apBootTimeStamp.apTimeStamp.tv_nsec = apTimestamp.tv_nsec;
@@ -7781,7 +7781,7 @@ handleWwanZppFixIndication(const qmiLocGetAvailWwanPositionIndMsgT_v02& zpp_ind)
             /* The UTC time from modem is not valid.
             In this case, we use current system time instead.*/
 
-            struct timespec time_info_current;
+            struct timespec time_info_current = {};
             clock_gettime(CLOCK_REALTIME,&time_info_current);
             zppLoc.timestamp = (time_info_current.tv_sec)*1e3 +
                                (time_info_current.tv_nsec)/1e6;
@@ -7847,7 +7847,7 @@ void LocApiV02::
             /* The UTC time from modem is not valid.
                     In this case, we use current system time instead.*/
 
-          struct timespec time_info_current;
+          struct timespec time_info_current = {};
           clock_gettime(CLOCK_REALTIME,&time_info_current);
           zppLoc.timestamp = (time_info_current.tv_sec)*1e3 +
                   (time_info_current.tv_nsec)/1e6;
