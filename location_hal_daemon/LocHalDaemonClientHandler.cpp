@@ -1044,3 +1044,17 @@ uint32_t LocHalDaemonClientHandler::getSupportedTbf(uint32_t tbfMsec) {
 
     return supportedTbfMsec;
 }
+
+void LocHalDaemonClientHandler::onOdcpiRequestCb(const OdcpiRequestInfo& request) {
+    std::lock_guard<std::mutex> lock(LocationApiService::mMutex);
+    LOC_LOGd("--< onOdcpiRequestCb");
+    if ((nullptr != mIpcSender) && mRegisterOdcpiInjector) {
+        LocConfigOdcpiInjectReqCBMsg msg(SERVICE_NAME, request);
+        bool rc = sendMessage(msg);
+        // purge this client if failed
+        if (!rc) {
+            LOC_LOGe("failed rc=%d purging client=%s", rc, mName.c_str());
+            mService->deleteClientbyName(mName);
+        }
+    }
+}

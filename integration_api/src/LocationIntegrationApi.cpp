@@ -484,6 +484,17 @@ bool LocationIntegrationApi::configOutputNmeaTypes(NmeaTypesMask enabledNMEAType
     }
 }
 
+bool LocationIntegrationApi::registerLocationInjector(
+    LocRequestLocationInjectionCb requestLocationInjectionCb) {
+    if (mApiImpl) {
+        return (mApiImpl->registerLocationInjector(requestLocationInjectionCb) == 0);
+    }
+    else {
+        LOC_LOGe("NULL mApiImpl");
+        return false;
+    }
+}
+
 bool LocationIntegrationApi::setUserConsentForTerrestrialPositioning(bool userConsent) {
     if (mApiImpl) {
         return (mApiImpl->setUserConsentForTerrestrialPositioning(userConsent) == 0);
@@ -492,5 +503,102 @@ bool LocationIntegrationApi::setUserConsentForTerrestrialPositioning(bool userCo
         return false;
     }
 }
+
+//convert to LocationDataType.h -> Location
+static void convertLocation(const location_client::Location& location,
+                          ::Location& halLocation) {
+    uint32_t flags = 0;
+
+    halLocation.timestamp = location.timestamp;
+    halLocation.latitude = location.latitude;
+    halLocation.longitude = location.longitude;
+    halLocation.altitude = location.altitude;
+    halLocation.speed = location.speed;
+    halLocation.bearing = location.bearing;
+    halLocation.accuracy = location.horizontalAccuracy;
+    halLocation.verticalAccuracy = location.verticalAccuracy;
+    halLocation.speedAccuracy = location.speedAccuracy;
+    halLocation.bearingAccuracy = location.bearingAccuracy;
+
+    if (location_client::LOCATION_HAS_LAT_LONG_BIT & location.flags) {
+        flags |= ::LOCATION_HAS_LAT_LONG_BIT;
+    }
+    if (location_client::LOCATION_HAS_ALTITUDE_BIT & location.flags) {
+        flags |= ::LOCATION_HAS_ALTITUDE_BIT;
+    }
+    if (location_client::LOCATION_HAS_SPEED_BIT & location.flags) {
+        flags |= ::LOCATION_HAS_SPEED_BIT;
+    }
+    if (location_client::LOCATION_HAS_BEARING_BIT & location.flags) {
+        flags |= ::LOCATION_HAS_BEARING_BIT;
+    }
+    if (location_client::LOCATION_HAS_ACCURACY_BIT & location.flags) {
+        flags |= ::LOCATION_HAS_ACCURACY_BIT;
+    }
+    if (location_client::LOCATION_HAS_VERTICAL_ACCURACY_BIT & location.flags) {
+        flags |= ::LOCATION_HAS_VERTICAL_ACCURACY_BIT;
+    }
+    if (location_client::LOCATION_HAS_SPEED_ACCURACY_BIT & location.flags) {
+        flags |= ::LOCATION_HAS_SPEED_ACCURACY_BIT;
+    }
+    if (location_client::LOCATION_HAS_BEARING_ACCURACY_BIT & location.flags) {
+        flags |= ::LOCATION_HAS_BEARING_ACCURACY_BIT;
+    }
+    halLocation.flags = (::LocationFlagsMask)flags;
+
+    flags = 0;
+    if (location_client::LOCATION_TECHNOLOGY_GNSS_BIT & location.techMask) {
+        flags |= ::LOCATION_TECHNOLOGY_GNSS_BIT;
+    }
+    if (location_client::LOCATION_TECHNOLOGY_CELL_BIT & location.techMask) {
+        flags |= ::LOCATION_TECHNOLOGY_CELL_BIT;
+    }
+    if (location_client::LOCATION_TECHNOLOGY_WIFI_BIT & location.techMask) {
+        flags |= ::LOCATION_TECHNOLOGY_WIFI_BIT;
+    }
+    if (location_client::LOCATION_TECHNOLOGY_SENSORS_BIT & location.techMask) {
+        flags |= ::LOCATION_TECHNOLOGY_SENSORS_BIT;
+    }
+    if (location_client::LOCATION_TECHNOLOGY_REFERENCE_LOCATION_BIT & location.techMask) {
+        flags |= ::LOCATION_TECHNOLOGY_REFERENCE_LOCATION_BIT;
+    }
+    if (location_client::LOCATION_TECHNOLOGY_INJECTED_COARSE_POSITION_BIT & location.techMask) {
+        flags |= ::LOCATION_TECHNOLOGY_INJECTED_COARSE_POSITION_BIT;
+    }
+    if (location_client::LOCATION_TECHNOLOGY_AFLT_BIT & location.techMask) {
+        flags |= ::LOCATION_TECHNOLOGY_AFLT_BIT;
+    }
+    if (location_client::LOCATION_TECHNOLOGY_HYBRID_BIT & location.techMask) {
+        flags |= ::LOCATION_TECHNOLOGY_HYBRID_BIT;
+    }
+    if (location_client::LOCATION_TECHNOLOGY_PPE_BIT & location.techMask) {
+        flags |= ::LOCATION_TECHNOLOGY_PPE_BIT;
+    }
+    if (location_client::LOCATION_TECHNOLOGY_VEH_BIT & location.techMask) {
+        flags |= ::LOCATION_TECHNOLOGY_VEH_BIT;
+    }
+    if (location_client::LOCATION_TECHNOLOGY_VIS_BIT & location.techMask) {
+        flags |= ::LOCATION_TECHNOLOGY_VIS_BIT;
+    }
+    halLocation.techMask = (::LocationTechnologyMask)flags;
+}
+
+bool LocationIntegrationApi::injectBestLocation(const location_client::Location& location) {
+    ::Location bestLocation{};
+    /* Latitude, longitude, timestamp, horizontalAccuracy are required fields.
+       Altitude and velocity related fields (left over fields) are not supported. */
+    bestLocation.size = sizeof(bestLocation);
+    convertLocation(location, bestLocation);
+    if (mApiImpl) {
+        mApiImpl->odcpiInject(bestLocation);
+        return true;
+    }
+    else {
+        LOC_LOGe("NULL mApiImpl");
+        return false;
+    }
+
+}
+
 } // namespace location_integration
 

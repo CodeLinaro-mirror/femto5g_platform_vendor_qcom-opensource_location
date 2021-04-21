@@ -120,6 +120,9 @@ public:
     virtual uint32_t* gnssUpdateConfig(const GnssConfig& config) override;
     virtual uint32_t gnssDeleteAidingData(GnssAidingData& data) override;
     virtual uint32_t configMinGpsWeek(uint16_t minGpsWeek) override;
+    virtual void odcpiInit(const odcpiRequestCallback& callback,
+                           OdcpiPrioritytype priority) override;
+    virtual void odcpiInject(const ::Location& location) override;
 
     uint32_t getRobustLocationConfig();
     uint32_t getMinGpsWeek();
@@ -130,6 +133,9 @@ public:
     uint32_t configOutputNmeaTypes(GnssNmeaTypesMask enabledNmeaTypes) override;
 
     uint32_t setUserConsentForTerrestrialPositioning(bool userConsent);
+
+    uint32_t registerLocationInjector(
+            LocRequestLocationInjectionCb requestLocationInjectionCb);
 
 private:
     ~LocationIntegrationApiImpl();
@@ -148,6 +154,7 @@ private:
             const LocConfigGetRobustLocationConfigRespMsg* pRespMsg);
     void processGetMinGpsWeekRespCb(const LocConfigGetMinGpsWeekRespMsg* pRespMsg);
     void processGetMinSvElevationRespCb(const LocConfigGetMinSvElevationRespMsg* pRespMsg);
+    void odcpiRequestCb(const OdcpiRequestInfo& request);
 
     // internal session parameter
     static mutex             mMutex;
@@ -169,6 +176,7 @@ private:
     DeadReckoningEngineConfigInfo mDreConfigInfo;
     NmeaConfigInfo                mNmeaConfigInfo;
     GtpUserConsentConfigInfo      mGtpUserConsentConfigInfo;
+    LocRequestLocationInjectionCb mRequestLocationInjectionCb;
 
     LocConfigReqCntMap       mConfigReqCntMap;
     LocIntegrationCbs        mIntegrationCbs;

@@ -537,6 +537,25 @@ void LocationApiService::processClientMsg(const char* data, uint32_t length) {
             getGnssConfig(pMsg, GNSS_CONFIG_FLAGS_MIN_SV_ELEVATION_BIT);
             break;
         }
+
+        case E_INTAPI_CONFIG_REGISTER_ODCPI_INIT_MSG_ID: {
+            if (sizeof(LocConfigOdcpiInitReqMsg) != length) {
+                LOC_LOGe("invalid LocConfigOdcpiInitReqMsg");
+                break;
+            }
+            odcpiInit(reinterpret_cast<LocConfigOdcpiInitReqMsg*>(pMsg));
+            break;
+        }
+
+        case E_INTAPI_CONFIG_ODCPI_INJECT_MSG_ID: {
+            if (sizeof(LocConfigOdcpiInjectReqMsg) != length) {
+                LOC_LOGe("invalid LocConfigInjectBestLocationReqMsg");
+                break;
+            }
+            odcpiInject(reinterpret_cast<LocConfigOdcpiInjectReqMsg*>(pMsg));
+            break;
+        }
+
         default: {
             LOC_LOGe("Unknown message with id: %d ", pMsg->msgId);
             break;
@@ -1175,6 +1194,55 @@ void LocationApiService::configDeadReckoningEngineParams(const LocConfigDrEngine
     uint32_t sessionId = mLocationControlApi->configDeadReckoningEngineParams(
             pMsg->mDreConfig);
     addConfigRequestToMap(sessionId, pMsg);
+}
+
+void LocationApiService::odcpiInit(
+        const LocConfigOdcpiInitReqMsg* pMsg) {
+    if (!pMsg) {
+        return;
+    }
+    std::lock_guard<std::mutex> lock(mMutex);
+    LocHalDaemonClientHandler* pClient = getClient(pMsg->mSocketName);
+    if (!pClient) {
+        LOC_LOGe(">-- invlalid client=%s", pMsg->mSocketName);
+        return;
+    }
+    LOC_LOGi(">-- registerLocationInjector %d",
+             pMsg->mRegOdcpiInit);
+    bool old_register = isOdcpiInjectorExist();
+
+    pClient->mRegisterOdcpiInjector = pMsg->mRegOdcpiInit;
+    bool new_register = isOdcpiInjectorExist();
+
+    odcpiRequestCallback cb = [this](const OdcpiRequestInfo& odcpiRequest) {
+        for (auto each : mClients) {
+           // deliver the odcpi request to the registered client
+           each.second->onOdcpiRequestCb(odcpiRequest);
+        }
+    };
+
+    if (old_register != new_register) {
+        if (new_register) {
+            mLocationControlApi->odcpiInit(cb, OdcpiPrioritytype::ODCPI_HANDLER_PRIORITY_DEFAULT);
+        } else {
+            mLocationControlApi->odcpiDeinit(OdcpiPrioritytype::ODCPI_HANDLER_PRIORITY_DEFAULT);
+        }
+    }
+}
+
+void LocationApiService::odcpiInject(
+        const LocConfigOdcpiInjectReqMsg* pMsg) {
+    if (!pMsg) {
+        return;
+    }
+    std::lock_guard<std::mutex> lock(mMutex);
+    LocHalDaemonClientHandler* pClient = getClient(pMsg->mSocketName);
+    if (!pClient) {
+        LOC_LOGe(">-- invlalid client=%s", pMsg->mSocketName);
+        return;
+    }
+
+    mLocationControlApi->odcpiInject(pMsg->mLocation);
 }
 
 void LocationApiService::addConfigRequestToMap(
