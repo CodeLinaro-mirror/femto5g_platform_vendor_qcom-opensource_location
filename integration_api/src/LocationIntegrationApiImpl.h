@@ -138,6 +138,11 @@ struct ProtoMsgInfo{
             configType(inType), protoStr(std::move(inStr)) {}
 };
 
+struct LocConfigOdcpiInitData {
+    bool              regOdcpiInit;
+    OdcpiPrioritytype  odcpiPriority;
+};
+
 class IpcListener;
 
 class LocationIntegrationApiImpl : public ILocationControlAPI {
@@ -169,6 +174,9 @@ public:
     virtual uint32_t* gnssUpdateConfig(const GnssConfig& config) override;
     virtual uint32_t gnssDeleteAidingData(GnssAidingData& data) override;
     virtual uint32_t configMinGpsWeek(uint16_t minGpsWeek) override;
+    virtual void odcpiInit(const odcpiRequestCallback& callback,
+                           OdcpiPrioritytype priority) override;
+    virtual void odcpiInject(const ::Location& location) override;
 
     uint32_t getRobustLocationConfig();
     uint32_t getMinGpsWeek();
@@ -189,6 +197,9 @@ public:
     uint32_t configXtraParams(bool enable, const ::XtraConfigParams& configParams);
     uint32_t getXtraStatus();
     uint32_t registerXtraStatusUpdate(bool registerUpdate);
+
+    uint32_t registerLocationInjector(
+            LocRequestLocationInjectionCb requestLocationInjectionCb);
 
 private:
     ~LocationIntegrationApiImpl();
@@ -213,6 +224,7 @@ private:
 
     // protobuf conversion util class
     LocationApiPbMsgConv mPbufMsgConv;
+    void odcpiRequestCb(const OdcpiRequestInfo& request);
 
     // internal session parameter
     static mutex             mMutex;
@@ -238,6 +250,8 @@ private:
     NmeaConfigInfo                mNmeaConfigInfo;
     bool                          mRegisterXtraUpdate;
     bool                          mXtraUpdateUponRegisterPending;
+    LocRequestLocationInjectionCb mRequestLocationInjectionCb;
+    LocConfigOdcpiInitData   mOdcpiInitData;
     LocConfigReqCntMap       mConfigReqCntMap;
     LocIntegrationCbs        mIntegrationCbs;
     std::queue<ProtoMsgInfo> mQueuedMsg; // queue of the requests before

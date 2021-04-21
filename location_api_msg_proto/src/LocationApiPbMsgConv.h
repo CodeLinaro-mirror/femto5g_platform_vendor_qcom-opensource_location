@@ -155,6 +155,9 @@ public:
     // AntennaInformation to PBAntennaInformation
     int convertAntennaInfoToPB(const AntennaInformation& antennaInfo,
             PBAntennaInformation* pbAntennaInfo) const;
+    // OdcpiRequestInfo to PBOdcpiRequestInfo
+    int convertOdcpiRequestInfoToPB(const OdcpiRequestInfo  &requestInfo,
+            PBOdcpiRequestInfo *pbOdcpiRequestInfo) const;
 
     // Memory cleanup - Free up memory after PB conversion and serializing data
     inline void freeUpPBLocAPIStartTrackingReqMsg(PBLocAPIStartTrackingReqMsg &pbLocApiStartTrack)
@@ -559,6 +562,9 @@ public:
             XtraConfigParams& xtraParams) const;
     int pbConvertToXtraStatus(const PBXtraStatus &pbXtraStatus,
             XtraStatus& xtraStatus) const;
+    // PBOdcpiRequestInfo to OdcpiRequestInfo
+    int pbConvertToOdcpiRequestInfo(const PBOdcpiRequestInfo &pbOdcpiRequestInfo,
+            OdcpiRequestInfo  &requestInfo) const;
 
     // MASK CONVERSION
     // ***************
@@ -580,6 +586,7 @@ public:
     ClientType getEnumForPBClientType(const PBClientType &pbClntTyp) const;
     LocationError getEnumForPBLocationError(const PBLocationError &pbLocErr) const;
     BatchingMode getEnumForPBBatchingMode(const PBBatchingMode &pbBatchMode) const;
+    OdcpiPrioritytype getEnumForPBOdcpiPriority(const PBOdcpiPriority &pbPriority) const;
 
     // PositioningEngineMask to/from PB PositioningEngineMask
     uint32_t getPBMaskForPositioningEngineMask(const uint32_t &posEngMask) const;
@@ -614,6 +621,7 @@ public:
             const XtraStatusUpdateType &xtraStatusUpdateType) const;
     XtraDataStatus getXtraDataStatusFromPB(const PBXtraDataStatus &pbXtraDataStatus) const;
     PBXtraDataStatus getPBEnumForXtraDataStatus(const XtraDataStatus &xtraDataStatus) const;
+    PBOdcpiPriority getPBEnumForOdcpiPriority(const OdcpiPrioritytype &priority) const;
 
 private:
     bool mPbDebugLogEnabled;
@@ -773,6 +781,7 @@ private:
             const GnssEphemerisSource& ephemerisSource) const;
     PBGnssEphemerisHealth getPBEnumForGnssEphemerisHealth(
             const GnssEphemerisHealth& ephemerisHealth) const;
+    PBOdcpiRequestType getPBEnumForOdcpiRequestType(const OdcpiRequestType &requestType) const;
 
 
     // ** Special enum conversion
@@ -858,6 +867,8 @@ private:
             const PBGnssEphemerisSource& pbGnssEphemerisSource) const;
     GnssEphemerisHealth getEnumForPBGnssEphemerisHealth(
             const PBGnssEphemerisHealth& pbGnssEphemerisHealth) const;
+    OdcpiRequestType getEnumForPBOdcpiRequestType(
+            const PBOdcpiRequestType &pbOdcpiRequestType) const;
 
     // ** Special enum conversion
     // PBLocApiGnss_LocSvSystemEnumType to GnssSvType

@@ -62,7 +62,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 /*
-Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -102,6 +102,9 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <array>
 #include <unordered_set>
 #include <unordered_map>
+#include <functional>
+
+#include "LocationClientApi.h"
 
 namespace location_integration
 {
@@ -179,6 +182,11 @@ enum LocConfigTypeEnum{
     /** Register the callback to get update on xtra feature setting
      *  and xtra assistance data status. <br/> */
     REGISTER_XTRA_STATUS_UPDATE = 105,
+
+    CONFIG_REGISTER_ODCPI_INIT = 106,
+    CONFIG_REGISTER_ODCPI_INJECT_CB = 107,
+    CONFIG_REGISTER_ODCPI_INJECT = 108,
+
 } ;
 
 /**
@@ -677,6 +685,37 @@ typedef std::function<void(
     *  validity info. */
    const XtraStatus&    xtraStatus
 )> LocConfigGetXtraStatusCb;
+
+/** Specify the location injection request <br/> */
+enum LocationInjectRequestType {
+    LOCATION_INJECT_REQUEST_TYPE_START,
+    LOCATION_INJECT_REQUEST_TYPE_STOP
+};
+
+/** @brief
+    Callback for requesting location injection.
+
+    LIA must call this when it wants the registered location injector to
+    provide locations to assist with GNSS operation. Some examples include
+    assisting with time to first fix, recovering errors, or helping an e911
+    emergency session.<br/>
+
+    @param requestType
+    The location injector shall injectBestLocation when requestType is
+    LOCATION_INJECT_REQUEST_TYPE_START. <br/>
+    The location injector shall not injectBestLocation when requestType is
+    LOCATION_INJECT_REQUEST_TYPE_STOP. <br/>
+    @param tbfMillis
+    Time Between Fixes in Milliseconds.
+    The not-zero value is paired with LOCATION_INJECT_REQUEST_TYPE_START.
+    The location provider should injectBestLocation with the tbfMillis
+    interval until it receives LOCATION_INJECT_REQUEST_TYPE_STOP. <br/>
+    The value 0 is paired with LOCATION_INJECT_REQUEST_TYPE_STOP. <br/>
+ */
+typedef std::function<void(
+    LocationInjectRequestType requestType,
+    uint32_t tbfMillis
+)> LocRequestLocationInjectionCb;
 
 /**
  *  Specify the set of callbacks that can be passed to
@@ -1980,6 +2019,40 @@ public:
     * </code>
     * </pre>
     */
+
+    /** @brief
+        This method lets the LIA client register/deregister as a location injector.
+        A location injector will be notified when the GNSS engine needs
+        the information to better estimate the TTFF, recover errors,
+        or to help during an e911 emergency session
+
+        @param
+        Callback to receive injecting location request. <br/>
+        Pass a null callback to stop receiving the request. <br/>
+
+        @return true, if the register/deregister request as a location injector
+                is accepted; otherwise false. <br/>
+    */
+    bool registerLocationInjector(
+            LocRequestLocationInjectionCb requestLocationInjectionCb);
+
+    /** @brief
+        Inject best locations <br/>
+
+        The LIA client shall register as a location injector and wait for
+        The LocRequestLocationInjectionCb with
+        LOCATION_INJECT_REQUEST_TYPE_START to start injectBestLocation. <br/>
+
+        If the LIA client doesnt follow the above rule and instead injectBestLocation
+        randomly, the GNSS engine might produce low quality GNSS position. <br/>
+
+        @param location
+        location to be injected.<br/>
+
+        @return true, if the injected location is accepted;
+                otherwise false. <br/>
+    */
+    bool injectBestLocation(const location_client::Location& location);
 
 private:
     LocationIntegrationApiImpl* mApiImpl;

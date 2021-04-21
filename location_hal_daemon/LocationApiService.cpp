@@ -758,6 +758,29 @@ void LocationApiService::processClientMsg(const char* data, uint32_t length) {
                     (const LocConfigDeregisterXtraStatusUpdateReqMsg*) &locApiMsg);
             break;
         }
+        case E_INTAPI_CONFIG_REGISTER_ODCPI_INIT_MSG_ID: {
+            PBLocConfigOdcpiInitReqMsg pbOdcpiInitMsg;
+            if (0 == pbOdcpiInitMsg.ParseFromString(pbLocApiMsg.payload())) {
+                LOC_LOGe("Failed to parse pbOdcpiInitMsg from payload!!");
+                return;
+            }
+            LocConfigOdcpiInitReqMsg msg(sockName.c_str(), pbOdcpiInitMsg,
+                    &mPbufMsgConv);
+            configOdcpiInit(reinterpret_cast<LocConfigOdcpiInitReqMsg*>(&msg));
+            break;
+        }
+
+        case E_INTAPI_CONFIG_ODCPI_INJECT_MSG_ID: {
+            PBLocConfigOdcpiInjectReqMsg pbOdcpiInjectMsg;
+            if (0 == pbOdcpiInjectMsg.ParseFromString(pbLocApiMsg.payload())) {
+                LOC_LOGe("Failed to parse pbOdcpiInjectMsg from payload!!");
+                return;
+            }
+            LocConfigOdcpiInjectReqMsg msg(sockName.c_str(), pbOdcpiInjectMsg,
+                    &mPbufMsgConv);
+            configOdcpiInject(reinterpret_cast<LocConfigOdcpiInjectReqMsg*>(&msg));
+            break;
+        }
 
         default: {
             LOC_LOGe("Unknown message with id: %d ", eLocMsgid);
@@ -1549,6 +1572,56 @@ void LocationApiService::configDeadReckoningEngineParams(const LocConfigDrEngine
     uint32_t sessionId = mLocationControlApi->configDeadReckoningEngineParams(
             pMsg->mDreConfig);
     addConfigRequestToMap(sessionId, pMsg);
+}
+
+void LocationApiService::configOdcpiInit(
+        const LocConfigOdcpiInitReqMsg* pMsg) {
+    if (!pMsg) {
+        return;
+    }
+    std::lock_guard<std::recursive_mutex> lock(mMutex);
+    LocHalDaemonClientHandler* pClient = getClient(pMsg->mSocketName);
+    if (!pClient) {
+        LOC_LOGe(">--  invlalid client=%s", pMsg->mSocketName);
+        return;
+    }
+    LOC_LOGi(">-- registerLocationInjector %d", pMsg->mRegOdcpiInit);
+    bool old_register = isOdcpiInjectorExist();
+
+    pClient->mRegisterOdcpiInjector = pMsg->mRegOdcpiInit;
+    bool new_register = isOdcpiInjectorExist();
+
+    if (old_register != new_register) {
+        if (new_register) {
+            odcpiRequestCallback cb = [this](const OdcpiRequestInfo& odcpiRequest) {
+                for (auto each : mClients) {
+                   // deliver the odcpi request to registered client
+                   each.second->onOdcpiRequestCb(odcpiRequest);
+                }
+            };
+            mLocationControlApi->odcpiInit(cb, OdcpiPrioritytype::ODCPI_HANDLER_PRIORITY_HIGH);
+        } else {
+            mLocationControlApi->odcpiDeinit(OdcpiPrioritytype::ODCPI_HANDLER_PRIORITY_DEFAULT);
+        }
+    }
+}
+
+void LocationApiService::configOdcpiInject(
+        const LocConfigOdcpiInjectReqMsg* pMsg) {
+    if (!pMsg) {
+        return;
+    }
+    std::lock_guard<std::recursive_mutex> lock(mMutex);
+    LocHalDaemonClientHandler* pClient = getClient(pMsg->mSocketName);
+    if (!pClient) {
+        LOC_LOGe(">-- invlalid client=%s", pMsg->mSocketName);
+        return;
+    }
+    if (false == pClient->mRegisterOdcpiInjector) {
+        LOC_LOGe(">-- client %s not a registered injector", pMsg->mSocketName);
+        return;
+    }
+    mLocationControlApi->odcpiInject(pMsg->mLocation);
 }
 
 void LocationApiService::addConfigRequestToMap(

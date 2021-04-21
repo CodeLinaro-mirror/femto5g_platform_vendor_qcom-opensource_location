@@ -313,6 +313,15 @@ ELocMsgID LocationApiPbMsgConv::getEnumForPBELocMsgID(const PBELocMsgID &pbLocMs
         case PB_E_INTAPI_DEREGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID:
             eLocMsgId = E_INTAPI_DEREGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID;
             break;
+        case PB_E_INTAPI_CONFIG_REGISTER_ODCPI_INIT_MSG_ID:
+            eLocMsgId = E_INTAPI_CONFIG_REGISTER_ODCPI_INIT_MSG_ID;
+            break;
+        case PB_E_INTAPI_CONFIG_ODCPI_INJECT_CB_MSG_ID:
+            eLocMsgId = E_INTAPI_CONFIG_ODCPI_INJECT_CB_MSG_ID;
+            break;
+        case PB_E_INTAPI_CONFIG_ODCPI_INJECT_MSG_ID:
+            eLocMsgId = E_INTAPI_CONFIG_ODCPI_INJECT_MSG_ID;
+            break;
         default:
             break;
     }
@@ -1074,6 +1083,15 @@ PBELocMsgID LocationApiPbMsgConv::getPBEnumForELocMsgID(const ELocMsgID &eLocMsg
             break;
         case E_INTAPI_DEREGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID:
             pbLocMsgId = PB_E_INTAPI_DEREGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID;
+            break;
+        case E_INTAPI_CONFIG_REGISTER_ODCPI_INIT_MSG_ID:
+            pbLocMsgId = PB_E_INTAPI_CONFIG_REGISTER_ODCPI_INIT_MSG_ID;
+            break;
+        case E_INTAPI_CONFIG_ODCPI_INJECT_CB_MSG_ID:
+            pbLocMsgId = PB_E_INTAPI_CONFIG_ODCPI_INJECT_CB_MSG_ID;
+            break;
+        case E_INTAPI_CONFIG_ODCPI_INJECT_MSG_ID:
+            pbLocMsgId = PB_E_INTAPI_CONFIG_ODCPI_INJECT_MSG_ID;
             break;
         default:
             break;
@@ -6730,5 +6748,108 @@ int LocationApiPbMsgConv::pbConvertTo2DimensionDoubleVector(
         }
         doubleArrays.push_back(std::move(dVector));
     }
+    return 0;
+}
+
+PBOdcpiPriority LocationApiPbMsgConv::getPBEnumForOdcpiPriority(
+        const OdcpiPrioritytype &priority) const {
+    PBOdcpiPriority pbOdcpiPriority = PB_ODCPI_HANDLER_PRIORITY_INVALID;
+
+    if (ODCPI_HANDLER_PRIORITY_LOW == priority) {
+        pbOdcpiPriority = PB_ODCPI_HANDLER_PRIORITY_LOW;
+    } else if (ODCPI_HANDLER_PRIORITY_HIGH == priority) {
+        pbOdcpiPriority = PB_ODCPI_HANDLER_PRIORITY_HIGH;
+    } else if (ODCPI_HANDLER_PRIORITY_DEFAULT == priority) {
+        pbOdcpiPriority = PB_ODCPI_HANDLER_PRIORITY_LOW;
+    } else if (ODCPI_HANDLER_PRIORITY_MEDIUM == priority) {
+        pbOdcpiPriority = PB_ODCPI_HANDLER_PRIORITY_MEDIUM;
+    }
+    LocApiPb_LOGv("LocApiPB: OdcpiPrioritytype: %d, PBOdcpiPriority: %d",
+                   priority, pbOdcpiPriority);
+    return pbOdcpiPriority;
+}
+
+OdcpiPrioritytype LocationApiPbMsgConv::getEnumForPBOdcpiPriority(
+        const PBOdcpiPriority &pbPriority) const {
+    OdcpiPrioritytype priority = (OdcpiPrioritytype)0;
+
+    if (PB_ODCPI_HANDLER_PRIORITY_LOW == pbPriority) {
+        priority = ODCPI_HANDLER_PRIORITY_LOW;
+    } else if (PB_ODCPI_HANDLER_PRIORITY_HIGH == pbPriority) {
+        priority = ODCPI_HANDLER_PRIORITY_HIGH;
+    } else if (PB_ODCPI_HANDLER_PRIORITY_MEDIUM == pbPriority) {
+        priority = ODCPI_HANDLER_PRIORITY_MEDIUM;
+    }
+    LocApiPb_LOGv("LocApiPB: OdcpiPrioritytype: %d, PBOdcpiPriority: %d",
+                   priority, pbPriority);
+    return priority;
+}
+
+PBOdcpiRequestType LocationApiPbMsgConv::getPBEnumForOdcpiRequestType(
+        const OdcpiRequestType &requestType) const {
+    PBOdcpiRequestType pbOdcpiRequestType =  PB_ODCPI_REQUEST_TYPE_INVALID;
+
+    if (ODCPI_REQUEST_TYPE_START == requestType) {
+        pbOdcpiRequestType = PB_ODCPI_REQUEST_TYPE_START;
+    } else if (ODCPI_REQUEST_TYPE_STOP == requestType) {
+        pbOdcpiRequestType = PB_ODCPI_REQUEST_TYPE_STOP;
+    }
+    LocApiPb_LOGv("LocApiPB: requestType: %d, pbOdcpiRequestType: %d",
+                   requestType, pbOdcpiRequestType);
+    return pbOdcpiRequestType;
+}
+
+OdcpiRequestType LocationApiPbMsgConv::getEnumForPBOdcpiRequestType(
+        const PBOdcpiRequestType &pbOdcpiRequestType) const {
+    OdcpiRequestType requestType = (OdcpiRequestType)0;
+
+    if (PB_ODCPI_REQUEST_TYPE_START == pbOdcpiRequestType) {
+        requestType = ODCPI_REQUEST_TYPE_START;
+    } else if (PB_ODCPI_REQUEST_TYPE_STOP == pbOdcpiRequestType) {
+        requestType = ODCPI_REQUEST_TYPE_STOP;
+    }
+    LocApiPb_LOGv("LocApiPB: OdcpiPrioritytype: %d, PBOdcpiPriority: %d",
+                   requestType, pbOdcpiRequestType);
+    return requestType;
+}
+
+int LocationApiPbMsgConv::convertOdcpiRequestInfoToPB(
+        const OdcpiRequestInfo  &requestInfo,
+        PBOdcpiRequestInfo *pbOdcpiRequestInfo) const {
+    if (nullptr == pbOdcpiRequestInfo) {
+        LOC_LOGe("pbOdcpiRequestInfo is NULL!, return");
+        return 1;
+    }
+
+    // uint32 size = 1;
+    pbOdcpiRequestInfo->set_size(requestInfo.size);
+    // PBOdcpiRequestType type = 2;
+    pbOdcpiRequestInfo->set_type(getPBEnumForOdcpiRequestType(requestInfo.type));
+    // uint32 tbfMillis = 3;
+    pbOdcpiRequestInfo->set_tbfmillis(requestInfo.tbfMillis);
+    // bool isEmergencyMode = 4;
+    pbOdcpiRequestInfo->set_isemergencymode(requestInfo.isEmergencyMode);
+
+    LocApiPb_LOGv("LocApiPB: pbOdcpiRequestInfo: size: %d, type: %d, tbfMs: %d, isEmergencyMode %d",
+            pbOdcpiRequestInfo->size(), pbOdcpiRequestInfo->type(),
+            pbOdcpiRequestInfo->tbfmillis(), pbOdcpiRequestInfo->isemergencymode());
+
+    return 0;
+}
+
+int LocationApiPbMsgConv::pbConvertToOdcpiRequestInfo(const PBOdcpiRequestInfo &pbOdcpiRequestInfo,
+            OdcpiRequestInfo  &requestInfo) const {
+    // uint32 size = 1;
+    requestInfo.size = pbOdcpiRequestInfo.size();
+    // PBOdcpiRequestType type = 2;
+    requestInfo.type = getEnumForPBOdcpiRequestType(pbOdcpiRequestInfo.type());
+    // uint32 tbfMillis = 3;
+    requestInfo.tbfMillis = pbOdcpiRequestInfo.tbfmillis();
+    // bool isEmergencyMode = 4;
+    requestInfo.isEmergencyMode = pbOdcpiRequestInfo.isemergencymode();
+
+    LocApiPb_LOGv("LocApiPB: requestInfo: size: %d, type: %d, tbfMillis: %d, isEmergencyMode: %d",
+            requestInfo.size, requestInfo.type,
+            requestInfo.tbfMillis, requestInfo.isEmergencyMode);
     return 0;
 }

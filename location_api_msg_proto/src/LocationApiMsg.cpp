@@ -212,6 +212,12 @@ const char* LocApiMsgString(ELocMsgID msgId) {
         return "E_INTAPI_REGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID";
     case E_INTAPI_DEREGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID:
         return "E_INTAPI_DEREGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID";
+    case E_INTAPI_CONFIG_REGISTER_ODCPI_INIT_MSG_ID:
+        return "E_INTAPI_CONFIG_REGISTER_ODCPI_INIT_MSG_ID";
+    case E_INTAPI_CONFIG_ODCPI_INJECT_CB_MSG_ID:
+        return "E_INTAPI_CONFIG_ODCPI_INJECT_CB_MSG_ID";
+    case E_INTAPI_CONFIG_ODCPI_INJECT_MSG_ID:
+        return "E_INTAPI_CONFIG_ODCPI_INJECT_MSG_ID";
     default:
         return "unknown ELocMsgID";
     }
@@ -3314,6 +3320,206 @@ int LocAPIPingTestIndMsg::serializeToProtobuf(string& protoStr) {
     pLocApiPbMsgConv->freeUpPBLocAPIPingTestIndMsg(pbLocApiPingTestIndMsg);
     return protoStr.size();
 }
+
+// Convert LocConfigOdcpiInitReqMsg -> PBLocConfigOdcpiInitReqMsg
+int LocConfigOdcpiInitReqMsg::serializeToProtobuf(
+        string& protoStr) {
+    PBLocAPIMsgHeader pLocApiMsgHdr;
+    PBLocConfigOdcpiInitReqMsg pbMsg;
+    if (nullptr == pLocApiPbMsgConv) {
+        LOC_LOGe("pLocApiPbMsgConv is null!");
+        return 0;
+    }
+    // string      mSocketName = 1;
+    pLocApiMsgHdr.set_msocketname(mSocketName);
+    // PBELocMsgID  msgId = 2;
+    pLocApiMsgHdr.set_msgid(pLocApiPbMsgConv->getPBEnumForELocMsgID(msgId));
+    // uint32   msgVersion = 3;
+    pLocApiMsgHdr.set_msgversion(msgVersion);
+
+
+    // bool mRegOdcpiInit
+    pbMsg.set_mregodcpiinit(mRegOdcpiInit);
+    // OdcpiPrioritytype mPriority
+    pbMsg.set_mpriority(pLocApiPbMsgConv->getPBEnumForOdcpiPriority(mPriority));
+
+    string pbStr;
+    if (!pbMsg.SerializeToString(&pbStr)) {
+        LOC_LOGe("SerializeToString on PBLocConfigOdcpiInitReqMsg failed!");
+        return 0;
+    }
+
+    // bytes       payload = 4;
+    pLocApiMsgHdr.set_payload(pbStr);
+
+    // uint32   payloadSize = 5;
+    pLocApiMsgHdr.set_payloadsize(sizeof(LocConfigOdcpiInitReqMsg));
+
+    if (!pLocApiMsgHdr.SerializeToString(&protoStr)) {
+        LOC_LOGe("SerializeToString on pLocApiMsgHdr failed!");
+        return 0;
+    }
+    return protoStr.size();
+
+}
+
+// Decode PBLocConfigOdcpiInitReqMsg -> LocConfigOdcpiInitReqMsg
+LocConfigOdcpiInitReqMsg::LocConfigOdcpiInitReqMsg(
+            const char* name,
+            const PBLocConfigOdcpiInitReqMsg &pbMsg,
+            const LocationApiPbMsgConv *pbMsgConv):
+        LocAPIMsgHeader(name,
+                        E_INTAPI_CONFIG_REGISTER_ODCPI_INIT_MSG_ID,
+                        pbMsgConv) {
+    if (nullptr == pLocApiPbMsgConv) {
+        LOC_LOGe("pLocApiPbMsgConv is null!");
+        return;
+    }
+
+    mRegOdcpiInit = pbMsg.mregodcpiinit();
+    mPriority = pLocApiPbMsgConv->getEnumForPBOdcpiPriority(pbMsg.mpriority());
+}
+
+// Convert LocConfigOdcpiInjectReqCBMsg -> PBLocConfigOdcpiInjectReqCBMsg
+int LocConfigOdcpiInjectReqCBMsg::serializeToProtobuf(
+        string& protoStr) {
+    PBLocConfigOdcpiInjectReqCBMsg pbMsg;
+    PBLocAPIMsgHeader pLocApiMsgHdr;
+    if (nullptr == pLocApiPbMsgConv) {
+        LOC_LOGe("pLocApiPbMsgConv is null!");
+        return 0;
+    }
+    // string      mSocketName = 1;
+    pLocApiMsgHdr.set_msocketname(mSocketName);
+    // PBELocMsgID  msgId = 2;
+    pLocApiMsgHdr.set_msgid(pLocApiPbMsgConv->getPBEnumForELocMsgID(msgId));
+    // uint32   msgVersion = 3;
+    pLocApiMsgHdr.set_msgversion(msgVersion);
+
+
+    //OdcpiRequestInfo  mRequestInfo
+    PBOdcpiRequestInfo *pbOdcpiRequestInfo = pbMsg.mutable_mrequestinfo();
+    if (nullptr != pbOdcpiRequestInfo) {
+        if (pLocApiPbMsgConv->convertOdcpiRequestInfoToPB(mRequestInfo,
+                pbOdcpiRequestInfo)) {
+            LOC_LOGe("convertOdcpiRequestInfoToPB failed");
+            free(pbOdcpiRequestInfo);
+            return 0;
+        }
+    } else {
+        LOC_LOGe("mutable_mrequestinfo failed");
+        return 0;
+    }
+
+    string pbStr;
+    if (!pbMsg.SerializeToString(&pbStr)) {
+        LOC_LOGe("SerializeToString on PBLocConfigOdcpiInjectReqCBMsg failed!");
+        return 0;
+    }
+
+    // bytes       payload = 4;
+    pLocApiMsgHdr.set_payload(pbStr);
+
+    // uint32   payloadSize = 5;
+    pLocApiMsgHdr.set_payloadsize(sizeof(LocConfigOdcpiInjectReqCBMsg));
+
+    if (!pLocApiMsgHdr.SerializeToString(&protoStr)) {
+        LOC_LOGe("SerializeToString on pLocApiMsgHdr failed!");
+        return 0;
+    }
+    return protoStr.size();
+
+}
+
+// Decode PBLocConfigOdcpiInjectReqCBMsg -> LocConfigOdcpiInjectReqCBMsg
+LocConfigOdcpiInjectReqCBMsg::
+        LocConfigOdcpiInjectReqCBMsg(
+            const char* name,
+            const PBLocConfigOdcpiInjectReqCBMsg &pbMsg,
+            const LocationApiPbMsgConv *pbMsgConv):
+        LocAPIMsgHeader(name,
+                        E_INTAPI_CONFIG_ODCPI_INJECT_CB_MSG_ID,
+                        pbMsgConv) {
+    if (nullptr == pLocApiPbMsgConv) {
+        LOC_LOGe("pLocApiPbMsgConv is null!");
+        return;
+    }
+
+    if (pbMsg.has_mrequestinfo()) {
+        pLocApiPbMsgConv->pbConvertToOdcpiRequestInfo(pbMsg.mrequestinfo(), mRequestInfo);
+    }
+}
+
+// Convert LocConfigOdcpiInjectReqMsg -> PBLocConfigOdcpiInjectReqMsg
+int LocConfigOdcpiInjectReqMsg::serializeToProtobuf(
+        string& protoStr) {
+    PBLocConfigOdcpiInjectReqMsg pbMsg;
+    PBLocAPIMsgHeader pLocApiMsgHdr;
+    if (nullptr == pLocApiPbMsgConv) {
+        LOC_LOGe("pLocApiPbMsgConv is null!");
+        return 0;
+    }
+    // string      mSocketName = 1;
+    pLocApiMsgHdr.set_msocketname(mSocketName);
+    // PBELocMsgID  msgId = 2;
+    pLocApiMsgHdr.set_msgid(pLocApiPbMsgConv->getPBEnumForELocMsgID(msgId));
+    // uint32   msgVersion = 3;
+    pLocApiMsgHdr.set_msgversion(msgVersion);
+
+
+    // Location mLocation
+    PBLocation* pbLocation = pbMsg.mutable_mlocation();
+    if (nullptr != pbLocation) {
+        if (pLocApiPbMsgConv->convertLocationToPB(mLocation, pbLocation)) {
+            LOC_LOGe("convertLocationToPB failed");
+            free(pbLocation);
+            return 0;
+        }
+    } else {
+        LOC_LOGe("mutable_mlocation failed");
+        return 0;
+    }
+
+    string pbStr;
+    if (!pbMsg.SerializeToString(&pbStr)) {
+        LOC_LOGe("SerializeToString on PBLocConfigOdcpiInjectReqMsg failed!");
+        return 0;
+    }
+
+    // bytes       payload = 4;
+    pLocApiMsgHdr.set_payload(pbStr);
+
+    // uint32   payloadSize = 5;
+    pLocApiMsgHdr.set_payloadsize(sizeof(LocConfigOdcpiInjectReqMsg));
+
+    if (!pLocApiMsgHdr.SerializeToString(&protoStr)) {
+        LOC_LOGe("SerializeToString on pLocApiMsgHdr failed!");
+        return 0;
+    }
+    return protoStr.size();
+
+}
+
+// Decode PBLocConfigOdcpiInjectReqMsg -> LocConfigOdcpiInjectReqMsg
+LocConfigOdcpiInjectReqMsg::
+        LocConfigOdcpiInjectReqMsg(
+            const char* name,
+            const PBLocConfigOdcpiInjectReqMsg &pbMsg,
+            const LocationApiPbMsgConv *pbMsgConv):
+        LocAPIMsgHeader(name,
+                        E_INTAPI_CONFIG_ODCPI_INJECT_MSG_ID,
+                        pbMsgConv) {
+    if (nullptr == pLocApiPbMsgConv) {
+        LOC_LOGe("pLocApiPbMsgConv is null!");
+        return;
+    }
+
+    // PBLocation mLocation = 1;
+    if (pbMsg.has_mlocation()) {
+        pLocApiPbMsgConv->pbConvertToLocation(pbMsg.mlocation(), mLocation);
+    }
+}
+
 
 
 // SERIALIZE PROTOBUF TO RIGID FORMAT

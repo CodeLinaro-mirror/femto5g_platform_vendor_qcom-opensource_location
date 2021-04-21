@@ -106,8 +106,10 @@ public:
                 mSubscriptionMask(0),
                 mEngineInfoRequestMask(0),
                 mGeofenceIds(nullptr),
+
                 mIpcSender(createSender(clientname.c_str())),
-                mAntennaInfoCb(*this) {
+                mAntennaInfoCb(*this),
+                mRegisterOdcpiInjector(false) {
 
         if (mClientType == LOCATION_CLIENT_API) {
             updateSubscription(E_LOC_CB_GNSS_LOCATION_INFO_BIT);
@@ -140,6 +142,7 @@ public:
     void onXtraStatusUpdateCb(const XtraStatus& xtraStatus);
     bool hasPendingEngineInfoRequest(uint32_t mask);
     void addEngineInfoRequst(uint32_t mask);
+    void onOdcpiRequestCb(const OdcpiRequestInfo& request);
 
     uint32_t startBatching(uint32_t minInterval, uint32_t minDistance, BatchingMode batchMode);
     void stopBatching();
@@ -171,6 +174,7 @@ public:
     void pingTest();
 
     bool mBatching;
+    bool mRegisterOdcpiInjector;
     BatchingMode mBatchingMode;
     std::queue<ELocMsgID> mPendingMessages;
     std::queue<ELocMsgID> mGfPendingMessages;

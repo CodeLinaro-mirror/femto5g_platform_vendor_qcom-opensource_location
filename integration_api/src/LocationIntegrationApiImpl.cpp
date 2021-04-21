@@ -157,6 +157,15 @@ static LocConfigTypeEnum getLocConfigTypeFromMsgId(ELocMsgID  msgId) {
     case E_INTAPI_DEREGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID:
         configType = REGISTER_XTRA_STATUS_UPDATE;
         break;
+    case E_INTAPI_CONFIG_REGISTER_ODCPI_INIT_MSG_ID:
+        configType = CONFIG_REGISTER_ODCPI_INIT;
+        break;
+    case E_INTAPI_CONFIG_ODCPI_INJECT_CB_MSG_ID:
+        configType = CONFIG_REGISTER_ODCPI_INJECT_CB;
+        break;
+    case E_INTAPI_CONFIG_ODCPI_INJECT_MSG_ID:
+        configType = CONFIG_REGISTER_ODCPI_INJECT;
+        break;
     default:
         break;
     }
@@ -283,8 +292,9 @@ LocationIntegrationApiImpl::LocationIntegrationApiImpl(LocIntegrationCbs& integr
         mGtpUserConsentConfigInfo{},
         mNmeaConfigInfo{},
         mRegisterXtraUpdate(false),
-        mXtraUpdateUponRegisterPending(false) {
-
+        mXtraUpdateUponRegisterPending(false),
+        mOdcpiInitData{},
+        mRequestLocationInjectionCb(nullptr) {
     if (integrationClientAllowed() == false) {
         return;
     }
@@ -558,6 +568,19 @@ void IpcListener::onReceive(const char* data, uint32_t length,
                 LocConfigGetXtraStatusRespMsg msg(sockName.c_str(), respMsg,
                                                   &mApiImpl.mPbufMsgConv);
                 mApiImpl.processGetXtraStatusRespCb((LocConfigGetXtraStatusRespMsg*)&msg);
+                break;
+            }
+            case E_INTAPI_CONFIG_ODCPI_INJECT_CB_MSG_ID:
+            {
+                PBLocConfigOdcpiInjectReqCBMsg cfgOdcpiInjectReqMsg;
+                if (0 == cfgOdcpiInjectReqMsg.ParseFromString(pbLocApiMsg.payload())) {
+                    LOC_LOGe("Failed to parse cfgOdcpiInjectReqMsg from payload!!");
+                    return;
+                }
+
+                LocConfigOdcpiInjectReqCBMsg msg(sockName.c_str(),
+                        cfgOdcpiInjectReqMsg, &mApiImpl.mPbufMsgConv);
+                mApiImpl.odcpiRequestCb(msg.mRequestInfo);
                 break;
             }
 
@@ -1297,6 +1320,104 @@ uint32_t LocationIntegrationApiImpl::registerXtraStatusUpdate(bool registerUpdat
     return 0;
 }
 
+void LocationIntegrationApiImpl::odcpiRequestCb(const OdcpiRequestInfo& request) {
+
+    LOC_LOGd("request type %d tbf %d", request.type, request.tbfMillis);
+    LocationInjectRequestType requestType;
+    switch (request.type) {
+        case OdcpiRequestType::ODCPI_REQUEST_TYPE_START:
+            requestType = LocationInjectRequestType::LOCATION_INJECT_REQUEST_TYPE_START;
+            break;
+        case OdcpiRequestType::ODCPI_REQUEST_TYPE_STOP:
+            requestType = LocationInjectRequestType::LOCATION_INJECT_REQUEST_TYPE_STOP;
+            break;
+        default:
+            LOC_LOGe("Undefined request type %d", request.type);
+            return;
+    }
+
+    if (mRequestLocationInjectionCb) {
+        mRequestLocationInjectionCb(requestType, request.tbfMillis);
+    } else {
+        LOC_LOGe("odcpiRequestCb received with null mRequestLocationInjectionCb");
+    }
+}
+
+uint32_t LocationIntegrationApiImpl::registerLocationInjector(
+        LocRequestLocationInjectionCb requestLocationInjectionCb) {
+
+    mRequestLocationInjectionCb = requestLocationInjectionCb;
+
+    odcpiRequestCallback cb = [this](const OdcpiRequestInfo& odcpiRequest) {
+        odcpiRequestCb(odcpiRequest);
+    };
+    odcpiInit(cb, OdcpiPrioritytype::ODCPI_HANDLER_PRIORITY_DEFAULT);
+    return 0;
+}
+
+void LocationIntegrationApiImpl::odcpiInit(const odcpiRequestCallback& callback,
+                                           OdcpiPrioritytype priority) {
+
+    struct RegisterLocationInjectorReq : public LocMsg {
+        RegisterLocationInjectorReq(
+                LocationIntegrationApiImpl* apiImpl,
+                OdcpiPrioritytype priority) :
+            mApiImpl(apiImpl), mPriority(priority) {}
+        virtual ~RegisterLocationInjectorReq() {}
+        void proc() const {
+            string pbStr;
+            bool registerOdcpiInit = true;
+            LocConfigOdcpiInitReqMsg msg(
+                mApiImpl->mSocketName, registerOdcpiInit,
+                mPriority, &mApiImpl->mPbufMsgConv);
+            if (msg.serializeToProtobuf(pbStr)) {
+                /* no ResponseCb */
+                mApiImpl->sendConfigMsgToHalDaemon(CONFIG_REGISTER_ODCPI_INIT,
+                    pbStr, false);
+                mApiImpl->mOdcpiInitData.odcpiPriority = mPriority;
+                mApiImpl->mOdcpiInitData.regOdcpiInit = registerOdcpiInit;
+            }
+            else {
+                LOC_LOGe("serializeToProtobuf failed");
+            }
+        }
+
+        LocationIntegrationApiImpl* mApiImpl;
+        OdcpiPrioritytype           mPriority;
+    };
+
+    mMsgTask.sendMsg(new (nothrow) RegisterLocationInjectorReq(this, priority));
+}
+
+void LocationIntegrationApiImpl::odcpiInject(const ::Location &location) {
+
+    struct InjectBestLocationReq : public LocMsg {
+        InjectBestLocationReq(LocationIntegrationApiImpl* apiImpl,
+            const ::Location &location) :
+            mApiImpl(apiImpl),
+            mLocation(location) {}
+        virtual ~InjectBestLocationReq() {}
+        void proc() const {
+            string pbStr;
+            LocConfigOdcpiInjectReqMsg msg(
+                mApiImpl->mSocketName, mLocation, &mApiImpl->mPbufMsgConv);
+            if (msg.serializeToProtobuf(pbStr)) {
+                /* no ResponseCb */
+                mApiImpl->sendConfigMsgToHalDaemon(CONFIG_REGISTER_ODCPI_INJECT,
+                    pbStr, false);
+            }
+            else {
+                LOC_LOGe("serializeToProtobuf failed");
+            }
+        }
+
+        LocationIntegrationApiImpl* mApiImpl;
+        const ::Location            mLocation;
+    };
+
+    mMsgTask.sendMsg(new (nothrow) InjectBestLocationReq(this, location));
+}
+
 bool LocationIntegrationApiImpl::sendConfigMsgToHalDaemon(
         LocConfigTypeEnum configType, const string& pbStr, bool invokeResponseCb) {
     bool rc = false;
@@ -1499,6 +1620,15 @@ void LocationIntegrationApiImpl::processHalReadyMsg() {
         LocConfigRegisterXtraStatusUpdateReqMsg msg(mSocketName, &mPbufMsgConv);
         if (msg.serializeToProtobuf(pbStr)) {
             sendConfigMsgToHalDaemon(REGISTER_XTRA_STATUS_UPDATE, pbStr, false);
+        }
+    }
+
+    if (mRequestLocationInjectionCb) {
+        string pbStr;
+        LocConfigOdcpiInitReqMsg msg(mSocketName, mOdcpiInitData.regOdcpiInit,
+                mOdcpiInitData.odcpiPriority, &mPbufMsgConv);
+        if (msg.serializeToProtobuf(pbStr)) {
+            sendConfigMsgToHalDaemon((LocConfigTypeEnum)0, pbStr, false);
         }
     }
 }

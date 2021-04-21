@@ -332,6 +332,9 @@ enum ELocMsgID {
     E_INTAPI_CONFIG_OUTPUT_NMEA_TYPES_MSG_ID = 212,
     E_INTAPI_CONFIG_ENGINE_INTEGRITY_RISK_MSG_ID = 213,
     E_INTAPI_CONFIG_XTRA_PARAMS_MSG_ID = 214,
+    E_INTAPI_CONFIG_REGISTER_ODCPI_INIT_MSG_ID = 215,
+    E_INTAPI_CONFIG_ODCPI_INJECT_CB_MSG_ID = 216,
+    E_INTAPI_CONFIG_ODCPI_INJECT_MSG_ID = 217,
 
     // integration API config retrieval request/response
     E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID  = 300,
@@ -910,6 +913,64 @@ struct LocAPIGetSinglePosRespMsg: LocAPIMsgHeader
 
     int serializeToProtobuf(string& protoStr) override;
 };
+
+struct LocConfigOdcpiInitReqMsg : LocAPIMsgHeader
+{
+    bool              mRegOdcpiInit;
+    OdcpiPrioritytype     mPriority;
+
+    inline LocConfigOdcpiInitReqMsg(
+        const char* name, bool regOdcpiInit, OdcpiPrioritytype priority,
+        const LocationApiPbMsgConv* pbMsgConv) :
+        LocAPIMsgHeader(name, E_INTAPI_CONFIG_REGISTER_ODCPI_INIT_MSG_ID, pbMsgConv),
+        mRegOdcpiInit(regOdcpiInit),
+        mPriority(priority) { }
+
+    LocConfigOdcpiInitReqMsg(const char* name,
+        const PBLocConfigOdcpiInitReqMsg& pbMsg,
+        const LocationApiPbMsgConv* pbMsgConv);
+
+    int serializeToProtobuf(string& protoStr) override;
+};
+
+struct LocConfigOdcpiInjectReqCBMsg : LocAPIMsgHeader
+{
+    OdcpiRequestInfo              mRequestInfo;
+
+    inline LocConfigOdcpiInjectReqCBMsg(const char*               name,
+                                        const OdcpiRequestInfo&   requestInfo,
+                                        const LocationApiPbMsgConv* pbMsgConv) :
+        LocAPIMsgHeader(name,
+            E_INTAPI_CONFIG_ODCPI_INJECT_CB_MSG_ID ,
+            pbMsgConv),
+        mRequestInfo(requestInfo) { }
+
+    LocConfigOdcpiInjectReqCBMsg(const char* name,
+        const PBLocConfigOdcpiInjectReqCBMsg& pbMsg,
+        const LocationApiPbMsgConv* pbMsgConv);
+
+    int serializeToProtobuf(string& protoStr) override;
+};
+
+struct LocConfigOdcpiInjectReqMsg : LocAPIMsgHeader
+{
+    ::Location mLocation;
+
+    inline LocConfigOdcpiInjectReqMsg(const char* name,
+                                      const ::Location location,
+                                      const LocationApiPbMsgConv* pbMsgConv) :
+        LocAPIMsgHeader(name,
+            E_INTAPI_CONFIG_ODCPI_INJECT_MSG_ID,
+            pbMsgConv),
+        mLocation(location) { }
+
+    LocConfigOdcpiInjectReqMsg(const char* name,
+        const PBLocConfigOdcpiInjectReqMsg& pbMsg,
+        const LocationApiPbMsgConv* pbMsgConv);
+
+    int serializeToProtobuf(string& protoStr) override;
+};
+
 
 /******************************************************************************
 IPC message structure - indications

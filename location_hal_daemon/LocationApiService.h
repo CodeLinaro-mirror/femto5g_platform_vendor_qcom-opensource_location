@@ -301,6 +301,10 @@ private:
     void configEngineIntegrityRisk(const LocConfigEngineIntegrityRiskReqMsg* pMsg);
     void configXtraParams(const LocConfigXtraReqMsg* pMsg);
 
+    // Location configuration API ODCPI/DBH requests
+    void configOdcpiInit(const LocConfigOdcpiInitReqMsg* pMsg);
+    void configOdcpiInject(const LocConfigOdcpiInjectReqMsg* pMsg);
+
     // Location configuration API get/read requests
     void getGnssConfig(const LocAPIMsgHeader* pReqMsg,
                        GnssConfigFlagsBits configFlag);
@@ -344,6 +348,17 @@ private:
             }
         }
         return nullptr;
+    }
+
+    inline bool isOdcpiInjectorExist() {
+        bool existed = false;
+        for (auto client : mClients) {
+            if (client.second && client.second->mRegisterOdcpiInjector) {
+                existed = true;
+                break;
+            }
+        }
+        return existed;
     }
 
     GnssInterface* getGnssInterface();

@@ -1308,3 +1308,26 @@ static GeofenceBreachTypeMask parseClientGeofenceBreachType(GeofenceBreachType t
     }
     return mask;
 }
+
+void LocHalDaemonClientHandler::onOdcpiRequestCb(const OdcpiRequestInfo& request) {
+    std::lock_guard<std::recursive_mutex> lock(LocationApiService::mMutex);
+
+    LOC_LOGd("--< onOdcpiRequestCb");
+    if ((nullptr != mIpcSender) && mRegisterOdcpiInjector) {
+        // broadcast
+        string pbStr;
+        LocConfigOdcpiInjectReqCBMsg msg(SERVICE_NAME, request, &mService->mPbufMsgConv);
+        if (msg.serializeToProtobuf(pbStr)) {
+            bool rc = sendMessage(pbStr.c_str(), pbStr.size(), msg.msgId);
+            // purge this client if failed
+            if (!rc) {
+                LOC_LOGe("failed rc=%d purging client=%s", rc, mName.c_str());
+                mService->deleteClientbyName(mName);
+            }
+        }
+        else {
+            LOC_LOGe("LocConfigOdcpiInjectReqCBMsg serializeToProtobuf failed");
+        }
+    }
+}
+
