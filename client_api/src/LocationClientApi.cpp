@@ -536,9 +536,10 @@ void LocationClientApi::getSingleTerrestrialPosition(
     LOC_LOGd("timeout msec = %u, horQoS = %f,"
              "techMask = 0x%x", timeoutMsec, horQoS, techMask);
 
-    if ((timeoutMsec == 0) || (techMask != TERRESTRIAL_TECH_GTP_WWAN) ||
-        (horQoS != 0.0)) {
-        LOC_LOGe("invalid parameter: timeout %d, tech mask 0x%x, horQoS %f",
+    if ((terrestrialPositionCallback != nullptr) &&
+            ((timeoutMsec == 0) || (techMask != TERRESTRIAL_TECH_GTP_WWAN) ||
+             (horQoS != 0.0))) {
+        LOC_LOGe("invalid parameter: timeout %d msec, tech mask 0x%x, horQoS %f",
                  timeoutMsec, techMask, horQoS);
         if (responseCallback) {
             responseCallback(LOCATION_RESPONSE_PARAM_INVALID);
@@ -862,7 +863,7 @@ DECLARE_TBL(GnssMeasurementsClockFlagsMask) = {
     {GNSS_MEASUREMENTS_CLOCK_FLAGS_TIME_UNCERTAINTY_BIT, "TIME_UNC"},
     {GNSS_MEASUREMENTS_CLOCK_FLAGS_FULL_BIAS_BIT, "FULL_BIAS"},
     {GNSS_MEASUREMENTS_CLOCK_FLAGS_BIAS_BIT, "BIAS"},
-    {GNSS_MEASUREMENTS_CLOCK_FLAGS_BIAS_BIT, "BIAS_UNC"},
+    {GNSS_MEASUREMENTS_CLOCK_FLAGS_BIAS_UNCERTAINTY_BIT, "BIAS_UNC"},
     {GNSS_MEASUREMENTS_CLOCK_FLAGS_DRIFT_BIT, "DRIFT"},
     {GNSS_MEASUREMENTS_CLOCK_FLAGS_DRIFT_UNCERTAINTY_BIT, "DRIFT_UNC"},
     {GNSS_MEASUREMENTS_CLOCK_FLAGS_HW_CLOCK_DISCONTINUITY_COUNT_BIT, "HW_CLK_DISCONTINUITY_CNT"}
@@ -1157,6 +1158,7 @@ string GnssMeasurementsData::toString() const {
     out += FIELDVAL_ENUM(multipathIndicator, GnssMeasurementsMultipathIndicator_tbl);
     out += FIELDVAL_DEC(signalToNoiseRatioDb);
     out += FIELDVAL_DEC(agcLevelDb);
+    out += FIELDVAL_MASK(gnssSignalType, GnssSignalTypeMask_tbl);
 
     return out;
 }
