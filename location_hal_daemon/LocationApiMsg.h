@@ -252,6 +252,9 @@ enum ELocMsgID {
     E_INTAPI_CONFIG_MIN_SV_ELEVATION_MSG_ID = 208,
     E_INTAPI_CONFIG_OUTPUT_NMEA_TYPES_MSG_ID = 209,
     E_INTAPI_CONFIG_USER_CONSENT_TERRESTRIAL_POSITIONING_MSG_ID = 211,
+    E_INTAPI_CONFIG_REGISTER_ODCPI_INIT_MSG_ID = 213,
+    E_INTAPI_CONFIG_ODCPI_INJECT_CB_MSG_ID = 214,
+    E_INTAPI_CONFIG_ODCPI_INJECT_MSG_ID = 215,
 
     // integration API config retrieval request/response
     E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID  = 300,
@@ -906,6 +909,36 @@ struct LocConfigUserConsentTerrestrialPositioningReqMsg: LocAPIMsgHeader
             const char* name, bool userConsent) :
         LocAPIMsgHeader(name, E_INTAPI_CONFIG_USER_CONSENT_TERRESTRIAL_POSITIONING_MSG_ID),
         mUserConsent(userConsent) { }
+};
+
+struct LocConfigOdcpiInitReqMsg : LocAPIMsgHeader
+{
+    bool              mRegOdcpiInit;
+
+    inline LocConfigOdcpiInitReqMsg(
+            const char* name, bool regOdcpiInit) :
+        LocAPIMsgHeader(name, E_INTAPI_CONFIG_REGISTER_ODCPI_INIT_MSG_ID),
+        mRegOdcpiInit(regOdcpiInit) { }
+};
+
+struct LocConfigOdcpiInjectReqCBMsg : LocAPIMsgHeader
+{
+    OdcpiRequestInfo              mRequestInfo;
+
+    inline LocConfigOdcpiInjectReqCBMsg(const char*               name,
+                                        const OdcpiRequestInfo&   requestInfo) :
+        LocAPIMsgHeader(name, E_INTAPI_CONFIG_ODCPI_INJECT_CB_MSG_ID),
+        mRequestInfo(requestInfo) { }
+};
+
+struct LocConfigOdcpiInjectReqMsg : LocAPIMsgHeader
+{
+    ::Location mLocation;
+
+    inline LocConfigOdcpiInjectReqMsg(const char* name,
+                                      const ::Location &location) :
+        LocAPIMsgHeader(name, E_INTAPI_CONFIG_ODCPI_INJECT_MSG_ID),
+        mLocation(location) { }
 };
 
 /******************************************************************************

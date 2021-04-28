@@ -186,7 +186,8 @@ LocationIntegrationApiImpl::LocationIntegrationApiImpl(LocIntegrationCbs& integr
         mLeverArmConfigInfo{},
         mRobustLocationConfigInfo{},
         mDreConfigInfo{},
-        mGtpUserConsentConfigInfo{} {
+        mGtpUserConsentConfigInfo{},
+        mRequestLocationInjectionCb(nullptr) {
     if (integrationClientAllowed() == false) {
         return;
     }
@@ -386,6 +387,18 @@ void IpcListener::onReceive(const char* data, uint32_t length,
                              pMsg->msgId);
                 }
                 mApiImpl.processGetMinSvElevationRespCb((LocConfigGetMinSvElevationRespMsg*)pMsg);
+                break;
+            }
+
+            case E_INTAPI_CONFIG_ODCPI_INJECT_CB_MSG_ID:
+            {
+                if (sizeof(LocConfigOdcpiInjectReqCBMsg) != mMsgData.length()) {
+                    LOC_LOGw("payload size does not match for message with id: %d",
+                             pMsg->msgId);
+                }
+                LocConfigOdcpiInjectReqCBMsg* pOdcpiInjectReqCBMsg =
+                        (LocConfigOdcpiInjectReqCBMsg*)pMsg;
+                mApiImpl.odcpiRequestCb(pOdcpiInjectReqCBMsg->mRequestInfo);
                 break;
             }
 
@@ -804,6 +817,90 @@ uint32_t LocationIntegrationApiImpl::setUserConsentForTerrestrialPositioning(boo
     return 0;
 }
 
+void LocationIntegrationApiImpl::odcpiRequestCb(const OdcpiRequestInfo& request) {
+
+    LOC_LOGd("request type %d tbf %d", request.type, request.tbfMillis);
+    LocationInjectRequestType requestType;
+    switch (request.type) {
+        case OdcpiRequestType::ODCPI_REQUEST_TYPE_START:
+            requestType = LocationInjectRequestType::LOCATION_INJECT_REQUEST_TYPE_START;
+            break;
+        case OdcpiRequestType::ODCPI_REQUEST_TYPE_STOP:
+            requestType = LocationInjectRequestType::LOCATION_INJECT_REQUEST_TYPE_STOP;
+            break;
+        default:
+            LOC_LOGe("Undefined request type %d", request.type);
+            return;
+    }
+
+    if (mRequestLocationInjectionCb) {
+        mRequestLocationInjectionCb(requestType, request.tbfMillis);
+    } else {
+        LOC_LOGe("odcpiRequestCb received with null mRequestLocationInjectionCb");
+    }
+}
+
+uint32_t LocationIntegrationApiImpl::registerLocationInjector(
+        LocRequestLocationInjectionCb requestLocationInjectionCb) {
+
+    mRequestLocationInjectionCb = requestLocationInjectionCb;
+
+    odcpiRequestCallback cb = [this](const OdcpiRequestInfo& odcpiRequest) {
+        odcpiRequestCb(odcpiRequest);
+    };
+    odcpiInit(cb, OdcpiPrioritytype::ODCPI_HANDLER_PRIORITY_DEFAULT);
+    return 0;
+}
+
+void LocationIntegrationApiImpl::odcpiInit(const odcpiRequestCallback& callback,
+                                           OdcpiPrioritytype priority) {
+
+    struct RegisterLocationInjectorReq : public LocMsg {
+        RegisterLocationInjectorReq(
+                LocationIntegrationApiImpl* apiImpl) : mApiImpl(apiImpl){}
+        virtual ~RegisterLocationInjectorReq() {}
+        void proc() const {
+            bool registerOdcpiInit =
+                (nullptr != mApiImpl->mRequestLocationInjectionCb) ? true : false;
+            LOC_LOGd("registerOdcpiInit %d", registerOdcpiInit);
+            LocConfigOdcpiInitReqMsg msg(mApiImpl->mSocketName, registerOdcpiInit);
+                // no ResponseCb on purpose
+                mApiImpl->sendConfigMsgToHalDaemon(
+                        (LocConfigTypeEnum)0,
+                        reinterpret_cast<uint8_t*>(&msg),
+                        sizeof(msg), false);
+
+        }
+
+        LocationIntegrationApiImpl* mApiImpl;
+    };
+
+    (void)priority;
+    mMsgTask->sendMsg(new (nothrow) RegisterLocationInjectorReq(this));
+}
+
+void LocationIntegrationApiImpl::odcpiInject(const ::Location &location) {
+
+    struct InjectBestLocationReq : public LocMsg {
+        InjectBestLocationReq(LocationIntegrationApiImpl* apiImpl,
+                const ::Location &location) : mApiImpl(apiImpl), mLocation(location) {}
+        virtual ~InjectBestLocationReq() {}
+        void proc() const {
+            LocConfigOdcpiInjectReqMsg msg(mApiImpl->mSocketName, mLocation);
+            // no ResponseCb on purpose
+            mApiImpl->sendConfigMsgToHalDaemon(
+                    (LocConfigTypeEnum)0,
+                    reinterpret_cast<uint8_t*>(&msg),
+                    sizeof(msg), false);
+        }
+
+        LocationIntegrationApiImpl* mApiImpl;
+        const ::Location            mLocation;
+    };
+
+    mMsgTask->sendMsg(new (nothrow) InjectBestLocationReq(this, location));
+}
+
 void LocationIntegrationApiImpl::sendConfigMsgToHalDaemon(
         LocConfigTypeEnum configType, uint8_t* pMsg,
         size_t msgSize, bool invokeResponseCb) {
@@ -911,6 +1008,15 @@ void LocationIntegrationApiImpl::processHalReadyMsg() {
         sendConfigMsgToHalDaemon(CONFIG_USER_CONSENT_TERRESTRIAL_POSITIONING,
                                   reinterpret_cast<uint8_t*>(&msg),
                                   sizeof(msg));
+    }
+
+    if (mRequestLocationInjectionCb) {
+        LocConfigOdcpiInitReqMsg msg(mSocketName, true);
+        // no ResponseCb on purpose
+        sendConfigMsgToHalDaemon(
+                    (LocConfigTypeEnum)0,
+                    reinterpret_cast<uint8_t*>(&msg),
+                    sizeof(msg), false);
     }
 }
 

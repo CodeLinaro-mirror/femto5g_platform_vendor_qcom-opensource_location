@@ -234,6 +234,10 @@ private:
     void configUserConsentTerrestrialPositioning(
             LocConfigUserConsentTerrestrialPositioningReqMsg* pMsg);
 
+    // Location configuration API ODCPI/DBH requests
+    void odcpiInit(const LocConfigOdcpiInitReqMsg* pMsg);
+    void odcpiInject(const LocConfigOdcpiInjectReqMsg* pMsg);
+
     // Location configuration API get/read requests
     void getGnssConfig(const LocAPIMsgHeader* pReqMsg,
                        GnssConfigFlagsBits configFlag);
@@ -259,6 +263,17 @@ private:
     inline LocHalDaemonClientHandler* getClient(const char* socketName) {
         std::string clientname(socketName);
         return getClient(clientname);
+    }
+
+    inline bool isOdcpiInjectorExist() {
+        bool existed = false;
+        for (auto client : mClients) {
+            if (client.second && client.second->mRegisterOdcpiInjector) {
+                existed = true;
+                break;
+            }
+        }
+        return existed;
     }
 
     GnssInterface* getGnssInterface();
