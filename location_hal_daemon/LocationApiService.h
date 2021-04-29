@@ -116,7 +116,7 @@ class MaintTimer : public LocTimer {
 public:
     MaintTimer(LocationApiService* locationApiService) :
             mLocationApiService(locationApiService),
-            mMsgTask(new MsgTask("LocHalDaemonMaintenanceMsgTask", false)) {
+            mMsgTask(new MsgTask("LocHalDaemonMaintenanceMsgTask")) {
         if (!mMsgTask) {
             LOC_LOGe("failed to create msg task");
         }
