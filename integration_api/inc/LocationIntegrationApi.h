@@ -1,4 +1,4 @@
-/* Copyright (c) 2019-2020 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2019-2021 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -30,10 +30,13 @@
 #define LOCATION_INTEGRATION_API_H
 
 #include <loc_pla.h>
-#include <unordered_set>
 #ifdef NO_UNORDERED_SET_OR_MAP
+    #include <set>
     #include <map>
+    #define unordered_set set
+    #define unordered_map map
 #else
+    #include <unordered_set>
     #include <unordered_map>
 #endif
 
@@ -80,6 +83,11 @@ enum LocConfigTypeEnum{
     /** Config the run state, e.g.: pause/resume, of the position
      * engine <br/> */
     CONFIG_ENGINE_RUN_STATE = 11,
+    /** Config user consent to use GTP terrestrial positioning
+     *  service. <br/> */
+    CONFIG_USER_CONSENT_TERRESTRIAL_POSITIONING = 12,
+    /** Config the output nmea sentence types. <br/> */
+    CONFIG_OUTPUT_NMEA_TYPES = 13,
 
     /** Get configuration regarding robust location setting used by
      *  the GNSS standard position engine (SPE).  <br/> */
@@ -231,10 +239,11 @@ struct LeverArmParams {
     /** Offset along the vehicle forward axis, in unit of meters
      *  <br/> */
     float forwardOffsetMeters;
-    /** Offset along the vehicle starboard axis, in unit of
-     *  meters <br/> */
+    /** Offset along the vehicle starboard axis, in unit of meters.
+     *  Left side offset is negative, and right side offset is
+     *  positive. <br/> */
     float sidewaysOffsetMeters;
-    /** Offset along the vehicle up axis, in unit of meters <br/> */
+    /** Offset along the vehicle up axis, in unit of meters. <br/> */
     float upOffsetMeters;
 };
 
@@ -465,8 +474,8 @@ struct RobustLocationConfig {
  *  callback will be invoked for successful processing of
  *  getRobustLocationConfig(). <br/>
  *
- *  In order to receive the robust location configuration, user
- *  shall instantiate the callback and pass it to the
+ *  In order to receive the robust location configuration,
+ *  client shall instantiate the callback and pass it to the
  *  LocationIntegrationApi constructor and then invoke
  *  getRobustLocationConfig(). <br/> */
 typedef std::function<void(
@@ -527,6 +536,54 @@ struct LocIntegrationCbs {
     /** Callback to receive the secondary band configuration for
      *  constellation. <br/> */
     LocConfigGetConstellationSecondaryBandConfigCb getConstellationSecondaryBandConfigCb;
+};
+
+/** Specify the NMEA sentence types that the device will output
+ *  via location_client::startPositionSession(). <br/>
+ *
+ *  Please note that this setting is only applicable if
+ *  NMEA_PROVIDER in gps.conf is set to 0 to use HLOS
+ *  generated NMEA. <br/> */
+enum NmeaTypesMask {
+    /** Enable HLOS to generate and output GGA NMEA sentence.
+     *  <br> */
+    NMEA_TYPE_GGA      = (1<<0),
+    /** Enable HLOS to generate and output RMC NMEA sentence.
+     *  <br> */
+    NMEA_TYPE_RMC      = (1<<1),
+    /** Enable HLOS to generate and output GSA NMEA sentence.
+     *  <br> */
+    NMEA_TYPE_GSA      = (1<<2),
+    /** Enable HLOS to generate and output VTG NMEA sentence.
+     *  <br> */
+    NMEA_TYPE_VTG      = (1<<3),
+    /** Enable HLOS to generate and output GNS NMEA sentence.
+     *  <br> */
+    NMEA_TYPE_GNS      = (1<<4),
+    /** Enable HLOS to generate and output DTM NMEA sentence.
+     *  <br> */
+    NMEA_TYPE_DTM      = (1<<5),
+    /** Enable HLOS to generate and output GPGSV NMEA sentence for
+     *  SVs from GPS constellation. <br> */
+    NMEA_TYPE_GPGSV    = (1<<6),
+    /** Enable HLOS to generate and output GLGSV NMEA sentence for
+     *  SVs from GLONASS constellation. <br> */
+    NMEA_TYPE_GLGSV    = (1<<7),
+    /** Enable HLOS to generate and output GAGSV NMEA sentence for
+     *  SVs from GALILEO constellation. <br> */
+    NMEA_TYPE_GAGSV    = (1<<8),
+    /** Enable HLOS to generate and output GQGSV NMEA sentence for
+     *  SVs from QZSS constellation. <br> */
+    NMEA_TYPE_GQGSV    = (1<<9),
+    /** Enable HLOS to generate and output GBGSV NMEA sentence for
+     *  SVs from BEIDOU constellation. <br> */
+    NMEA_TYPE_GBGSV    = (1<<10),
+    /** Enable HLOS to generate and output GIGSV NMEA sentence for
+     *  SVs from NAVIC constellation. <br> */
+    NMEA_TYPE_GIGSV    = (1<<11),
+    /** Enable HLOS to generate and output all supported NMEA
+     *  sentences. <br> */
+    NMEA_TYPE_ALL        = 0xffffffff,
 };
 
 class LocationIntegrationApiImpl;
@@ -1136,6 +1193,85 @@ public:
     */
     bool configEngineRunState(LocIntegrationEngineType engType,
                               LocIntegrationEngineRunState engState);
+
+
+    /** @brief
+        Set client consent to use terrestrial positioning. <br/>
+
+        Client must call this API with userConsent set to true in order
+        to retrieve terrestrial position via
+        LocationClientApi::getSingleTerrestrialPosition(). <br/>
+
+        The consent will remain effective across power cycles, until
+        this API is called with a different value.  <br/>
+
+        @param
+        true: client agrees to the privacy entailed when using terrestrial
+        positioning.
+        false: client does not agree to the privacy entailed when using
+        terrestrial positioning. Due to this, client will not be able to
+        retrieve terrestrial position.
+
+        @return true, if client constent has been accepted for further processing.
+                When returning true, LocConfigCb() will be invoked to deliver
+                asynchronous processing status. <br/>
+
+        @return false, if client constent has not been accepted for further
+                processing. When returning false, no further processing
+                will be performed and LocConfigCb() will not be invoked.
+                <br/>
+    */
+    bool setUserConsentForTerrestrialPositioning(bool userConsent);
+
+    /** @brief
+        This API is used to config the NMEA sentence types that
+        clients will receive via
+        location_client::startPositionSession(). <br/>
+
+        Without prior calling this API, all NMEA sentences supported
+        in the system, as defined in NmeaTypesMask, will get
+        generated and delivered to all the location api clients that
+        register to receive NMEA sentences. <br/>
+
+        The NMEA sentence types are per-device setting and calling
+        this API will impact all the location api clients that
+        register to receive NMEA sentences. This API call is not
+        incremental and the new NMEA sentence types will completely
+        overwrite the previous call. <br/>
+
+        If one or more unspecified bits are set in the NMEA mask,
+        those bits will be ignored, but the rest of the
+        configuration will get applied. <br/>
+
+        Please note that the configured NMEA sentence types are not
+        persistent. Upon reboot of the processor that hosts the
+        location hal daemon, if the client process that configures
+        the NMEA sentence types resides on the same processor as
+        location hal daemon, it is expected that the client process
+        to get re-launched and reconfigure the NMEA sentence types
+        if the desired NMEA sentence types are different from
+        default. If the client process that configures the NMEA
+        sentence types resides on a diffrent processor as the
+        location hal daemon, upon location hal daemon restarts,
+        location hal daemon will receive the configured NMEA
+        sentence types again from location integration api library
+        running on the client process on the different processor.
+        <br/>
+
+        @param
+        enabledNmeaTypes: specify the set of NMEA sentences the
+        device will generate and deliver to the location api clients
+        that register to receive NMEA sentences. <br/>
+
+        @return true, if the API request has been accepted. The
+                status will be returned via configCB. When returning
+                true, LocConfigCb() will be invoked to deliver
+                asynchronous processing status. <br/>
+
+        @return false, if the API request has not been accepted for
+                further processing. <br/>
+    */
+    bool configOutputNmeaTypes(NmeaTypesMask enabledNmeaTypes);
 
 private:
     LocationIntegrationApiImpl* mApiImpl;

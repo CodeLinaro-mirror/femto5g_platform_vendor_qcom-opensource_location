@@ -31,6 +31,7 @@
 
 #include <mutex>
 
+#include <loc_pla.h>
 #include <LocIpc.h>
 #include <LocationDataTypes.h>
 #include <ILocationAPI.h>
@@ -41,6 +42,7 @@
 
 #ifdef NO_UNORDERED_SET_OR_MAP
     #include <map>
+    #define unordered_map map
 #else
     #include <unordered_map>
 #endif
@@ -84,6 +86,16 @@ typedef struct {
     ::DeadReckoningEngineConfig dreConfig;
 } DeadReckoningEngineConfigInfo;
 
+typedef struct {
+    bool isValid;
+    bool userConsent;
+} GtpUserConsentConfigInfo;
+
+typedef struct {
+    bool isValid;
+    GnssNmeaTypesMask enabledNmeaTypes;
+} NmeaConfigInfo;
+
 class IpcListener;
 
 class LocationIntegrationApiImpl : public ILocationControlAPI {
@@ -125,6 +137,10 @@ public:
     uint32_t getConstellationSecondaryBandConfig();
 
     uint32_t configEngineRunState(PositioningEngineMask engType, LocEngineRunState engState);
+
+    uint32_t setUserConsentForTerrestrialPositioning(bool userConsent);
+
+    uint32_t configOutputNmeaTypes(GnssNmeaTypesMask enabledNmeaTypes) override;
 
 private:
     ~LocationIntegrationApiImpl();
@@ -168,7 +184,8 @@ private:
     RobustLocationConfigInfo mRobustLocationConfigInfo;
     DeadReckoningEngineConfigInfo mDreConfigInfo;
     LocConfigEngRunStateMap       mEngRunStateConfigMap;
-
+    GtpUserConsentConfigInfo      mGtpUserConsentConfigInfo;
+    NmeaConfigInfo                mNmeaConfigInfo;
     LocConfigReqCntMap       mConfigReqCntMap;
     LocIntegrationCbs        mIntegrationCbs;
 

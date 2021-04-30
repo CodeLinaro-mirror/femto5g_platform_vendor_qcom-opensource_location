@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018-2021, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -160,7 +160,10 @@ enum GnssSvOptionsMask {
     /** This SV has valid GnssSv::carrierFrequencyHz. <br/> */
     GNSS_SV_OPTIONS_HAS_CARRIER_FREQUENCY_BIT   = (1<<3),
     /** This SV has valid GnssSv::gnssSignalTypeMask. <br/>   */
-    GNSS_SV_OPTIONS_HAS_GNSS_SIGNAL_TYPE_BIT    = (1<<4)
+    GNSS_SV_OPTIONS_HAS_GNSS_SIGNAL_TYPE_BIT    = (1<<4),
+    /** This SV has valid GnssSv::basebandCarrierToNoiseDbHz.
+     *  <br/> */
+    GNSS_SV_OPTIONS_HAS_BASEBAND_CARRIER_TO_NOISE_BIT = (1<<5)
 };
 
 /**
@@ -384,6 +387,12 @@ enum LocationResponse {
     LOCATION_RESPONSE_NOT_SUPPORTED = 2,
     /** LocationClientApi call has invalid parameter. <br/>   */
     LOCATION_RESPONSE_PARAM_INVALID = 3,
+    /** LocationClientApi call timeout */
+    LOCATION_RESPONSE_TIMEOUT = 4,
+    /** LocationClientApi is busy. */
+    LOCATION_RESPONSE_REQUEST_ALREADY_IN_PROGRESS = 5,
+    /** System is not ready, e.g.: hal daemon is not yet ready. */
+    LOCATION_RESPONSE_SYSTEM_NOT_READY = 6,
 };
 
 /** Specify the SV constellation type in GnssSv
@@ -701,44 +710,54 @@ struct GnssLocationPositionDynamics {
      *  meters/second^2. <br/>   */
     float           vertAccel;
     /** Uncertainty of forward acceleration in body frame, in unit
-     *  of meters/second^2. <br/>   */
+     *  of meters/second^2. <br/>
+     *  Uncertainty is defined with 68% confidence level. <br/> */
     float           longAccelUnc;
     /** Uncertainty of side-ward acceleration in body frame, in unit
-     *  of meters/second^2. <br/>   */
+     *  of meters/second^2. <br/>
+     *  Uncertainty is defined with 68% confidence level. <br/>    */
     float           latAccelUnc;
     /** Uncertainty of vertical acceleration in body frame, in unit
-     *  of meters/second^2. <br/>   */
+     *  of meters/second^2. <br/>
+     *  Uncertainty is defined with 68% confidence level. <br/>   */
     float           vertAccelUnc;
     /** Body pitch, in unit of radians. <br/>   */
     float           pitch;
-    /** Uncertainty of body pitch, in unit of radians. <br/>   */
+    /** Uncertainty of body pitch, in unit of radians. <br/>
+     *  Uncertainty is defined with 68% confidence level. <br/>    */
     float           pitchUnc;
     /** Body pitch rate, in unit of radians/second.  <br/> */
     float           pitchRate;
-    /** Uncertainty of pitch rate, in unit of radians/second.  <br/> */
+    /** Uncertainty of pitch rate, in unit of radians/second.  <br/>
+     *  Uncertainty is defined with 68% confidence level. <br/>  */
     float           pitchRateUnc;
     /** Roll of body frame, clockwise is positive, in unit of
      *  radian.  <br/> */
     float           roll;
-    /** Uncertainty of roll, 68% confidence level, in unit of
-    radian. <br/>  */
+    /** Uncertainty of roll, in unit of radian. <br/>
+     *  Uncertainty is defined with 68% confidence level. <br/> */
     float           rollUnc;
     /** Roll rate of body frame, clockwise is
     positive, in unit of radian/second. <br/> */
     float           rollRate;
-    /** Uncertainty of roll rate, 68% confidence level, in unit of
-     *  radian/second. <br/>  */
+    /** Uncertainty of roll rate, in unit of radian/second. <br/>
+     *  Uncertainty is defined with 68% confidence level. <br/> */
     float           rollRateUnc;
     /** Yaw of body frame, clockwise is positive, in unit of
      *  radian. <br/> */
     float           yaw;
     /** Uncertainty of yaw, 68% confidence level, in unit of radian.
-     *  <br/> */
+     *  <br/>
+     *  Uncertainty is defined with 68% confidence level. <br/>  */
     float           yawUnc;
-    /** Heading rate, in unit of radians/second. <br/>   */
+    /** Heading rate, in unit of radians/second. <br/>
+     *  Range: +/- pi (where pi is ~3.14159). <br/>
+     *  The positive value is clockwise and negative value is
+     *  anti-clockwise. <br/>
+     */
     float           yawRate;
-    /** Uncertainty of heading rate, in unit of radians/second.
-     *  <br/> */
+    /** Uncertainty of heading rate, in unit of radians/second. <br/>
+     *  Uncertainty is defined with 68% confidence level. <br/>  */
     float           yawRateUnc;
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
@@ -942,14 +961,18 @@ struct Location {
     float speed;
     /** Bearing, in unit of degrees, range [0, 360) <br/>   */
     float bearing;
-    /** Horizontal accuracy, in unit of meters. <br/>   */
+    /** Horizontal accuracy, in unit of meters. <br/>
+     *  Uncertainty is defined with 68% confidence level. <br/> */
     float horizontalAccuracy;
-    /** Vertial accuracy, in uint of meters. <br/>   */
+    /** Vertial accuracy, in uint of meters. <br/>
+     *  Uncertainty is defined with 68% confidence level. <br/> */
     float verticalAccuracy;
-    /** Speed uncertainty, in unit meters/second. <br/>   */
+    /** Horizontal speed uncertainty, in unit meters/second. <br/>
+     *  Uncertainty is defined with 68% confidence level. <br/> */
     float speedAccuracy;
     /** Bearing uncertainty, in unit of degrees, range (0 to
-     *  359.999). <br/>   */
+     *  359.999). <br/>
+     *  Uncertainty is defined with 68% confidence level. <br/> */
     float bearingAccuracy;
     /** Sets of technology that contributed to the fix. <br/>   */
     LocationTechnologyMask techMask;
@@ -1038,17 +1061,22 @@ struct GnssLocation : public Location {
     /** Vertical reliability. <br/>   */
     LocationReliability verReliability;
     /** Horizontal elliptical accuracy semi-major axis, in unit of
-     *  meters. <br/>   */
+     *  meters. <br/>
+     *  Uncertainty is defined with 39% confidence level. <br/> */
     float horUncEllipseSemiMajor;
     /** Horizontal elliptical accuracy semi-minor axis, in unit of
-     *  meters. <br/>  <br/>   */
+     *  meters. <br/>
+     *  Uncertainty is defined with 39% confidence level. <br/> */
     float horUncEllipseSemiMinor;
     /** Horizontal elliptical accuracy azimuth, in unit of degrees,
-     *  range [0, 180]. <br/>   */
+     *  range [0, 180]. <br/>
+     *  Confidence for uncertianty is not specified. <br/> */
     float horUncEllipseOrientAzimuth;
-    /** North standard deviation, in unit of meters. <br/>   */
+    /** North standard deviation, in unit of meters. <br/>
+     *  Uncertainty is defined with 68% confidence level. <br/> */
     float northStdDeviation;
-    /** East standard deviation, in unit of meters. <br/>   */
+    /** East standard deviation, in unit of meters. <br/>
+     *  Uncertainty is defined with 68% confidence level. <br/> */
     float eastStdDeviation;
     /** North velocity, in unit of meters/sec. <br/>   */
     float northVelocity;
@@ -1056,11 +1084,14 @@ struct GnssLocation : public Location {
     float eastVelocity;
     /** Up velocity, in unit of meters/sec. <br/>   */
     float upVelocity;
-    /** North velocity uncertainty, in unit of meters/sec. <br/>  */
+    /** North velocity uncertainty, in unit of meters/sec. <br/>
+     *  Uncertainty is defined with 68% confidence level. <br/> */
     float northVelocityStdDeviation;
-    /** East velocity uncertainty, in unit of meters/sec <br/>   */
+    /** East velocity uncertainty, in unit of meters/sec <br/>
+     *  Uncertainty is defined with 68% confidence level. <br/> */
     float eastVelocityStdDeviation;
-    /** Up velocity uncertainty, in unit of meters/sec. <br/>   */
+    /** Up velocity uncertainty, in unit of meters/sec. <br/>
+     *  Uncertainty is defined with 68% confidence level. <br/> */
     float upVelocityStdDeviation;
     /** Number of SV used in position report. <br/>   */
     uint16_t numSvUsedInPosition;
@@ -1080,7 +1111,11 @@ struct GnssLocation : public Location {
     /** Number of leap Seconds at time when this position is
      *  generated. */
     uint8_t leapSeconds;
-    /** Time uncertainty, in unit of milliseconds. <br/>   */
+    /** Time uncertainty, in unit of milliseconds. <br/>
+     *  For PVT report from SPE engine, confidence leve is at
+     *  99%. <br/>
+     *  For PVT reports from other engines, confidence level is
+     *  undefined. <br/> */
     float timeUncMs;
     /** Sensor calibration confidence percent, range [0, 100].
      *  <br/> */
@@ -1159,7 +1194,10 @@ struct GnssSv {
      *   SV Range for supported constellation is specified as below:
      *   <br/>
      *    - For GPS:     1 to 32 <br/>
-     *    - For GLONASS: 65 to 96 <br/>
+     *    - For GLONASS: 65 to 96 or FCN+104
+     *                   [65, 96] if orbital slot number(OSN) is known
+     *                   [97, 110] as frequency channel number(FCN) [-7, 6] plus 104
+     *                   i.e. encode FCN -7 as 97, 0 as 104, 6 as 110 <br/>
      *    - For SBAS:    120 to 158 and 183 to 191 <br/>
      *    - For QZSS:    193 to 197 <br/>
      *    - For BDS:     201 to 263 <br/>
@@ -1172,26 +1210,36 @@ struct GnssSv {
     GnssSvType type;
      /** Signal-to-noise ratio at antenna of the SV, in unit of
       * dB-Hz. <br/>
-      * This field is always valid.  <br/> */
+      * cN0Dbhz of 0.0 indicates that this field is unknown. <br/> */
     float cN0Dbhz;
-    /** Elevation of the SV, in unit of degrees. <br/> This field is
-     *  always valid.  <br/> */
+    /** Elevation of the SV, in unit of degrees. <br/>
+     *  This field is always valid.  <br/> */
     float elevation;
-    /** Azimuth of the SV, in unit of degrees. <br/> This field is
-     *  always valid.  <br/> */
+    /** Azimuth of the SV, in unit of degrees. <br/>
+     *  This field is always valid.  <br/> */
     float azimuth;
     /** Bitwise OR of GnssSvOptionsMask to specify additional
      *  info and valid fields in GnssSv. <br/>
      *  This field is always valid.  <br/>  */
     GnssSvOptionsMask gnssSvOptionsMask;
-    /** Carrier frequency of the signal tracked. <br/> This field is
-     *  valid if gnssSvOptionsMask has
+    /** Carrier frequency of the signal tracked. <br/>
+     *  This field is valid if gnssSvOptionsMask has
      *  GNSS_SV_OPTIONS_HAS_CARRIER_FREQUENCY_BIT set.  <br/> */
     float carrierFrequencyHz;
     /** GNSS signal type mask of the SV. <br/>
      *  This field is valid if gnssSvOptionsMask has
      *  GNSS_SV_OPTIONS_HAS_GNSS_SIGNAL_TYPE_BIT. <br/> */
     GnssSignalTypeMask gnssSignalTypeMask;
+    /** GLONASS frequency channel number, range is [1, 14].
+     * <br/>
+     * This field is always valid if and ony if sv is of GLONASS.
+     * <br/> */
+    uint16_t gloFrequency;
+   /** RF loss from antenna to baseband of the SV, in unit of
+     *  dB-Hz. <br/>
+     *  This field is valid if gnssSvOptionsMask has
+     *  GNSS_SV_OPTIONS_HAS_BASEBAND_CARRIER_TO_NOISE_BIT set. <br/> */
+    double basebandCarrierToNoiseDbHz;
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
     string toString() const;
@@ -1302,7 +1350,8 @@ enum GnssMeasurementsDataFlagsMask{
      *  GnssMeasurementsData::stateMask.  <br/>   */
     GNSS_MEASUREMENTS_DATA_STATE_BIT                        = (1<<2),
     /** GnssMeasurementsData has valid
-     *  GnssMeasurementsData::receivedSvTimeNs.  <br/>   */
+     *  GnssMeasurementsData::receivedSvTimeNs and
+     *  GnssMeasurementsData::receivedSvTimeSubNs.  <br/> */
     GNSS_MEASUREMENTS_DATA_RECEIVED_SV_TIME_BIT             = (1<<3),
     /** GnssMeasurementsData has valid
      *  GnssMeasurementsData::receivedSvTimeUncertaintyNs.  <br/> */
@@ -1347,6 +1396,9 @@ enum GnssMeasurementsDataFlagsMask{
     /** GnssMeasurementsData has valid
      *  GnssMeasurementsData::agcLevelDb.  <br/>   */
     GNSS_MEASUREMENTS_DATA_AUTOMATIC_GAIN_CONTROL_BIT       = (1<<17),
+    /** GnssMeasurementsData has valid
+     *  GnssMeasurementsData::gnssSignalType. <br/> */
+    GNSS_MEASUREMENTS_DATA_GNSS_SIGNAL_TYPE_BIT             = (1<<18),
 };
 
 /** Specify GNSS measurement state in
@@ -1467,8 +1519,19 @@ struct GnssMeasurementsData {
      *  GNSS measurement state. <br/>   */
     GnssMeasurementsStateMask stateMask;
     /** Received GNSS time of the week in nanoseconds when the
-     *  measurement was taken. <br/>   */
+     *  measurement was taken. <br/>
+     *  For sub nanoseconds part of the time, please refer to
+     *  of GnssMeasurementsData::receivedSvTimeSubNs. <br/>
+     *  Total time is: receivedSvTimeNs+receivedSvTimeSubNs. <br/>*/
     int64_t receivedSvTimeNs;
+
+    /** Sub nanoseconds portion of the received GNSS time of the
+     *  week when the measurement was taken. <br/>
+     *  For nanoseconds portion of the time, please refer to field
+     *  of GnssMeasurementsData::receivedSvTimeSubNs. <br/>
+     *  Total time is: receivedSvTimeNs+receivedSvTimeSubNs. <br/>*/
+    float receivedSvTimeSubNs;
+
     /** Satellite time. <br/>
      *  All SV times in the current measurement block are already
      *  propagated to a common reference time epoch, in unit of
@@ -1508,6 +1571,8 @@ struct GnssMeasurementsData {
     double signalToNoiseRatioDb;
     /** Automatic gain control level, in unit of dB <br/> */
     double agcLevelDb;
+    /** Signal type of the measurement.  <br/> */
+    GnssSignalTypeMask gnssSignalType;
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
     string toString() const;
@@ -1555,6 +1620,8 @@ struct GnssMeasurements {
     GnssMeasurementsClock clock;
     /** GNSS measurements data. <br/>   */
     std::vector<GnssMeasurementsData> measurements;
+    /** NHz measurements indicator */
+    bool isNhz;
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
     string toString() const;
@@ -1657,6 +1724,15 @@ struct LocationSystemInfo {
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
     string toString() const;
+};
+
+/** Specify the set of terrestrial technologies to be used when
+ *  invoking getSingleTerrestrialPosition(). <br/>
+ *
+ *  Currently, only TERRESTRIAL_TECH_GTP_WWAN is supported.
+ *  <br/> */
+enum TerrestrialTechnologyMask {
+    TERRESTRIAL_TECH_GTP_WWAN = 1 << 0,
 };
 
 enum BatchingStatus {
@@ -1856,8 +1932,12 @@ struct GnssReportCbs {
     /** Callback to receive GnssData from modem GNSS engine.
      *  <br/> */
     GnssDataCb gnssDataCallback;
-    /** Callback to receive GnssMeasurements modem GNSS engine. <br/>  */
+    /** Callback to receive 1Hz GnssMeasurements from modem GNSS
+     *  engine. <br/> */
     GnssMeasurementsCb gnssMeasurementsCallback;
+    /** Callback to receive NHz GnssMeasurements from modem GNSS
+     *  engine. <br/> */
+    GnssMeasurementsCb gnssNHzMeasurementsCallback;
 };
 
 /** Specify the set of callbacks to receive the reports when
@@ -1883,9 +1963,12 @@ struct EngineReportCbs {
     /** Callback to receive GnssData from modem GNSS engine.
      *  <br/> */
     GnssDataCb gnssDataCallback;
-    /** Callback to receive GnssMeasurements from modem GNSS engine.
-     *  <br/> */
+    /** Callback to receive 1Hz GnssMeasurements from modem GNSS
+     *  engine. <br/> */
     GnssMeasurementsCb gnssMeasurementsCallback;
+    /** Callback to receive NHz GnssMeasurements from modem GNSS
+     *  engine. <br/> */
+    GnssMeasurementsCb gnssNHzMeasurementsCallback;
 };
 
 /**
@@ -2145,6 +2228,85 @@ public:
      *  No callback will be issued regarding the procesing status.
      *  <br/> */
     void stopPositionSession();
+
+    /** @brief
+        Retrieve single-shot terrestrial position using the set of
+        specified terrestrial technologies. <br/>
+
+        For this phase, only TERRESTRIAL_TECH_GTP_WWAN will be
+        supported and this will return cell-based position. <br/.
+
+        This API can be invoked with on-going tracking session
+        initiated via startPositionSession(). <br/
+
+        If this API is invoked with single-shot terrestrial position
+        already in progress, the request will fail and the
+        responseCallback will get invoked with
+        LOCATION_RESPONSE_BUSY. <br/
+
+        @param timeoutMsec
+        The amount of time that user is willing to wait for
+        the terrestrial positioning to become available. <br/>
+
+        @param techMask
+        The set of terrestrial technologies that are allowed to be
+        used for producing the position. <br/>
+
+        For this phase, only TERRESTRIAL_TECH_GTP_WWAN will be
+        supported. If other values are pased to this API,
+        LOCATION_RESPONSE_PARAM_INVALID will be delivered via
+        responseCb if responseCb is not null. <br/>
+
+        @param horQoS
+        horizontal accuracy requirement for the terrestrial fix.
+        0(Zero) means client does not specify horizontal accuracy
+        requirement. <br/>
+
+        For this phase, only 0 will be accepted. None-zero
+        horizontal accuracy requirement will not be supported and
+        LOCATION_RESPONSE_PARAM_INVALID will be delivered via
+        responseCb if responseCb is not null. <br/>
+
+        @param terrestrialPositionCallback
+        callback to receive terrestrial position. Some fields in
+        LocationClientApi::Location, e.g.: speed, bearing and their
+        uncertainty may not be available for terrestrial position.
+        Please check Location::flags for the fields that are
+        available. <br/>
+
+        This callback will only be invoked when
+        responseCallback is invoked with ResponseCb with processing
+        status set to LOCATION_RESPONSE_SUCCESS. <br/>
+
+        Null terrestrialPositionCallback will cancel the current
+        request. If responseCallback is none-null,
+        LOCATION_RESPONSE_SUCCESS will be delivered. <br/>
+
+        @param responseCallback
+        Callback to receive processing status, e.g.: success or
+        failure code: e.g.: timeout. If null responseCallback is
+        passed, client will not be informed of processing status,
+        e.g.:LOCATION_RESPONSE_PARAM_INVALID. <br/>
+
+        When the processing status is LOCATION_RESPONSE_SUCCESS, the
+        terrestrialPositionCallback will be invoked to deliver the
+        single-shot terrestrial position report. <br/>
+
+        If this API is invoked with invalid parameter, e.g.: 0
+        milli-seconds timeout, or techMask set to value other than
+        TERRESTRIAL_TECH_GTP_WWAN or horQoS set to none-zero value,
+        the responseCallback will get invoked with
+        LOCATION_RESPONSE_PARAM_INVALID. <br/>
+
+        If this API is invoked with single-shot terrestrial position
+        already in progress, the request will fail and the
+        responseCallback will get invoked with
+        LOCATION_RESPONSE_BUSY. <br/> */
+    void getSingleTerrestrialPosition(uint32_t timeoutMsec,
+                                      TerrestrialTechnologyMask techMask,
+                                      float horQos,
+                                      LocationCb terrestrialPositionCallback,
+                                      ResponseCb responseCallback);
 
     /** @example example1:testTrackingApi
     * <pre>

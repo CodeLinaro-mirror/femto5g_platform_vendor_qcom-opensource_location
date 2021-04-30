@@ -36,6 +36,7 @@
 
 #ifdef NO_UNORDERED_SET_OR_MAP
     #include <map>
+    #define unordered_map map
 #else
     #include <unordered_map>
 #endif
@@ -82,6 +83,7 @@ public:
             mSubscriptionMask = 0;
             mLocationApi = LocationAPI::createInstance(mCallbacks);
         }
+        updateSubscription(0);
     }
 
     static shared_ptr<LocIpcSender> createSender(const string socket);
@@ -117,6 +119,8 @@ public:
     void eraseGeofenceIds(size_t count, uint32_t* clientIds);
     uint32_t* getSessionIds(size_t count, uint32_t* clientIds);
     uint32_t* getClientIds(size_t count, uint32_t* sessionIds);
+    // send terrestrial fix to the requesting LCA client
+    void sendTerrestrialFix(LocationError error, const Location& location);
 
     inline shared_ptr<LocIpcSender> getIpcSender () {return mIpcSender;};
 

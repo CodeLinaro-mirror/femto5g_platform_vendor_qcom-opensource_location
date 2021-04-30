@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018-2021, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -30,6 +30,7 @@
 #define LOCATIONAPIMSG_H
 
 #include <string>
+#include <vector>
 #include <memory>
 #include <algorithm>
 #include <loc_pla.h> // for strlcpy
@@ -241,6 +242,10 @@ enum ELocMsgID {
     // Measurement reports
     E_LOCAPI_MEAS_MSG_ID = 30,
 
+    // Terrestria fix request/response msg
+    E_LOCAPI_GET_SINGLE_TERRESTRIAL_POS_REQ_MSG_ID = 31,
+    E_LOCAPI_GET_SINGLE_TERRESTRIAL_POS_RESP_MSG_ID = 32,
+
     // ping
     E_LOCAPI_PINGTEST_MSG_ID = 99,
 
@@ -256,6 +261,8 @@ enum ELocMsgID {
     E_INTAPI_CONFIG_MIN_SV_ELEVATION_MSG_ID = 208,
     E_INTAPI_CONFIG_CONSTELLATION_SECONDARY_BAND_MSG_ID  = 209,
     E_INTAPI_CONFIG_ENGINE_RUN_STATE_MSG_ID = 210,
+    E_INTAPI_CONFIG_USER_CONSENT_TERRESTRIAL_POSITIONING_MSG_ID = 211,
+    E_INTAPI_CONFIG_OUTPUT_NMEA_TYPES_MSG_ID = 212,
 
     // integration API config retrieval request/response
     E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID  = 300,
@@ -273,7 +280,7 @@ enum ELocMsgID {
 
 typedef uint32_t LocationCallbacksMask;
 enum ELocationCallbacksOption {
-    E_LOC_CB_DISTANCE_BASED_TRACKING_BIT= (1<<0), /**< Register for DBT location report */
+    E_LOC_CB_TRACKING_BIT               = (1<<0), /**< Register for DBT location report */
     E_LOC_CB_GNSS_LOCATION_INFO_BIT     = (1<<1), /**< Register for GNSS Location */
     E_LOC_CB_GNSS_SV_BIT                = (1<<2), /**< Register for GNSS SV */
     E_LOC_CB_GNSS_NMEA_BIT              = (1<<3), /**< Register for GNSS NMEA */
@@ -285,14 +292,16 @@ enum ELocationCallbacksOption {
     E_LOC_CB_ENGINE_LOCATIONS_INFO_BIT  = (1<<9), /**< Register for multiple engine reports */
     E_LOC_CB_SIMPLE_LOCATION_INFO_BIT   = (1<<10), /**< Register for simple location */
     E_LOC_CB_GNSS_MEAS_BIT              = (1<<11), /**< Register for GNSS Measurements */
+    E_LOC_CB_GNSS_NHZ_MEAS_BIT          = (1<<12), /**< Register for NHZ GNSS Measurements */
 };
 
 // Mask related to all info that are tied with a position session and need to be unsubscribed
 // when session is stopped
-#define LOCATION_SESSON_ALL_INFO_MASK (E_LOC_CB_DISTANCE_BASED_TRACKING_BIT|\
+#define LOCATION_SESSON_ALL_INFO_MASK (E_LOC_CB_TRACKING_BIT|\
                                        E_LOC_CB_GNSS_LOCATION_INFO_BIT|\
                                        E_LOC_CB_GNSS_SV_BIT|E_LOC_CB_GNSS_NMEA_BIT|\
                                        E_LOC_CB_GNSS_DATA_BIT|E_LOC_CB_GNSS_MEAS_BIT|\
+                                       E_LOC_CB_GNSS_NHZ_MEAS_BIT|\
                                        E_LOC_CB_ENGINE_LOCATIONS_INFO_BIT|\
                                        E_LOC_CB_SIMPLE_LOCATION_INFO_BIT)
 
@@ -314,21 +323,15 @@ struct LocAPINmeaSerializedPayload {
 };
 
 struct LocAPIBatchNotification {
-    // do not use size_t as data type for size_t is architecture dependent
-    uint32_t size;
-    uint32_t count;
     BatchingStatus status;
-    Location location[1];
+    std::vector<Location> location;
 };
 
 struct LocAPIGeofenceBreachNotification {
-    // do not use size_t as data type for size_t is architecture dependent
-    uint32_t size;
-    uint32_t count;
     uint64_t timestamp;
     GeofenceBreachTypeMask type; //type of breach
     Location location;   //location associated with breach
-    uint32_t id[1];
+    std::vector<uint32_t> id;
 };
 
 struct GeofencePayload {
@@ -353,10 +356,7 @@ struct GeofenceResponse {
 };
 
 struct CollectiveResPayload {
-    // do not use size_t as data type for size_t is architecture dependent
-    uint32_t size;
-    uint32_t count;
-    GeofenceResponse resp[1];
+    std::vector<GeofenceResponse> resp;
 };
 /******************************************************************************
 IPC message header structure
@@ -499,6 +499,9 @@ struct LocAPICollectiveRespMsg: LocAPIMsgHeader
 {
     CollectiveResPayload collectiveRes;
 
+    inline LocAPICollectiveRespMsg(const char* name, ELocMsgID msgId,
+            const LocationApiPbMsgConv *pbMsgConv) :
+        LocAPIMsgHeader(name, msgId, pbMsgConv) { }
     inline LocAPICollectiveRespMsg(const char* name, ELocMsgID msgId,
             CollectiveResPayload& response, const LocationApiPbMsgConv *pbMsgConv) :
         LocAPIMsgHeader(name, msgId, pbMsgConv),
@@ -736,6 +739,43 @@ struct LocAPIGetGnssEnergyConsumedReqMsg: LocAPIMsgHeader
     int serializeToProtobuf(string& protoStr) override;
 };
 
+struct LocAPIGetSingleTerrestrialPosReqMsg: LocAPIMsgHeader
+{
+    uint32_t            mTimeoutMsec;
+    TerrestrialTechMask mTechMask;
+    float               mHorQoS;
+
+    inline LocAPIGetSingleTerrestrialPosReqMsg(
+            const char* name, uint32_t timeoutMsec, TerrestrialTechMask techMask,
+            float horQoS, const LocationApiPbMsgConv *pbMsgConv) :
+        LocAPIMsgHeader(name, E_LOCAPI_GET_SINGLE_TERRESTRIAL_POS_REQ_MSG_ID, pbMsgConv),
+        mTimeoutMsec(timeoutMsec), mTechMask(techMask), mHorQoS(horQoS) { }
+
+    LocAPIGetSingleTerrestrialPosReqMsg(const char* name,
+            const PBLocAPIGetSingleTerrestrialPosReqMsg &pbLocGetTerrestrialPosReq,
+            const LocationApiPbMsgConv *pbMsgConv);
+
+    int serializeToProtobuf(string& protoStr) override;
+};
+
+struct LocAPIGetSingleTerrestrialPosRespMsg: LocAPIMsgHeader
+{
+    LocationError mErrorCode;
+    Location      mLocation;
+
+    inline LocAPIGetSingleTerrestrialPosRespMsg(
+            const char* name, LocationError errorCode, Location location,
+            const LocationApiPbMsgConv *pbMsgConv) :
+        LocAPIMsgHeader(name, E_LOCAPI_GET_SINGLE_TERRESTRIAL_POS_RESP_MSG_ID, pbMsgConv),
+        mErrorCode(errorCode), mLocation(location) { }
+
+    LocAPIGetSingleTerrestrialPosRespMsg(const char* name,
+            const PBLocAPIGetSingleTerrestrialPosRespMsg &pbLocGetTerrestrialPosResp,
+            const LocationApiPbMsgConv *pbMsgConv);
+
+    int serializeToProtobuf(string& protoStr) override;
+};
+
 /******************************************************************************
 IPC message structure - indications
 ******************************************************************************/
@@ -759,6 +799,8 @@ struct LocAPIBatchingIndMsg: LocAPIMsgHeader
 {
     LocAPIBatchNotification batchNotification;
 
+    inline LocAPIBatchingIndMsg(const char* name, const LocationApiPbMsgConv *pbMsgConv) :
+        LocAPIMsgHeader(name, E_LOCAPI_BATCHING_MSG_ID, pbMsgConv) { }
     inline LocAPIBatchingIndMsg(const char* name, LocAPIBatchNotification& batchNotif,
             const LocationApiPbMsgConv *pbMsgConv) :
         LocAPIMsgHeader(name, E_LOCAPI_BATCHING_MSG_ID, pbMsgConv),
@@ -774,6 +816,8 @@ struct LocAPIGeofenceBreachIndMsg: LocAPIMsgHeader
 {
     LocAPIGeofenceBreachNotification gfBreachNotification;
 
+    inline LocAPIGeofenceBreachIndMsg(const char* name, const LocationApiPbMsgConv *pbMsgConv) :
+        LocAPIMsgHeader(name, E_LOCAPI_GEOFENCE_BREACH_MSG_ID, pbMsgConv) { }
     inline LocAPIGeofenceBreachIndMsg(const char* name,
             LocAPIGeofenceBreachNotification& gfBreachNotif,
             const LocationApiPbMsgConv *pbMsgConv) :
@@ -899,7 +943,7 @@ struct LocAPIMeasIndMsg : LocAPIMsgHeader
     int serializeToProtobuf(string& protoStr) override;
 };
 
-// defintion for message with msg id of E_LOCAPI_GET_TOTAL_ENGERY_CONSUMED_BY_GPS_ENGINE_MSG_ID
+// defintion for message with msg id of E_LOCAPI_GET_GNSS_ENGERY_CONSUMED_MSG_ID
 struct LocAPIGnssEnergyConsumedIndMsg: LocAPIMsgHeader
 {
     uint64_t totalGnssEnergyConsumedSinceFirstBoot;
@@ -1122,6 +1166,43 @@ struct LocConfigEngineRunStateReqMsg: LocAPIMsgHeader
 
     LocConfigEngineRunStateReqMsg(const char* name,
             const PBLocConfigEngineRunStateReqMsg &pbConfigEngineStateReqMsg,
+            const LocationApiPbMsgConv *pbMsgConv);
+
+    int serializeToProtobuf(string& protoStr) override;
+};
+
+struct LocConfigUserConsentTerrestrialPositioningReqMsg: LocAPIMsgHeader
+{
+    bool mUserConsent;
+
+    inline LocConfigUserConsentTerrestrialPositioningReqMsg(
+            const char* name, bool userConsent, const LocationApiPbMsgConv *pbMsgConv) :
+        LocAPIMsgHeader(name,
+                        E_INTAPI_CONFIG_USER_CONSENT_TERRESTRIAL_POSITIONING_MSG_ID,
+                        pbMsgConv),
+        mUserConsent(userConsent) { }
+
+    LocConfigUserConsentTerrestrialPositioningReqMsg(const char* name,
+            const PBLocConfigUserConsentTerrestrialPositioningReqMsg &pbMsg,
+            const LocationApiPbMsgConv *pbMsgConv);
+
+    int serializeToProtobuf(string& protoStr) override;
+};
+
+struct LocConfigOutputNmeaTypesReqMsg: LocAPIMsgHeader
+{
+    GnssNmeaTypesMask mEnabledNmeaTypes;
+
+    inline LocConfigOutputNmeaTypesReqMsg(
+            const char* name, GnssNmeaTypesMask enabledNmeaTypes,
+            const LocationApiPbMsgConv *pbMsgConv) :
+        LocAPIMsgHeader(name,
+                        E_INTAPI_CONFIG_OUTPUT_NMEA_TYPES_MSG_ID,
+                        pbMsgConv),
+        mEnabledNmeaTypes(enabledNmeaTypes) { }
+
+    LocConfigOutputNmeaTypesReqMsg(const char* name,
+            const PBLocConfigOutputNmeaTypesReqMsg &pbMsg,
             const LocationApiPbMsgConv *pbMsgConv);
 
     int serializeToProtobuf(string& protoStr) override;

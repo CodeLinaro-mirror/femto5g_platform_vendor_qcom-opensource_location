@@ -1,4 +1,4 @@
-/* Copyright (c) 2019-2020 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2019-2021 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -38,11 +38,13 @@
 #include <sys/prctl.h>
 #include <sys/capability.h>
 #include <semaphore.h>
+#include <getopt.h>
 #include <loc_pla.h>
 #include <loc_cfg.h>
 #include <loc_misc_utils.h>
 #ifdef NO_UNORDERED_SET_OR_MAP
     #include <map>
+    #define unordered_map map
 #else
     #include <unordered_map>
 #endif
@@ -54,6 +56,7 @@ using namespace location_client;
 using namespace location_integration;
 
 static bool     outputEnabled = true;
+static bool     detailedOutputEnabled = false;
 // debug events counter
 static uint32_t numLocationCb = 0;
 static uint32_t numGnssLocationCb = 0;
@@ -63,36 +66,81 @@ static uint32_t numGnssNmeaCb = 0;
 static uint32_t numDataCb         = 0;
 static uint32_t numGnssMeasurementsCb = 0;
 
+static LocationClientApi* pAutoStartClient = nullptr;
+static location_integration::LocationIntegrationApi* pAutoStartIntClient = nullptr;
+static sem_t sem_autoTestCompleted;
+static int fixCnt = 0x7fffffff;
+static uint64_t autoTestStartTimeMs = 0;
+static int autoTestTimeoutSec = 0x7FFFFFFF;
+
+enum ReportType {
+    POSITION_REPORT = 1 << 0,
+    NMEA_REPORT     = 1 << 1,
+    SV_REPORT       = 1 << 2,
+    DATA_REPORT     = 1 << 3,
+    MEAS_REPORT     = 1 << 4,
+    NHZ_MEAS_REPORT = 1 << 5,
+};
+
+enum TrackingSessionType {
+    NO_TRACKING = 0,
+    SIMPLE_REPORT_TRACKING = 1,
+    DETAILED_REPORT_TRACKING = 2,
+    ENGINE_REPORT_TRACKING = 3,
+};
+
 #define DISABLE_REPORT_OUTPUT "disableReportOutput"
 #define ENABLE_REPORT_OUTPUT  "enableReportOutput"
-#define DISABLE_TUNC       "disableTunc"
-#define ENABLE_TUNC        "enableTunc"
-#define DISABLE_PACE       "disablePACE"
-#define ENABLE_PACE        "enablePACE"
-#define RESET_SV_CONFIG    "resetSVConfig"
-#define CONFIG_SV          "configSV"
-#define CONFIG_SECONDARY_BAND     "configSecondaryBand"
-#define GET_SECONDARY_BAND_CONFIG "getSecondaryBandConfig"
-#define MULTI_CONFIG_SV    "multiConfigSV"
-#define DELETE_ALL         "deleteAll"
-#define DELETE_AIDING_DATA "deleteAidingData"
-#define CONFIG_LEVER_ARM   "configLeverArm"
-#define CONFIG_ROBUST_LOCATION  "configRobustLocation"
+#define ENABLE_DETAILED_REPORT_OUTPUT  "enableDetailedReportOutput"
+#define DISABLE_TUNC          "disableTunc"
+#define ENABLE_TUNC           "enableTunc"
+#define DISABLE_PACE          "disablePACE"
+#define ENABLE_PACE           "enablePACE"
+#define RESET_SV_CONFIG       "resetSVConfig"
+#define CONFIG_SV             "configSV"
+#define CONFIG_SECONDARY_BAND      "configSecondaryBand"
+#define GET_SECONDARY_BAND_CONFIG  "getSecondaryBandConfig"
+#define MULTI_CONFIG_SV            "multiConfigSV"
+#define DELETE_ALL                 "deleteAll"
+#define DELETE_AIDING_DATA         "deleteAidingData"
+#define CONFIG_LEVER_ARM           "configLeverArm"
+#define CONFIG_ROBUST_LOCATION     "configRobustLocation"
 #define GET_ROBUST_LOCATION_CONFIG "getRobustLocationConfig"
-#define CONFIG_MIN_GPS_WEEK "configMinGpsWeek"
-#define GET_MIN_GPS_WEEK    "getMinGpsWeek"
-#define CONFIG_DR_ENGINE    "configDrEngine"
-#define CONFIG_MIN_SV_ELEVATION "configMinSvElevation"
-#define GET_MIN_SV_ELEVATION    "getMinSvElevation"
-#define CONFIG_ENGINE_RUN_STATE "configEngineRunState"
+#define CONFIG_MIN_GPS_WEEK        "configMinGpsWeek"
+#define GET_MIN_GPS_WEEK           "getMinGpsWeek"
+#define CONFIG_DR_ENGINE           "configDrEngine"
+#define CONFIG_MIN_SV_ELEVATION    "configMinSvElevation"
+#define GET_MIN_SV_ELEVATION       "getMinSvElevation"
+#define CONFIG_ENGINE_RUN_STATE    "configEngineRunState"
+#define SET_USER_CONSENT           "setUserConsentForTerrestrialPositioning"
+#define GET_SINGLE_GTP_WWAN_FIX    "getSingleGtpWwanFix"
+#define CANCEL_SINGLE_GTP_WWAN_FIX "cancelSingleGtpWwanFix"
+#define CONFIG_NMEA_TYPES          "configOutputNmeaTypes"
 
 // debug utility
-static uint64_t getTimestamp() {
-    struct timespec ts;
+static uint64_t getTimestampMs() {
+    struct timespec ts = {};
     clock_gettime(CLOCK_BOOTTIME, &ts);
-    uint64_t absolute_micro =
-            ((uint64_t)(ts.tv_sec)) * 1000000ULL + ((uint64_t)(ts.tv_nsec)) / 1000ULL;
-    return absolute_micro;
+    uint64_t msec =
+            ((uint64_t)(ts.tv_sec)) * 1000ULL + ((uint64_t)(ts.tv_nsec)) / 1000000ULL;
+    return msec;
+}
+
+static void cleanupAfterAutoStart() {
+    if (pAutoStartClient) {
+        printf("calling stopPosition and delete LCA client\n");
+        pAutoStartClient->stopPositionSession();
+        delete pAutoStartClient;
+        pAutoStartClient = nullptr;
+        printf("\n\n summary: received %d fixes\n", numEngLocationCb);
+    }
+    if (pAutoStartIntClient) {
+        printf("calling delete LIA client \n");
+        delete pAutoStartIntClient;
+        pAutoStartIntClient = nullptr;
+    }
+    // wait one second for stop request to reach hal daemon
+    sleep(1);
 }
 
 /******************************************************************************
@@ -113,13 +161,37 @@ static void onLocationCb(const location_client::Location& location) {
     if (!outputEnabled) {
         return;
     }
-    printf("<<< onLocationCb cnt=%u time=%" PRIu64" mask=0x%x lat=%f lon=%f alt=%f\n",
-           numLocationCb,
-           location.timestamp,
-           location.flags,
-           location.latitude,
-           location.longitude,
-           location.altitude);
+    if (detailedOutputEnabled) {
+        printf("<<< onLocationCb cnt=%u: %s\n", numLocationCb, location.toString().c_str());
+    } else {
+        printf("<<< onLocationCb cnt=%u: time=%" PRIu64" mask=0x%x lat=%f lon=%f alt=%f\n",
+               numLocationCb,
+               location.timestamp,
+               location.flags,
+               location.latitude,
+               location.longitude,
+               location.altitude);
+    }
+}
+
+static void onGtpResponseCb(location_client::LocationResponse response) {
+    printf("<<< onGtpResponseCb err=%u\n", response);
+}
+
+static void onGtpLocationCb(const location_client::Location& location) {
+    if (!outputEnabled) {
+        return;
+    }
+    if (detailedOutputEnabled) {
+        printf("<<< onGtpLocationCb: %s\n", location.toString().c_str());
+    } else {
+        printf("<<< onGtpLocationCb time=%" PRIu64" mask=0x%x lat=%f lon=%f alt=%f\n",
+               location.timestamp,
+               location.flags,
+               location.latitude,
+               location.longitude,
+               location.altitude);
+    }
 }
 
 static void onGnssLocationCb(const location_client::GnssLocation& location) {
@@ -127,49 +199,84 @@ static void onGnssLocationCb(const location_client::GnssLocation& location) {
     if (!outputEnabled) {
         return;
     }
-    printf("<<< onGnssLocationCb cnt=%u time=%" PRIu64" mask=0x%x lat=%f lon=%f alt=%f\n",
-            numGnssLocationCb,
-            location.timestamp,
-            location.flags,
-            location.latitude,
-            location.longitude,
-            location.altitude);
+    if (detailedOutputEnabled) {
+        printf("<<< onGnssLocationCb cnt=%u: %s\n", numGnssLocationCb, location.toString().c_str());
+    } else {
+        printf("<<< onGnssLocationCb cnt=%u: time=%" PRIu64" mask=0x%x lat=%f lon=%f alt=%f\n",
+                numGnssLocationCb,
+                location.timestamp,
+                location.flags,
+                location.latitude,
+                location.longitude,
+                location.altitude);
+    }
 }
 
 static void onEngLocationsCb(const std::vector<location_client::GnssLocation>& locations) {
-    numEngLocationCb++;
     if (!outputEnabled) {
         return;
     }
     for (auto gnssLocation : locations) {
-       printf("<<< onEngLocationsCb: cnt=%u time=%" PRIu64" mask=0x%x lat=%f lon=%f alt=%f\n"
-              "info mask=0x%" PRIx64 ", nav solution maks = 0x%x, eng type %d, eng mask 0x%x, "
-              "session status %d",
-              numEngLocationCb,
-              gnssLocation.timestamp,
-              gnssLocation.flags,
-              gnssLocation.latitude,
-              gnssLocation.longitude,
-              gnssLocation.altitude,
-              gnssLocation.gnssInfoFlags,
-              gnssLocation.navSolutionMask,
-              gnssLocation.locOutputEngType,
-              gnssLocation.locOutputEngMask,
-              gnssLocation.sessionStatus);
+        if (detailedOutputEnabled) {
+            printf("<<< onEngLocationsCb cnt=%u: %s\n", numEngLocationCb,
+                   gnssLocation.toString().c_str());
+        } else {
+            printf("<<< onEngLocationsCb cnt=%u: time=%" PRIu64" mask=0x%x lat=%f lon=%f alt=%f\n"
+                   "info mask=0x%" PRIx64 ", nav solution maks = 0x%x, eng type %d, eng mask 0x%x, "
+                   "session status %d\n",
+                   numEngLocationCb,
+                   gnssLocation.timestamp,
+                   gnssLocation.flags,
+                   gnssLocation.latitude,
+                   gnssLocation.longitude,
+                   gnssLocation.altitude,
+                   gnssLocation.gnssInfoFlags,
+                   gnssLocation.navSolutionMask,
+                   gnssLocation.locOutputEngType,
+                   gnssLocation.locOutputEngMask,
+                   gnssLocation.sessionStatus);
+        }
+
+        if (gnssLocation.sessionStatus == LOC_SESS_SUCCESS &&
+            gnssLocation.locOutputEngType == LOC_OUTPUT_ENGINE_FUSED) {
+            numEngLocationCb++;
+        }
+    }
+
+    if (numEngLocationCb >= fixCnt) {
+        sem_post(&sem_autoTestCompleted);
     }
 }
 
 static void onGnssSvCb(const std::vector<location_client::GnssSv>& gnssSvs) {
     numGnssSvCb++;
+
+    // we are in auto-test mode, check whether we have completed the test
+    if (autoTestStartTimeMs != 0) {
+        uint64_t nowMs = getTimestampMs();
+        if (nowMs-autoTestStartTimeMs >= autoTestTimeoutSec * 1000) {
+            printf("complete due to run time exceeded %d sec\n", autoTestTimeoutSec);
+            sem_post(&sem_autoTestCompleted);
+        }
+    }
+
     if (!outputEnabled) {
         return;
     }
-    std::stringstream ss;
-    ss << "<<< onGnssSvCb c=" << numGnssSvCb << " s=" << gnssSvs.size();
-    for (auto sv : gnssSvs) {
-        ss << " " << sv.type << ":" << sv.svId << "/" << (uint32_t)sv.cN0Dbhz;
+
+    if (detailedOutputEnabled) {
+        printf("<<< onGnssSvCb cnt=%d\n", numGnssSvCb);
+        for (auto sv : gnssSvs) {
+            printf("<<< %s\n", sv.toString().c_str());
+        }
+    } else {
+        std::stringstream ss;
+        ss << "<<< onGnssSvCb c=" << numGnssSvCb << " s=" << gnssSvs.size();
+        for (auto sv : gnssSvs) {
+            ss << " " << sv.type << ":" << sv.svId << "/" << (uint32_t)sv.cN0Dbhz;
+        }
+        printf("%s\n", ss.str().c_str());
     }
-    printf("%s\n", ss.str().c_str());
 }
 
 static void onGnssNmeaCb(uint64_t timestamp, const std::string& nmea) {
@@ -186,7 +293,11 @@ static void onGnssDataCb(const location_client::GnssData& gnssData) {
     if (!outputEnabled) {
         return;
     }
-    printf("<<< gnssDataCb cnt=%u, %s ", numDataCb, gnssData.toString().c_str());
+    if (detailedOutputEnabled) {
+        printf("<<< gnssDataCb cnt=%u: %s\n", numDataCb, gnssData.toString().c_str());
+    } else {
+        printf("<<< gnssDataCb cnt=%u\n", numDataCb);
+    }
 }
 
 static void onGnssMeasurementsCb(const location_client::GnssMeasurements& gnssMeasurements) {
@@ -194,8 +305,14 @@ static void onGnssMeasurementsCb(const location_client::GnssMeasurements& gnssMe
     if (!outputEnabled) {
         return;
     }
-    printf("<<< onGnssMeasurementsCb cnt=%u, num of meas %d\n", numGnssMeasurementsCb,
-           gnssMeasurements.measurements.size());
+    if (detailedOutputEnabled) {
+        printf("<<< onGnssMeasurementsCb cnt=%u, %s ", numGnssMeasurementsCb,
+               gnssMeasurements.toString().c_str());
+    } else {
+        printf("<<< onGnssMeasurementsCb cnt=%u, num of meas %d, nHz %d\n",
+               numGnssMeasurementsCb, gnssMeasurements.measurements.size(),
+               gnssMeasurements.isNhz);
+    }
 }
 
 static void onConfigResponseCb(location_integration::LocConfigTypeEnum    requestType,
@@ -232,11 +349,11 @@ static void printHelp() {
     printf("u: Update a session with 2000 ms interval\n");
     printf("m: Interleaving fix session with 1000 and 2000 ms interval, change every 3 seconds\n");
     printf("s: Stop a session \n");
-    printf("p: Ping test\n");
     printf("q: Quit\n");
     printf("r: delete client\n");
-    printf("%s supress output from various reports: disable output\n", DISABLE_REPORT_OUTPUT);
-    printf("%s enable output from various reports: disable output\n", ENABLE_REPORT_OUTPUT);
+    printf("%s: supress output from various reports\n", DISABLE_REPORT_OUTPUT);
+    printf("%s: enable output from various reports\n", ENABLE_REPORT_OUTPUT);
+    printf("%s: enable detailed output from various reports\n", ENABLE_DETAILED_REPORT_OUTPUT);
     printf("%s tuncThreshold energyBudget: enable tunc\n", ENABLE_TUNC);
     printf("%s: disable tunc\n", DISABLE_TUNC);
     printf("%s: enable PACE\n", ENABLE_PACE);
@@ -257,6 +374,9 @@ static void printHelp() {
     printf("%s: set min sv elevation angle\n", CONFIG_MIN_SV_ELEVATION);
     printf("%s: get min sv elevation angle\n", GET_MIN_SV_ELEVATION);
     printf("%s: config engine run state\n", CONFIG_ENGINE_RUN_STATE);
+    printf("%s: set user consent for terrestrial positioning 0/1\n", SET_USER_CONSENT);
+    printf("%s: get single shot wwan fix\n", GET_SINGLE_GTP_WWAN_FIX);
+    printf("%s: config nmea types \n", CONFIG_NMEA_TYPES);
 }
 
 void setRequiredPermToRunAsLocClient() {
@@ -501,59 +621,187 @@ void parseDreConfig (char* buf, DeadReckoningEngineConfig& dreConfig) {
     dreConfig.validMask = (DeadReckoningEngineConfigValidMask)validMask;
 }
 
-
-/******************************************************************************
-Main function
-******************************************************************************/
-
 static void checkForAutoStart(int argc, char *argv[]) {
-    // check for auto-start option
-    if (argc >= 2) {
-        if (strncmp (argv[1], "auto", strlen("auto")) == 0) {
-            printf("usage: location_clientapi_test_app auto");
-            uint32_t pid = (uint32_t)getpid();
+    bool autoRun = false;
+    bool deleteAll = false;
+    uint32_t aidingDataMask = 0;
+    int interval = 100;
+    LocReqEngineTypeMask reqEngMask = (LocReqEngineTypeMask) 0x7;
+    uint32_t reportType = 0xff;
+    TrackingSessionType trackingType = NO_TRACKING;
 
-            LocationClientApi* pClient = new LocationClientApi(onCapabilitiesCb);
-            if (nullptr == pClient) {
+    //Specifying the expected options
+    //The two options l and b expect numbers as argument
+    static struct option long_options[] = {
+        {"auto",      no_argument,       0,  'a' },
+        {"verbose",   no_argument,       0,  'V' },
+        {"nooutput",   no_argument,      0,  'N' },
+        {"deleteAll", no_argument,       0,  'D' },
+        {"delete",    required_argument, 0,  'd' },
+        {"session",   required_argument, 0,  's' },
+        {"engine",    required_argument, 0,  'e' },
+        {"interval",  required_argument, 0,  'i' },
+        {"timeout", required_argument,   0,  't' },
+        {"fixcnt",   required_argument,  0,  'l' },
+        {"reportType", required_argument, 0, 'r' },
+        {0,           0,                 0,   0  }
+    };
+
+    int long_index =0;
+    int opt = -1;
+    while ((opt = getopt_long(argc, argv, "aVNDd:s:e:i:t:l:r:",
+                              long_options, &long_index)) != -1) {
+        switch (opt) {
+             case 'a' :
+                 autoRun = true;
+                 break;
+             case 'V' :
+                 detailedOutputEnabled = true;
+                 break;
+             case 'N' :
+                 outputEnabled = false;
+                 break;
+             case 'D':
+                 deleteAll = true;
+                 break;
+             case 'd' :
+                 aidingDataMask = atoi(optarg);
+                 break;
+             case 's':
+                 printf("session type: %s\n", optarg);
+                 if (optarg[0] == 'l') {
+                     trackingType = SIMPLE_REPORT_TRACKING;
+                 } else if (optarg[0] == 'g') {
+                     trackingType = DETAILED_REPORT_TRACKING;
+                 } else {
+                     trackingType = ENGINE_REPORT_TRACKING;
+                 }
+                 break;
+             case 'e' :
+                 printf("report mask: %s\n", optarg);
+                 reqEngMask = (LocReqEngineTypeMask) atoi(optarg);
+                 break;
+             case 'l':
+                 printf("fix cnt: %s\n", optarg);
+                 fixCnt = atoi(optarg);
+                 break;
+            case 'i':
+                 printf("interval: %s\n", optarg);
+                 interval = atoi(optarg);
+                 break;
+             case 't':
+                 printf("tiemout: %s\n", optarg);
+                 autoTestTimeoutSec = atoi(optarg);
+                 break;
+             case 'r' :
+                 printf("report type: %s\n", optarg);
+                 reportType = atoi(optarg);
+                 break;
+             default:
+                 printf("unsupported args provided\n");
+                 break;
+        }
+    }
+
+    printf("auto run %d, deleteAll %d, delete mask 0x%x, session type %d,"
+           "outputEnabled %d, detailedOutputEnabled %d",
+           autoRun, deleteAll, aidingDataMask, trackingType,
+           outputEnabled, detailedOutputEnabled);
+
+    // check for auto-start option
+    if (autoRun) {
+        uint32_t pid = (uint32_t)getpid();
+
+        if (deleteAll == true || aidingDataMask != 0) {
+            // create location integratin API
+            LocIntegrationCbs intCbs;
+            intCbs.configCb = LocConfigCb(onConfigResponseCb);
+            LocConfigPriorityMap priorityMap;
+            pAutoStartIntClient =
+                    new LocationIntegrationApi(priorityMap, intCbs);
+            if (!pAutoStartIntClient) {
+                printf("can not create Location integration API");
+                exit(1);
+            }
+            sleep(1); // wait for capability callback
+            if (deleteAll) {
+                pAutoStartIntClient->deleteAllAidingData();
+            } else {
+                pAutoStartIntClient->deleteAidingData((AidingDataDeletionMask) aidingDataMask);
+            }
+            // wait for config response callback to be received
+            sleep(1);
+        }
+
+        if (trackingType != NO_TRACKING) {
+            pAutoStartClient = new LocationClientApi(onCapabilitiesCb);
+            if (nullptr == pAutoStartClient) {
                 printf("can not create Location client API");
                 exit(1);
             }
 
-            bool cleanup = false;
-            if (argc >= 3) {
-                if (strncmp (argv[2], "clean", strlen("clean")) == 0) {
-                    cleanup = true;
+            if (trackingType == SIMPLE_REPORT_TRACKING) {
+                pAutoStartClient->startPositionSession(interval, 0, onLocationCb, onResponseCb);
+            } else if (trackingType == DETAILED_REPORT_TRACKING) {
+                // callbacks
+                GnssReportCbs reportcbs;
+                if (reportType & POSITION_REPORT) {
+                    reportcbs.gnssLocationCallback = GnssLocationCb(onGnssLocationCb);
                 }
-            }
-            // wait for capability to come
-            sleep(1);
+                if (reportType & NMEA_REPORT) {
+                    reportcbs.gnssNmeaCallback = GnssNmeaCb(onGnssNmeaCb);
+                }
+                if (reportType & SV_REPORT) {
+                    reportcbs.gnssSvCallback = GnssSvCb(onGnssSvCb);
+                }
+                if (reportType & DATA_REPORT) {
+                    reportcbs.gnssDataCallback = GnssDataCb(onGnssDataCb);
+                }
+                if (reportType & MEAS_REPORT) {
+                    reportcbs.gnssMeasurementsCallback = GnssMeasurementsCb(onGnssMeasurementsCb);
+                }
+                if (reportType & NHZ_MEAS_REPORT) {
+                    reportcbs.gnssNHzMeasurementsCallback =
+                            GnssMeasurementsCb(onGnssMeasurementsCb);
+                }
+                pAutoStartClient->startPositionSession(interval, reportcbs, onResponseCb);
+            } else if (reqEngMask != 0) {
+                EngineReportCbs reportcbs;
+                if (reportType & POSITION_REPORT) {
+                    reportcbs.engLocationsCallback = EngineLocationsCb(onEngLocationsCb);
+                }
+                if (reportType & NMEA_REPORT) {
+                    reportcbs.gnssNmeaCallback = GnssNmeaCb(onGnssNmeaCb);
+                }
+                if (reportType & SV_REPORT) {
+                    reportcbs.gnssSvCallback = GnssSvCb(onGnssSvCb);
+                }
+                if (reportType & DATA_REPORT) {
+                    reportcbs.gnssDataCallback = GnssDataCb(onGnssDataCb);
+                }
+                if (reportType & MEAS_REPORT) {
+                    reportcbs.gnssMeasurementsCallback = GnssMeasurementsCb(onGnssMeasurementsCb);
+                }
+                if (reportType & NHZ_MEAS_REPORT) {
+                    reportcbs.gnssNHzMeasurementsCallback =
+                            GnssMeasurementsCb(onGnssMeasurementsCb);
+                }
 
-            EngineReportCbs reportcbs;
-            reportcbs.engLocationsCallback = EngineLocationsCb(onEngLocationsCb);
-            reportcbs.gnssSvCallback = GnssSvCb(onGnssSvCb);
-            reportcbs.gnssNmeaCallback = GnssNmeaCb(onGnssNmeaCb);
-            LocReqEngineTypeMask reqEngMask = (LocReqEngineTypeMask)
-                    (LOC_REQ_ENGINE_FUSED_BIT|LOC_REQ_ENGINE_SPE_BIT|
-                    LOC_REQ_ENGINE_PPE_BIT);
-            pClient->startPositionSession(100, reqEngMask, reportcbs, onResponseCb);
-            // wait for fix report to come
-            sleep(2);
-            while (numEngLocationCb < 10) {
-                sleep(3);
-                printf("pid %u, recevied %d report\n", pid, numEngLocationCb);
+                pAutoStartClient->startPositionSession(interval, reqEngMask,
+                                                       reportcbs, onResponseCb);
             }
-            printf("pid %u, recevied %d report\n", pid, numEngLocationCb);
-            if (pClient && cleanup) {
-                printf("calling stopPosition and delete client \n");
-                pClient->stopPositionSession();
-                delete pClient;
-                sleep(1);
-            }
-            exit(0);
+            autoTestStartTimeMs = getTimestampMs();
+            sem_wait(&sem_autoTestCompleted);
         }
+
+        cleanupAfterAutoStart();
+        exit(0);
     }
 }
 
+/******************************************************************************
+Main function
+******************************************************************************/
 int main(int argc, char *argv[]) {
 
     setRequiredPermToRunAsLocClient();
@@ -617,6 +865,11 @@ int main(int argc, char *argv[]) {
 
         if (strncmp(buf, ENABLE_REPORT_OUTPUT, strlen(ENABLE_REPORT_OUTPUT)) == 0) {
             outputEnabled = true;
+            detailedOutputEnabled = false;
+        } else if (strncmp(buf, ENABLE_DETAILED_REPORT_OUTPUT,
+                           strlen(ENABLE_DETAILED_REPORT_OUTPUT)) == 0) {
+            outputEnabled = true;
+            detailedOutputEnabled = true;
         } else if (strncmp(buf, DISABLE_REPORT_OUTPUT, strlen(DISABLE_REPORT_OUTPUT)) == 0) {
             outputEnabled = false;
         } else if (strncmp(buf, DISABLE_TUNC, strlen(DISABLE_TUNC)) == 0) {
@@ -770,6 +1023,67 @@ int main(int argc, char *argv[]) {
             printf("eng type %d, eng state %d\n", engType, engState);
             bool retVal = pIntClient->configEngineRunState(engType, engState);
             printf("configEngineRunState returned %d\n", retVal);
+        } else if (strncmp(buf, SET_USER_CONSENT, strlen(SET_USER_CONSENT)) == 0) {
+            static char *save = nullptr;
+            bool userConsent = false;
+            char* token = strtok_r(buf, " ", &save);
+            token = strtok_r(NULL, " ", &save);
+            if (token != NULL) {
+                userConsent = (atoi(token) != 0);
+            }
+            printf("userConsent %d\n", userConsent);
+            pIntClient->setUserConsentForTerrestrialPositioning(userConsent);
+        } else if (strncmp(buf, GET_SINGLE_GTP_WWAN_FIX, strlen(GET_SINGLE_GTP_WWAN_FIX)) == 0) {
+            static char *save = nullptr;
+            uint32_t timeoutMsec = 0;
+            float horQoS = 0.0;
+            uint32_t techMask = 0x0;
+            // skip first argument
+            char* token = strtok_r(buf, " ", &save);
+            // get timeout
+            token = strtok_r(NULL, " ", &save);
+            if (token != NULL) {
+                timeoutMsec = atoi(token);
+            }
+            // get qos
+            token = strtok_r(NULL, " ", &save);
+            if (token != NULL) {
+                horQoS = atof(token);
+            }
+            // tech mask
+            token = strtok_r(NULL, " ", &save);
+            if (token != NULL) {
+                techMask = atoi(token);
+            }
+            printf("timeout msec %d, horQoS %f, techMask 0x%x\n", timeoutMsec, horQoS, techMask);
+            if (!pClient) {
+                pClient = new LocationClientApi(onCapabilitiesCb);
+            }
+            if (pClient) {
+                pClient->getSingleTerrestrialPosition(timeoutMsec,
+                                                      (TerrestrialTechnologyMask) techMask,
+                                                      horQoS, onGtpLocationCb, onGtpResponseCb);
+            }
+        } else if (strncmp(buf, CANCEL_SINGLE_GTP_WWAN_FIX,
+                           strlen(CANCEL_SINGLE_GTP_WWAN_FIX)) == 0) {
+            // cancel the request
+            if (!pClient) {
+                pClient = new LocationClientApi(onCapabilitiesCb);
+            }
+            if (pClient) {
+                pClient->getSingleTerrestrialPosition(0, TERRESTRIAL_TECH_GTP_WWAN, 0.0,
+                                                      nullptr, onGtpResponseCb);
+            }
+        } else if (strncmp(buf, CONFIG_NMEA_TYPES, strlen(CONFIG_NMEA_TYPES)) == 0) {
+            static char *save = nullptr;
+            NmeaTypesMask nmeaTypes = (NmeaTypesMask) NMEA_TYPE_ALL;
+            char* token = strtok_r(buf, " ", &save);
+            token = strtok_r(NULL, " ", &save);
+            if (token != NULL) {
+                nmeaTypes = (NmeaTypesMask) strtoul(token, &save, 10);
+            }
+            printf("nmeaTypes 0x%x\n", nmeaTypes);
+            pIntClient->configOutputNmeaTypes(nmeaTypes);
         } else {
             int command = buf[0];
             switch(command) {
@@ -846,11 +1160,14 @@ int main(int argc, char *argv[]) {
 
 EXIT:
     if (nullptr != pClient) {
+        pClient->stopPositionSession();
         delete pClient;
+        pClient = nullptr;
     }
 
     if (nullptr != pIntClient) {
         delete pIntClient;
+        pIntClient = nullptr;
     }
 
     printf("Done\n");

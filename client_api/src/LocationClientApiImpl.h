@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018-2021, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -43,6 +43,8 @@
 #ifdef NO_UNORDERED_SET_OR_MAP
     #include <set>
     #include <map>
+    #define unordered_set set
+    #define unordered_map map
 #else
     #include <unordered_set>
     #include <unordered_map>
@@ -163,6 +165,10 @@ public:
     void invokePositionSessionResponseCb(LocationResponse responseCode);
     inline uint16_t getYearOfHw() {return mYearOfHw;}
 
+    void getSingleTerrestrialPos(uint32_t timeoutMsec, TerrestrialTechMask techMask,
+                                 float horQoS, LocationCb terrestrialPositionCallback,
+                                 ResponseCb responseCallback);
+
 private:
     ~LocationClientApiImpl();
     void capabilitesCallback(ELocMsgID  msgId, const void* msgData);
@@ -173,6 +179,7 @@ private:
 
     // internal session parameter
     static uint32_t         mClientIdGenerator;
+    static uint32_t         mClientIdIndex;
     static mutex            mMutex;
     uint32_t                mClientId;
     uint32_t                mSessionId;
@@ -211,12 +218,17 @@ private:
     GnssNmeaCb              mGnssNmeaCb;
     GnssDataCb              mGnssDataCb;
     GnssMeasurementsCb      mGnssMeasurementsCb;
+    GnssMeasurementsCb      mGnssNHzMeasurementsCb;
 
     GnssEnergyConsumedCb    mGnssEnergyConsumedInfoCb;
     ResponseCb              mGnssEnergyConsumedResponseCb;
 
     LocationSystemInfoCb    mLocationSysInfoCb;
     ResponseCb              mLocationSysInfoResponseCb;
+
+    // Terrestrial fix callback
+    LocationCb              mSingleTerrestrialPosCb;
+    ResponseCb              mSingleTerrestrialPosRespCb;
 
     MsgTask*                   mMsgTask;
 
