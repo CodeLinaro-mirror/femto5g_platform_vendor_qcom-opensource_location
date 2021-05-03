@@ -74,10 +74,8 @@ public:
                 mGeofenceIds(nullptr),
                 mRegisterOdcpiInjector(false),
                 mIpcSender(createSender(clientname.c_str())) {
-
-
         if (mClientType == LOCATION_CLIENT_API) {
-            updateSubscription(E_LOC_CB_GNSS_LOCATION_INFO_BIT);
+            updateSubscription(0);
             // client has not yet subscribed to anything yet
             mSubscriptionMask = 0;
             mLocationApi = LocationAPI::createInstance(mCallbacks);
