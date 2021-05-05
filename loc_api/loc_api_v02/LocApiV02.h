@@ -241,8 +241,11 @@ private:
 
   void setGnssBiases(GnssMeasurementsNotification& mGnssMeasurements);
 
-  void reportSvPolynomial (
-  const qmiLocEventGnssSvPolyIndMsgT_v02 *gnss_sv_poly_ptr);
+  void invalidateCarrierPhaseInfo(
+          qmiLocEventGnssSvMeasInfoIndMsgT_v02& gnss_measurement_report_ptr);
+
+  void  reportSvPolynomial (
+          const qmiLocEventGnssSvPolyIndMsgT_v02 *gnss_sv_poly_ptr);
 
   void reportSvEphemeris (
   uint32_t eventId, const locClientEventIndUnionType &eventPayload);
