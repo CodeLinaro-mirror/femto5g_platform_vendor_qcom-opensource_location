@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2021, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -954,7 +954,7 @@ void LocApiV02 ::
     location.flags |= LOCATION_HAS_ACCURACY_BIT;
     location.accuracy = accuracy;
 
-    struct timespec time_info_current;
+    struct timespec time_info_current = {};
     if(clock_gettime(CLOCK_REALTIME,&time_info_current) == 0) //success
     {
         location.timestamp = (time_info_current.tv_sec)*1e3 +
@@ -2546,7 +2546,7 @@ void LocApiV02 :: reportPosition (
     locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_OUTPUT_ENG_MASK;
     locationExtended.locOutputEngMask = STANDARD_POSITIONING_ENGINE;
 
-    struct timespec apTimestamp;
+    struct timespec apTimestamp = {};
     if( clock_gettime( CLOCK_BOOTTIME, &apTimestamp)== 0)
     {
        locationExtended.timeStamp.apTimeStamp.tv_sec = apTimestamp.tv_sec;
@@ -2587,21 +2587,16 @@ void LocApiV02 :: reportPosition (
             dataNotify.agc[i-1] = 0.0;
             dataNotify.jammerInd[i-1] = 0.0;
             if (GNSS_INVALID_JAMMER_IND !=
-                location_report_ptr->jammerIndicatorList[i].agcMetricDb) {
-                LOC_LOGv("agcMetricDb[%d]=0x%X",
-                         i, location_report_ptr->jammerIndicatorList[i].agcMetricDb);
-                dataNotify.gnssDataMask[i-1] |= GNSS_LOC_DATA_AGC_BIT;
-                dataNotify.agc[i-1] =
-                    (double)location_report_ptr->jammerIndicatorList[i].agcMetricDb / 100.0;
-                msInWeek = -1;
-            }
-            if (GNSS_INVALID_JAMMER_IND !=
                 location_report_ptr->jammerIndicatorList[i].bpMetricDb) {
-                LOC_LOGv("bpMetricDb[%d]=0x%X",
+                LOC_LOGv("agcMetricDb[%d]=%d; bpMetricDb[%d]=%d",
+                         i, -location_report_ptr->jammerIndicatorList[i].bpMetricDb,
                          i, location_report_ptr->jammerIndicatorList[i].bpMetricDb);
-                dataNotify.gnssDataMask[i-1] |= GNSS_LOC_DATA_JAMMER_IND_BIT;
+                dataNotify.gnssDataMask[i-1] |=
+                        GNSS_LOC_DATA_AGC_BIT | GNSS_LOC_DATA_JAMMER_IND_BIT;
+                dataNotify.agc[i-1] =
+                        -(double)location_report_ptr->jammerIndicatorList[i].bpMetricDb / 100.0;
                 dataNotify.jammerInd[i-1] =
-                    (double)location_report_ptr->jammerIndicatorList[i].bpMetricDb / 100.0;
+                        (double)location_report_ptr->jammerIndicatorList[i].bpMetricDb / 100.0;
                 msInWeek = -1;
             }
         }
@@ -2691,7 +2686,7 @@ void LocApiV02 :: reportPosition (
         locationExtended.tech_mask = convertPosTechMask(location_report_ptr->technologyMask);
 
         //Mark the location source as from GNSS
-        location.gpsLocation.flags |= LOCATION_HAS_SOURCE_INFO;
+        location.gpsLocation.flags |= LOC_GPS_LOCATION_HAS_SOURCE_INFO;
         location.position_source = ULP_LOCATION_IS_FROM_GNSS;
 
         if (location_report_ptr->spoofReportMask_valid)
@@ -2731,10 +2726,13 @@ void LocApiV02 :: reportPosition (
            locationExtended.vert_unc = location_report_ptr->vertUnc;
         }
 
-        if (location_report_ptr->speedUnc_valid)
+        if (location_report_ptr->velUncEnu_valid)
         {
            locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_SPEED_UNC;
-           locationExtended.speed_unc = location_report_ptr->speedUnc;
+           locationExtended.speed_unc = sqrt(location_report_ptr->velUncEnu[0] *
+                                             location_report_ptr->velUncEnu[0] +
+                                             location_report_ptr->velUncEnu[1] *
+                                             location_report_ptr->velUncEnu[1]);
         }
         if (location_report_ptr->headingUnc_valid)
         {
@@ -3454,13 +3452,17 @@ void  LocApiV02 :: reportSv (
 
                 LOC_LOGv("i:%d sv-id:%d count:%d sys:%d en:0x%" PRIx64,
                     i, sv_info_ptr->gnssSvId, SvNotify.count, sv_info_ptr->system,
-                    gnss_report_ptr->gnssSignalTypeList[SvNotify.count]);
+                    gnss_report_ptr->gnssSignalTypeList[i]);
 
                 GnssSv &gnssSv_ref = SvNotify.gnssSvs[SvNotify.count];
                 bool bSvIdIsValid = false;
 
                 gnssSv_ref.size = sizeof(GnssSv);
                 gnssSv_ref.svId = sv_info_ptr->gnssSvId;
+                if (1 == gnss_report_ptr->expandedSvList_valid) {
+                    gnssSv_ref.gloFrequency = gnss_report_ptr->expandedSvList[i].gloFrequency;
+                }
+
                 switch (sv_info_ptr->system) {
                 case eQMI_LOC_SV_SYSTEM_GPS_V02:
                     gnssSv_ref.type = GNSS_SV_TYPE_GPS;
@@ -3480,13 +3482,16 @@ void  LocApiV02 :: reportSv (
                                                          SBAS_SV_PRN_MIN, SBAS_SV_PRN_MAX);
                     break;
 
-                // Glonass in SV report comes in range of [1, 32],
-                // convert to [65, 96]
+                // Glonass in SV report comes in range of [1, 32] or 255,
+                // convert to [65, 96] or 255
                 case eQMI_LOC_SV_SYSTEM_GLONASS_V02:
                     gnssSv_ref.type = GNSS_SV_TYPE_GLONASS;
-                    gnssSv_ref.svId = sv_info_ptr->gnssSvId + GLO_SV_PRN_MIN - 1;
-                    bSvIdIsValid = isValInRangeInclusive(gnssSv_ref.svId,
-                                                         GLO_SV_PRN_MIN, GLO_SV_PRN_MAX);
+                    if (!isGloSlotUnknown(sv_info_ptr->gnssSvId)) {
+                        gnssSv_ref.svId = sv_info_ptr->gnssSvId + GLO_SV_PRN_MIN - 1;
+                    }
+                    bSvIdIsValid = isValInRangeInclusive(gnssSv_ref.svId, GLO_SV_PRN_MIN,
+                                                         GLO_SV_PRN_MAX) ||
+                                   isGloSlotUnknown(gnssSv_ref.svId);
                     break;
 
                 case eQMI_LOC_SV_SYSTEM_BDS_V02:
@@ -3548,17 +3553,17 @@ void  LocApiV02 :: reportSv (
                             LOC_LOGv("gloFrequency = 0x%X", gloFrequency);
                         }
 
-                        if (gnss_report_ptr->gnssSignalTypeList[SvNotify.count] != 0) {
+                        if (gnss_report_ptr->gnssSignalTypeList[i] != 0) {
                             gnssSv_ref.carrierFrequencyHz =
                                     convertSignalTypeToCarrierFrequency(
-                                        gnss_report_ptr->gnssSignalTypeList[SvNotify.count],
+                                        gnss_report_ptr->gnssSignalTypeList[i],
                                         gloFrequency);
                             mask |= GNSS_SV_OPTIONS_HAS_CARRIER_FREQUENCY_BIT;
                             gnssSv_ref.gnssSignalTypeMask = convertQmiGnssSignalType(
-                                    gnss_report_ptr->gnssSignalTypeList[SvNotify.count]);
+                                    gnss_report_ptr->gnssSignalTypeList[i]);
                             LOC_LOGd("sv id %d, qmi signal type: 0x%" PRIx64 ", "
                                      "hal signal type: 0x%x", gnssSv_ref.svId,
-                                     gnss_report_ptr->gnssSignalTypeList[SvNotify.count],
+                                     gnss_report_ptr->gnssSignalTypeList[i],
                                      gnssSv_ref.gnssSignalTypeMask);
                         }
                     }
@@ -4723,7 +4728,26 @@ void LocApiV02 :: reportAtlRequest(
     }
     LOC_LOGd("handle=%d agpsType=0x%X apnTypeMask=0x%X",
         connHandle, agpsType, apnTypeMask);
-    requestATL(connHandle, agpsType, apnTypeMask);
+
+    LocSubId agpsSubId = LOC_DEFAULT_SUB;
+    if (server_request_ptr->subId_valid) {
+        switch (server_request_ptr->subId) {
+        case eQMI_LOC_SYS_MODEM_AS_ID_1_V02:
+            agpsSubId = LOC_PRIMARY_SUB;
+            break;
+        case eQMI_LOC_SYS_MODEM_AS_ID_2_V02:
+            agpsSubId = LOC_SECONDARY_SUB;
+            break;
+        case eQMI_LOC_SYS_MODEM_AS_ID_3_V02:
+            agpsSubId = LOC_TERTIARY_SUB;
+            break;
+        default:
+            agpsSubId = LOC_DEFAULT_SUB;
+            break;
+        }
+    }
+    LOC_LOGd("agpsSubId=%d", agpsSubId);
+    requestATL(connHandle, agpsType, apnTypeMask, agpsSubId);
   }
   // service the ATL close request
   else if (server_request_ptr->requestType == eQMI_LOC_SERVER_REQUEST_CLOSE_V02)
@@ -5388,7 +5412,7 @@ void LocApiV02 ::reportSvMeasurementInternal() {
             mGnssMeasurements->gnssSvMeasurementSet.svMeasSetHeader;
 
         // when we received the last sequence, timestamp the packet with AP time
-        struct timespec apTimestamp;
+        struct timespec apTimestamp = {};
         if (clock_gettime(CLOCK_BOOTTIME, &apTimestamp)== 0) {
             svMeasSetHead.apBootTimeStamp.apTimeStamp.tv_sec = apTimestamp.tv_sec;
             svMeasSetHead.apBootTimeStamp.apTimeStamp.tv_nsec = apTimestamp.tv_nsec;
@@ -6443,18 +6467,18 @@ bool LocApiV02 :: convertGnssMeasurements(
     // AGC
     if (gnss_measurement_report_ptr.jammerIndicator_valid) {
         if (GNSS_INVALID_JAMMER_IND !=
-            gnss_measurement_report_ptr.jammerIndicator.agcMetricDb) {
-            LOC_LOGv("AGC is valid: agcMetricDb = 0x%X bpMetricDb = 0x%X",
-                gnss_measurement_report_ptr.jammerIndicator.agcMetricDb,
-                gnss_measurement_report_ptr.jammerIndicator.bpMetricDb);
+            gnss_measurement_report_ptr.jammerIndicator.bpMetricDb) {
+            LOC_LOGv("AGC is valid: agcMetricDb = %d bpMetricDb = %d",
+                     -gnss_measurement_report_ptr.jammerIndicator.bpMetricDb,
+                     gnss_measurement_report_ptr.jammerIndicator.bpMetricDb);
 
             measurementData.agcLevelDb =
-                (double)gnss_measurement_report_ptr.jammerIndicator.agcMetricDb / 100.0;
+                    -(double)gnss_measurement_report_ptr.jammerIndicator.bpMetricDb / 100.0;
             measurementData.flags |= GNSS_MEASUREMENTS_DATA_AUTOMATIC_GAIN_CONTROL_BIT;
         } else {
             LOC_LOGv("AGC is invalid: agcMetricDb = 0x%X bpMetricDb = 0x%X",
-                 gnss_measurement_report_ptr.jammerIndicator.agcMetricDb,
-                 gnss_measurement_report_ptr.jammerIndicator.bpMetricDb);
+                     gnss_measurement_report_ptr.jammerIndicator.agcMetricDb,
+                     gnss_measurement_report_ptr.jammerIndicator.bpMetricDb);
         }
         bAgcIsPresent = true;
     } else {
@@ -7757,7 +7781,7 @@ handleWwanZppFixIndication(const qmiLocGetAvailWwanPositionIndMsgT_v02& zpp_ind)
             /* The UTC time from modem is not valid.
             In this case, we use current system time instead.*/
 
-            struct timespec time_info_current;
+            struct timespec time_info_current = {};
             clock_gettime(CLOCK_REALTIME,&time_info_current);
             zppLoc.timestamp = (time_info_current.tv_sec)*1e3 +
                                (time_info_current.tv_nsec)/1e6;
@@ -7823,7 +7847,7 @@ void LocApiV02::
             /* The UTC time from modem is not valid.
                     In this case, we use current system time instead.*/
 
-          struct timespec time_info_current;
+          struct timespec time_info_current = {};
           clock_gettime(CLOCK_REALTIME,&time_info_current);
           zppLoc.timestamp = (time_info_current.tv_sec)*1e3 +
                   (time_info_current.tv_nsec)/1e6;
