@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018-2021, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -88,13 +88,7 @@ bool LocationClientApi::startPositionSession(
     // callback masks
     LocationCallbacks callbacksOption = {0};
     callbacksOption.responseCb = [](::LocationError err, uint32_t id) {};
-    // only register for trackingCb if distance is not 0
-    if (distanceInMeters != 0) {
-        callbacksOption.trackingCb = [](::Location n) {};
-    } else {
-        // for time based, register gnss location cb
-        callbacksOption.gnssLocationInfoCb = [](::GnssLocationInfoNotification n) {};
-    }
+    callbacksOption.trackingCb = [](::Location n) {};
     mApiImpl->updateCallbacks(callbacksOption);
 
     // options
@@ -502,6 +496,29 @@ void LocationClientApi::updateLocationSystemInfoListener(
         if (responseCallback) {
             responseCallback(LOCATION_RESPONSE_PARAM_INVALID);
         }
+    }
+}
+
+void LocationClientApi::getSingleTerrestrialPosition(
+        uint32_t timeoutMsec, TerrestrialTechnologyMask techMask,
+        float horQoS, LocationCb terrestrialPositionCallback,
+        ResponseCb responseCallback) {
+
+    LOC_LOGd("timeout msec = %u, horQoS = %f,"
+             "techMask = 0x%x", timeoutMsec, horQoS, techMask);
+
+    if ((timeoutMsec == 0) || (techMask != TERRESTRIAL_TECH_GTP_WWAN) ||
+        (horQoS != 0.0)) {
+        LOC_LOGe("invalid parameter: timeout %d, tech mask 0x%x, horQoS %f",
+                 timeoutMsec, techMask, horQoS);
+        if (responseCallback) {
+            responseCallback(LOCATION_RESPONSE_PARAM_INVALID);
+        }
+    } else if (mApiImpl) {
+        mApiImpl->getSingleTerrestrialPos(timeoutMsec, ::TERRESTRIAL_TECH_GTP_WWAN, horQoS,
+                                          terrestrialPositionCallback, responseCallback);
+    } else {
+        LOC_LOGe ("NULL mApiImpl");
     }
 }
 
