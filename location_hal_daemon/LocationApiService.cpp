@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2020 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018-2021 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -47,8 +47,6 @@ using namespace std;
 #define MAX_GEOFENCE_COUNT (200)
 
 typedef void* (getLocationInterface)();
-typedef void  (createOSFramework)();
-typedef void  (destroyOSFramework)();
 
 /******************************************************************************
 LocationApiService - static members
@@ -125,7 +123,10 @@ LocationApiService::LocationApiService(const configParamToRead & configParamRead
 
     mLocationControlId(0),
     mAutoStartGnss(configParamRead.autoStartGnss),
-    mPowerState(POWER_STATE_UNKNOWN)
+    mPowerState(POWER_STATE_UNKNOWN),
+    mMsgTask(new MsgTask("LocHalDaemonMaintenanceMsgTask", false)),
+    mGtpWwanSsLocationApi(nullptr),
+    mOptInTerrestrialService(-1)
 #ifdef POWERMANAGER_ENABLED
     ,mPowerEventObserver(nullptr)
 #endif
@@ -158,9 +159,6 @@ LocationApiService::LocationApiService(const configParamToRead & configParamRead
         return;
     }
 #endif
-
-    // Create OSFramework and IzatManager instance
-    createOSFrameworkInstance();
 
     // create a default client if enabled by config
     if (mAutoStartGnss) {
@@ -212,14 +210,15 @@ LocationApiService::~LocationApiService() {
     mIpc.stopNonBlockingListening();
     mIpc.stopBlockingListening(*mBlockingRecver);
 
+    if (mMsgTask) {
+        mMsgTask->destroy();
+    }
+
     // free resource associated with the client
     for (auto each : mClients) {
         LOC_LOGd(">-- deleted client [%s]", each.first.c_str());
         each.second->cleanup();
     }
-
-    // Destroy OSFramework instance
-    destroyOSFrameworkInstance();
 
     // delete location contorol API handle
     mLocationControlApi->disable(mLocationControlId);
@@ -396,6 +395,16 @@ void LocationApiService::processClientMsg(const char* data, uint32_t length) {
                     <LocAPIGetGnssEnergyConsumedReqMsg*>(pMsg)->mSocketName);
             break;
         }
+        case E_LOCAPI_GET_SINGLE_TERRESTRIAL_POS_REQ_MSG_ID: {
+            PBLocAPIGetSingleTerrestrialPosReqMsg pbMsg;
+            if (0 == pbMsg.ParseFromString(pbLocApiMsg.payload())) {
+                LOC_LOGe("Failed to parse PBLocAPIGetSingleTerrestrialPosReqMsg from payload!!");
+                return;
+            }
+            LocAPIGetSingleTerrestrialPosReqMsg msg(sockName.c_str(), pbMsg, &mPbufMsgConv);
+            getSingleTerrestrialPos(&msg);
+            break;
+        }
         case E_LOCAPI_PINGTEST_MSG_ID: {
             if (sizeof(LocAPIPingTestReqMsg) != length) {
                 LOC_LOGe("invalid message");
@@ -459,6 +468,19 @@ void LocationApiService::processClientMsg(const char* data, uint32_t length) {
                 break;
             }
             configRobustLocation(reinterpret_cast<LocConfigRobustLocationReqMsg*>(pMsg));
+            break;
+        }
+
+        case E_INTAPI_CONFIG_USER_CONSENT_TERRESTRIAL_POSITIONING_MSG_ID: {
+            PBLocConfigUserConsentTerrestrialPositioningReqMsg pbMsg;
+            if (0 == pbMsg.ParseFromString(pbLocApiMsg.payload())) {
+                LOC_LOGe("Failed to parse PBLocConfigUserConsentTerrestrialPositioningReqMsg!!");
+                return;
+            }
+            LocConfigUserConsentTerrestrialPositioningReqMsg msg(
+                    sockName.c_str(), pbMsg, &mPbufMsgConv);
+            configUserConsentTerrestrialPositioning(reinterpret_cast
+                    <LocConfigUserConsentTerrestrialPositioningReqMsg*>(&msg));
             break;
         }
 
@@ -533,6 +555,7 @@ void LocationApiService::deleteClientbyName(const std::string clientname) {
         return;
     }
     mClients.erase(clientname);
+    mTerrestrialFixReqs.erase(clientname);
     pClient->cleanup();
 
     LOC_LOGi(">-- deleteClient client=%s", clientname.c_str());
@@ -678,7 +701,7 @@ void LocationApiService::getGnssEnergyConsumed(const char* clientSocketName) {
         if (requestAlreadyPending == false) {
             LOC_LOGd("--< issue request to GNSS HAL");
 
-            // callback function for engine hub to report back sv event
+            // callback function when gpss engine report back energy consumed info
             GnssEnergyConsumedCallback reportEnergyCb =
                 [this](uint64_t total) {
                     onGnssEnergyConsumedCb(total);
@@ -948,7 +971,7 @@ void LocationApiService::configConstellations(
             pMsg->mSvTypeConfig, pMsg->mSvIdConfig);
     }
 
-    LOC_LOGi(">-- reset: %d, enable constellations: 0x%" PRIx64 ", "
+    LOC_LOGi(">-- reset sv type config: %d, enable constellations: 0x%" PRIx64 ", "
              "blacklisted consteallations: 0x%" PRIx64 ", ",
              pMsg->mResetToDefault,
              pMsg->mSvTypeConfig.enabledSvTypesMask,
@@ -959,10 +982,10 @@ void LocationApiService::configConstellations(
 void LocationApiService::configAidingDataDeletion(
         LocConfigAidingDataDeletionReqMsg* pMsg) {
 
-    std::lock_guard<std::mutex> lock(mMutex);
     if (!pMsg) {
         return;
     }
+    std::lock_guard<std::mutex> lock(mMutex);
 
     LOC_LOGi(">-- client %s, deleteAll %d",
              pMsg->mSocketName, pMsg->mAidingData.deleteAll);
@@ -1008,6 +1031,47 @@ void LocationApiService::configRobustLocation(
 
     uint32_t sessionId = mLocationControlApi->configRobustLocation(
             pMsg->mEnable, pMsg->mEnableForE911);
+    addConfigRequestToMap(sessionId, pMsg);
+}
+
+void LocationApiService::configUserConsentTerrestrialPositioning(
+        LocConfigUserConsentTerrestrialPositioningReqMsg* pMsg) {
+    if (!pMsg) {
+        return;
+    }
+    std::lock_guard<std::mutex> lock(mMutex);
+
+    LOC_LOGi(">-- client %s, current user consent %d, new usr consent %d",
+             pMsg->mSocketName, mOptInTerrestrialService, pMsg->mUserConsent);
+
+    mOptInTerrestrialService = pMsg->mUserConsent;
+    if ((mOptInTerrestrialService == true) && (mGtpWwanSsLocationApi == nullptr)) {
+        // set callback functions for Location API
+        mGtpWwanSsLocationApiCallbacks.size = sizeof(mGtpWwanSsLocationApiCallbacks);
+
+        // mandatory callback
+        mGtpWwanSsLocationApiCallbacks.capabilitiesCb = [this](LocationCapabilitiesMask mask) {
+            onCapabilitiesCallback(mask);
+        };
+        mGtpWwanSsLocationApiCallbacks.responseCb = [this](LocationError err, uint32_t id) {
+            onResponseCb(err, id);
+        };
+        mGtpWwanSsLocationApiCallbacks.collectiveResponseCb =
+                [this](size_t count, LocationError* errs, uint32_t* ids) {
+            onCollectiveResponseCallback(count, errs, ids);
+        };
+
+        mGtpWwanPosCallback = [this](Location location) {
+            onGtpWwanTrackingCallback(location);
+        };
+
+        mGtpWwanSsLocationApi = LocationAPI::createInstance(mGtpWwanSsLocationApiCallbacks);
+        if (mGtpWwanSsLocationApi) {
+            mGtpWwanSsLocationApi->enableNetworkProvider();
+        }
+    }
+
+    uint32_t sessionId = mLocationControlApi->setOptInStatus(pMsg->mUserConsent);
     addConfigRequestToMap(sessionId, pMsg);
 }
 
@@ -1097,6 +1161,36 @@ void LocationApiService::onGnssConfigCallback(uint32_t sessionId,
         LOC_LOGe("--< client not found for session id %d", sessionId);
     }
 }
+// mandatory callback for location api
+void LocationApiService::onCapabilitiesCallback(LocationCapabilitiesMask mask) {
+}
+
+// mandatory callback for location api
+void LocationApiService::onResponseCb(LocationError err, uint32_t id) {
+}
+
+// mandatory callback for location api
+void LocationApiService::onCollectiveResponseCallback(
+        size_t count, LocationError *errs, uint32_t *ids) {
+}
+
+void LocationApiService::onGtpWwanTrackingCallback(Location location) {
+    std::lock_guard<std::mutex> lock(mMutex);
+    LOC_LOGd("--< onGtpWwanTrackingCallback optIn=%u loc flags=0x%x", mOptInTerrestrialService,
+            location.flags);
+
+    if ((mTerrestrialFixReqs.size() != 0) &&
+            (location.flags & LOCATION_HAS_LAT_LONG_BIT) && (mOptInTerrestrialService == 1)) {
+
+        for (auto it = mTerrestrialFixReqs.begin(); it != mTerrestrialFixReqs.end();) {
+            LocHalDaemonClientHandler* pClient = getClient(it->first);
+            pClient->sendTerrestrialFix(LOCATION_ERROR_SUCCESS, location);
+            ++it;
+        }
+        mTerrestrialFixReqs.clear();
+        mGtpWwanSsLocationApi->stopNetworkLocation(&mGtpWwanPosCallback);
+    }
+}
 
 /******************************************************************************
 LocationApiService - power event handlers
@@ -1174,26 +1268,81 @@ void LocationApiService::checkEnableGnss() {
     }
 }
 
-// Create OSFramework instance
-void LocationApiService::createOSFrameworkInstance() {
-    void* libHandle = nullptr;
-    createOSFramework* getter = (createOSFramework*)dlGetSymFromLib(libHandle,
-            "liblocationservice_glue.so", "createOSFramework");
-    if (getter != nullptr) {
-        (*getter)();
+/******************************************************************************
+LocationApiService - GTP WWAN functionality
+******************************************************************************/
+void LocationApiService::getSingleTerrestrialPos(
+        LocAPIGetSingleTerrestrialPosReqMsg* pReqMsg) {
+
+    std::string clientName(pReqMsg->mSocketName);
+
+    LOC_LOGd(">--getSingleTerrestrialPos, timeout msec %d, tech mask 0x%x, horQoS %f",
+             pReqMsg->mTimeoutMsec, pReqMsg->mTechMask, pReqMsg->mHorQoS);
+
+    std::lock_guard<std::mutex> lock(mMutex);
+    // Make sure client has opt-in for the service
+    if (mOptInTerrestrialService != 1) {
+        LocHalDaemonClientHandler* pClient = getClient(clientName);
+        if (pClient) {
+            // inform client that GTP service is not supported
+            Location location = {};
+            pClient->sendTerrestrialFix(LOCATION_ERROR_NOT_SUPPORTED, location);
+        }
     } else {
-        LOC_LOGe("dlGetSymFromLib failed for liblocationservice_glue.so");
+        mTerrestrialFixReqs.emplace(std::piecewise_construct,
+                                    std::forward_as_tuple(clientName),
+                                    std::forward_as_tuple(this, clientName));
+
+        auto it = mTerrestrialFixReqs.find(clientName);
+        if (it != mTerrestrialFixReqs.end()) {
+            it->second.start(pReqMsg->mTimeoutMsec, false);
+        }
+
+        if (mTerrestrialFixReqs.size() == 1) {
+            mGtpWwanSsLocationApi->startNetworkLocation(&mGtpWwanPosCallback);
+        }
     }
 }
 
-// Destroy OSFramework instance
-void LocationApiService::destroyOSFrameworkInstance() {
-    void* libHandle = nullptr;
-    destroyOSFramework* getter = (destroyOSFramework*)dlGetSymFromLib(libHandle,
-            "liblocationservice_glue.so", "destroyOSFramework");
-    if (getter != nullptr) {
-        (*getter)();
-    } else {
-        LOC_LOGe("dlGetSymFromLib failed for liblocationservice_glue.so");
+void LocationApiService::gtpFixRequestTimeout(const std::string& clientName) {
+    std::lock_guard<std::mutex> lock(LocationApiService::mMutex);
+
+    LOC_LOGd("timer out processing for client %s", clientName.c_str());
+    auto it = mTerrestrialFixReqs.find(clientName);
+    if (it != mTerrestrialFixReqs.end()) {
+        LocHalDaemonClientHandler* pClient = getClient(clientName);
+        if (pClient) {
+            // inform client of timeout
+            Location location = {};
+            pClient->sendTerrestrialFix(LOCATION_ERROR_TIMEOUT, location);
+        }
+        mTerrestrialFixReqs.erase(clientName);
+        // stop tracking if there is no more request
+        if (mTerrestrialFixReqs.size() == 1) {
+            mGtpWwanSsLocationApi->stopNetworkLocation(&mGtpWwanPosCallback);
+        }
+    }
+}
+
+void SingleTerrestrialFixTimer::timeOutCallback() {
+    LOC_LOGd("SingleTerrestrialFix timeout timer fired");
+
+    struct SingleTerrestrialFixTimeoutReq : public LocMsg {
+        SingleTerrestrialFixTimeoutReq(LocationApiService* locationApiService,
+                                       const std::string &clientName) :
+                mLocationApiService(locationApiService),
+                mClientName(clientName) {}
+        virtual ~SingleTerrestrialFixTimeoutReq() {}
+        void proc() const {
+            mLocationApiService->gtpFixRequestTimeout(mClientName);
+        }
+        LocationApiService* mLocationApiService;
+        std::string         mClientName;
+    };
+
+    MsgTask* mMsgTask = mLocationApiService->getMsgTask();
+    if (mMsgTask) {
+        mMsgTask->sendMsg(new (nothrow) SingleTerrestrialFixTimeoutReq(
+                mLocationApiService, mClientName));
     }
 }

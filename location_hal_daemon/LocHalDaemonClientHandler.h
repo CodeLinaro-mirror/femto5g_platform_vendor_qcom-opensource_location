@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018-2021, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -79,6 +79,7 @@ public:
             updateSubscription(E_LOC_CB_GNSS_LOCATION_INFO_BIT);
             mLocationApi = LocationAPI::createInstance(mCallbacks);
         }
+        updateSubscription(0);
     }
 
     static shared_ptr<LocIpcSender> createSender(const string socket);
@@ -114,6 +115,9 @@ public:
     void eraseGeofenceIds(size_t count, uint32_t* clientIds);
     uint32_t* getSessionIds(size_t count, uint32_t* clientIds);
     uint32_t* getClientIds(size_t count, uint32_t* sessionIds);
+    // send terrestrial fix to the requesting LCA client
+    void sendTerrestrialFix(LocationError error, const Location& location);
+
     void pingTest();
 
     bool mTracking;
