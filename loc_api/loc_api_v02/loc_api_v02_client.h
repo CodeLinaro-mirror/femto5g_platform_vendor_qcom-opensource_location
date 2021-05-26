@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2018, 2020 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2018, 2020-2021 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -1016,7 +1016,7 @@ typedef union
         The eventIndId field in the event indication callback is set to
         QMI_LOC_EVENT_GEOFENCE_PROXIMITY_NOTIFICATION_IND_V02. @newpagetable */
 
-   const qmiLocEventGnssSvMeasInfoIndMsgT_v02* pGnssSvRawInfoEvent;
+   qmiLocEventGnssSvMeasInfoIndMsgT_v02* pGnssSvRawInfoEvent;
 
    /**< Sent by the engine when GNSS measurements are available
         The eventIndId field in the event indication callback is set to
