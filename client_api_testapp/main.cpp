@@ -1,4 +1,4 @@
-/* Copyright (c) 2019-2020 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2019-2021 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -71,6 +71,8 @@ static sem_t sem_pingcbreceived;
 #define CONFIG_LEVER_ARM   "configLeverArm"
 #define CONFIG_ROBUST_LOCATION  "configRobustLocation"
 #define GET_ROBUST_LOCATION_CONFIG "getRobustLocationConfig"
+#define SET_USER_CONSENT    "setUserConsentForTerrestrialPositioning"
+#define GET_SINGLE_GTP_WWAN_FIX    "getSingleGtpWwanFix"
 
 // debug utility
 static uint64_t getTimestamp() {
@@ -101,6 +103,24 @@ static void onLocationCb(const location_client::Location& location) {
             location.latitude,
             location.longitude,
             location.altitude);
+}
+
+static void onGtpResponseCb(location_client::LocationResponse response) {
+    printf("<<< onGtpResponseCb err=%u\n", response);
+}
+
+static void onGtpLocationCb(const location_client::Location& location) {
+    numLocationCb++;
+    if (!outputEnabled) {
+        return;
+    }
+    printf("<<< onGtpLocationCb cnt=%u time=%" PRIu64" mask=0x%x lat=%f lon=%f alt=%f\n",
+           numLocationCb,
+           location.timestamp,
+           location.flags,
+           location.latitude,
+           location.longitude,
+           location.altitude);
 }
 
 static void onGnssLocationCb(const location_client::GnssLocation& location) {
@@ -210,6 +230,8 @@ static void printHelp() {
     printf("%s: config lever arm\n", CONFIG_LEVER_ARM);
     printf("%s: config robust location\n", CONFIG_ROBUST_LOCATION);
     printf("%s: get robust location config\n", GET_ROBUST_LOCATION_CONFIG);
+    printf("%s: set user consent for terrestrial positioning 0/1\n", SET_USER_CONSENT);
+    printf("%s: get single shot wwan fix\n", GET_SINGLE_GTP_WWAN_FIX);
 }
 
 void setRequiredPermToRunAsLocClient()
