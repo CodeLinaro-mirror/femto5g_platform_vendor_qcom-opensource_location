@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2021, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -162,6 +162,7 @@ private:
 
   size_t mBatchSize, mDesiredBatchSize;
   size_t mTripBatchSize, mDesiredTripBatchSize;
+  int mUseBatching1_0;
   bool mIsFirstFinalFixReported;
   bool mIsFirstStartFixReq;
   uint64_t mHlosQtimer1, mHlosQtimer2;
@@ -224,6 +225,9 @@ private:
   static void convertGnssConestellationMask (
             qmiLocGNSSConstellEnumT_v02 qmiConstellationEnum,
             GnssConstellationTypeMask& constellationMask);
+
+  static GnssSignalTypeMask convertQmiGnssSignalType(
+        qmiLocGnssSignalTypeMaskT_v02 qmiGnssSignalType);
 
   /* If Confidence value is less than 68%, then scale the accuracy value to 68%
      confidence.*/
@@ -515,8 +519,6 @@ public:
   virtual LocationError setEmergencyExtensionWindowSync(const uint32_t emergencyExtensionSeconds);
   virtual void setMeasurementCorrections(
         const GnssMeasurementCorrections& gnssMeasurementCorrections);
-  virtual GnssSignalTypeMask convertQmiGnssSignalType(
-        qmiLocGnssSignalTypeMaskT_v02 qmiGnssSignalType);
 
   void convertQmiBlacklistedSvConfigToGnssConfig(
         const qmiLocGetBlacklistSvIndMsgT_v02& qmiBlacklistConfig,
