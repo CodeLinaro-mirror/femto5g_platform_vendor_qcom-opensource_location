@@ -1013,8 +1013,8 @@ PBLocApiGnss_LocSvSystemEnumType LocationApiPbMsgConv::getPBGnssLocSvSysEnumFrom
 // **** helper function for mask conversion to protobuf masks
 uint32_t LocationApiPbMsgConv::getPBMaskForLocationCallbacksMask(const uint32_t &locCbMask) const {
     uint32_t pbLocCbMask = 0;
-    if (locCbMask & E_LOC_CB_DISTANCE_BASED_TRACKING_BIT) {
-        pbLocCbMask |= PB_E_LOC_CB_DISTANCE_BASED_TRACKING_BIT;
+    if (locCbMask & E_LOC_CB_TRACKING_BIT) {
+        pbLocCbMask |= PB_E_LOC_CB_TRACKING_BIT;
     }
     if (locCbMask & E_LOC_CB_GNSS_LOCATION_INFO_BIT) {
         pbLocCbMask |= PB_E_LOC_CB_GNSS_LOCATION_INFO_BIT;
@@ -1562,6 +1562,9 @@ uint32_t LocationApiPbMsgConv::getPBMaskForGnssMeasurementsDataFlagsMask(
     if (gnssMeasDataFlagsMask & GNSS_MEASUREMENTS_DATA_AUTOMATIC_GAIN_CONTROL_BIT) {
         pbGnssMeasDataFlagsMask |= PB_GNSS_MEASUREMENTS_DATA_AUTOMATIC_GAIN_CONTROL_BIT;
     }
+    if (gnssMeasDataFlagsMask & GNSS_MEASUREMENTS_DATA_GNSS_SIGNAL_TYPE_BIT) {
+        pbGnssMeasDataFlagsMask |= PB_GNSS_MEASUREMENTS_DATA_GNSS_SIGNAL_TYPE_BIT;
+    }
     LocApiPb_LOGv("LocApiPB: gnssMeasDataFlagsMask:%x, pbGnssMeasDataFlagsMask:%x",
             gnssMeasDataFlagsMask, pbGnssMeasDataFlagsMask);
     return pbGnssMeasDataFlagsMask;
@@ -2002,8 +2005,8 @@ uint64_t LocationApiPbMsgConv::getLocationCapabilitiesMaskFromPB(
 
 uint32_t LocationApiPbMsgConv::getLocationCallbacksMaskFromPB(const uint32_t &pbLocCbMask) const {
     uint32_t locCbMask = 0;
-    if (pbLocCbMask & PB_E_LOC_CB_DISTANCE_BASED_TRACKING_BIT) {
-        locCbMask |= E_LOC_CB_DISTANCE_BASED_TRACKING_BIT;
+    if (pbLocCbMask & PB_E_LOC_CB_TRACKING_BIT) {
+        locCbMask |= E_LOC_CB_TRACKING_BIT;
     }
     if (pbLocCbMask & PB_E_LOC_CB_GNSS_LOCATION_INFO_BIT) {
         locCbMask |= E_LOC_CB_GNSS_LOCATION_INFO_BIT;
@@ -2475,6 +2478,9 @@ uint32_t LocationApiPbMsgConv::getGnssMeasurementsDataFlagsMaskFromPB(
     }
     if (pbGnssMeasDataFlgMask & PB_GNSS_MEASUREMENTS_DATA_AUTOMATIC_GAIN_CONTROL_BIT) {
         gnssMeasDataFlgMask |= GNSS_MEASUREMENTS_DATA_AUTOMATIC_GAIN_CONTROL_BIT;
+    }
+    if (pbGnssMeasDataFlgMask & PB_GNSS_MEASUREMENTS_DATA_GNSS_SIGNAL_TYPE_BIT) {
+        gnssMeasDataFlgMask |= GNSS_MEASUREMENTS_DATA_GNSS_SIGNAL_TYPE_BIT;
     }
     LocApiPb_LOGv("LocApiPB: pbGnssMeasDataFlgMask:%x, gnssMeasDataFlgMask:%x",
             pbGnssMeasDataFlgMask, gnssMeasDataFlgMask);
@@ -3919,6 +3925,9 @@ int LocationApiPbMsgConv::convertGnssMeasDataToPB(const GnssMeasurementsData &gn
     // double agcLevelDb = 20;
     pbGnssMeasData->set_agcleveldb(gnssMeasData.agcLevelDb);
 
+    // uint32 gnssSignalType = 22;
+    pbGnssMeasData->set_gnsssignaltype(getPBMaskForGnssSignalTypeMask(gnssMeasData.gnssSignalType));
+
     // float receivedSvTimeSubNs = 26
     pbGnssMeasData->set_receivedsvtimesubns(gnssMeasData.receivedSvTimeSubNs);
 
@@ -5111,6 +5120,10 @@ int LocationApiPbMsgConv::pbConvertToGnssMeasurementsData(
 
     // double agcLevelDb = 20;
     gnssMeasData.agcLevelDb = pbGnssMeasData.agcleveldb();
+
+    // uint32 gnssSignalType = 22
+    gnssMeasData.gnssSignalType =
+            getGnssSignalTypeMaskFromPB(pbGnssMeasData.gnsssignaltype());
 
     // int64 receivedSvTimeSubNs = 26;
     gnssMeasData.receivedSvTimeSubNs = pbGnssMeasData.receivedsvtimesubns();

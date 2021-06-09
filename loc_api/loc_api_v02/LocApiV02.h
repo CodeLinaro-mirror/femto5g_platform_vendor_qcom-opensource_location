@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2021, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -68,6 +68,15 @@
 using Resender = std::function<void()>;
 using namespace loc_core;
 
+typedef struct {
+    uint32_t counter;
+    qmiLocSvSystemEnumT_v02 system;
+    qmiLocGnssSignalTypeMaskT_v02 gnssSignalType;
+    uint16_t gnssSvId;
+    qmiLocMeasFieldsValidMaskT_v02 validMask;
+    uint8_t cycleSlipCount;
+} adrData;
+
 /* This class derives from the LocApiBase class.
    The members of this class are responsible for converting
    the Loc API V02 data structures into Loc Adapter data structures.
@@ -91,6 +100,9 @@ private:
   bool mIsFirstStartFixReq;
   uint64_t mHlosQtimer1, mHlosQtimer2;
   uint32_t mRefFCount;
+  uint32_t mCounter;
+  uint32_t mMinInterval;
+  std::vector<adrData>  mADRdata;
 
   /* Convert event mask from loc eng to loc_api_v02 format */
   static locClientEventMaskType convertMask(LOC_API_ADAPTER_EVENT_MASK_T mask);
@@ -118,7 +130,7 @@ private:
       uint8_t gloFrequency);
 
   /*convert GnssMeasurement type from QMI LOC to loc eng format*/
-  static bool convertGnssMeasurements (GnssMeasurementsData& measurementData,
+  bool convertGnssMeasurements (GnssMeasurementsData& measurementData,
       const qmiLocEventGnssSvMeasInfoIndMsgT_v02& gnss_measurement_report_ptr,
       int index);
 
@@ -142,6 +154,9 @@ private:
   static void convertGnssConestellationMask (
             qmiLocGNSSConstellEnumT_v02 qmiConstellationEnum,
             GnssConstellationTypeMask& constellationMask);
+
+  static GnssSignalTypeMask convertQmiGnssSignalType(
+        qmiLocGnssSignalTypeMaskT_v02 qmiGnssSignalType);
 
   /* If Confidence value is less than 68%, then scale the accuracy value to 68%
      confidence.*/
@@ -386,8 +401,6 @@ public:
   virtual GnssConfigLppProfile convertLppProfile(const uint32_t lppProfile);
   virtual GnssConfigLppeControlPlaneMask convertLppeCp(const uint32_t lppeControlPlaneMask);
   virtual GnssConfigLppeUserPlaneMask convertLppeUp(const uint32_t lppeUserPlaneMask);
-  virtual GnssSignalTypeMask convertQmiGnssSignalType(
-        qmiLocGnssSignalTypeMaskT_v02 qmiGnssSignalType);
 
   void convertQmiBlacklistedSvConfigToGnssConfig(
         const qmiLocGetBlacklistSvIndMsgT_v02& qmiBlacklistConfig,

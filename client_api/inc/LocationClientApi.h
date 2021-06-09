@@ -1396,6 +1396,9 @@ enum GnssMeasurementsDataFlagsMask{
     /** GnssMeasurementsData has valid
      *  GnssMeasurementsData::agcLevelDb.  <br/>   */
     GNSS_MEASUREMENTS_DATA_AUTOMATIC_GAIN_CONTROL_BIT       = (1<<17),
+    /** GnssMeasurementsData has valid
+     *  GnssMeasurementsData::gnssSignalType. <br/> */
+    GNSS_MEASUREMENTS_DATA_GNSS_SIGNAL_TYPE_BIT             = (1<<18),
 };
 
 /** Specify GNSS measurement state in
@@ -1568,6 +1571,8 @@ struct GnssMeasurementsData {
     double signalToNoiseRatioDb;
     /** Automatic gain control level, in unit of dB <br/> */
     double agcLevelDb;
+    /** Signal type of the measurement.  <br/> */
+    GnssSignalTypeMask gnssSignalType;
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
     string toString() const;
@@ -1636,13 +1641,16 @@ enum LeapSecondSysInfoMask{
  *  LeapSecondSystemInfo.  <br/>   */
 struct LeapSecondChangeInfo {
     /** GPS timestamp that corrresponds to the last known leap
-        second change event. <br/>
-        The info can be available on two scenario: <br/>
-        1: this leap second change event has been scheduled and yet
-           to happen <br/>
-        2: this leap second change event has already happened and
-           next leap second change event has not yet been
-           scheduled. <br/>   */
+     *  second change event. <br/>
+     *  The info can be available on two scenario: <br/>
+     *  1: this leap second change event has been scheduled and yet
+     *     to happen and GPS receiver has decoded this info since
+     *     device last bootup. <br/
+     *  2: this leap second change event happened after device was
+     *     last booted up and GPS receiver has decoded this info.
+     *     Please note that if device gets rebooted after leap
+     *     second change happened, this info will become
+     *     unavailable. <br/> */
     GnssSystemTimeStructType gpsTimestampLsChange;
     /** Number of leap seconds prior to the leap second change event
      *  that corresponds to the timestamp at gpsTimestampLsChange.
@@ -1672,22 +1680,32 @@ struct LeapSecondSystemInfo {
      *  specify valid fields in LeapSecondSystemInfo. */
     LeapSecondSysInfoMask leapSecondInfoMask;
     /** Current leap seconds, in unit of seconds. <br/>
-     *  This info will only be available if the leap second change
-     *  info is not available. <br/>   */
+     *  1: When the leap second change info is available, to figure
+     *     out the current leap second info, compare current gps
+     *     time with LeapSecondChangeInfo::gpsTimestampLsChange to
+     *     know whether to choose leapSecondBefore or
+     *     leapSecondAfter as current leap second. <br/>
+     *  2: When the leap second change info is not available, then
+     *     use this field to retrieve the current leap second. <br/>
+     */
     uint8_t               leapSecondCurrent;
-    /** Leap second change event info. The info can be available on
-        two scenario: <br/>
-        1: this leap second change event has been scheduled and yet
-           to happen <br/>
-        2: this leap second change event has already happened and
-           next leap second change event has not yet been scheduled.
-           <br/>
-
-        If leap second change info is avaiable, to figure out the
-        current leap second info, compare current gps time with
-        LeapSecondChangeInfo::gpsTimestampLsChange to know whether
-        to choose leapSecondBefore or leapSecondAfter as current
-        leap second. <br/> */
+    /** GPS timestamp that corrresponds to the last known leap
+     *  second change event. <br/>
+     *  The info can be available on two scenario: <br/>
+     *  1: this leap second change event has been scheduled and yet
+     *     to happen and GPS receiver has decoded this info since
+     *     device last bootup. <br/
+     *  2: this leap second change event happened after device was
+     *     last booted up and GPS receiver has decoded this info.
+     *     Please note that if device gets rebooted after leap
+     *     second change has happened, this info will become
+     *     unavailable. <br/>
+     *
+     *   If leap second change info is avaiable, to figure out the
+     *   current leap second info, compare current gps time with
+     *   LeapSecondChangeInfo::gpsTimestampLsChange to know whether
+     *   to choose leapSecondBefore or leapSecondAfter as current
+     *   leap second. <br/> */
     LeapSecondChangeInfo  leapSecondChangeInfo;
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
