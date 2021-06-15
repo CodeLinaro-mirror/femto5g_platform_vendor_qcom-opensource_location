@@ -122,6 +122,15 @@ static loc_param_s_type gps_conf_param_table[] =
         {"AP_TIMESTAMP_UNCERTAINTY",&ap_timestamp_uncertainty,NULL,'n'}
 };
 
+/* Using configure item: DISABLE_PPE in/data/vendor/location-partner/ppe/
+   to keep the meas info or to void meas info. */
+#define LOC_PATH_PPE_CONF "/data/vendor/location-partner/ppe/ppe.conf"
+static int invalidateMeasInfo = 0;
+static loc_param_s_type ppe_conf_param_table[] =
+{
+        {"DISABLE_PPE_ENGINE", &invalidateMeasInfo, NULL, 'n'}
+};
+
 /* static event callbacks that call the LocApiV02 callbacks*/
 
 /* global event callback, call the eventCb function in loc api adapter v02
@@ -268,6 +277,7 @@ LocApiV02 :: LocApiV02(LOC_API_ADAPTER_EVENT_MASK_T exMask,
   loc_sync_req_init();
 
   UTIL_READ_CONF(LOC_PATH_GPS_CONF,gps_conf_param_table);
+  UTIL_READ_CONF(LOC_PATH_PPE_CONF, ppe_conf_param_table);
 }
 
 /* Destructor for LocApiV02 */
@@ -5409,6 +5419,33 @@ bool LocApiV02 :: convertNiNotifyVerifyType (
    return true;
 }
 
+void LocApiV02 :: invalidateCarrierPhaseInfo(
+       qmiLocEventGnssSvMeasInfoIndMsgT_v02& gnss_measurement_report){
+    if (invalidateMeasInfo) {
+        for (uint32_t i = 0; i < gnss_measurement_report.svMeasurement_len; i++) {
+            gnss_measurement_report.svMeasurement[i].validMask &=
+                    ~QMI_LOC_SV_CARRIER_PHASE_VALID_V02;
+            gnss_measurement_report.svMeasurement[i].carrierPhase = 0.0;
+        }
+
+        for (uint32_t i = 0; i < gnss_measurement_report.extSvMeasurement_len; i++) {
+            gnss_measurement_report.extSvMeasurement[i].validMask &=
+                    ~QMI_LOC_SV_CARRIER_PHASE_VALID_V02;
+            gnss_measurement_report.extSvMeasurement[i].carrierPhase = 0.0;
+        }
+
+        gnss_measurement_report.svCarrierPhaseUncertainty_valid = false;
+        gnss_measurement_report.svCarrierPhaseUncertainty_len = 0;
+        memset (gnss_measurement_report.svCarrierPhaseUncertainty, 0,
+                sizeof(gnss_measurement_report.svCarrierPhaseUncertainty));
+
+        gnss_measurement_report.extSvCarrierPhaseUncertainty_valid = false;
+        gnss_measurement_report.extSvCarrierPhaseUncertainty_len = 0;
+        memset (gnss_measurement_report.extSvCarrierPhaseUncertainty, 0,
+                sizeof(gnss_measurement_report.extSvCarrierPhaseUncertainty));
+    }
+}
+
 /* convert and report GNSS measurement data to loc eng */
 void LocApiV02 :: reportGnssMeasurementData(
   const qmiLocEventGnssSvMeasInfoIndMsgT_v02& gnss_measurement_report_ptr)
@@ -5970,7 +6007,7 @@ int LocApiV02 :: convertGnssClock (GnssMeasurementsClock& clock,
 void LocApiV02 :: eventCb(locClientHandleType /*clientHandle*/,
   uint32_t eventId, locClientEventIndUnionType eventPayload)
 {
-  LOC_LOGd("event id = 0x%X", eventId);
+  LOC_LOGd("recevied event %s", loc_get_v02_event_name(eventId));
 
   switch(eventId)
   {
@@ -6000,23 +6037,17 @@ void LocApiV02 :: eventCb(locClientHandleType /*clientHandle*/,
 
     // XTRA request
     case QMI_LOC_EVENT_INJECT_PREDICTED_ORBITS_REQ_IND_V02:
-      LOC_LOGD("%s:%d]: XTRA download request\n", __func__,
-                    __LINE__);
       reportXtraServerUrl(eventPayload.pInjectPredictedOrbitsReqEvent);
       requestXtraData();
       break;
 
     // time request
     case QMI_LOC_EVENT_INJECT_TIME_REQ_IND_V02:
-      LOC_LOGD("%s:%d]: Time request\n", __func__,
-                    __LINE__);
       requestTime();
       break;
 
     //position request
     case QMI_LOC_EVENT_INJECT_POSITION_REQ_IND_V02:
-      LOC_LOGD("%s:%d]: Position request\n", __func__,
-                    __LINE__);
       requestLocation();
       break;
 
@@ -6031,15 +6062,12 @@ void LocApiV02 :: eventCb(locClientHandleType /*clientHandle*/,
       break;
 
     case QMI_LOC_EVENT_GNSS_MEASUREMENT_REPORT_IND_V02:
-      LOC_LOGD("%s:%d]: GNSS Measurement Report\n", __func__,
-               __LINE__);
+      invalidateCarrierPhaseInfo(*eventPayload.pGnssSvRawInfoEvent);
       reportSvMeasurement(eventPayload.pGnssSvRawInfoEvent);
       reportGnssMeasurementData(*eventPayload.pGnssSvRawInfoEvent); /*TBD merge into one function*/
       break;
 
     case QMI_LOC_EVENT_SV_POLYNOMIAL_REPORT_IND_V02:
-      LOC_LOGD("%s:%d]: GNSS SV Polynomial Ind\n", __func__,
-               __LINE__);
       reportSvPolynomial(eventPayload.pGnssSvPolyInfoEvent);
       break;
 
@@ -6057,17 +6085,14 @@ void LocApiV02 :: eventCb(locClientHandleType /*clientHandle*/,
       break;
 
     case QMI_LOC_GET_BLACKLIST_SV_IND_V02:
-      LOC_LOGd("GET blacklist SV Ind");
       reportGnssSvIdConfig(*eventPayload.pGetBlacklistSvEvent);
       break;
 
     case QMI_LOC_GET_CONSTELLATION_CONTROL_IND_V02:
-      LOC_LOGd("GET constellation Ind");
       reportGnssSvTypeConfig(*eventPayload.pGetConstellationConfigEvent);
       break;
 
     case  QMI_LOC_EVENT_WIFI_REQ_IND_V02:
-      LOC_LOGd("WIFI Req Ind");
       requestOdcpi(*eventPayload.pWifiReqEvent);
       break;
 

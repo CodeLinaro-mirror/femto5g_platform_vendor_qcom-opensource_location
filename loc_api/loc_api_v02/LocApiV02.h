@@ -167,12 +167,12 @@ private:
       mSvMeasurementSet->svMeasSetHeader.size = sizeof(GnssSvMeasurementHeader);
   }
 
+  void invalidateCarrierPhaseInfo(
+          qmiLocEventGnssSvMeasInfoIndMsgT_v02& gnss_measurement_report_ptr);
   void  reportSvPolynomial (
-  const qmiLocEventGnssSvPolyIndMsgT_v02 *gnss_sv_poly_ptr);
-
+         const qmiLocEventGnssSvPolyIndMsgT_v02 *gnss_sv_poly_ptr);
   void reportSvEphemeris (
-  uint32_t eventId, const locClientEventIndUnionType &eventPayload);
-
+          uint32_t eventId, const locClientEventIndUnionType &eventPayload);
   void populateGpsEphemeris(const qmiLocGpsEphemerisReportIndMsgT_v02 *,
           GnssSvEphemerisReport &);
   void populateGlonassEphemeris(const qmiLocGloEphemerisReportIndMsgT_v02 *,
