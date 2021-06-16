@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018-2021, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -60,11 +60,11 @@ void LocHalDaemonClientHandler::updateSubscription(uint32_t mask) {
         onCollectiveResponseCallback(count, errs, ids);
     };
 
-    if (mSubscriptionMask & E_LOC_CB_DISTANCE_BASED_TRACKING_BIT) {
-        mCallbacks.trackingCb = [this](Location location) {
-            onTrackingCb(location);
-        };
-    }
+    // update optional callback - following four callbacks can be controlable
+    // tracking
+    mCallbacks.trackingCb = [this](Location location) {
+        onTrackingCb(location);
+    };
 
     // batching
     if (mSubscriptionMask & E_LOC_CB_BATCHING_BIT) {
@@ -94,7 +94,7 @@ void LocHalDaemonClientHandler::updateSubscription(uint32_t mask) {
     }
 
     // location info
-    if (mSubscriptionMask & (E_LOC_CB_GNSS_LOCATION_INFO_BIT | E_LOC_CB_SIMPLE_LOCATION_INFO_BIT)) {
+    if (mSubscriptionMask & E_LOC_CB_GNSS_LOCATION_INFO_BIT) {
         mCallbacks.gnssLocationInfoCb = [this](GnssLocationInfoNotification notification) {
             onGnssLocationInfoCb(notification);
         };
@@ -567,7 +567,7 @@ LocHalDaemonClientHandler - Location Control API response callback functions
 void LocHalDaemonClientHandler::onControlResponseCb(LocationError err, ELocMsgID msgId) {
     // no need to hold the lock, as lock is already held at the caller
     if (nullptr != mIpcSender) {
-        LOC_LOGd("--< onControlResponseCb err=%u msgId=%u", err, msgId);
+        LOC_LOGi("--< onControlResponseCb err=%u msgId=%u", err, msgId);
         LocAPIGenericRespMsg msg(SERVICE_NAME, msgId, err);
         int rc = sendMessage(msg);
         // purge this client if failed
@@ -578,25 +578,49 @@ void LocHalDaemonClientHandler::onControlResponseCb(LocationError err, ELocMsgID
     }
 }
 
+void LocHalDaemonClientHandler::sendTerrestrialFix(LocationError error,
+    const Location& location) {
+    LocAPIGetSingleTerrestrialPosRespMsg msg(SERVICE_NAME,
+        error, location,  &mService->mPbufMsgConv);
+
+    const char* msgStream = nullptr;
+    size_t msgLen = 0;
+    string pbStr;
+    if (msg.serializeToProtobuf(pbStr)) {
+        msgStream = pbStr.c_str();
+        msgLen = pbStr.size();
+        sendMessage(msgStream, msgLen, E_LOCAPI_GET_SINGLE_TERRESTRIAL_POS_RESP_MSG_ID);
+    }
+}
+
 void LocHalDaemonClientHandler::onGnssConfigCb(ELocMsgID configMsgId,
                                                const GnssConfig & gnssConfig) {
-    uint8_t* msg = nullptr;
-    size_t msgLen = 0;
+    string pbStr;
 
     switch (configMsgId) {
     case E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID:
         if (gnssConfig.flags & GNSS_CONFIG_FLAGS_ROBUST_LOCATION_BIT) {
-            msg = (uint8_t*) new LocConfigGetRobustLocationConfigRespMsg(
-                    SERVICE_NAME, gnssConfig.robustLocationConfig);
-            msgLen = sizeof(LocConfigGetRobustLocationConfigRespMsg);
+            LocConfigGetRobustLocationConfigRespMsg msg(SERVICE_NAME,
+                    gnssConfig.robustLocationConfig,
+                    &mService->mPbufMsgConv);
+            msg.serializeToProtobuf(pbStr);
         }
         break;
+    case E_INTAPI_GET_CONSTELLATION_SECONDARY_BAND_CONFIG_REQ_MSG_ID:
+        if (gnssConfig.flags & GNSS_CONFIG_FLAGS_CONSTELLATION_SECONDARY_BAND_BIT)
+        {
+            LocConfigGetConstellationSecondaryBandConfigRespMsg msg(SERVICE_NAME,
+                    gnssConfig.secondaryBandConfig, &mService->mPbufMsgConv);
+            msg.serializeToProtobuf(pbStr);
+        }
+        break;
+
     default:
         break;
     }
 
-    if ((nullptr != mIpcSender) && (nullptr != msg)) {
-        int rc = sendMessage(msg, msgLen);
+    if ((nullptr != mIpcSender) && (pbStr.size() != 0)) {
+        bool rc = sendMessage(pbStr.c_str(), pbStr.size(), configMsgId);
         // purge this client if failed
         if (!rc) {
             LOC_LOGe("failed rc=%d purging client=%s", rc, mName.c_str());
@@ -641,7 +665,7 @@ void LocHalDaemonClientHandler::onTrackingCb(Location location) {
     LOC_LOGd("--< onTrackingCb");
 
     if ((nullptr != mIpcSender) &&
-            (mSubscriptionMask & E_LOC_CB_DISTANCE_BASED_TRACKING_BIT)) {
+        (mSubscriptionMask & (E_LOC_CB_TRACKING_BIT | E_LOC_CB_SIMPLE_LOCATION_INFO_BIT))) {
         // broadcast
         LocAPILocationIndMsg msg(SERVICE_NAME, location);
         int rc = sendMessage(msg);
