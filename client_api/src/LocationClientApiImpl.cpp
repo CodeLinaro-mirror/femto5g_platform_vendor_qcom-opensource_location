@@ -499,6 +499,15 @@ static GnssLocation parseLocationInfo(const ::GnssLocationInfoNotification &halL
         locationInfo.calibrationStatus =
                 (DrCalibrationStatusMask)halLocationInfo.calibrationStatus;
     }
+    if (::GNSS_LOCATION_INFO_LOC_OUTPUT_ENG_MASK_BIT & halLocationInfo.flags) {
+        flags |= GNSS_LOCATION_LOC_OUTPUT_ENG_MASK_BIT;
+        locationInfo.locOutputEngMask =
+                (PositioningEngineMask) halLocationInfo.locOutputEngMask;
+    }
+    if (::GNSS_LOCATION_INFO_PROPAGATION_TIME_MS_BIT & halLocationInfo.flags) {
+        flags |= GNSS_LOCATION_PROPAGATION_TIME_MS_BIT;
+        locationInfo.propagationTimeMs = halLocationInfo.propagationTimeMs;
+    }
 
     locationInfo.gnssInfoFlags = (GnssLocationInfoFlagMask)flags;
     locationInfo.altitudeMeanSeaLevel = halLocationInfo.altitudeMeanSeaLevel;

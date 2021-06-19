@@ -251,6 +251,10 @@ enum GnssLocationInfoFlagMask {
     GNSS_LOCATION_INFO_CALIBRATION_CONFIDENCE_PERCENT_BIT = (1<<25),
     /** valid sensor calibrationConfidence */
     GNSS_LOCATION_INFO_CALIBRATION_STATUS_BIT           = (1<<26),
+    /** valid locOutputEngMask */
+    GNSS_LOCATION_LOC_OUTPUT_ENG_MASK_BIT               = (1<<27),
+    /** valid propagationTimeMs */
+    GNSS_LOCATION_PROPAGATION_TIME_MS_BIT               = (1<<28),
 };
 
 enum LocationReliability {
@@ -457,6 +461,17 @@ struct GnssSystemTime {
     SystemTimeStructUnion u;
 };
 
+/** Specify the set of position engines supported by
+ *  LocationClientAPI. <br/>   */
+enum PositioningEngineMask {
+    /** Mask for standard GNSS position engine. <br/>   */
+    STANDARD_POSITIONING_ENGINE = (1 << 0),
+    /** Mask for dead reckoning position engine. <br/>   */
+    DEAD_RECKONING_ENGINE       = (1 << 1),
+    /** Mask for precise position engine. <br/>   */
+    PRECISE_POSITIONING_ENGINE  = (1 << 2),
+};
+
 struct Location {
     /** bitwise OR of LocationFlagsBits to mark which params are valid */
     LocationFlagsMask flags;
@@ -545,6 +560,12 @@ struct GnssLocation : public Location {
     uint8_t calibrationConfidencePercent;
     /** sensor calibration status  */
     DrCalibrationStatusMask calibrationStatus;
+    /** This field indicates the set of engines contribute to the
+     *  fix. <br/> */
+    PositioningEngineMask locOutputEngMask;
+    /** This field specifies the number of mill-seconds that this
+     *  position report is propagated from RAW PVT report. */
+    uint32_t propagationTimeMs;
 };
 
 struct GnssSv {

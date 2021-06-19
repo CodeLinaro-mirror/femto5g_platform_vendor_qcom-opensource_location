@@ -2529,6 +2529,13 @@ void LocApiV02 :: reportPosition (
             //Mark the location source as from GNSS
             location.gpsLocation.flags |= LOCATION_HAS_SOURCE_INFO;
             location.position_source = ULP_LOCATION_IS_FROM_GNSS;
+
+            // fill in the fused mask
+            locationExtended.locOutputEngMask = STANDARD_POSITIONING_ENGINE;
+            locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_LOC_OUTPUT_ENG_MASK;
+            locationExtended.propagationTimeMs = 0;
+            locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_PROPAGATION_TIME_MS;
+
             if (location_report_ptr->magneticDeviation_valid)
             {
                 locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_MAG_DEV;
