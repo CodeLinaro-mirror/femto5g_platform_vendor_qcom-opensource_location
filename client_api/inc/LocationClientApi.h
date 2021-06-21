@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018-2021, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -33,6 +33,30 @@
 #include <string>
 #include <functional>
 #include <memory>
+
+// DEPRECATION - BACKWARD COMPATIBILITY SECTION
+#define GnssLocationPosTechMask LocationTechnologyMask
+#define LOCATION_POS_TECH_DEFAULT_BIT \
+         0
+#define LOCATION_POS_TECH_SATELLITE_BIT \
+         LOCATION_TECHNOLOGY_GNSS_BIT
+#define LOCATION_POS_TECH_CELLID_BIT \
+         LOCATION_TECHNOLOGY_CELL_BIT
+#define LOCATION_POS_TECH_WIFI_BIT \
+         LOCATION_TECHNOLOGY_WIFI_BIT
+#define LOCATION_POS_TECH_SENSORS_BIT \
+         LOCATION_TECHNOLOGY_SENSORS_BIT
+#define LOCATION_POS_TECH_REFERENCE_LOCATION_BIT \
+         LOCATION_TECHNOLOGY_REFERENCE_LOCATION_BIT
+#define LOCATION_POS_TECH_INJECTED_COARSE_POSITION_BIT \
+        LOCATION_TECHNOLOGY_INJECTED_COARSE_POSITION_BIT
+#define LOCATION_POS_TECH_AFLT_BIT \
+         LOCATION_TECHNOLOGY_AFLT_BIT
+#define LOCATION_POS_TECH_HYBRID_BIT \
+         LOCATION_TECHNOLOGY_HYBRID_BIT
+#define LOCATION_POS_TECH_PPE_BIT \
+         LOCATION_TECHNOLOGY_PPE_BIT
+// DEPRECATION - BACKWARD COMPATIBILITY SECTION
 
 using std::string;
 
@@ -126,16 +150,30 @@ enum LocationFlagsMask {
 enum LocationTechnologyMask {
     /** GNSS-based technology was used to calculate
      *  Location. <br/>   */
-    LOCATION_TECHNOLOGY_GNSS_BIT     = (1<<0),
+    LOCATION_TECHNOLOGY_GNSS_BIT                     = (1<<0),
     /** Cell-based technology was used to calculate
      *  Location. <br/>   */
-    LOCATION_TECHNOLOGY_CELL_BIT     = (1<<1),
+    LOCATION_TECHNOLOGY_CELL_BIT                     = (1<<1),
     /** WiFi-based technology was used to calculate
      *  Location. <br/>   */
-    LOCATION_TECHNOLOGY_WIFI_BIT     = (1<<2),
+    LOCATION_TECHNOLOGY_WIFI_BIT                     = (1<<2),
     /** Sensor-based technology was used to calculate
      *  Location. <br/>   */
-    LOCATION_TECHNOLOGY_SENSORS_BIT  = (1<<3)
+    LOCATION_TECHNOLOGY_SENSORS_BIT                  = (1<<3),
+    /**  Reference location was used to calculate Location.
+     *   <br/> */
+    LOCATION_TECHNOLOGY_REFERENCE_LOCATION_BIT       = (1<<4),
+    /** Coarse position injected into the location engine
+     *  was used to calculate Location.  <br/>   */
+    LOCATION_TECHNOLOGY_INJECTED_COARSE_POSITION_BIT = (1<<5),
+    /** AFLT was used to calculate Location. <br/>   */
+    LOCATION_TECHNOLOGY_AFLT_BIT                     = (1<<6),
+    /** GNSS and network-provided measurements were
+     *  used to calculate Location. <br/>   */
+    LOCATION_TECHNOLOGY_HYBRID_BIT                   = (1<<7),
+    /** Precise position engine was used to calculate
+     *  Location. <br/>   */
+    LOCATION_TECHNOLOGY_PPE_BIT                      = (1<<8)
 };
 
 /** Specify the set of navigation solutions that contribute
@@ -162,42 +200,6 @@ enum GnssLocationNavSolutionMask {
     /** PPP correction was used to calculate
      *  GnssLocation. <br/>   */
     LOCATION_NAV_CORRECTION_PPP_BIT    = (1<<6)
-};
-
-/**
- *  Specify the set of technologies that contribute to
- *  GnssLocation. <br/>
- */
-enum GnssLocationPosTechMask {
-    /** Technology used to generate GnssLocation
-     *  is unknown. <br/>   */
-    LOCATION_POS_TECH_DEFAULT_BIT                  = 0,
-    /** Satellites-based technology was used to generate
-     *  GnssLocation. <br/>   */
-    LOCATION_POS_TECH_SATELLITE_BIT                = (1<<0),
-    /** Cell towers were used to generate
-     *  GnssLocation. <br/>   */
-    LOCATION_POS_TECH_CELLID_BIT                   = (1<<1),
-    /** Wi-Fi access points were used to generate
-     *  GnssLocation. <br/>   */
-    LOCATION_POS_TECH_WIFI_BIT                     = (1<<2),
-    /** Sensors were used to generate
-     *  GnssLocation. <br/>   */
-    LOCATION_POS_TECH_SENSORS_BIT                  = (1<<3),
-    /**  Reference location was used to generate GnssLocation.
-     *   <br/> */
-    LOCATION_POS_TECH_REFERENCE_LOCATION_BIT       = (1<<4),
-    /** Coarse position injected into the location engine was used to
-     *  generate GnssLocation.  <br/>   */
-    LOCATION_POS_TECH_INJECTED_COARSE_POSITION_BIT = (1<<5),
-    /** AFLT was used to generate GnssLocation. <br/>   */
-    LOCATION_POS_TECH_AFLT_BIT                     = (1<<6),
-    /** GNSS and network-provided measurements were used to generate
-     *  GnssLocation. <br/>   */
-    LOCATION_POS_TECH_HYBRID_BIT                   = (1<<7),
-    /** Precise position engine was used to generate
-     *  GnssLocation. <br/>   */
-    LOCATION_POS_TECH_PPE_BIT                      = (1<<8)
 };
 
 /** Specify the valid fields in
@@ -320,6 +322,12 @@ enum LocationResponse {
     LOCATION_RESPONSE_NOT_SUPPORTED = 2,
     /** LocationClientApi call has invalid parameter. <br/>   */
     LOCATION_RESPONSE_PARAM_INVALID = 3,
+    /** LocationClientApi call timeout */
+    LOCATION_RESPONSE_TIMEOUT = 4,
+    /** LocationClientApi is busy. */
+    LOCATION_RESPONSE_REQUEST_ALREADY_IN_PROGRESS = 5,
+    /** System is not ready, e.g.: hal daemon is not yet ready. */
+    LOCATION_RESPONSE_SYSTEM_NOT_READY = 6,
 };
 
 /** Specify the SV constellation type in GnssSv
@@ -665,7 +673,11 @@ struct GnssLocationPositionDynamics {
     /** Uncertainty of yaw, 68% confidence level, in unit of radian.
      *  <br/> */
     float           yawUnc;
-    /** Heading rate, in unit of radians/second. <br/>   */
+    /** Heading rate, in unit of radians/second. <br/>
+     *  Range: +/- pi (where pi is ~3.14159). <br/>
+     *  The positive value is clockwise and negative value is
+     *  anti-clockwise. <br/>
+     */
     float           yawRate;
     /** Uncertainty of heading rate, in unit of radians/second.
      *  <br/> */
@@ -965,7 +977,7 @@ struct GnssLocation : public Location {
      *  report. <br/>   */
     GnssLocationNavSolutionMask  navSolutionMask;
     /** Position technology used in computing this fix. */
-    GnssLocationPosTechMask      posTechMask;
+    LocationTechnologyMask       posTechMask;
     /** Body frame dynamics info. <br/>   */
     GnssLocationPositionDynamics bodyFrameData;
     /** GNSS system time when this position is calculated. <br/>  */
@@ -1015,7 +1027,7 @@ struct GnssLocation : public Location {
             eastVelocityStdDeviation(0.0f), upVelocityStdDeviation(0.0f),
             numSvUsedInPosition(0), svUsedInPosition({}),
             navSolutionMask((GnssLocationNavSolutionMask)0),
-            posTechMask((GnssLocationPosTechMask)0),
+            posTechMask((LocationTechnologyMask)0),
             bodyFrameData({}),
             gnssSystemTime({}), measUsageInfo(), leapSeconds(0),
             timeUncMs(0.0f), calibrationConfidencePercent(0),
@@ -1537,6 +1549,15 @@ struct LocationSystemInfo {
     string toString();
 };
 
+/** Specify the set of terrestrial technologies to be used when
+ *  invoking getSingleTerrestrialPosition(). <br/>
+ *
+ *  Currently, only TERRESTRIAL_TECH_GTP_WWAN is supported.
+ *  <br/> */
+enum TerrestrialTechnologyMask {
+    TERRESTRIAL_TECH_GTP_WWAN = 1 << 0,
+};
+
 enum BatchingStatus {
     BATCHING_STATUS_INACTIVE    = 0,
     BATCHING_STATUS_ACTIVE      = 1,
@@ -2025,6 +2046,81 @@ public:
      *  startPositionSession(), it will be invoked to deliver the
      *  processing status. <br/> */
     void stopPositionSession();
+
+    /** @brief
+        Retrieve single-shot terrestrial position using the set of
+        specified terrestrial technologies. <br/>
+
+        For this phase, only TERRESTRIAL_TECH_GTP_WWAN will be
+        supported and this will return cell-based position. <br/.
+
+        This API can be invoked with on-going tracking session
+        initiated via startPositionSession(). <br/
+
+        If this API is invoked with single-shot terrestrial position
+        already in progress, the request will fail and the
+        responseCallback will get invoked with
+        LOCATION_RESPONSE_BUSY. <br/
+
+        @param timeoutMsec
+        The amount of time that user is willing to wait for
+        the terrestrial positioning to become available. <br/>
+
+        @param techMask
+        The set of terrestrial technologies that are allowed to be
+        used for producing the position. <br/>
+
+        For this phase, only TERRESTRIAL_TECH_GTP_WWAN will be
+        supported. Passing other values to this API will return
+        false. <br/>
+
+        @param horQoS
+        horizontal accuracy requirement for the terrestrial fix.
+        0(Zero) means client does not specify horizontal accuracy
+        requirement. <br/>
+
+        For this phase, only 0 will be accepted. None-zero
+        horizontal accuracy requirement will not be supported and
+        API call will return false. <br/>
+
+        @param terrestrialPositionCallback
+        callback to receive terrestrial position. Some fields in
+        LocationClientApi::Location, e.g.: speed, bearing and their
+        uncertainty may not be available for terrestrial position.
+        Please check Location::flags for the fields that are
+        available. <br/>
+
+        This callback will only be invoked when
+        responseCallback is invoked with ResponseCb with processing
+        status set to LOCATION_RESPONSE_SUCCESS. <br/>
+
+        Null terrestrialPositionCallback will cancel the current
+        request. If responseCallback is none-null,
+        LOCATION_RESPONSE_SUCCESS will be delivered. <br/>
+
+        @param responseCallback
+        Callback to receive processing status, e.g.: success or
+        failure code: e.g.: timeout. <br/>
+
+        When the processing status is LOCATION_RESPONSE_SUCCESS, the
+        terrestrialPositionCallback will be invoked to deliver the
+        single-shot terrestrial position report. <br/>
+
+        If this API is invoked with invalid parameter, e.g.: 0
+        milli-seconds timeout, or techMask set to value other than
+        TERRESTRIAL_TECH_GTP_WWAN or horQoS set to none-zero value,
+        the responseCallback will get invoked with
+        LOCATION_RESPONSE_PARAM_INVALID. <br/>
+
+        If this API is invoked with single-shot terrestrial position
+        already in progress, the request will fail and the
+        responseCallback will get invoked with
+        LOCATION_RESPONSE_BUSY. <br/> */
+    void getSingleTerrestrialPosition(uint32_t timeoutMsec,
+                                      TerrestrialTechnologyMask techMask,
+                                      float horQos,
+                                      LocationCb terrestrialPositionCallback,
+                                      ResponseCb responseCallback);
 
     /** @example example1:testTrackingApi
     * <pre>

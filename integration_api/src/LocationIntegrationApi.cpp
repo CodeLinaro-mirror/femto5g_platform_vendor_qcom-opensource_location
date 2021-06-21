@@ -1,4 +1,4 @@
-/* Copyright (c) 2019-2020 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2019-2021 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -32,6 +32,7 @@
 #include <LocationIntegrationApi.h>
 #include <LocationIntegrationApiImpl.h>
 #include <log_util.h>
+#include <loc_pla.h>
 
 namespace location_integration {
 
@@ -261,6 +262,15 @@ bool LocationIntegrationApi::getRobustLocationConfig() {
         // mApiImpl->getRobustLocationConfig returns none-zero when
         // there is no callback
         return (mApiImpl->getRobustLocationConfig() == 0);
+    } else {
+        LOC_LOGe ("NULL mApiImpl");
+        return false;
+    }
+}
+
+bool LocationIntegrationApi::setUserConsentForTerrestrialPositioning(bool userConsent) {
+    if (mApiImpl) {
+        return (mApiImpl->setUserConsentForTerrestrialPositioning(userConsent) == 0);
     } else {
         LOC_LOGe ("NULL mApiImpl");
         return false;
