@@ -1151,6 +1151,10 @@ typedef union
    /** Sent by the engine to notify client about query reqest
    QMI_LOC_EVENT_QUERY_XTRA_INFO_REQ_IND_V02 */
 
+   const qmiLocPlatformPowerStateChangedIndMsgT_v02 *pPowerStateChangedIndMsg;
+   /** Sent by the engine to inform power state change
+    QMI_LOC_EVENT_PLATFORM_POWER_STATE_CHANGED_IND_V02 */
+
 }locClientEventIndUnionType;
 
 
