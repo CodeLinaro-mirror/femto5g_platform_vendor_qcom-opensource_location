@@ -1,0 +1,30 @@
+From 7fae3e89bc01c309b86b81d67986f824d481d5eb Mon Sep 17 00:00:00 2001
+From: Madhanraj Chelladurai <mchellad@codeaurora.org>
+Date: Fri, 25 Jun 2021 15:01:47 +0530
+Subject: [PATCH] [PATCH] gps: perform ioctl settings to keep UART awake
+
+Signed-off-by: Madhanraj Chelladurai <mchellad@codeaurora.org>
+---
+ serial.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/serial.c b/serial.c
+index b4d665308..74f8e2662 100644
+--- a/serial.c
++++ b/serial.c
+@@ -570,6 +570,12 @@ int gpsd_serial_open(struct gps_device_t *session)
+ 	(void)ioctl(session->gpsdata.gps_fd, (unsigned long)TIOCEXCL);
+ #endif /* TIOCEXCL */
+
++#ifndef TIOCPMGET
++#define TIOCPMGET 0x544D /* PM get */
++#endif
++	/* Target will not enter into suspend mode as GNSS is holding the "TIOCPMGET" */
++	(void)ioctl(session->gpsdata.gps_fd, TIOCPMGET);
++
+ #ifdef __linux__
+ 	/*
+ 	 * Don't touch devices already opened by another process.
+-- 
+2.17.1
+
