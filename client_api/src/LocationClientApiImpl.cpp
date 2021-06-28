@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018-2021, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -105,8 +105,7 @@ static LocationCapabilitiesMask parseCapabilitiesMask(::LocationCapabilitiesMask
     return static_cast<LocationCapabilitiesMask>(capsMask);
 }
 
-static Location parseLocation(const ::Location &halLocation) {
-    Location location;
+static void parseLocation(const ::Location &halLocation, Location& location) {
     uint32_t flags = 0;
 
     location.timestamp = halLocation.timestamp;
@@ -162,8 +161,27 @@ static Location parseLocation(const ::Location &halLocation) {
     if (::LOCATION_TECHNOLOGY_SENSORS_BIT & halLocation.techMask) {
         flags |= LOCATION_TECHNOLOGY_SENSORS_BIT;
     }
+    if (::LOCATION_TECHNOLOGY_REFERENCE_LOCATION_BIT & halLocation.techMask) {
+        flags |= LOCATION_TECHNOLOGY_REFERENCE_LOCATION_BIT;
+    }
+    if (::LOCATION_TECHNOLOGY_INJECTED_COARSE_POSITION_BIT & halLocation.techMask) {
+        flags |= LOCATION_TECHNOLOGY_INJECTED_COARSE_POSITION_BIT;
+    }
+    if (::LOCATION_TECHNOLOGY_AFLT_BIT & halLocation.techMask) {
+        flags |= LOCATION_TECHNOLOGY_AFLT_BIT;
+    }
+    if (::LOCATION_TECHNOLOGY_HYBRID_BIT & halLocation.techMask) {
+        flags |= LOCATION_TECHNOLOGY_HYBRID_BIT;
+    }
+    if (::LOCATION_TECHNOLOGY_PPE_BIT & halLocation.techMask) {
+        flags |= LOCATION_TECHNOLOGY_PPE_BIT;
+    }
     location.techMask = (LocationTechnologyMask)flags;
+}
 
+static Location parseLocation(const ::Location &halLocation) {
+    Location location;
+    parseLocation(halLocation, location);
     return location;
 }
 
@@ -467,65 +485,9 @@ static GnssSystemTime parseSystemTime(const ::GnssSystemTime &halSystemTime) {
 static GnssLocation parseLocationInfo(const ::GnssLocationInfoNotification &halLocationInfo) {
 
     GnssLocation locationInfo;
-    ::Location halLocation = halLocationInfo.location;
+    parseLocation(halLocationInfo.location, locationInfo);
     uint32_t flags = 0;
 
-    locationInfo.timestamp = halLocation.timestamp;
-    locationInfo.latitude = halLocation.latitude;
-    locationInfo.longitude = halLocation.longitude;
-    locationInfo.altitude = halLocation.altitude;
-    locationInfo.speed = halLocation.speed;
-    locationInfo.bearing = halLocation.bearing;
-    locationInfo.horizontalAccuracy = halLocation.accuracy;
-    locationInfo.verticalAccuracy = halLocation.verticalAccuracy;
-    locationInfo.speedAccuracy = halLocation.speedAccuracy;
-    locationInfo.bearingAccuracy = halLocation.bearingAccuracy;
-
-    if (0 != halLocation.timestamp) {
-        flags |= LOCATION_HAS_TIMESTAMP_BIT;
-    }
-    if (::LOCATION_HAS_LAT_LONG_BIT & halLocation.flags) {
-        flags |= LOCATION_HAS_LAT_LONG_BIT;
-    }
-    if (::LOCATION_HAS_ALTITUDE_BIT & halLocation.flags) {
-        flags |= LOCATION_HAS_ALTITUDE_BIT;
-    }
-    if (::LOCATION_HAS_SPEED_BIT & halLocation.flags) {
-        flags |= LOCATION_HAS_SPEED_BIT;
-    }
-    if (::LOCATION_HAS_BEARING_BIT & halLocation.flags) {
-        flags |= LOCATION_HAS_BEARING_BIT;
-    }
-    if (::LOCATION_HAS_ACCURACY_BIT & halLocation.flags) {
-        flags |= LOCATION_HAS_ACCURACY_BIT;
-    }
-    if (::LOCATION_HAS_VERTICAL_ACCURACY_BIT & halLocation.flags) {
-        flags |= LOCATION_HAS_VERTICAL_ACCURACY_BIT;
-    }
-    if (::LOCATION_HAS_SPEED_ACCURACY_BIT & halLocation.flags) {
-        flags |= LOCATION_HAS_SPEED_ACCURACY_BIT;
-    }
-    if (::LOCATION_HAS_BEARING_ACCURACY_BIT & halLocation.flags) {
-        flags |= LOCATION_HAS_BEARING_ACCURACY_BIT;
-    }
-    locationInfo.flags = (LocationFlagsMask)flags;
-
-    flags = 0;
-    if (::LOCATION_TECHNOLOGY_GNSS_BIT & halLocation.techMask) {
-        flags |= LOCATION_TECHNOLOGY_GNSS_BIT;
-    }
-    if (::LOCATION_TECHNOLOGY_CELL_BIT & halLocation.techMask) {
-        flags |= LOCATION_TECHNOLOGY_CELL_BIT;
-    }
-    if (::LOCATION_TECHNOLOGY_WIFI_BIT & halLocation.techMask) {
-        flags |= LOCATION_TECHNOLOGY_WIFI_BIT;
-    }
-    if (::LOCATION_TECHNOLOGY_SENSORS_BIT & halLocation.techMask) {
-        flags |= LOCATION_TECHNOLOGY_SENSORS_BIT;
-    }
-    locationInfo.techMask = (LocationTechnologyMask)flags;
-
-    flags = 0;
     if (::GNSS_LOCATION_INFO_ALTITUDE_MEAN_SEA_LEVEL_BIT & halLocationInfo.flags) {
         flags |= GNSS_LOCATION_INFO_ALTITUDE_MEAN_SEA_LEVEL_BIT;
     }
@@ -556,9 +518,7 @@ static GnssLocation parseLocationInfo(const ::GnssLocationInfoNotification &halL
     if (::GNSS_LOCATION_INFO_NAV_SOLUTION_MASK_BIT & halLocationInfo.flags) {
         flags |= GNSS_LOCATION_INFO_NAV_SOLUTION_MASK_BIT;
     }
-    if (::GNSS_LOCATION_INFO_POS_TECH_MASK_BIT & halLocationInfo.flags) {
-        flags |= GNSS_LOCATION_INFO_POS_TECH_MASK_BIT;
-    }
+    flags |= GNSS_LOCATION_INFO_POS_TECH_MASK_BIT;
     if (::GNSS_LOCATION_INFO_SV_SOURCE_INFO_BIT & halLocationInfo.flags) {
         flags |= GNSS_LOCATION_INFO_SV_SOURCE_INFO_BIT;
     }
@@ -680,39 +640,9 @@ static GnssLocation parseLocationInfo(const ::GnssLocationInfoNotification &halL
     }
     locationInfo.navSolutionMask = (GnssLocationNavSolutionMask)flags;
 
-    flags = 0;
-    if (::LOCATION_POS_TECH_DEFAULT_BIT & halLocationInfo.posTechMask) {
-        flags |= LOCATION_POS_TECH_DEFAULT_BIT;
-    }
-    if (::LOCATION_POS_TECH_SATELLITE_BIT & halLocationInfo.posTechMask) {
-        flags |= LOCATION_POS_TECH_SATELLITE_BIT;
-    }
-    if (::LOCATION_POS_TECH_CELLID_BIT & halLocationInfo.posTechMask) {
-        flags |= LOCATION_POS_TECH_CELLID_BIT;
-    }
-    if (::LOCATION_POS_TECH_WIFI_BIT & halLocationInfo.posTechMask) {
-        flags |= LOCATION_POS_TECH_WIFI_BIT;
-    }
-    if (::LOCATION_POS_TECH_SENSORS_BIT & halLocationInfo.posTechMask) {
-        flags |= LOCATION_POS_TECH_SENSORS_BIT;
-    }
-    if (::LOCATION_POS_TECH_REFERENCE_LOCATION_BIT & halLocationInfo.posTechMask) {
-        flags |= LOCATION_POS_TECH_REFERENCE_LOCATION_BIT;
-    }
-    if (::LOCATION_POS_TECH_INJECTED_COARSE_POSITION_BIT & halLocationInfo.posTechMask) {
-        flags |= LOCATION_POS_TECH_INJECTED_COARSE_POSITION_BIT;
-    }
-    if (::LOCATION_POS_TECH_AFLT_BIT & halLocationInfo.posTechMask) {
-        flags |= LOCATION_POS_TECH_AFLT_BIT;
-    }
-    if (::LOCATION_POS_TECH_HYBRID_BIT & halLocationInfo.posTechMask) {
-        flags |= LOCATION_POS_TECH_HYBRID_BIT;
-    }
-    if (::LOCATION_POS_TECH_PPE_BIT & halLocationInfo.posTechMask) {
-        flags |= LOCATION_POS_TECH_PPE_BIT;
-    }
-    locationInfo.posTechMask = (GnssLocationPosTechMask)flags;
-    locationInfo.bodyFrameData = parseLocationPositionDynamics(halLocationInfo.bodyFrameData);
+    locationInfo.posTechMask = locationInfo.techMask;
+    locationInfo.bodyFrameData = parseLocationPositionDynamics(
+            halLocationInfo.bodyFrameData, halLocationInfo.bodyFrameDataExt);
     locationInfo.gnssSystemTime = parseSystemTime(halLocationInfo.gnssSystemTime);
     locationInfo.leapSeconds = halLocationInfo.leapSeconds;
     locationInfo.timeUncMs = halLocationInfo.timeUncMs;
@@ -872,6 +802,9 @@ static LocationResponse parseLocationError(::LocationError error) {
         case ::LOCATION_ERROR_NOT_SUPPORTED:
             response = LOCATION_RESPONSE_NOT_SUPPORTED;
             break;
+        case ::LOCATION_ERROR_TIMEOUT:
+            response = LOCATION_RESPONSE_TIMEOUT;
+            break;
         default:
             response = LOCATION_RESPONSE_UNKOWN_FAILURE;
             break;
@@ -961,6 +894,8 @@ LocationClientApiImpl::LocationClientApiImpl(CapabilitiesCb capabitiescb) :
 #ifndef FEATURE_EXTERNAL_AP
         ,mDiagIface(nullptr)
 #endif
+        mSingleTerrestrialPosCb(nullptr),
+        mSingleTerrestrialPosRespCb(nullptr)
 {
     // read configuration file
     UTIL_READ_CONF(LOC_PATH_GPS_CONF, gConfigTable);
@@ -1123,14 +1058,10 @@ void LocationClientApiImpl::updateCallbacks(LocationCallbacks& callbacks) {
             //convert callbacks to callBacksMask
             LocationCallbacksMask callBacksMask = 0;
             if (mCallBacks.trackingCb) {
-                callBacksMask |= E_LOC_CB_DISTANCE_BASED_TRACKING_BIT;
+                callBacksMask |= E_LOC_CB_TRACKING_BIT;
             }
             if (mCallBacks.gnssLocationInfoCb) {
-                if (mApiImpl->mLocationCb) {
-                    callBacksMask |= E_LOC_CB_SIMPLE_LOCATION_INFO_BIT;
-                } else {
-                    callBacksMask |= E_LOC_CB_GNSS_LOCATION_INFO_BIT;
-                }
+                callBacksMask |= E_LOC_CB_GNSS_LOCATION_INFO_BIT;
             }
             if (mCallBacks.engineLocationsInfoCb) {
                 callBacksMask |= E_LOC_CB_ENGINE_LOCATIONS_INFO_BIT;
@@ -1788,6 +1719,90 @@ void LocationClientApiImpl::updateLocationSystemInfoListener(
             this, locSystemInfoCallback, responseCallback));
 }
 
+void LocationClientApiImpl::getSingleTerrestrialPos(
+        uint32_t timeoutMsec, TerrestrialTechMask techMask, float horQoS,
+        LocationCb terrestrialPositionCallback, ResponseCb responseCallback) {
+
+    struct GetSingleTerrestrialPosReq : public LocMsg {
+        GetSingleTerrestrialPosReq(LocationClientApiImpl *apiImpl,
+                                        uint32_t timeoutMsec,
+                                        TerrestrialTechMask techMask,
+                                        float horQoS,
+                                        LocationCb terrestrialPositionCallback,
+                                        ResponseCb responseCallback) :
+            mApiImpl(apiImpl), mTimeoutMsec(timeoutMsec), mTechMask(techMask),
+            mHorQoS(horQoS), mSingleTerrestrialPosCb(terrestrialPositionCallback),
+            mResponseCb(responseCallback) {}
+
+        virtual ~GetSingleTerrestrialPosReq() {}
+        void proc() const {
+            do {
+                if ((mApiImpl->mSingleTerrestrialPosCb == nullptr) &&
+                        (mSingleTerrestrialPosCb == nullptr)) {
+                    // pos cb can not be null if there is no pending request
+                    if (mResponseCb) {
+                        mResponseCb(LOCATION_RESPONSE_PARAM_INVALID);
+                    }
+                    break;
+                }
+
+                if ((mApiImpl->mSingleTerrestrialPosCb != nullptr) &&
+                        (mSingleTerrestrialPosCb != nullptr)) {
+                    // do not allow concurent single terrestrial position requests
+                    if (mResponseCb) {
+                        mResponseCb(LOCATION_RESPONSE_REQUEST_ALREADY_IN_PROGRESS);
+                    }
+                    break;
+                }
+
+                if (!mApiImpl->mHalRegistered) {
+                    if (mResponseCb) {
+                        mResponseCb(LOCATION_RESPONSE_SYSTEM_NOT_READY);
+                    }
+                    break;
+                }
+
+                // save the new callback
+                mApiImpl->mSingleTerrestrialPosCb = mSingleTerrestrialPosCb;
+                mApiImpl->mSingleTerrestrialPosRespCb = mResponseCb;
+
+                // If client has cancelled the callback, we are done with processing
+                if (mApiImpl->mSingleTerrestrialPosCb == nullptr) {
+                    if (mResponseCb) {
+                        mResponseCb(LOCATION_RESPONSE_SUCCESS);
+                    }
+                    break;
+                }
+
+                string pbStr;
+                LocAPIGetSingleTerrestrialPosReqMsg msg(
+                        mApiImpl->mSocketName, mTimeoutMsec, mTechMask, mHorQoS,
+                        &mApiImpl->mPbufMsgConv);
+
+                if (msg.serializeToProtobuf(pbStr)) {
+                    bool rc = mApiImpl->sendMessage(
+                            reinterpret_cast<uint8_t *>((uint8_t *)pbStr.c_str()),
+                                        pbStr.size());
+                    if (!rc && mResponseCb) {
+                        mResponseCb(LOCATION_RESPONSE_UNKOWN_FAILURE);
+                    }
+                }
+            } while (0);
+        }
+
+        LocationClientApiImpl *mApiImpl;
+        uint32_t mTimeoutMsec;
+        TerrestrialTechMask mTechMask;
+        float mHorQoS;
+        LocationCb mSingleTerrestrialPosCb;
+        ResponseCb mResponseCb;
+    };
+
+    mMsgTask->sendMsg(new (nothrow)GetSingleTerrestrialPosReq(
+            this, timeoutMsec, techMask, horQoS,
+            terrestrialPositionCallback, responseCallback));
+}
+
 /******************************************************************************
 LocationClientApiImpl - LocIpc onReceive handler
 ******************************************************************************/
@@ -1986,10 +2001,8 @@ void IpcListener::onReceive(const char* data, uint32_t length,
                     LOC_LOGw("payload size does not match for message with id: %d",
                              pMsg->msgId);
                 }
-                LocationCallbacksMask tempMask =
-                        (E_LOC_CB_DISTANCE_BASED_TRACKING_BIT | E_LOC_CB_SIMPLE_LOCATION_INFO_BIT);
                 if ((mApiImpl.mSessionId != LOCATION_CLIENT_SESSION_ID_INVALID) &&
-                        (mApiImpl.mCallbacksMask & tempMask)) {
+                        (mApiImpl.mCallbacksMask & E_LOC_CB_TRACKING_BIT)) {
                     const LocAPILocationIndMsg* pLocationIndMsg = (LocAPILocationIndMsg*)(pMsg);
                     Location location = parseLocation(pLocationIndMsg->locationNotification);
                     if (mApiImpl.mLocationCb) {
@@ -2295,6 +2308,32 @@ void IpcListener::onReceive(const char* data, uint32_t length,
                     if (mApiImpl.mLocationSysInfoCb) {
                         mApiImpl.mLocationSysInfoCb(locationSystemInfo);
                     }
+                }
+                break;
+            }
+
+            case E_LOCAPI_GET_SINGLE_TERRESTRIAL_POS_RESP_MSG_ID:
+            {
+                LOC_LOGd("<<< message = terrestrial pos info");
+                if (mApiImpl.mSingleTerrestrialPosCb) {
+                    PBLocAPIGetSingleTerrestrialPosRespMsg pbMsg;
+                    if (0 == pbMsg.ParseFromString(pbLocApiMsg.payload())) {
+                        LOC_LOGe("Failed to parse PBLocAPIGetSingleTerrestrialPosRespMsg!!");
+                        return;
+                    }
+
+                    LocAPIGetSingleTerrestrialPosRespMsg msg(sockName.c_str(), pbMsg,
+                                                             &mApiImpl.mPbufMsgConv);
+                    if (mApiImpl.mSingleTerrestrialPosRespCb) {
+                        mApiImpl.mSingleTerrestrialPosRespCb(parseLocationError(msg.mErrorCode));
+                    }
+                    if (msg.mErrorCode == ::LOCATION_ERROR_SUCCESS) {
+                        Location terrestialPos = parseLocation(msg.mLocation);
+                        mApiImpl.mSingleTerrestrialPosCb(terrestialPos);
+                    }
+                    // clean up variable to indicate that no request is pending
+                    mApiImpl.mSingleTerrestrialPosRespCb = nullptr;
+                    mApiImpl.mSingleTerrestrialPosCb = nullptr;
                 }
                 break;
             }
