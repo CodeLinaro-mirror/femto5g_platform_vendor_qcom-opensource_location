@@ -1562,9 +1562,20 @@ uint32_t LocationApiPbMsgConv::getPBMaskForGnssMeasurementsDataFlagsMask(
     if (gnssMeasDataFlagsMask & GNSS_MEASUREMENTS_DATA_AUTOMATIC_GAIN_CONTROL_BIT) {
         pbGnssMeasDataFlagsMask |= PB_GNSS_MEASUREMENTS_DATA_AUTOMATIC_GAIN_CONTROL_BIT;
     }
+
+    if (gnssMeasDataFlagsMask & GNSS_MEASUREMENTS_DATA_FULL_ISB_BIT) {
+        pbGnssMeasDataFlagsMask |= PB_GNSS_MEASUREMENTS_DATA_FULL_ISB_BIT;
+    }
+    if (gnssMeasDataFlagsMask & GNSS_MEASUREMENTS_DATA_FULL_ISB_UNCERTAINTY_BIT) {
+        pbGnssMeasDataFlagsMask |= PB_GNSS_MEASUREMENTS_DATA_FULL_ISB_UNCERTAINTY_BIT;
+    }
     if (gnssMeasDataFlagsMask & GNSS_MEASUREMENTS_DATA_GNSS_SIGNAL_TYPE_BIT) {
         pbGnssMeasDataFlagsMask |= PB_GNSS_MEASUREMENTS_DATA_GNSS_SIGNAL_TYPE_BIT;
     }
+    if (gnssMeasDataFlagsMask & GNSS_MEASUREMENTS_DATA_BASEBAND_CARRIER_TO_NOISE_BIT) {
+        pbGnssMeasDataFlagsMask |= PB_GNSS_MEASUREMENTS_DATA_BASEBAND_CARRIER_TO_NOISE_BIT;
+    }
+
     LocApiPb_LOGv("LocApiPB: gnssMeasDataFlagsMask:%x, pbGnssMeasDataFlagsMask:%x",
             gnssMeasDataFlagsMask, pbGnssMeasDataFlagsMask);
     return pbGnssMeasDataFlagsMask;
@@ -2479,8 +2490,17 @@ uint32_t LocationApiPbMsgConv::getGnssMeasurementsDataFlagsMaskFromPB(
     if (pbGnssMeasDataFlgMask & PB_GNSS_MEASUREMENTS_DATA_AUTOMATIC_GAIN_CONTROL_BIT) {
         gnssMeasDataFlgMask |= GNSS_MEASUREMENTS_DATA_AUTOMATIC_GAIN_CONTROL_BIT;
     }
+    if (pbGnssMeasDataFlgMask & PB_GNSS_MEASUREMENTS_DATA_FULL_ISB_BIT) {
+        gnssMeasDataFlgMask |= GNSS_MEASUREMENTS_DATA_FULL_ISB_BIT;
+    }
+    if (pbGnssMeasDataFlgMask & PB_GNSS_MEASUREMENTS_DATA_FULL_ISB_UNCERTAINTY_BIT) {
+        gnssMeasDataFlgMask |= GNSS_MEASUREMENTS_DATA_FULL_ISB_UNCERTAINTY_BIT;
+    }
     if (pbGnssMeasDataFlgMask & PB_GNSS_MEASUREMENTS_DATA_GNSS_SIGNAL_TYPE_BIT) {
         gnssMeasDataFlgMask |= GNSS_MEASUREMENTS_DATA_GNSS_SIGNAL_TYPE_BIT;
+    }
+    if (pbGnssMeasDataFlgMask & PB_GNSS_MEASUREMENTS_DATA_BASEBAND_CARRIER_TO_NOISE_BIT) {
+        gnssMeasDataFlgMask |= GNSS_MEASUREMENTS_DATA_BASEBAND_CARRIER_TO_NOISE_BIT;
     }
     LocApiPb_LOGv("LocApiPB: pbGnssMeasDataFlgMask:%x, gnssMeasDataFlgMask:%x",
             pbGnssMeasDataFlgMask, gnssMeasDataFlgMask);
@@ -3925,11 +3945,22 @@ int LocationApiPbMsgConv::convertGnssMeasDataToPB(const GnssMeasurementsData &gn
     // double agcLevelDb = 20;
     pbGnssMeasData->set_agcleveldb(gnssMeasData.agcLevelDb);
 
+    // double basebandCarrierToNoiseDbHz = 21;
+    pbGnssMeasData->set_basebandcarriertonoisedbhz(gnssMeasData.basebandCarrierToNoiseDbHz);
+
     // uint32 gnssSignalType = 22;
     pbGnssMeasData->set_gnsssignaltype(getPBMaskForGnssSignalTypeMask(gnssMeasData.gnssSignalType));
 
+    // double fullInterSignalBiasNs = 23;
+    pbGnssMeasData->set_fullintersignalbiasns(gnssMeasData.fullInterSignalBiasNs);
+
+    // double fullInterSignalBiasUncertaintyNs = 24;
+    pbGnssMeasData->set_fullintersignalbiasuncertaintyns(
+            gnssMeasData.fullInterSignalBiasUncertaintyNs);
+
     // float receivedSvTimeSubNs = 26
     pbGnssMeasData->set_receivedsvtimesubns(gnssMeasData.receivedSvTimeSubNs);
+
 
     LOC_LOGd("LocApiPB: gnssMeasData - GnssMeasDataFlags:%x, Svid:%d, SvType:%d, StateMsk:%x, "\
             "RcvSvTime:%"  PRIu64", RcvSvTimeUnc:%" PRIu64", CNoDb:%lf", gnssMeasData.flags,
@@ -5121,9 +5152,19 @@ int LocationApiPbMsgConv::pbConvertToGnssMeasurementsData(
     // double agcLevelDb = 20;
     gnssMeasData.agcLevelDb = pbGnssMeasData.agcleveldb();
 
+    // double basebandCarrierToNoiseDbHz = 21;
+    gnssMeasData.basebandCarrierToNoiseDbHz = pbGnssMeasData.basebandcarriertonoisedbhz();
+
     // uint32 gnssSignalType = 22
     gnssMeasData.gnssSignalType =
             getGnssSignalTypeMaskFromPB(pbGnssMeasData.gnsssignaltype());
+
+    //double fullInterSignalBiasNs = 23;
+    gnssMeasData.fullInterSignalBiasNs = pbGnssMeasData.fullintersignalbiasns();
+
+    // double fullInterSignalBiasUncertaintyNs = 24;
+    gnssMeasData.fullInterSignalBiasUncertaintyNs =
+            pbGnssMeasData.fullintersignalbiasuncertaintyns();
 
     // int64 receivedSvTimeSubNs = 26;
     gnssMeasData.receivedSvTimeSubNs = pbGnssMeasData.receivedsvtimesubns();
