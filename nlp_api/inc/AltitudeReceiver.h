@@ -1,4 +1,4 @@
-/* Copyright (c) 2020 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2021 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -26,46 +26,41 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef WIFI_DB_PROV_H
-#define WIFI_DB_PROV_H
+#ifndef ALT_REC_H
+#define ALT_REC_H
 
 #include <DBCommon.h>
 
 /******************************************************************************
-WiFiDBReceiver
+AltitudeReceiver
 ******************************************************************************/
 
 typedef struct {
-    void (*requestAPObsLocData)();
-} WiFiDBProvider;
+    NlpLocation loc;
+    uint64_t elapsedRealTimeInMs;
+} LocationExt;
+
+/** @brief
+    All the memory pointers received will be never freed internally.
+    Caller shall manage the memory before and after calling these functions.
+    If altitude is valid, ALTITUDE_BIT must set in loc.locationFlagsMask.
+    elapsedRealTimeInMs must be set correctly using boottime of system.
+*/
+typedef struct {
+    void (*pushAltitude)(const LocationExt* location);
+} AltitudeReceiver;
 
 /******************************************************************************
 ResponseListener
 ******************************************************************************/
-typedef struct {
-    uint8_t macAddress[6];
-    float rssi;
-    uint64_t deltaTime;
-    char ssid[8];
-    uint16_t channelNumber;
-} ApScan;
-
-typedef struct {
-    NlpLocation location;
-    CellInfo cellInfo;
-    uint64_t scanTimestamp;
-    ApScan* ap_scan_list;
-    uint16_t ap_scan_list_count;
-} APObsLocData;
 
 /** @brief
     All the memory pointers returned in these callbacks will be freed after call returns.
     Implementation of these callbacks shall copy the needed data before returning.
 */
 typedef struct {
-    void (*onApObsLocDataAvailable)(const APObsLocData* ap_obs_list, uint16_t ap_obs_list_count,
-            ApBsListStatus ap_status, const void* clientData);
-    void (*onServiceRequest)(const void* clientData);
-} WiFiDBProviderResponseListener;
+    void (*onAltitudeLookupRequest)(const LocationExt* location, bool is_emergency,
+            const void* clientData);
+} AltitudeReceiverResponseListener;
 
-#endif /* WIFI_DB_PROV_H */
+#endif
