@@ -533,6 +533,18 @@ enum GnssLocationInfoFlagMask {
     GNSS_LOCATION_INFO_ALTITUDE_ASSUMED_BIT             = (1ULL<<33),
     /** GnssLocation has valid GnssLocation::sessionStatus. <br/> */
     GNSS_LOCATION_INFO_SESSION_STATUS_BIT               = (1ULL<<34),
+    /** GnssLocation has valid GnssLocation::integrityRiskUsed.
+     *  <br/> */
+    GNSS_LOCATION_INFO_INTEGRITY_RISK_USED_BIT          = (1ULL<<35),
+    /** GnssLocation has valid GnssLocation::protectAlongTrack.
+     *  <br/> */
+    GNSS_LOCATION_INFO_PROTECT_ALONG_TRACK_BIT          = (1ULL<<36),
+    /** GnssLocation has valid GnssLocation::protectCrossTrack.
+     *  <br/> */
+    GNSS_LOCATION_INFO_PROTECT_CROSS_TRACK_BIT          = (1ULL<<37),
+    /** GnssLocation has valid GnssLocation::sprotectVertical.
+     *  <br/> */
+    GNSS_LOCATION_INFO_PROTECT_VERTICAL_BIT             = (1ULL<<38),
 };
 
 /** Specify the reliability level of
@@ -1154,6 +1166,26 @@ struct GnssLocation : public Location {
     /** Indicates whether session is success, failure or
      *  intermediate. <br/> */
     LocSessionStatus sessionStatus;
+    /** Integrity risk used for protection level parameters. <br/>
+     *  Unit of 2.5e-10. Valid range is [1 to (4e9-1)].
+     *  </br> Other values means integrity risk is disabled and
+     *  GnssLocation::protectAlongTrack,
+     *  GnssLocation::protectCrossTrack and
+     *  GnssLocation::protectVertical will not be available. <br/>
+     */
+    uint32_t integrityRiskUsed;
+    /** Along-track protection level at specified integrity risk, in
+     *  unit of meter. <br/>
+     */
+    float    protectAlongTrack;
+   /** Cross-track protection level at specified integrity risk, in
+     *  unit of meter. <br/>
+     */
+    float    protectCrossTrack;
+    /** Vertical component protection level at specified integrity
+     *  risk, in unit of meter. <br/>
+     */
+    float    protectVertical;
 
     /* Default constructor to initalize GnssLocation structure */
     inline GnssLocation() :
@@ -1180,7 +1212,9 @@ struct GnssLocation : public Location {
             llaVRPBased({}),
             enuVelocityVRPBased{0.0f, 0.0f, 0.0f},
             drSolutionStatusMask((DrSolutionStatusMask)0),
-            altitudeAssumed(false), sessionStatus(LOC_SESS_FAILURE) {
+            altitudeAssumed(false), sessionStatus(LOC_SESS_FAILURE),
+            integrityRiskUsed(0), protectAlongTrack(0.0f),
+            protectCrossTrack(0.0f), protectVertical(0.0f) {
     }
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
@@ -1715,10 +1749,10 @@ struct LeapSecondSystemInfo {
      *     use this field to retrieve the current leap second. <br/>
      */
     uint8_t               leapSecondCurrent;
-    /** GPS timestamp that corresponds to the last known leap second
-     *  change event. <br/>
-     *  The info can be available on two scenario: <br/> 1: this
-     *  leap second change event has been scheduled and yet
+    /** GPS timestamp that corrresponds to the last known leap
+     *  second change event. <br/>
+     *  The info can be available on two scenario: <br/>
+     *  1: this leap second change event has been scheduled and yet
      *     to happen and GPS receiver has decoded this info since
      *     device last bootup. <br/
      *  2: this leap second change event happened after device was
@@ -1727,7 +1761,7 @@ struct LeapSecondSystemInfo {
      *     second change has happened, this info will become
      *     unavailable. <br/>
      *
-     *   If leap second change info is available, to figure out the
+     *   If leap second change info is avaiable, to figure out the
      *   current leap second info, compare current gps time with
      *   LeapSecondChangeInfo::gpsTimestampLsChange to know whether
      *   to choose leapSecondBefore or leapSecondAfter as current
