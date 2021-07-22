@@ -29,6 +29,7 @@
 #include <stdint.h>
 #include <sys/stat.h>
 #include <dlfcn.h>
+#include <unistd.h>
 #include <memory>
 #include <SystemStatus.h>
 #include <LocationApiMsg.h>
@@ -220,13 +221,17 @@ LocationApiService::LocationApiService(const configParamToRead & configParamRead
     LOC_LOGd("Ready, start Ipc Receivers");
     auto recver = LocIpc::getLocIpcLocalRecver(make_shared<LocHaldLocalIpcListener>(*this),
             SOCKET_TO_LOCATION_HAL_DAEMON);
+
+#ifdef LV_BUILD
+    mIpc.startBlockingListening(*recver);
+#else
     // blocking: set to false
     mIpc.startNonBlockingListening(recver);
-
     mBlockingRecver = LocIpc::getLocIpcQrtrRecver(make_shared<LocHaldIpcListener>(*this),
             LOCATION_CLIENT_API_QSOCKET_HALDAEMON_SERVICE_ID,
             LOCATION_CLIENT_API_QSOCKET_HALDAEMON_INSTANCE_ID);
     mIpc.startBlockingListening(*mBlockingRecver);
+#endif
 }
 
 LocationApiService::~LocationApiService() {
