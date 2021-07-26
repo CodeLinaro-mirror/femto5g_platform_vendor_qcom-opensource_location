@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2018, 2020 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2018, 2020-2021 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -1142,6 +1142,19 @@ typedef union
    const qmiLocLatencyInformationIndMsgT_v02 *pLocLatencyInfoIndMsg;
    /** Sent by the engine to inform of latency info
     QMI_LOC_LATENCY_INFORMATION_IND_V02 */
+
+   const qmiLocLocationRequestNotificationIndMsgT_v02 *pLocReqNotifEvent;
+   /** Sent by the engine to inform of location system info event
+   QMI_LOC_LOCATION_REQUEST_NOTIFICATION_IND_V02 */
+
+   const qmiLocEventQueryXtraInfoReqIndMsgT_v02 *pLocQueryXtraReqEvent;
+   /** Sent by the engine to notify client about query reqest
+   QMI_LOC_EVENT_QUERY_XTRA_INFO_REQ_IND_V02 */
+
+   const qmiLocPlatformPowerStateChangedIndMsgT_v02 *pPowerStateChangedIndMsg;
+   /** Sent by the engine to inform power state change
+    QMI_LOC_EVENT_PLATFORM_POWER_STATE_CHANGED_IND_V02 */
+
 }locClientEventIndUnionType;
 
 

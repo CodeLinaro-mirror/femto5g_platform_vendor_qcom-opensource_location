@@ -90,13 +90,7 @@ bool LocationClientApi::startPositionSession(
     // callback masks
     LocationCallbacks callbacksOption = {0};
     callbacksOption.responseCb = [](::LocationError err, uint32_t id) {};
-    // only register for trackingCb if distance is not 0
-    if (distanceInMeters != 0) {
-        callbacksOption.trackingCb = [](::Location n) {};
-    } else {
-        // for time based, register gnss location cb
-        callbacksOption.gnssLocationInfoCb = [](::GnssLocationInfoNotification n) {};
-    }
+    callbacksOption.trackingCb = [](::Location n) {};
     mApiImpl->updateCallbacks(callbacksOption);
 
     // options
@@ -536,9 +530,10 @@ void LocationClientApi::getSingleTerrestrialPosition(
     LOC_LOGd("timeout msec = %u, horQoS = %f,"
              "techMask = 0x%x", timeoutMsec, horQoS, techMask);
 
-    if ((timeoutMsec == 0) || (techMask != TERRESTRIAL_TECH_GTP_WWAN) ||
-        (horQoS != 0.0)) {
-        LOC_LOGe("invalid parameter: timeout %d, tech mask 0x%x, horQoS %f",
+    if ((terrestrialPositionCallback != nullptr) &&
+            ((timeoutMsec == 0) || (techMask != TERRESTRIAL_TECH_GTP_WWAN) ||
+             (horQoS != 0.0))) {
+        LOC_LOGe("invalid parameter: timeout %d msec, tech mask 0x%x, horQoS %f",
                  timeoutMsec, techMask, horQoS);
         if (responseCallback) {
             responseCallback(LOCATION_RESPONSE_PARAM_INVALID);
@@ -824,7 +819,11 @@ DECLARE_TBL(GnssMeasurementsDataFlagsMask) = {
     {GNSS_MEASUREMENTS_DATA_CARRIER_PHASE_UNCERTAINTY_BIT, "carrierPhaseUncertainty"},
     {GNSS_MEASUREMENTS_DATA_MULTIPATH_INDICATOR_BIT, "multipathIndicator"},
     {GNSS_MEASUREMENTS_DATA_SIGNAL_TO_NOISE_RATIO_BIT, "signalToNoiseRatioDb"},
-    {GNSS_MEASUREMENTS_DATA_AUTOMATIC_GAIN_CONTROL_BIT, "agcLevelDb"}
+    {GNSS_MEASUREMENTS_DATA_AUTOMATIC_GAIN_CONTROL_BIT, "agcLevelDb"},
+    {GNSS_MEASUREMENTS_DATA_GNSS_SIGNAL_TYPE_BIT, "gnssSignalType"},
+    {GNSS_MEASUREMENTS_DATA_BASEBAND_CARRIER_TO_NOISE_BIT, "basebandCarrierToNoiseDbHz"},
+    {GNSS_MEASUREMENTS_DATA_FULL_ISB_BIT, "fullInterSignalBiasNs"},
+    {GNSS_MEASUREMENTS_DATA_FULL_ISB_UNCERTAINTY_BIT, "fullInterSignalBiasUncertaintyNs"},
 };
 // GnssMeasurementsStateMask
 DECLARE_TBL(GnssMeasurementsStateMask) = {
@@ -862,7 +861,7 @@ DECLARE_TBL(GnssMeasurementsClockFlagsMask) = {
     {GNSS_MEASUREMENTS_CLOCK_FLAGS_TIME_UNCERTAINTY_BIT, "TIME_UNC"},
     {GNSS_MEASUREMENTS_CLOCK_FLAGS_FULL_BIAS_BIT, "FULL_BIAS"},
     {GNSS_MEASUREMENTS_CLOCK_FLAGS_BIAS_BIT, "BIAS"},
-    {GNSS_MEASUREMENTS_CLOCK_FLAGS_BIAS_BIT, "BIAS_UNC"},
+    {GNSS_MEASUREMENTS_CLOCK_FLAGS_BIAS_UNCERTAINTY_BIT, "BIAS_UNC"},
     {GNSS_MEASUREMENTS_CLOCK_FLAGS_DRIFT_BIT, "DRIFT"},
     {GNSS_MEASUREMENTS_CLOCK_FLAGS_DRIFT_UNCERTAINTY_BIT, "DRIFT_UNC"},
     {GNSS_MEASUREMENTS_CLOCK_FLAGS_HW_CLOCK_DISCONTINUITY_COUNT_BIT, "HW_CLK_DISCONTINUITY_CNT"}
@@ -1157,6 +1156,10 @@ string GnssMeasurementsData::toString() const {
     out += FIELDVAL_ENUM(multipathIndicator, GnssMeasurementsMultipathIndicator_tbl);
     out += FIELDVAL_DEC(signalToNoiseRatioDb);
     out += FIELDVAL_DEC(agcLevelDb);
+    out += FIELDVAL_MASK(gnssSignalType, GnssSignalTypeMask_tbl);
+    out += FIELDVAL_DEC(basebandCarrierToNoiseDbHz);
+    out += FIELDVAL_DEC(fullInterSignalBiasNs);
+    out += FIELDVAL_DEC(fullInterSignalBiasUncertaintyNs);
 
     return out;
 }

@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2021, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -68,6 +68,81 @@
 using Resender = std::function<void()>;
 using namespace loc_core;
 
+typedef struct {
+    uint32_t counter;
+    qmiLocSvSystemEnumT_v02 system;
+    qmiLocGnssSignalTypeMaskT_v02 gnssSignalType;
+    uint16_t gnssSvId;
+    qmiLocMeasFieldsValidMaskT_v02 validMask;
+    uint8_t cycleSlipCount;
+    uint8_t nHzMeasurement;
+} adrData;
+
+typedef uint64_t GpsSvMeasHeaderFlags;
+#define BIAS_GPSL1_VALID                0x00000001
+#define BIAS_GPSL1_UNC_VALID            0x00000002
+#define BIAS_GPSL1_GPSL5_VALID          0x00000004
+#define BIAS_GPSL1_GPSL5_UNC_VALID      0x00000008
+#define BIAS_GPSL1_GLOG1_VALID          0x00000010
+#define BIAS_GPSL1_GLOG1_UNC_VALID      0x00000020
+#define BIAS_GPSL1_GALE1_VALID          0x00000040
+#define BIAS_GPSL1_GALE1_UNC_VALID      0x00000080
+#define BIAS_GPSL1_BDSB1_VALID          0x00000100
+#define BIAS_GPSL1_BDSB1_UNC_VALID      0x00000200
+#define BIAS_GPSL1_NAVIC_VALID          0x00000400
+#define BIAS_GPSL1_NAVIC_UNC_VALID      0x00000800
+
+#define BIAS_GALE1_VALID                0x00001000
+#define BIAS_GALE1_UNC_VALID            0x00002000
+#define BIAS_GALE1_GALE5A_VALID         0x00004000
+#define BIAS_GALE1_GALE5A_UNC_VALID     0x00008000
+#define BIAS_BDSB1_VALID                0x00010000
+#define BIAS_BDSB1_UNC_VALID            0x00020000
+#define BIAS_BDSB1_BDSB1C_VALID         0x00040000
+#define BIAS_BDSB1_BDSB1C_UNC_VALID     0x00080000
+#define BIAS_BDSB1_BDSB2A_VALID         0x00100000
+#define BIAS_BDSB1_BDSB2A_UNC_VALID     0x00200000
+
+#define BIAS_GPSL1_GPSL2C_VALID         0x00400000
+#define BIAS_GPSL1_GPSL2C_UNC_VALID     0x00800000
+#define BIAS_GALE1_GALE5B_VALID         0x01000000
+#define BIAS_GALE1_GALE5B_UNC_VALID     0x02000000
+
+typedef struct {
+    uint64_t flags;
+
+    /* used directly */
+    float gpsL1;
+    float gpsL1Unc;
+    float gpsL1_gpsL5;
+    float gpsL1_gpsL5Unc;
+    float gpsL1_gpsL2c;
+    float gpsL1_gpsL2cUnc;
+    float gpsL1_gloG1;
+    float gpsL1_gloG1Unc;
+    float gpsL1_galE1;
+    float gpsL1_galE1Unc;
+    float gpsL1_bdsB1;
+    float gpsL1_bdsB1Unc;
+    float gpsL1_navic;
+    float gpsL1_navicUnc;
+
+    /* used for intermediate computations */
+    float galE1;
+    float galE1Unc;
+    float galE1_galE5a;
+    float galE1_galE5aUnc;
+    float galE1_galE5b;
+    float galE1_galE5bUnc;
+
+    float bdsB1;
+    float bdsB1Unc;
+    float bdsB1_bdsB1c;
+    float bdsB1_bdsB1cUnc;
+    float bdsB1_bdsB2a;
+    float bdsB1_bdsB2aUnc;
+} timeBiases;
+
 /* This class derives from the LocApiBase class.
    The members of this class are responsible for converting
    the Loc API V02 data structures into Loc Adapter data structures.
@@ -91,9 +166,14 @@ private:
   bool mIsFirstStartFixReq;
   uint64_t mHlosQtimer1, mHlosQtimer2;
   uint32_t mRefFCount;
+  uint32_t mCounter;
+  uint32_t mMinInterval;
+  std::vector<adrData>  mADRdata;
+  timeBiases mTimeBiases;
+  qmiLocPlatformPowerStateEnumT_v02 mPlatformPowerState;
 
   /* Convert event mask from loc eng to loc_api_v02 format */
-  static locClientEventMaskType convertMask(LOC_API_ADAPTER_EVENT_MASK_T mask);
+  static locClientEventMaskType convertLocClientEventMask(LOC_API_ADAPTER_EVENT_MASK_T mask);
 
   /* Convert GPS LOCK from LocationAPI format to QMI format */
   static qmiLocLockEnumT_v02 convertGpsLockFromAPItoQMI(GnssConfigGpsLock lock);
@@ -118,7 +198,7 @@ private:
       uint8_t gloFrequency);
 
   /*convert GnssMeasurement type from QMI LOC to loc eng format*/
-  static bool convertGnssMeasurements (GnssMeasurementsData& measurementData,
+  bool convertGnssMeasurements (GnssMeasurementsData& measurementData,
       const qmiLocEventGnssSvMeasInfoIndMsgT_v02& gnss_measurement_report_ptr,
       int index);
 
@@ -142,6 +222,9 @@ private:
   static void convertGnssConestellationMask (
             qmiLocGNSSConstellEnumT_v02 qmiConstellationEnum,
             GnssConstellationTypeMask& constellationMask);
+
+  static GnssSignalTypeMask convertQmiGnssSignalType(
+        qmiLocGnssSignalTypeMaskT_v02 qmiGnssSignalType);
 
   /* If Confidence value is less than 68%, then scale the accuracy value to 68%
      confidence.*/
@@ -176,7 +259,9 @@ private:
       mSvMeasurementSet->svMeasSetHeader.size = sizeof(GnssSvMeasurementHeader);
   }
 
-  void  reportSvPolynomial (
+  void setGnssBiases(GnssMeasurementsNotification& mGnssMeasurements);
+
+  void reportSvPolynomial (
   const qmiLocEventGnssSvPolyIndMsgT_v02 *gnss_sv_poly_ptr);
 
   void reportSvEphemeris (
@@ -239,7 +324,7 @@ private:
 
   void registerEventMask(LOC_API_ADAPTER_EVENT_MASK_T adapterMask);
   bool sendRequestForAidingData(locClientEventMaskType qmiMask);
-  locClientEventMaskType adjustMaskIfNoSession(locClientEventMaskType qmiMask);
+  locClientEventMaskType adjustLocClientEventMask(locClientEventMaskType qmiMask);
   bool cacheGnssMeasurementSupport();
   void registerMasterClient();
   int getGpsLock(uint8_t subType);
@@ -258,6 +343,9 @@ private:
   void wifiStatusInformSync();
 
   void reportLatencyInfo(const qmiLocLatencyInformationIndMsgT_v02* pLocLatencyInfo);
+
+  void reportPowerStateChangeInfo(
+        const qmiLocPlatformPowerStateChangedIndMsgT_v02 *pPowerStateChangedInfo);
 
 protected:
   virtual enum loc_api_adapter_err
@@ -386,8 +474,6 @@ public:
   virtual GnssConfigLppProfile convertLppProfile(const uint32_t lppProfile);
   virtual GnssConfigLppeControlPlaneMask convertLppeCp(const uint32_t lppeControlPlaneMask);
   virtual GnssConfigLppeUserPlaneMask convertLppeUp(const uint32_t lppeUserPlaneMask);
-  virtual GnssSignalTypeMask convertQmiGnssSignalType(
-        qmiLocGnssSignalTypeMaskT_v02 qmiGnssSignalType);
 
   void convertQmiBlacklistedSvConfigToGnssConfig(
         const qmiLocGetBlacklistSvIndMsgT_v02& qmiBlacklistConfig,

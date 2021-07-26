@@ -1208,8 +1208,8 @@ struct GnssSv {
      *  BEIDOU, GALILEO). <br/>
      *  This field is always valid.  <br/> */
     GnssSvType type;
-     /** Signal-to-noise ratio at antenna of the SV, in unit of
-      * dB-Hz. <br/>
+     /** Carrier-to-noise ratio of the signal measured at antenna,
+      * in unit of dB-Hz. <br/>
       * cN0Dbhz of 0.0 indicates that this field is unknown. <br/> */
     float cN0Dbhz;
     /** Elevation of the SV, in unit of degrees. <br/>
@@ -1232,11 +1232,11 @@ struct GnssSv {
     GnssSignalTypeMask gnssSignalTypeMask;
     /** GLONASS frequency channel number, range is [1, 14].
      * <br/>
-     * This field is always valid if and ony if sv is of GLONASS.
+     * This field is always valid if and only if sv is of GLONASS.
      * <br/> */
     uint16_t gloFrequency;
-   /** RF loss from antenna to baseband of the SV, in unit of
-     *  dB-Hz. <br/>
+     /** Carrier-to-noise ratio of the signal measured at baseband,
+     *  in unit of dB-Hz. <br/>
      *  This field is valid if gnssSvOptionsMask has
      *  GNSS_SV_OPTIONS_HAS_BASEBAND_CARRIER_TO_NOISE_BIT set. <br/> */
     double basebandCarrierToNoiseDbHz;
@@ -1396,6 +1396,19 @@ enum GnssMeasurementsDataFlagsMask{
     /** GnssMeasurementsData has valid
      *  GnssMeasurementsData::agcLevelDb.  <br/>   */
     GNSS_MEASUREMENTS_DATA_AUTOMATIC_GAIN_CONTROL_BIT       = (1<<17),
+    /** GnssMeasurementsData has valid
+     *  GnssMeasurementsData::gnssSignalType. <br/> */
+    GNSS_MEASUREMENTS_DATA_GNSS_SIGNAL_TYPE_BIT             = (1<<18),
+    /** GnssMeasurementsData has valid
+     *  GnssMeasurementsData::basebandCarrierToNoiseDbHz. <br/> */
+    GNSS_MEASUREMENTS_DATA_BASEBAND_CARRIER_TO_NOISE_BIT    = (1<<19),
+    /** GnssMeasurementsData has valid
+     *  GnssMeasurementsData::fullInterSignalBiasNs. <br/> */
+    GNSS_MEASUREMENTS_DATA_FULL_ISB_BIT                     = (1<<20),
+    /** GnssMeasurementsData has valid
+     *  GnssMeasurementsData::fullInterSignalBiasUncertaintyNs.
+     *  <br/> */
+    GNSS_MEASUREMENTS_DATA_FULL_ISB_UNCERTAINTY_BIT         = (1<<21),
 };
 
 /** Specify GNSS measurement state in
@@ -1568,6 +1581,24 @@ struct GnssMeasurementsData {
     double signalToNoiseRatioDb;
     /** Automatic gain control level, in unit of dB <br/> */
     double agcLevelDb;
+    /** Signal type of the measurement.  <br/> */
+    GnssSignalTypeMask gnssSignalType;
+    /** Carrier-to-noise ratio of the signal measured at baseband,
+     *  in unit of dB-Hz. <br/>
+     *  This field is valid if GnssMeasurementsData::flags has
+     *  GNSS_MEASUREMENTS_DATA_BASEBAND_CARRIER_TO_NOISE_BIT set.
+     *  <br/> */
+    double basebandCarrierToNoiseDbHz;
+    /** The full inter-signal bias (ISB) in nanoseconds. <br/>
+     *  This value is the sum of the estimated receiver-side and the
+     *  space-segment-side inter-system bias, inter-frequency bias
+     *  and inter-code bias. <br/>
+     */
+    double fullInterSignalBiasNs;
+    /** 1-sigma uncertainty associated with the full inter-signal
+     *  bias in nanoseconds. <br/>   */
+    double fullInterSignalBiasUncertaintyNs;
+
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
     string toString() const;
@@ -1636,13 +1667,16 @@ enum LeapSecondSysInfoMask{
  *  LeapSecondSystemInfo.  <br/>   */
 struct LeapSecondChangeInfo {
     /** GPS timestamp that corrresponds to the last known leap
-        second change event. <br/>
-        The info can be available on two scenario: <br/>
-        1: this leap second change event has been scheduled and yet
-           to happen <br/>
-        2: this leap second change event has already happened and
-           next leap second change event has not yet been
-           scheduled. <br/>   */
+     *  second change event. <br/>
+     *  The info can be available on two scenario: <br/>
+     *  1: this leap second change event has been scheduled and yet
+     *     to happen and GPS receiver has decoded this info since
+     *     device last bootup. <br/
+     *  2: this leap second change event happened after device was
+     *     last booted up and GPS receiver has decoded this info.
+     *     Please note that if device gets rebooted after leap
+     *     second change happened, this info will become
+     *     unavailable. <br/> */
     GnssSystemTimeStructType gpsTimestampLsChange;
     /** Number of leap seconds prior to the leap second change event
      *  that corresponds to the timestamp at gpsTimestampLsChange.
@@ -1672,22 +1706,32 @@ struct LeapSecondSystemInfo {
      *  specify valid fields in LeapSecondSystemInfo. */
     LeapSecondSysInfoMask leapSecondInfoMask;
     /** Current leap seconds, in unit of seconds. <br/>
-     *  This info will only be available if the leap second change
-     *  info is not available. <br/>   */
+     *  1: When the leap second change info is available, to figure
+     *     out the current leap second info, compare current gps
+     *     time with LeapSecondChangeInfo::gpsTimestampLsChange to
+     *     know whether to choose leapSecondBefore or
+     *     leapSecondAfter as current leap second. <br/>
+     *  2: When the leap second change info is not available, then
+     *     use this field to retrieve the current leap second. <br/>
+     */
     uint8_t               leapSecondCurrent;
-    /** Leap second change event info. The info can be available on
-        two scenario: <br/>
-        1: this leap second change event has been scheduled and yet
-           to happen <br/>
-        2: this leap second change event has already happened and
-           next leap second change event has not yet been scheduled.
-           <br/>
-
-        If leap second change info is avaiable, to figure out the
-        current leap second info, compare current gps time with
-        LeapSecondChangeInfo::gpsTimestampLsChange to know whether
-        to choose leapSecondBefore or leapSecondAfter as current
-        leap second. <br/> */
+    /** GPS timestamp that corresponds to the last known leap second
+     *  change event. <br/>
+     *  The info can be available on two scenario: <br/> 1: this
+     *  leap second change event has been scheduled and yet
+     *     to happen and GPS receiver has decoded this info since
+     *     device last bootup. <br/
+     *  2: this leap second change event happened after device was
+     *     last booted up and GPS receiver has decoded this info.
+     *     Please note that if device gets rebooted after leap
+     *     second change has happened, this info will become
+     *     unavailable. <br/>
+     *
+     *   If leap second change info is available, to figure out the
+     *   current leap second info, compare current gps time with
+     *   LeapSecondChangeInfo::gpsTimestampLsChange to know whether
+     *   to choose leapSecondBefore or leapSecondAfter as current
+     *   leap second. <br/> */
     LeapSecondChangeInfo  leapSecondChangeInfo;
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
@@ -2303,7 +2347,8 @@ public:
                                       LocationCb terrestrialPositionCallback,
                                       ResponseCb responseCallback);
 
-    /** @example example1:testTrackingApi
+    /** @example example1:testDetailedGnssReportApi
+    *
     * <pre>
     * <code>
     *    // Sample Code
@@ -2311,7 +2356,14 @@ public:
     *     //...
     * }
     * static void onResponseCb(location_client::LocationResponse response) {
-    *     //...
+    *     if (response == LOCATION_RESPONSE_SUCCESS) {
+    *         // successfully started the tracking session
+    *         // expecting to receive detailed GNSS PVT reports and other reports
+    *         // the registered callbacks
+    *     } else {
+    *         // request to start the tracking session failed
+    *         // detained GNSS PVT reports and other report callbacks will not be invoked
+    *     }
     * }
     * static void onGnssLocationCb(const GnssLocation& location) {
     *     //...
@@ -2324,7 +2376,7 @@ public:
     * static void onGnssNmeaCb(uint64_t timestamp, const std::string& nmea) {
     *     //...
     * }
-    * void testTrackingApi() {
+    * void testDetailedGnssReportApi() {
     *     LocationClientApi *pClient = new LocationClientApi(onCapabilitiesCb);
     *     if (nullptr == pClient) {
     *         LOC_LOGe("failed to create LocationClientApi instance");
@@ -2350,6 +2402,129 @@ public:
     *     //...
     *     // stop session
     *     pClient->stopPositionSession();
+    *     //...
+    * }
+    * </code>
+    * </pre>
+    */
+
+    /** @example example2:testEngineReportApi
+    * <pre>
+    * <code>
+    *    // Sample Code
+    * static void onCapabilitiesCb(location_client::LocationCapabilitiesMask mask) {
+    *     //...
+    * }
+    * static void onResponseCb(location_client::LocationResponse response) {
+    *     if (response == LOCATION_RESPONSE_SUCCESS) {
+    *         // successfully started the tracking session
+    *         // expecting to receive engine PVT reports and other reports
+    *         // the registered callbacks
+    *     } else {
+    *         // request to start the tracking session failed
+    *         // engine PVT reports and other report callbacks will not be invoked
+    *     }
+    * }
+    * static void onEngLocationsCb(const std::vector<location_client::GnssLocation>& locations) {
+    *     for (auto gnssLocation : locations) {
+    *          if (gnssLocation.locOutputEngType == LOC_OUTPUT_ENGINE_FUSED) {
+    *               // This is fused report, check engines contributed to the fused report
+    *               if (gnssLocation.locOutputEngMask & STANDARD_POSITIONING_ENGINE) {
+    *                   // standard position engine contributed to the fix
+    *               }
+    *               if (gnssLocation.locOutputEngMask & RECISE_POSITIONING_ENGINE) {
+    *                   // standard position engine contributed to the fix
+    *               }
+    *               if (gnssLocation.locOutputEngMask & DEAD_RECKONING_ENGINE) {
+    *                   // standard position engine contributed to the fix
+    *               }
+    *          } else if (gnssLocation.locOutputEngType == LOC_OUTPUT_ENGINE_SPE) {
+    *               // This is unmodified and prompt SPE report
+    *          } else if (gnssLocation.locOutputEngType == LOC_OUTPUT_ENGINE_PPE) {
+    *              // This is unmodified and prompt PPE report
+    *          }
+    *     }
+    * }
+    *
+    * static void onGnssSvCb(const std::vector<location_client::GnssSv>& gnssSvs) {
+    *     //...
+    * }
+    *
+    * static void onGnssNmeaCb(uint64_t timestamp, const std::string& nmea) {
+    *     //...
+    * }
+    * static void onGnssDataCb(const location_client::GnssData& gnssData) {
+    *     //...
+    * }
+    * static void onGnssMeasurementsCb(const location_client::GnssMeasurements& gnssMeasurements) {
+    *     //...
+    * }
+    *
+    * void testEngineReportApi() {
+    *     LocationClientApi *pClient = new LocationClientApi(onCapabilitiesCb);
+    *     if (nullptr == pClient) {
+    *         LOC_LOGe("failed to create LocationClientApi instance");
+    *         return;
+    *     }
+    *
+    *     uint32_t interval = 1000;
+    *     // Request position from fused engine, SPE and PPE engines
+    *     // Adjust reqEngMask to client need
+    *     LocReqEngineTypeMask reqEngMask = (LOC_REQ_ENGINE_FUSED_BIT | LOC_REQ_ENGINE_SPE_BIT |
+    *                                       LOC_REQ_ENGINE_PPE_BIT);
+    *
+    *     // set callbacks
+    *     EngineReportCbs enginecbs;
+    *     enginecbs.engLocationsCallback = EngineLocationsCb(onEngLocationsCb);
+    *     enginecbs.gnssSvCallback = GnssSvCb(onGnssSvCb);
+    *     enginecbs.gnssNmeaCallback = GnssNmeaCb(onGnssNmeaCb);
+    *     enginecbs.gnssMeasurementsCallback = GnssMeasurementsCb(onGnssMeasurementsCb);
+    *     enginecbs.gnssNHzMeasurementsCallback = GnssMeasurementsCb(onGnssMeasurementsCb);
+    *     enginecbs.gnssDataCallback = GnssDataCb(onGnssDataCb);
+    *
+    *     // start tracking session
+    *     pClient->startPositionSession(interval, reqEngMask, enginecbs, onResponseCb);
+    *     //...
+    *     // stop session
+    *     pClient->stopPositionSession();
+    *     //...
+    * }
+    * </code>
+    * </pre>
+    */
+
+   /** @example example3:testSingleShotTerrestrialFixApi
+    * <pre>
+    * <code>
+    *    // Sample Code
+    * static void onCapabilitiesCb(location_client::LocationCapabilitiesMask mask) {
+    *     //...
+    * }
+    * static void onResponseCb(location_client::LocationResponse response) {
+    *     if (response == LOCATION_RESPONSE_SUCCESS) {
+    *         // successfully requested single shot gtp location
+    *         // onGtpLocationCb() will be invoked once to deliver gtp location
+    *     } else {
+    *         // request for single shot gtp fix failed
+    *         // onGtpLocationCb() will not be invoked
+    *     }
+    * }
+    * static void onGtpLocationCb(const location_client::Location& location) {
+    *   //...
+    * }
+    * void testSingleShotTerrestrialFixApi() {
+    *     LocationClientApi *pClient = new LocationClientApi(onCapabilitiesCb);
+    *     if (nullptr == pClient) {
+    *         LOC_LOGe("failed to create LocationClientApi instance");
+    *         return;
+    *     }
+    *     uint32_t timeoutMsec = 60000,
+    *     uint32_t gtpTechmask = TERRESTRIAL_TECH_GTP_WWAN;
+    *     pClient->getSingleTerrestrialPosition(timeoutMsec,
+    *                                           (TerrestrialTechnologyMask) gtpTechMask,
+    *                                           0.0, onGtpLocationCb, onResponseCb);
+    *     //...
+    * }
     * </code>
     * </pre>
     */
@@ -2444,7 +2619,7 @@ public:
     */
     void stopBatchingSession();
 
-    /** @example example2:testBatchingApi
+    /** @example example4:testBatchingApi
     * <pre>
     * <code>
     *    // Sample Code
@@ -2510,7 +2685,7 @@ public:
     */
     void resumeGeofences(std::vector<Geofence>& geofences);
 
-    /** @example example3:testGeofenceApi
+    /** @example example5:testGeofenceApi
     * <pre>
     * <code>
     *    // Sample Code
@@ -2579,6 +2754,44 @@ public:
     void getGnssEnergyConsumed(GnssEnergyConsumedCb gnssEnergyConsumedCallback,
                                ResponseCb responseCallback);
 
+
+    /** @example example6:testEnergyConsumedApi
+     * <pre>
+     * <code>
+     *    // Sample Code
+     * static void onCapabilitiesCb(location_client::LocationCapabilitiesMask mask) {
+     *     //...
+     * }
+     * static void onResponseCb(location_client::LocationResponse response) {
+     *     if (response == LOCATION_RESPONSE_SUCCESS) {
+     *         // successfully requested GNSS energy consumed info
+     *         // expecting to receive energy consumed info via ongnssEnergyConsumedInfoCb()
+     *     } else {
+     *         // request to retrieve GNSS energy consumed info failed
+     *         // ongnssEnergyConsumedInfoCb will not be invoked
+     *     }
+     * }
+     * static void ongnssEnergyConsumedInfoCb(const GnssEnergyConsumedInfo& gnssEneryConsumed) {
+     *   if (gnssEneryConsumed.flags & ENERGY_CONSUMED_SINCE_FIRST_BOOT_BIT) {
+     *       print("enery consumed since bootup: " +
+     *             gnssEneryConsumed.totalEnergyConsumedSinceFirstBoot);
+     *   }
+     * }
+     * void testEnergyConsumedApi() {
+     *     LocationClientApi *pClient = new LocationClientApi(onCapabilitiesCb);
+     *     if (nullptr == pClient) {
+     *         LOC_LOGe("failed to create LocationClientApi instance");
+     *         return;
+     *     }
+     *
+     *     pClient->getGnssEnergyConsumed(gnssEnergyConsumedInfoCb,
+     *        gnssEnergyConsumedResponseCb);
+     *     //...
+     * }
+     * </code>
+     * </pre>
+     */
+
     /** @brief
         Register/update listener to receive location system info
         that are not tied with positioning session, e.g.: next leap
@@ -2599,7 +2812,48 @@ public:
         */
     void updateLocationSystemInfoListener(LocationSystemInfoCb locSystemInfoCallback,
                                           ResponseCb responseCallback);
-
+    /** @example example7:testRegisterForSystemEventApi
+    * <pre>
+    * <code>
+    *    // Sample Code
+    * static void onCapabilitiesCb(location_client::LocationCapabilitiesMask mask) {
+    *     //...
+    * }
+    * static void onResponseCb(location_client::LocationResponse response) {
+    *     if (response == LOCATION_RESPONSE_SUCCESS) {
+    *         // successfully registered for system info update
+    *         // expecting to receive current leap second and leap second change event
+    *         via onLocationSystemInfoCb()
+    *     } else {
+    *         // failed to register for system info update
+    *         // onLocationSystemInfoCb() will not be invoked
+    *     }
+    * }
+    * static void onLocationSystemInfoCb(const location_client::LocationSystemInfo& systemInfo) {
+    *   if (systemInfo.systemInfoMask & LEAP_SECOND_SYS_INFO_CURRENT_LEAP_SECONDS_BIT) {
+    *       // current leap second info is valid
+    *   }
+    *   if (systemInfo.systemInfoMask & LEAP_SECOND_SYS_INFO_LEAP_SECOND_CHANGE_BIT) {
+    *       // leap second change event info is valid
+    *   }
+    * }
+    * void testRegisterForSystemEventApi() {
+    *     LocationClientApi *pClient = new LocationClientApi(onCapabilitiesCb);
+    *     if (nullptr == pClient) {
+    *         LOC_LOGe("failed to create LocationClientApi instance");
+    *         return;
+    *     }
+    *     // register for system info update
+    *     pClient->updateLocationSystemInfoListener(onLocationSystemInfoCb,
+    *             onResponseCb);
+    *     ...
+    *     // unregister for system info update when the info is no longer needed
+    *     pClient->updateLocationSystemInfoListener(null, null);
+    *     //...
+    * }
+    * </code>
+    * </pre>
+    */
 
     /** @brief
         Get the year of Hardware information.<br/>
