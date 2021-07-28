@@ -77,6 +77,9 @@ static LocConfigTypeEnum getLocConfigTypeFromMsgId(ELocMsgID  msgId) {
     case E_INTAPI_CONFIG_OUTPUT_NMEA_TYPES_MSG_ID:
         configType = CONFIG_OUTPUT_NMEA_TYPES;
         break;
+    case E_INTAPI_CONFIG_ENGINE_INTEGRITY_RISK_MSG_ID:
+        configType = CONFIG_ENGINE_INTEGRITY_RISK;
+        break;
     case E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID:
     case E_INTAPI_GET_ROBUST_LOCATION_CONFIG_RESP_MSG_ID:
         configType = GET_ROBUST_LOCATION_CONFIG;
@@ -350,6 +353,7 @@ void IpcListener::onReceive(const char* data, uint32_t length,
             case E_INTAPI_CONFIG_DEAD_RECKONING_ENGINE_MSG_ID:
             case E_INTAPI_CONFIG_MIN_SV_ELEVATION_MSG_ID:
             case E_INTAPI_CONFIG_OUTPUT_NMEA_TYPES_MSG_ID:
+            case E_INTAPI_CONFIG_ENGINE_INTEGRITY_RISK_MSG_ID:
             case E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID:
             case E_INTAPI_GET_MIN_GPS_WEEK_REQ_MSG_ID:
             case E_INTAPI_GET_MIN_SV_ELEVATION_REQ_MSG_ID:
@@ -820,6 +824,41 @@ uint32_t LocationIntegrationApiImpl::configOutputNmeaTypes(
     return 0;
 }
 
+uint32_t LocationIntegrationApiImpl::configEngineIntegrityRisk(
+        PositioningEngineMask engType, uint32_t integrityRisk) {
+
+    struct ConfigEngineIntegrityRiskReq : public LocMsg {
+        ConfigEngineIntegrityRiskReq(LocationIntegrationApiImpl* apiImpl,
+                                     PositioningEngineMask engType,
+                                     uint32_t integrityRisk) :
+                mApiImpl(apiImpl), mEngType(engType), mIntegrityRisk(integrityRisk) {}
+        virtual ~ConfigEngineIntegrityRiskReq() {}
+        void proc() const {
+            LOC_LOGd("eng type %d, integrity risk %u", mEngType, mIntegrityRisk);
+            if (mApiImpl->mEngIntegrityRiskConfigMap.find(mEngType) ==
+                        std::end(mApiImpl->mEngIntegrityRiskConfigMap)) {
+                mApiImpl->mEngIntegrityRiskConfigMap.emplace(mEngType, mIntegrityRisk);
+            } else {
+                // change the state for the eng
+                mApiImpl->mEngIntegrityRiskConfigMap[mEngType] = mIntegrityRisk;
+            }
+
+            LocConfigEngineIntegrityRiskReqMsg msg(mApiImpl->mSocketName,
+                    mEngType, mIntegrityRisk);
+            mApiImpl->sendConfigMsgToHalDaemon(CONFIG_ENGINE_INTEGRITY_RISK,
+                                               reinterpret_cast<uint8_t*>(&msg),
+                                               sizeof(msg));
+        }
+
+        LocationIntegrationApiImpl* mApiImpl;
+        PositioningEngineMask mEngType;
+        uint32_t mIntegrityRisk;
+    };
+
+    mMsgTask->sendMsg(new (nothrow) ConfigEngineIntegrityRiskReq(this, engType, integrityRisk));
+    return 0;
+}
+
 void LocationIntegrationApiImpl::sendConfigMsgToHalDaemon(
         LocConfigTypeEnum configType, uint8_t* pMsg,
         size_t msgSize, bool invokeResponseCb) {
@@ -924,6 +963,15 @@ void LocationIntegrationApiImpl::processHalReadyMsg() {
     if (mNmeaConfigInfo.isValid) {
          LocConfigOutputNmeaTypesReqMsg msg(mSocketName, mNmeaConfigInfo.enabledNmeaTypes);
          sendConfigMsgToHalDaemon(CONFIG_OUTPUT_NMEA_TYPES,
+                                  reinterpret_cast<uint8_t*>(&msg),
+                                  sizeof(msg));
+    }
+
+    // resend integrity risk config request
+    for (auto it = mEngIntegrityRiskConfigMap.begin();
+            it != mEngIntegrityRiskConfigMap.end(); ++it) {
+        LocConfigEngineIntegrityRiskReqMsg msg(mSocketName, it->first, it->second);
+        sendConfigMsgToHalDaemon(CONFIG_ENGINE_INTEGRITY_RISK,
                                   reinterpret_cast<uint8_t*>(&msg),
                                   sizeof(msg));
     }

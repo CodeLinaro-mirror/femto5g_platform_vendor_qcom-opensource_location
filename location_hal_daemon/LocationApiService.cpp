@@ -488,6 +488,15 @@ void LocationApiService::processClientMsg(const char* data, uint32_t length) {
             break;
         }
 
+        case E_INTAPI_CONFIG_ENGINE_INTEGRITY_RISK_MSG_ID : {
+            if (sizeof(LocConfigEngineIntegrityRiskReqMsg) != length) {
+                LOC_LOGe("invalid LocConfigEngineIntegrityRiskReqMsg");
+                break;
+            }
+            configEngineIntegrityRisk(reinterpret_cast<LocConfigEngineIntegrityRiskReqMsg*>(pMsg));
+            break;
+        }
+
         case E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID: {
             if (sizeof(LocConfigGetRobustLocationConfigReqMsg) != length) {
                 LOC_LOGe("invalid LocConfigGetRobustLocationConfigReqMsg");
@@ -1141,6 +1150,20 @@ void LocationApiService::configOutputNmeaTypes(const LocConfigOutputNmeaTypesReq
 
     LOC_LOGi(">-- client %s, mEnabledNmeaTypes 0x%x",  pMsg->mSocketName, pMsg->mEnabledNmeaTypes);
     uint32_t sessionId = mLocationControlApi->configOutputNmeaTypes(pMsg->mEnabledNmeaTypes);
+    addConfigRequestToMap(sessionId, pMsg);
+}
+
+void LocationApiService::configEngineIntegrityRisk(const LocConfigEngineIntegrityRiskReqMsg* pMsg) {
+    if (!pMsg) {
+        return;
+    }
+    std::lock_guard<std::mutex> lock(mMutex);
+
+    LOC_LOGi("client %s, eng type 0x%x, integrity risk %d",
+             pMsg->mSocketName, pMsg->mEngType, pMsg->mIntegrityRisk);
+
+    uint32_t sessionId =
+            mLocationControlApi->configEngineIntegrityRisk(pMsg->mEngType, pMsg->mIntegrityRisk);
     addConfigRequestToMap(sessionId, pMsg);
 }
 
