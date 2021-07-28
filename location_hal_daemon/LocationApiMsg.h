@@ -255,6 +255,7 @@ enum ELocMsgID {
     E_INTAPI_CONFIG_REGISTER_ODCPI_INIT_MSG_ID = 213,
     E_INTAPI_CONFIG_ODCPI_INJECT_CB_MSG_ID = 214,
     E_INTAPI_CONFIG_ODCPI_INJECT_MSG_ID = 215,
+    E_INTAPI_CONFIG_ENGINE_INTEGRITY_RISK_MSG_ID = 216,
 
     // integration API config retrieval request/response
     E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID  = 300,
@@ -947,6 +948,19 @@ struct LocConfigOdcpiInjectReqMsg : LocAPIMsgHeader
                                       const ::Location &location) :
         LocAPIMsgHeader(name, E_INTAPI_CONFIG_ODCPI_INJECT_MSG_ID),
         mLocation(location) { }
+};
+
+struct LocConfigEngineIntegrityRiskReqMsg: LocAPIMsgHeader
+{
+    // In this API, only one engine is configured at a time
+    PositioningEngineMask mEngType;
+    uint32_t mIntegrityRisk;
+
+    inline LocConfigEngineIntegrityRiskReqMsg(const char* name,
+                                              PositioningEngineMask engType,
+                                              uint32_t integrityRisk) :
+        LocAPIMsgHeader(name, E_INTAPI_CONFIG_ENGINE_INTEGRITY_RISK_MSG_ID),
+        mEngType(engType), mIntegrityRisk(integrityRisk) { }
 };
 
 /******************************************************************************

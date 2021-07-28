@@ -438,6 +438,25 @@ bool LocationIntegrationApi::getMinSvElevation() {
     }
 }
 
+PositioningEngineMask getHalEngType(LocIntegrationEngineType engType) {
+    PositioningEngineMask halEngType = (PositioningEngineMask)0;
+    switch (engType) {
+        case LOC_INT_ENGINE_SPE:
+            halEngType = STANDARD_POSITIONING_ENGINE;
+            break;
+        case LOC_INT_ENGINE_DRE:
+            halEngType = DEAD_RECKONING_ENGINE;
+            break;
+        case LOC_INT_ENGINE_PPE:
+            halEngType = PRECISE_POSITIONING_ENGINE;
+            break;
+        default:
+            LOC_LOGe("unknown engine type of %d", engType);
+        break;
+    }
+    return halEngType;
+}
+
 bool LocationIntegrationApi::configOutputNmeaTypes(NmeaTypesMask enabledNMEATypes) {
     if (mApiImpl) {
         uint32_t halNmeaTypes = ::NMEA_TYPE_NONE;
@@ -498,6 +517,20 @@ bool LocationIntegrationApi::registerLocationInjector(
 bool LocationIntegrationApi::setUserConsentForTerrestrialPositioning(bool userConsent) {
     if (mApiImpl) {
         return (mApiImpl->setUserConsentForTerrestrialPositioning(userConsent) == 0);
+    } else {
+        LOC_LOGe ("NULL mApiImpl");
+        return false;
+    }
+}
+
+bool LocationIntegrationApi::configEngineIntegrityRisk(
+        LocIntegrationEngineType engType, uint32_t integrityRisk) {
+    if (mApiImpl) {
+        PositioningEngineMask halEngType = getHalEngType(engType);
+        if (halEngType == (PositioningEngineMask) 0) {
+            return false;
+        }
+        return (mApiImpl->configEngineIntegrityRisk(halEngType, integrityRisk) == 0);
     } else {
         LOC_LOGe ("NULL mApiImpl");
         return false;

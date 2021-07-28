@@ -237,6 +237,7 @@ private:
     // Location configuration API ODCPI/DBH requests
     void odcpiInit(const LocConfigOdcpiInitReqMsg* pMsg);
     void odcpiInject(const LocConfigOdcpiInjectReqMsg* pMsg);
+    void configEngineIntegrityRisk(const LocConfigEngineIntegrityRiskReqMsg* pMsg);
 
     // Location configuration API get/read requests
     void getGnssConfig(const LocAPIMsgHeader* pReqMsg,

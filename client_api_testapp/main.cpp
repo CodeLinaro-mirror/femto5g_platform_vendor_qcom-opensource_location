@@ -112,10 +112,11 @@ enum TrackingSessionType {
 #define GET_SINGLE_GTP_WWAN_FIX "getSingleGtpWwanFix"
 #define GET_MULTIPLE_GTP_WWAN_FIXES  "getMultipleGtpWwanFixes"
 #define CANCEL_SINGLE_GTP_WWAN_FIX "cancelSingleGtpWwanFix"
+#define CONFIG_ENGINE_INTEGRITY_RISK "configEngineIntegrityRisk"
 
 // debug utility
 static uint64_t getTimestampMs() {
-    struct timespec ts;
+    struct timespec ts = {};
     clock_gettime(CLOCK_BOOTTIME, &ts);
     uint64_t msec =
             ((uint64_t)(ts.tv_sec)) * 1000ULL + ((uint64_t)(ts.tv_nsec)) / 1000000ULL;
@@ -144,7 +145,7 @@ static void cleanupAfterAutoStart() {
 Callback functions
 ******************************************************************************/
 static void onCapabilitiesCb(location_client::LocationCapabilitiesMask mask) {
-    printf("<<< onCapabilitiesCb mask=0x%x\n", mask);
+    printf("<<< onCapabilitiesCb mask=0x%" PRIx64 "\n", mask);
 }
 
 static void onResponseCb(location_client::LocationResponse response) {
@@ -372,6 +373,7 @@ static void printHelp() {
     printf("%s: get multiple wan fix: numOfFixes tbfMsec timeout_msec 0.0 1\n",
            GET_MULTIPLE_GTP_WWAN_FIXES);
     printf("%s: cancel single shot wwan fix\n", CANCEL_SINGLE_GTP_WWAN_FIX);
+    printf("%s: config engine integrity risk \n", CONFIG_ENGINE_INTEGRITY_RISK);
 }
 
 void setRequiredPermToRunAsLocClient()
@@ -641,7 +643,6 @@ void getGtpWwanFixes (bool multipleFixes, char* buf) {
     }
 }
 
-
 static bool checkForAutoStart(int argc, char *argv[]) {
     bool autoRun = false;
     bool deleteAll = false;
@@ -670,8 +671,8 @@ static bool checkForAutoStart(int argc, char *argv[]) {
 
     int long_index =0;
     int opt = -1;
-    while ((opt = getopt_long(argc, argv,"aVNDd:s:e:i:t:l:r:",
-                   long_options, &long_index )) != -1) {
+    while ((opt = getopt_long(argc, argv, "aVNDd:s:e:i:t:l:r:",
+                   long_options, &long_index)) != -1) {
         switch (opt) {
              case 'a' :
                  autoRun = true;
@@ -689,6 +690,7 @@ static bool checkForAutoStart(int argc, char *argv[]) {
                  aidingDataMask = atoi(optarg);
                  break;
              case 's':
+                 printf("session type: %s\n", optarg);
                  if (optarg[0] == 'l') {
                      trackingType = SIMPLE_REPORT_TRACKING;
                  } else if (optarg[0] == 'g') {
@@ -700,14 +702,19 @@ static bool checkForAutoStart(int argc, char *argv[]) {
              case 'e' :
                  printf("report mask: %s\n", optarg);
                  reqEngMask = (LocReqEngineTypeMask) atoi(optarg);
+                 trackingType = ENGINE_REPORT_TRACKING;
                  break;
              case 'l':
                  printf("fix cnt: %s\n", optarg);
                  fixCnt = atoi(optarg);
+                 trackingType = ENGINE_REPORT_TRACKING;
                  break;
             case 'i':
                  printf("interval: %s\n", optarg);
                  interval = atoi(optarg);
+                 if (trackingType == NO_TRACKING) {
+                     trackingType = ENGINE_REPORT_TRACKING;
+                 }
                  break;
              case 't':
                  printf("tiemout: %s\n", optarg);
@@ -991,6 +998,26 @@ int main(int argc, char *argv[]) {
             pIntClient->configMinSvElevation(minSvElevation);
         } else if (strncmp(buf, GET_MIN_SV_ELEVATION, strlen(GET_MIN_SV_ELEVATION)) == 0) {
             pIntClient->getMinSvElevation();
+        } else if (strncmp(buf, CONFIG_ENGINE_INTEGRITY_RISK,
+                           strlen(CONFIG_ENGINE_INTEGRITY_RISK)) == 0) {
+            printf("%s 1(SPE)/2(PPE)/3(DRE)/4(VPE) integrity_risk_level",
+                   CONFIG_ENGINE_INTEGRITY_RISK);
+            static char *save = nullptr;
+            LocIntegrationEngineType engType = (LocIntegrationEngineType)0;
+            uint32_t integrityRisk = 0;
+            // skip first argument of configEngineRunState
+            char* token = strtok_r(buf, " ", &save);
+            token = strtok_r(NULL, " ", &save);
+            if (token != NULL) {
+               engType = (LocIntegrationEngineType) atoi(token);
+                token = strtok_r(NULL, " ", &save);
+                if (token != NULL) {
+                    integrityRisk =  atoi(token);
+                }
+            }
+            printf("eng type %d, integrity risk %u\n", engType, integrityRisk);
+            bool retVal = pIntClient->configEngineIntegrityRisk(engType, integrityRisk);
+            printf("configEngineIntegrityRisk returned %d\n", retVal);
         } else if (strncmp(buf, CONFIG_NMEA_TYPES, strlen(CONFIG_NMEA_TYPES)) == 0) {
             static char *save = nullptr;
             NmeaTypesMask nmeaTypes = (NmeaTypesMask) NMEA_TYPE_ALL;
