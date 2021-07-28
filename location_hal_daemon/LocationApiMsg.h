@@ -247,7 +247,8 @@ enum ELocMsgID {
     E_INTAPI_CONFIG_DEAD_RECKONING_ENGINE_MSG_ID = 207,
     E_INTAPI_CONFIG_MIN_SV_ELEVATION_MSG_ID = 208,
     E_INTAPI_CONFIG_CONSTELLATION_SECONDARY_BAND_MSG_ID  = 209,
-    E_INTAPI_CONFIG_OUTPUT_NMEA_TYPES_MSG_ID = 210,
+    E_INTAPI_CONFIG_OUTPUT_NMEA_TYPES_MSG_ID = 211,
+    E_INTAPI_CONFIG_ENGINE_INTEGRITY_RISK_MSG_ID = 213,
 
     // integration API config retrieval request/response
     E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID  = 300,
@@ -888,6 +889,19 @@ struct LocConfigOutputNmeaTypesReqMsg: LocAPIMsgHeader
             const char* name, GnssNmeaTypesMask enabledNmeaTypes) :
         LocAPIMsgHeader(name, E_INTAPI_CONFIG_OUTPUT_NMEA_TYPES_MSG_ID),
         mEnabledNmeaTypes(enabledNmeaTypes) { }
+};
+
+struct LocConfigEngineIntegrityRiskReqMsg: LocAPIMsgHeader
+{
+    // In this API, only one engine is configured at a time
+    PositioningEngineMask mEngType;
+    uint32_t mIntegrityRisk;
+
+    inline LocConfigEngineIntegrityRiskReqMsg(const char* name,
+                                              PositioningEngineMask engType,
+                                              uint32_t integrityRisk) :
+        LocAPIMsgHeader(name, E_INTAPI_CONFIG_ENGINE_INTEGRITY_RISK_MSG_ID),
+        mEngType(engType), mIntegrityRisk(integrityRisk) { }
 };
 
 /******************************************************************************

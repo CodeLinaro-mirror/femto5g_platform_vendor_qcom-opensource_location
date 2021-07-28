@@ -51,6 +51,7 @@ using namespace location_integration;
 namespace location_integration
 {
 typedef std::unordered_map<LocConfigTypeEnum, int32_t> LocConfigReqCntMap;
+typedef std::unordered_map<PositioningEngineMask, uint32_t> LocConfigEngIntegrityRiskMap;
 
 typedef struct {
     bool     isValid;
@@ -126,6 +127,7 @@ public:
     uint32_t getMinSvElevation();
 
     uint32_t configOutputNmeaTypes(GnssNmeaTypesMask enabledNmeaTypes) override;
+    uint32_t configEngineIntegrityRisk(PositioningEngineMask engType, uint32_t integrityRisk);
 
     uint32_t getConstellationSecondaryBandConfig();
 
@@ -167,6 +169,7 @@ private:
     LeverArmConfigInfo       mLeverArmConfigInfo;
     RobustLocationConfigInfo mRobustLocationConfigInfo;
     DeadReckoningEngineConfigInfo mDreConfigInfo;
+    LocConfigEngIntegrityRiskMap  mEngIntegrityRiskConfigMap;
     NmeaConfigInfo                mNmeaConfigInfo;
     LocConfigReqCntMap       mConfigReqCntMap;
     LocIntegrationCbs        mIntegrationCbs;

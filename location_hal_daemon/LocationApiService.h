@@ -204,7 +204,8 @@ private:
     void configMinGpsWeek(const LocConfigMinGpsWeekReqMsg* pMsg);
     void configDeadReckoningEngineParams(const LocConfigDrEngineParamsReqMsg* pMsg);
     void configMinSvElevation(const LocConfigMinSvElevationReqMsg* pMsg);
-    void configOutputNmeaTypes(const LocConfigOutputNmeaTypesReqMsg* pMsg); 
+    void configOutputNmeaTypes(const LocConfigOutputNmeaTypesReqMsg* pMsg);
+    void configEngineIntegrityRisk(const LocConfigEngineIntegrityRiskReqMsg* pMsg);
 
     // Location configuration API get/read requests
     void getGnssConfig(const LocAPIMsgHeader* pReqMsg,
