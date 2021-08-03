@@ -31,6 +31,10 @@
 
 #include <stdint.h>
 
+ /** @brief
+ All the memory pointers received will be never freed internally.
+ Caller shall manage the memory before and after calling these functions.
+ */
 typedef enum {
     STD_CONT    = 0,
     STD_FINAL   = 1,
@@ -107,11 +111,5 @@ typedef struct {
     NetworkType networkType;
     uint64_t networkHandle;
 } NlpNetwork;
-
-typedef struct {
-    void (*onLocationOptInUpdate)(OptInStatus optInStatus);
-    void (*onNetworkStatusUpdate)(bool isConected, const NlpNetwork* networksAvailable,
-            uint8_t networksAvailableCount);
-} SystemStatusListener;
 
 #endif /* WIFI_DB_COMMON_H */

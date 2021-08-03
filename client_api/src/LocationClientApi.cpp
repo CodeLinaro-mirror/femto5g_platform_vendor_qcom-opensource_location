@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018-2021, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -88,13 +88,7 @@ bool LocationClientApi::startPositionSession(
     // callback masks
     LocationCallbacks callbacksOption = {0};
     callbacksOption.responseCb = [](::LocationError err, uint32_t id) {};
-    // only register for trackingCb if distance is not 0
-    if (distanceInMeters != 0) {
-        callbacksOption.trackingCb = [](::Location n) {};
-    } else {
-        // for time based, register gnss location cb
-        callbacksOption.gnssLocationInfoCb = [](::GnssLocationInfoNotification n) {};
-    }
+    callbacksOption.trackingCb = [](::Location n) {};
     mApiImpl->updateCallbacks(callbacksOption);
 
     // options
@@ -505,6 +499,29 @@ void LocationClientApi::updateLocationSystemInfoListener(
     }
 }
 
+void LocationClientApi::getSingleTerrestrialPosition(
+        uint32_t timeoutMsec, TerrestrialTechnologyMask techMask,
+        float horQoS, LocationCb terrestrialPositionCallback,
+        ResponseCb responseCallback) {
+
+    LOC_LOGd("timeout msec = %u, horQoS = %f,"
+             "techMask = 0x%x", timeoutMsec, horQoS, techMask);
+
+    if ((timeoutMsec == 0) || (techMask != TERRESTRIAL_TECH_GTP_WWAN) ||
+        (horQoS != 0.0)) {
+        LOC_LOGe("invalid parameter: timeout %d, tech mask 0x%x, horQoS %f",
+                 timeoutMsec, techMask, horQoS);
+        if (responseCallback) {
+            responseCallback(LOCATION_RESPONSE_PARAM_INVALID);
+        }
+    } else if (mApiImpl) {
+        mApiImpl->getSingleTerrestrialPos(timeoutMsec, ::TERRESTRIAL_TECH_GTP_WWAN, horQoS,
+                                          terrestrialPositionCallback, responseCallback);
+    } else {
+        LOC_LOGe ("NULL mApiImpl");
+    }
+}
+
 // ============ below Section implements toString() methods of data structs ==============
 static string maskToVals(uint64_t mask, int64_t baseNum) {
     string out;
@@ -549,7 +566,12 @@ DECLARE_TBL(LocationTechnologyMask) = {
     {LOCATION_TECHNOLOGY_GNSS_BIT, "GNSS"},
     {LOCATION_TECHNOLOGY_CELL_BIT, "CELL"},
     {LOCATION_TECHNOLOGY_WIFI_BIT, "WIFI"},
-    {LOCATION_TECHNOLOGY_SENSORS_BIT, "SENSOR"}
+    {LOCATION_TECHNOLOGY_SENSORS_BIT, "SENSOR"},
+    {LOCATION_TECHNOLOGY_REFERENCE_LOCATION_BIT, "REF_LOC"},
+    {LOCATION_TECHNOLOGY_INJECTED_COARSE_POSITION_BIT, "CPI"},
+    {LOCATION_TECHNOLOGY_AFLT_BIT, "AFLT"},
+    {LOCATION_TECHNOLOGY_HYBRID_BIT, "HYBRID"},
+    {LOCATION_TECHNOLOGY_PPE_BIT, "PPE"}
 };
 // GnssLocationNavSolutionMask
 DECLARE_TBL(GnssLocationNavSolutionMask) = {
@@ -560,18 +582,6 @@ DECLARE_TBL(GnssLocationNavSolutionMask) = {
     {LOCATION_NAV_CORRECTION_DGNSS_BIT, "NAV_CORR_DGNSS"},
     {LOCATION_NAV_CORRECTION_RTK_BIT, "NAV_CORR_RTK"},
     {LOCATION_NAV_CORRECTION_PPP_BIT, "NAV_CORR_PPP"}
-};
-// GnssLocationPosTechMask
-DECLARE_TBL(GnssLocationPosTechMask) = {
-    {LOCATION_POS_TECH_SATELLITE_BIT, "SATELLITE"},
-    {LOCATION_POS_TECH_CELLID_BIT, "CELLID"},
-    {LOCATION_POS_TECH_WIFI_BIT, "WIFI"},
-    {LOCATION_POS_TECH_SENSORS_BIT, "SENSORS"},
-    {LOCATION_POS_TECH_REFERENCE_LOCATION_BIT, "REF_LOC"},
-    {LOCATION_POS_TECH_INJECTED_COARSE_POSITION_BIT, "CPI"},
-    {LOCATION_POS_TECH_AFLT_BIT, "AFLT"},
-    {LOCATION_POS_TECH_HYBRID_BIT, "HYBRID"},
-    {LOCATION_POS_TECH_PPE_BIT, "PPE"}
 };
 // GnssLocationPosDataMask
 DECLARE_TBL(GnssLocationPosDataMask) = {
@@ -998,7 +1008,6 @@ string GnssLocation::toString() {
     out += FIELDVAL_DEC(numSvUsedInPosition);
     out += svUsedInPosition.toString();
     out += FIELDVAL_MASK(navSolutionMask, GnssLocationNavSolutionMask_tbl);
-    out += FIELDVAL_MASK(posTechMask, GnssLocationPosTechMask_tbl);
     out += bodyFrameData.toString();
     out += gnssSystemTime.toString();
 
