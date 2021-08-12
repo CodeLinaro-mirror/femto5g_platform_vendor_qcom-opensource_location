@@ -123,6 +123,7 @@ LocationApiService::LocationApiService(const configParamToRead & configParamRead
     mLocationControlId(0),
     mAutoStartGnss(configParamRead.autoStartGnss),
     mPowerState (POWER_STATE_UNKNOWN),
+    mMsgTask(new MsgTask("HalMaintMsgTask", false)),
     mMaintTimer(this),
     mGtpWwanSsLocationApi(nullptr),
     mOptInTerrestrialService(-1)
