@@ -512,6 +512,8 @@ enum PBLocationFlagsMask {
     PB_LOCATION_HAS_BEARING_ACCURACY_BIT  = 128;
     // location has valid valid Location::timestamp
     PB_LOCATION_HAS_TIMESTAMP_BIT         = 256;
+    // location has valid elapsedRealTime
+    PB_LOCATION_HAS_ELAPSED_REAL_TIME_BIT    = 512;
 }
 
 enum PBLocationTechnologyMask {
@@ -703,6 +705,10 @@ message PBLocation {
     float bearingAccuracy = 11;
     /** Sets of technology that contributed to the fix. bitwise OR of PBLocationTechnologyMask    */
     uint32 techMask = 12;
+    /** boot timestamp corresponding to GPS timestamp, in ns */
+    uint64 elapsedRealTime = 13;
+    /** boot timestamp uncertainty corresponding to GPS timestamp, in ns */
+    uint64 elapsedRealTimeUnc = 14;
 }
 
 message PBLocationOptions {
