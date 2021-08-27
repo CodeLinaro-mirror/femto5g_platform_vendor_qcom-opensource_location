@@ -4,13 +4,11 @@ cc_library_shared {
     name: "liblocation_client_api.impl",
     vendor: true,
 
-    sanitize: GNSS_SANITIZE,
-
     //# Libs
     shared_libs: [
         "libgps.utils",
         "liblocation_api_msg",
-        "libprotobuf-cpp-full",
+        "libprotobuf-cpp-lite",
         "liblog",
     ],
 

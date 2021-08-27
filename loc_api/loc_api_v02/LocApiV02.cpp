@@ -1012,15 +1012,14 @@ void LocApiV02::injectPosition(const Location& location, bool onDemandCpi)
         }
     }
 
-    if (LOCATION_HAS_ALTITUDE_BIT & location.flags) {
+    // Altitude is vaild only if Vert Unc is vaild and visa-versa
+    if ((LOCATION_HAS_ALTITUDE_BIT & location.flags) &&
+            (LOCATION_HAS_VERTICAL_ACCURACY_BIT & location.flags)) {
         injectPositionReq.altitudeWrtEllipsoid_valid = 1;
         injectPositionReq.altitudeWrtEllipsoid = location.altitude;
         injectPositionReq.altSourceInfo_valid = 1;
         injectPositionReq.altSourceInfo.source = eQMI_LOC_ALT_SRC_OTHER_V02;
         injectPositionReq.altSourceInfo.linkage = eQMI_LOC_ALT_SRC_LINKAGE_FULLY_INTERDEPENDENT_V02;
-    }
-
-    if (LOCATION_HAS_VERTICAL_ACCURACY_BIT & location.flags) {
         injectPositionReq.vertUnc_valid = 1;
         injectPositionReq.vertUnc = location.verticalAccuracy;
         injectPositionReq.vertConfidence_valid = 1;
@@ -1028,12 +1027,22 @@ void LocApiV02::injectPosition(const Location& location, bool onDemandCpi)
     }
 
     injectPositionReq.positionSrc_valid = 1;
-    if (LOCATION_TECHNOLOGY_WIFI_BIT & location.techMask) {
-        injectPositionReq.positionSrc = eQMI_LOC_POSITION_SRC_NLP_V02;
-    } else if (LOCATION_TECHNOLOGY_HYBRID_BIT & location.techMask) {
-        injectPositionReq.positionSrc = eQMI_LOC_POSITION_SRC_FLP_V02;
+    if (ContextBase::isFeatureSupported(LOC_SUPPORTED_FEATURE_QMI_FLP_NLP_SOURCE)) {
+        if (LOCATION_TECHNOLOGY_HYBRID_ALE_BIT & location.techMask) {
+            injectPositionReq.positionSrc = eQMI_LOC_POSITION_SRC_FLP_ALE_V02;
+        } else if (LOCATION_TECHNOLOGY_HYBRID_BIT & location.techMask) {
+            injectPositionReq.positionSrc = eQMI_LOC_POSITION_SRC_FLP_V02;
+        } else if (LOCATION_TECHNOLOGY_WIFI_BIT & location.techMask) {
+            injectPositionReq.positionSrc = eQMI_LOC_POSITION_SRC_NLP_V02;
+        } else {
+            injectPositionReq.positionSrc = eQMI_LOC_POSITION_SRC_OTHER_V02;
+        }
     } else {
-        injectPositionReq.positionSrc = eQMI_LOC_POSITION_SRC_OTHER_V02;
+        if (LOCATION_TECHNOLOGY_WIFI_BIT & location.techMask) {
+            injectPositionReq.positionSrc = eQMI_LOC_POSITION_SRC_WIFI_V02;
+        } else {
+            injectPositionReq.positionSrc = eQMI_LOC_POSITION_SRC_OTHER_V02;
+        }
     }
 
     if (onDemandCpi) {
