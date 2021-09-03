@@ -1,30 +1,30 @@
-/* Copyright (c) 2011-2020, The Linux Foundation. All rights reserved.
-*
-* Redistribution and use in source and binary forms, with or without
-* modification, are permitted provided that the following conditions are
-* met:
-*     * Redistributions of source code must retain the above copyright
-*       notice, this list of conditions and the following disclaimer.
-*     * Redistributions in binary form must reproduce the above
-*       copyright notice, this list of conditions and the following
-*       disclaimer in the documentation and/or other materials provided
-*       with the distribution.
-*     * Neither the name of The Linux Foundation, nor the names of its
-*       contributors may be used to endorse or promote products derived
-*       from this software without specific prior written permission.
-*
-* THIS SOFTWARE IS PROVIDED "AS IS" AND ANY EXPRESS OR IMPLIED
-* WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT
-* ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS
-* BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-* SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
-* BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-* WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-* OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-* IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+/* Copyright (c) 2011-2021, The Linux Foundation. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ *     * Redistributions of source code must retain the above copyright
+ *       notice, this list of conditions and the following disclaimer.
+ *     * Redistributions in binary form must reproduce the above
+ *       copyright notice, this list of conditions and the following
+ *       disclaimer in the documentation and/or other materials provided
+ *       with the distribution.
+ *     * Neither the name of The Linux Foundation, nor the names of its
+ *       contributors may be used to endorse or promote products derived
+ *       from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED "AS IS" AND ANY EXPRESS OR IMPLIED
+ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS
+ * BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+ * BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+ * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+ * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
 #ifndef LOC_SERVICE_02_H
 #define LOC_SERVICE_02_H
 /**
@@ -63,7 +63,7 @@
  *====*====*====*====*====*====*====*====*====*====*====*====*====*====*====*/
 
 /* This file was generated with Tool version 6.14.7
-   It was generated on: Thu Oct 29 2020 (Spin 0)
+   It was generated on: Sun Feb 21 2021 (Spin 0)
    From IDL File: location_service_v02.idl */
 
 /** @defgroup loc_qmi_consts Constant values defined in the IDL */
@@ -89,7 +89,7 @@ extern "C" {
 /** Major Version Number of the IDL used to generate this file */
 #define LOC_V02_IDL_MAJOR_VERS 0x02
 /** Revision Number of the IDL used to generate this file */
-#define LOC_V02_IDL_MINOR_VERS 0x86
+#define LOC_V02_IDL_MINOR_VERS 0x88
 /** Major Version Number of the qmi_idl_compiler used to generate this file */
 #define LOC_V02_IDL_TOOL_VERS 0x06
 /** Maximum Defined Message ID */
@@ -5382,6 +5382,8 @@ typedef enum {
   eQMI_LOC_POSITION_SRC_GNSS_TERRESTRIAL_HYBRID_V02 = 5, /**<  Position source is GNSS Terrestrial Hybrid \n  */
   eQMI_LOC_POSITION_SRC_OTHER_V02 = 6, /**<  Other sources \n  */
   eQMI_LOC_POSITION_SRC_DRE_V02 = 7, /**<  Position source is the dead reckoning engine  */
+  eQMI_LOC_POSITION_SRC_FLP_V02 = 8, /**<  Position source is Fused Location Provider  */
+  eQMI_LOC_POSITION_SRC_NLP_V02 = 9, /**<  Position source is Network Location Provider  */
   QMILOCPOSITIONSRCENUMT_MAX_ENUM_VAL_V02 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
 }qmiLocPositionSrcEnumT_v02;
 /**
@@ -5546,7 +5548,9 @@ typedef struct {
       - eQMI_LOC_POSITION_SRC_TERRESTRIAL (4) --  Position source is Terrestrial \n
       - eQMI_LOC_POSITION_SRC_GNSS_TERRESTRIAL_HYBRID (5) --  Position source is GNSS Terrestrial Hybrid \n
       - eQMI_LOC_POSITION_SRC_OTHER (6) --  Other sources \n
-      - eQMI_LOC_POSITION_SRC_DRE (7) --  Position source is the dead reckoning engine  \n
+      - eQMI_LOC_POSITION_SRC_DRE (7) --  Position source is the dead reckoning engine
+      - eQMI_LOC_POSITION_SRC_FLP (8) --  Position source is Fused Location Provider
+      - eQMI_LOC_POSITION_SRC_NLP (9) --  Position source is Network Location Provider  \n
  If altitude is specified and the altitude source is not specified, the engine
  assumes that the altitude was obtained using the specified position source. \n
  If both altitude and altitude source are specified, the engine assumes
@@ -8412,12 +8416,22 @@ typedef uint64_t qmiLocLppeUpAuxTechMaskT_v02;
 #define QMI_LOC_LPPE_MASK_UP_DBH_V02 ((qmiLocLppeUpAuxTechMaskT_v02)0x00000001ull) /**<  Enable Device-Based Hybrid (3D High Accuracy Position) mode on the LPPe user plane. \n */
 #define QMI_LOC_LPPE_MASK_UP_AP_WIFI_MEASUREMENT_V02 ((qmiLocLppeUpAuxTechMaskT_v02)0x00000002ull) /**<  Enable WLAN AP Measurement mode on the LPPe user plane.\n  */
 #define QMI_LOC_LPPE_MASK_UP_AP_SRN_BTLE_MEASUREMENT_V02 ((qmiLocLppeUpAuxTechMaskT_v02)0x00000004ull) /**<  Enable SRN BTLE Measurement mode on the LPPe user plane.\n  */
-#define QMI_LOC_LPPE_MASK_UP_UBP_V02 ((qmiLocLppeUpAuxTechMaskT_v02)0x00000008ull) /**<  Enable the Uncompromised Barometer Pressure Measurement mode on the LPPe user plane.  */
+#define QMI_LOC_LPPE_MASK_UP_UBP_V02 ((qmiLocLppeUpAuxTechMaskT_v02)0x00000008ull) /**<  Enable the Uncompromised Barometer Pressure Measurement mode on the LPPe user plane. \n  */
+#define QMI_LOC_LPPE_MASK_UP_RESERVED_1_BIT_V02 ((qmiLocLppeUpAuxTechMaskT_v02)0x00000010ull) /**<  Reserved for future use. \n    */
+#define QMI_LOC_LPPE_MASK_UP_RESERVED_2_BIT_V02 ((qmiLocLppeUpAuxTechMaskT_v02)0x00000020ull) /**<  Reserved for future use. \n    */
+#define QMI_LOC_LPPE_MASK_UP_RESERVED_3_BIT_V02 ((qmiLocLppeUpAuxTechMaskT_v02)0x00000040ull) /**<  Reserved for future use. \n    */
+#define QMI_LOC_LPPE_MASK_UP_RESERVED_4_BIT_V02 ((qmiLocLppeUpAuxTechMaskT_v02)0x00000080ull) /**<  Reserved for future use \n    */
+#define QMI_LOC_LPPE_MASK_UP_NON_E911_V02 ((qmiLocLppeUpAuxTechMaskT_v02)0x00000100ull) /**<  Enable the LPPe Capabilities for Non E911 NILR user plane sessions.  */
 typedef uint64_t qmiLocLppeCpAuxTechMaskT_v02;
 #define QMI_LOC_LPPE_MASK_CP_DBH_V02 ((qmiLocLppeCpAuxTechMaskT_v02)0x00000001ull) /**<  Enable Device-Based Hybrid (3D High Accuracy Position) mode on the LPPe control plane.\n  */
 #define QMI_LOC_LPPE_MASK_CP_AP_WIFI_MEASUREMENT_V02 ((qmiLocLppeCpAuxTechMaskT_v02)0x00000002ull) /**<  Enable WLAN AP Measurement mode on the LPPe control plane. \n */
 #define QMI_LOC_LPPE_MASK_CP_AP_SRN_BTLE_MEASUREMENT_V02 ((qmiLocLppeCpAuxTechMaskT_v02)0x00000004ull) /**<  Enable SRN BTLE Measurement mode on the LPPe user plane. \n */
-#define QMI_LOC_LPPE_MASK_CP_UBP_V02 ((qmiLocLppeCpAuxTechMaskT_v02)0x00000008ull) /**<  Enable the Uncompromised Barometer Pressure Measurement mode on the LPPe user plane.  */
+#define QMI_LOC_LPPE_MASK_CP_UBP_V02 ((qmiLocLppeCpAuxTechMaskT_v02)0x00000008ull) /**<  Enable the Uncompromised Barometer Pressure Measurement mode on the LPPe control plane. \n  */
+#define QMI_LOC_LPPE_MASK_CP_RESERVED_1_BIT_V02 ((qmiLocLppeCpAuxTechMaskT_v02)0x00000010ull) /**<  Reserved for future use \n    */
+#define QMI_LOC_LPPE_MASK_CP_RESERVED_2_BIT_V02 ((qmiLocLppeCpAuxTechMaskT_v02)0x00000020ull) /**<  Reserved for future use \n    */
+#define QMI_LOC_LPPE_MASK_CP_RESERVED_3_BIT_V02 ((qmiLocLppeCpAuxTechMaskT_v02)0x00000040ull) /**<  Reserved for future use \n    */
+#define QMI_LOC_LPPE_MASK_CP_RESERVED_4_BIT_V02 ((qmiLocLppeCpAuxTechMaskT_v02)0x00000080ull) /**<  Reserved for future use \n    */
+#define QMI_LOC_LPPE_MASK_CP_NON_E911_V02 ((qmiLocLppeCpAuxTechMaskT_v02)0x00000100ull) /**<  Enable the LPPe Capabilities for Non E911 NILR control plane sessions.  */
 /** @addtogroup loc_qmi_messages
     @{
   */
@@ -8552,7 +8566,12 @@ typedef struct {
       - QMI_LOC_LPPE_MASK_UP_DBH (0x00000001) --  Enable Device-Based Hybrid (3D High Accuracy Position) mode on the LPPe user plane. \n
       - QMI_LOC_LPPE_MASK_UP_AP_WIFI_MEASUREMENT (0x00000002) --  Enable WLAN AP Measurement mode on the LPPe user plane.\n
       - QMI_LOC_LPPE_MASK_UP_AP_SRN_BTLE_MEASUREMENT (0x00000004) --  Enable SRN BTLE Measurement mode on the LPPe user plane.\n
-      - QMI_LOC_LPPE_MASK_UP_UBP (0x00000008) --  Enable the Uncompromised Barometer Pressure Measurement mode on the LPPe user plane.
+      - QMI_LOC_LPPE_MASK_UP_UBP (0x00000008) --  Enable the Uncompromised Barometer Pressure Measurement mode on the LPPe user plane. \n
+      - QMI_LOC_LPPE_MASK_UP_RESERVED_1_BIT (0x00000010) --  Reserved for future use. \n
+      - QMI_LOC_LPPE_MASK_UP_RESERVED_2_BIT (0x00000020) --  Reserved for future use. \n
+      - QMI_LOC_LPPE_MASK_UP_RESERVED_3_BIT (0x00000040) --  Reserved for future use. \n
+      - QMI_LOC_LPPE_MASK_UP_RESERVED_4_BIT (0x00000080) --  Reserved for future use \n
+      - QMI_LOC_LPPE_MASK_UP_NON_E911 (0x00000100) --  Enable the LPPe Capabilities for Non E911 NILR user plane sessions.
  */
 
   /* Optional */
@@ -8564,7 +8583,12 @@ typedef struct {
       - QMI_LOC_LPPE_MASK_CP_DBH (0x00000001) --  Enable Device-Based Hybrid (3D High Accuracy Position) mode on the LPPe control plane.\n
       - QMI_LOC_LPPE_MASK_CP_AP_WIFI_MEASUREMENT (0x00000002) --  Enable WLAN AP Measurement mode on the LPPe control plane. \n
       - QMI_LOC_LPPE_MASK_CP_AP_SRN_BTLE_MEASUREMENT (0x00000004) --  Enable SRN BTLE Measurement mode on the LPPe user plane. \n
-      - QMI_LOC_LPPE_MASK_CP_UBP (0x00000008) --  Enable the Uncompromised Barometer Pressure Measurement mode on the LPPe user plane.
+      - QMI_LOC_LPPE_MASK_CP_UBP (0x00000008) --  Enable the Uncompromised Barometer Pressure Measurement mode on the LPPe control plane. \n
+      - QMI_LOC_LPPE_MASK_CP_RESERVED_1_BIT (0x00000010) --  Reserved for future use \n
+      - QMI_LOC_LPPE_MASK_CP_RESERVED_2_BIT (0x00000020) --  Reserved for future use \n
+      - QMI_LOC_LPPE_MASK_CP_RESERVED_3_BIT (0x00000040) --  Reserved for future use \n
+      - QMI_LOC_LPPE_MASK_CP_RESERVED_4_BIT (0x00000080) --  Reserved for future use \n
+      - QMI_LOC_LPPE_MASK_CP_NON_E911 (0x00000100) --  Enable the LPPe Capabilities for Non E911 NILR control plane sessions.
  */
 
   /* Optional */
@@ -8807,7 +8831,12 @@ typedef struct {
       - QMI_LOC_LPPE_MASK_UP_DBH (0x00000001) --  Enable Device-Based Hybrid (3D High Accuracy Position) mode on the LPPe user plane. \n
       - QMI_LOC_LPPE_MASK_UP_AP_WIFI_MEASUREMENT (0x00000002) --  Enable WLAN AP Measurement mode on the LPPe user plane.\n
       - QMI_LOC_LPPE_MASK_UP_AP_SRN_BTLE_MEASUREMENT (0x00000004) --  Enable SRN BTLE Measurement mode on the LPPe user plane.\n
-      - QMI_LOC_LPPE_MASK_UP_UBP (0x00000008) --  Enable the Uncompromised Barometer Pressure Measurement mode on the LPPe user plane.
+      - QMI_LOC_LPPE_MASK_UP_UBP (0x00000008) --  Enable the Uncompromised Barometer Pressure Measurement mode on the LPPe user plane. \n
+      - QMI_LOC_LPPE_MASK_UP_RESERVED_1_BIT (0x00000010) --  Reserved for future use. \n
+      - QMI_LOC_LPPE_MASK_UP_RESERVED_2_BIT (0x00000020) --  Reserved for future use. \n
+      - QMI_LOC_LPPE_MASK_UP_RESERVED_3_BIT (0x00000040) --  Reserved for future use. \n
+      - QMI_LOC_LPPE_MASK_UP_RESERVED_4_BIT (0x00000080) --  Reserved for future use \n
+      - QMI_LOC_LPPE_MASK_UP_NON_E911 (0x00000100) --  Enable the LPPe Capabilities for Non E911 NILR user plane sessions.
  */
 
   /* Optional */
@@ -8819,7 +8848,12 @@ typedef struct {
       - QMI_LOC_LPPE_MASK_CP_DBH (0x00000001) --  Enable Device-Based Hybrid (3D High Accuracy Position) mode on the LPPe control plane.\n
       - QMI_LOC_LPPE_MASK_CP_AP_WIFI_MEASUREMENT (0x00000002) --  Enable WLAN AP Measurement mode on the LPPe control plane. \n
       - QMI_LOC_LPPE_MASK_CP_AP_SRN_BTLE_MEASUREMENT (0x00000004) --  Enable SRN BTLE Measurement mode on the LPPe user plane. \n
-      - QMI_LOC_LPPE_MASK_CP_UBP (0x00000008) --  Enable the Uncompromised Barometer Pressure Measurement mode on the LPPe user plane.
+      - QMI_LOC_LPPE_MASK_CP_UBP (0x00000008) --  Enable the Uncompromised Barometer Pressure Measurement mode on the LPPe control plane. \n
+      - QMI_LOC_LPPE_MASK_CP_RESERVED_1_BIT (0x00000010) --  Reserved for future use \n
+      - QMI_LOC_LPPE_MASK_CP_RESERVED_2_BIT (0x00000020) --  Reserved for future use \n
+      - QMI_LOC_LPPE_MASK_CP_RESERVED_3_BIT (0x00000040) --  Reserved for future use \n
+      - QMI_LOC_LPPE_MASK_CP_RESERVED_4_BIT (0x00000080) --  Reserved for future use \n
+      - QMI_LOC_LPPE_MASK_CP_NON_E911 (0x00000100) --  Enable the LPPe Capabilities for Non E911 NILR control plane sessions.
  */
 
   /* Optional */
@@ -16588,6 +16622,8 @@ typedef struct {
       - eQMI_LOC_POSITION_SRC_GNSS_TERRESTRIAL_HYBRID (5) --  Position source is GNSS Terrestrial Hybrid \n
       - eQMI_LOC_POSITION_SRC_OTHER (6) --  Other sources \n
       - eQMI_LOC_POSITION_SRC_DRE (7) --  Position source is the dead reckoning engine
+      - eQMI_LOC_POSITION_SRC_FLP (8) --  Position source is Fused Location Provider
+      - eQMI_LOC_POSITION_SRC_NLP (9) --  Position source is Network Location Provider
  */
 
   /* Optional */
@@ -17843,6 +17879,7 @@ typedef enum {
   eQMI_LOC_SUPPORTED_FEATURE_ROBUST_LOCATION_V02 = 12, /**<  Support Robust Location feature  */
   eQMI_LOC_SUPPORTED_FEATURE_EDGNSS_V02 = 13, /**<  Support enhanced DGNSS  */
   eQMI_LOC_SUPPORTED_FEATURE_MULTIBAND_CONFIG_V02 = 14, /**<  Support the multiband GNSS configuration feature  */
+  eQMI_LOC_SUPPORTED_FEATURE_QMI_AGNSS_CONFIG_DISABLED_V02 = 15, /**<  Support the AGNSS configuration for DSDA   */
   QMILOCSUPPORTEDFEATUREENUMT_MAX_ENUM_VAL_V02 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
 }qmiLocSupportedFeatureEnumT_v02;
 /**
