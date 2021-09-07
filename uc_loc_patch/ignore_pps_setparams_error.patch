@@ -1,0 +1,35 @@
+From e53ade3000eb334cf8caa6ed9d55edbf08cf1c91 Mon Sep 17 00:00:00 2001
+From: Madhanraj Chelladurai <mchellad@codeaurora.org>
+Date: Mon, 13 Sep 2021 11:28:07 +0530
+Subject: [PATCH] [PATCH] gps: disable set parameters for pps node.
+
+Signed-off-by: Madhanraj Chelladurai <mchellad@codeaurora.org>
+---
+ ppsthread.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/ppsthread.c b/ppsthread.c
+index 4efedb9..00ae08b 100644
+--- a/ppsthread.c
++++ b/ppsthread.c
+@@ -425,6 +425,9 @@ static int init_kernel_pps(struct inner_context_t *inner_context)
+         return -1;
+     }
+ 
++#if 0
++/* time_pps_setparams not working in SNAP environment in
++strict confinement mode and destroying the handle */
+     if ( 0 > time_pps_setparams(inner_context->kernelpps_handle, &pp)) {
+         char errbuf[BUFSIZ] = "unknown error";
+         pps_strerror_r(errno, errbuf, sizeof(errbuf));
+@@ -435,6 +438,7 @@ static int init_kernel_pps(struct inner_context_t *inner_context)
+         (void)time_pps_destroy(inner_context->kernelpps_handle);
+         return -1;
+     }
++#endif
+     return 0;
+ }
+ #endif /* defined(HAVE_SYS_TIMEPPS_H) */
+-- 
+1.9.1
+
