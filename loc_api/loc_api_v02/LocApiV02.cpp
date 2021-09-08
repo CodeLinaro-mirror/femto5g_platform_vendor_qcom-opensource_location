@@ -252,7 +252,7 @@ static void getInterSystemTimeBias(const char* interSystem,
                                    Gnss_InterSystemBiasStructType &interSystemBias,
                                    const qmiLocInterSystemBiasStructT_v02* pInterSysBias)
 {
-    LOC_LOGd("%s] Mask:%d, TimeBias:%f, TimeBiasUnc:%f,\n",
+    LOC_LOGv("%s] Mask:%d, TimeBias:%f, TimeBiasUnc:%f,\n",
              interSystem, pInterSysBias->validMask, pInterSysBias->timeBias,
              pInterSysBias->timeBiasUnc);
 
@@ -3016,7 +3016,7 @@ void LocApiV02 :: reportPosition (
                             location_report_ptr->gnssSvUsedSignalTypeList[idx];
                     GnssSignalTypeMask gnssSignalTypeMask =
                             convertQmiGnssSignalType(qmiGnssSignalType);
-                    LOC_LOGd("sv id %d, qmi signal type: 0x%" PRIx64 ", hal signal type: 0x%x",
+                    LOC_LOGv("sv id %d, qmi signal type: 0x%" PRIx64 ", hal signal type: 0x%x",
                              gnssSvIdUsed, qmiGnssSignalType, gnssSignalTypeMask);
 
                     if (gnssSvIdUsed <= GPS_SV_PRN_MAX)
@@ -3633,7 +3633,7 @@ void  LocApiV02 :: reportSv (
                             mask |= GNSS_SV_OPTIONS_HAS_CARRIER_FREQUENCY_BIT;
                             gnssSv_ref.gnssSignalTypeMask = convertQmiGnssSignalType(
                                     gnss_report_ptr->gnssSignalTypeList[i]);
-                            LOC_LOGd("sv id %d, qmi signal type: 0x%" PRIx64 ", "
+                            LOC_LOGv("sv id %d, qmi signal type: 0x%" PRIx64 ", "
                                      "hal signal type: 0x%x", gnssSv_ref.svId,
                                      gnss_report_ptr->gnssSignalTypeList[i],
                                      gnssSv_ref.gnssSignalTypeMask);
@@ -4353,7 +4353,7 @@ void LocApiV02::reportSvMeasurementSvLoop(
                 svMeas.gnssSignalTypeMask =
                         getDefaultGnssSignalTypeMask(gnss_raw_measurement_ptr->system);
             }
-            LOC_LOGd("sv id %d, qmi signal type: 0x%" PRIx64 ", hal signal type: 0x%x",
+            LOC_LOGv("sv id %d, qmi signal type: 0x%" PRIx64 ", hal signal type: 0x%x",
                      qmiSvMeas.gnssSvId, gnss_raw_measurement_ptr->gnssSignalType,
                      svMeas.gnssSignalTypeMask);
             svMeas.gnssSvId = qmiSvMeas.gnssSvId;
