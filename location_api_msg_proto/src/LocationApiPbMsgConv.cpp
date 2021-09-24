@@ -4529,7 +4529,7 @@ int LocationApiPbMsgConv::pbConvertToLocation(const PBLocation &pbLoc, Location 
     loc.bearingAccuracy = pbLoc.bearingaccuracy();
 
     // uint32 techMask = 12; - bitwise OR of PBLocationTechnologyMask
-    loc.techMask = getLocationFlagsMaskFromPB(pbLoc.techmask());
+    loc.techMask = getLocationTechnologyMaskFromPB(pbLoc.techmask());
 
     // uint64 elapsedRealTime = 13;
     loc.elapsedRealTime = pbLoc.elapsedrealtime();
