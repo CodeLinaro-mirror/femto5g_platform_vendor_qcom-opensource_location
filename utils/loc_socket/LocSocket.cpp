@@ -217,6 +217,7 @@ protected:
     const ServiceInfo mServiceInfo;
     shared_ptr<Sock> mSock;
     mutable sockaddr_qrtr mAddr;
+    mutable sockaddr_qrtr mCtrlPntAddr;
     mutable struct qrtr_ctrl_pkt mCtrlPkt;
     mutable bool mLookupPending;
     bool ctrlCmdAndResponse(enum qrtr_pkt_type cmd) const {
@@ -226,14 +227,12 @@ protected:
                  le32_to_cpu(mCtrlPkt.server.instance));
         if (mSock->isValid()) {
             int rc = 0;
-            sockaddr_qrtr addr = mAddr;
-            addr.sq_port = QRTR_PORT_CTRL;
             mCtrlPkt.cmd = cpu_to_le32(cmd);
             if ((rc = ::sendto(mSock->mSid, &mCtrlPkt, sizeof(mCtrlPkt), 0,
-                               (const struct sockaddr *)&addr, sizeof(addr))) < 0) {
+                               (const struct sockaddr *)&mCtrlPntAddr, sizeof(mCtrlPntAddr))) < 0) {
                 LOC_LOGe("failed: sendto rc=%d reason=(%s)", rc, strerror(errno));
             } else if (QRTR_TYPE_NEW_LOOKUP == cmd) {
-                int len;
+                int len = 0;
                 struct qrtr_ctrl_pkt pkt;
                 while ((len = ::recv(mSock->mSid, &pkt, sizeof(pkt), 0)) > 0) {
                     if (len >= (decltype(len))sizeof(pkt)) {
@@ -324,6 +323,8 @@ public:
             mCtrlPkt.server.instance = cpu_to_le32(instance);
             mCtrlPkt.server.node = cpu_to_le32(mAddr.sq_node);
             mCtrlPkt.server.port = cpu_to_le32(mAddr.sq_port);
+            mCtrlPntAddr = mAddr;
+            mCtrlPntAddr.sq_port = QRTR_PORT_CTRL;
         }
     }
 
@@ -331,9 +332,18 @@ public:
         return make_unique<SockRecver>(listener, *this, mSock);
     }
 
-    inline virtual void copyDestAddrFrom(const LocIpcSender& otherSender) override {
+    inline virtual bool copyDestAddrFrom(const LocIpcSender& otherSender) override {
+        bool retval = false;
+        sockaddr_qrtr otherAddr = (reinterpret_cast<const LocIpcQrtrSender&>(otherSender)).mAddr;
+        if (mAddr.sq_family != otherAddr.sq_family ||
+                mAddr.sq_node != otherAddr.sq_node ||
+                mAddr.sq_port != otherAddr.sq_port) {
+            mAddr = otherAddr;
+            retval = true;
+        }
         mLookupPending = false;
-        mAddr = (reinterpret_cast<const LocIpcQrtrSender&>(otherSender)).mAddr;
+
+        return retval;
     }
 };
 
@@ -404,8 +414,6 @@ public:
         ctrlCmdAndResponse(QRTR_TYPE_NEW_SERVER);
 
         if (nullptr != qrtrWatcher) {
-            sockaddr_qrtr addr = mAddr;
-            addr.sq_port = QRTR_PORT_CTRL;
             struct qrtr_ctrl_pkt pkt = {};
             pkt.cmd = cpu_to_le32(QRTR_TYPE_NEW_LOOKUP);
             int rc = 0;
@@ -413,7 +421,8 @@ public:
                 pkt.server.service = cpu_to_le32(serviceId);
                 LOC_LOGd("watch for service: %d", pkt.server.service);
                 if ((rc = ::sendto(mSock->mSid, &pkt, sizeof(pkt), 0,
-                                   (const struct sockaddr *)&addr, sizeof(addr))) < 0) {
+                                   (const struct sockaddr *)&mCtrlPntAddr,
+                                   sizeof(mCtrlPntAddr))) < 0) {
                     LOC_LOGe("failed: sendto rc=%d reason=(%s)\n", rc, strerror(errno));
                 }
             }
