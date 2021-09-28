@@ -190,6 +190,7 @@ private:
     BatchingOptions            mBatchingOptions;
     LocationCapabilitiesMask   mCapsMask;
     bool                       mPositionSessionResponseCbPending;
+    uint64_t                   mSessionStartBootTimestampNs;
 
     // callbacks
     CapabilitiesCb          mCapabilitiesCb;
