@@ -1292,6 +1292,9 @@ uint32_t LocationApiPbMsgConv::getPBMaskForLocationFlagsMask(const uint32_t &loc
     if (locFlagsMask & LOCATION_HAS_BEARING_ACCURACY_BIT) {
         pbLocFlagsMask |= PB_LOCATION_HAS_BEARING_ACCURACY_BIT;
     }
+    if (locFlagsMask & LOCATION_HAS_ELAPSED_REAL_TIME_BIT) {
+        pbLocFlagsMask |= PB_LOCATION_HAS_ELAPSED_REAL_TIME_BIT;
+    }
     LocApiPb_LOGv("LocApiPB: locFlagsMask:%x, pbLocFlagsMask:%x", locFlagsMask, pbLocFlagsMask);
     return pbLocFlagsMask;
 }
@@ -2375,6 +2378,9 @@ uint32_t LocationApiPbMsgConv::getLocationFlagsMaskFromPB(const uint32_t &pbLocF
     if (pbLocFlagsMask & PB_LOCATION_HAS_BEARING_ACCURACY_BIT) {
         locFlagsMask |= LOCATION_HAS_BEARING_ACCURACY_BIT;
     }
+    if (pbLocFlagsMask & PB_LOCATION_HAS_ELAPSED_REAL_TIME_BIT) {
+        locFlagsMask |= LOCATION_HAS_ELAPSED_REAL_TIME_BIT;
+    }
     LocApiPb_LOGv("LocApiPB: pbLocFlagsMask:%x, locFlagsMask:%x", pbLocFlagsMask, locFlagsMask);
     return locFlagsMask;
 }
@@ -3109,7 +3115,7 @@ int LocationApiPbMsgConv::convertDeadReckoningEngineConfigToPB(
     // float gyroScaleFactorUnc = 6;
     pbDrEngConfig->set_gyroscalefactorunc(drEngConfig.gyroScaleFactorUnc);
 
-    LOC_LOGd("LocApiPB: drEngConfig - DrEngConfigValidMask:%"  PRIu64", VehSpeedScale: %f"
+    LOC_LOGv("LocApiPB: drEngConfig - DrEngConfigValidMask:%"  PRIu64", VehSpeedScale: %f"
             " VehSpeedScaleUnc: %f, GyroScale: %f, GyroScaleUnc: %f", drEngConfig.validMask,
             drEngConfig.vehicleSpeedScaleFactor, drEngConfig.vehicleSpeedScaleFactorUnc,
             drEngConfig.gyroScaleFactor, drEngConfig.gyroScaleFactorUnc);
@@ -3148,7 +3154,7 @@ int LocationApiPbMsgConv::convertGfAddedReqPayloadToPB(
         return 1;
     }
     // repeated PBGeofencePayload gfPayload = 1;
-    LOC_LOGd("LocApiPB: gfPayload count:%d", gfAddReqPayload.count);
+    LOC_LOGv("LocApiPB: gfPayload count:%d", gfAddReqPayload.count);
     for (uint32_t i=0; i < gfAddReqPayload.count; i++) {
         PBGeofencePayload* gfPload = pbGfAddReqPayload->add_gfpayload();
         if (nullptr != gfPload) {
@@ -3265,7 +3271,7 @@ int LocationApiPbMsgConv::convertGnssConfigRobustLocationToPB(
         return 1;
     }
 
-    LOC_LOGd("LocApiPB: gnssCfgRbstLoc - CfgRobustLocMask:%x, Enabled:%d, EnabForE911:%d, "\
+    LOC_LOGv("LocApiPB: gnssCfgRbstLoc - CfgRobustLocMask:%x, Enabled:%d, EnabForE911:%d, "\
         "MajorVer:%d, MinorVer:%d", gnssCfgRbstLoc.validMask, gnssCfgRbstLoc.enabled,
         gnssCfgRbstLoc.enabledForE911, gnssCfgRbstLoc.version.major, gnssCfgRbstLoc.version.minor);
     return 0;
@@ -3313,10 +3319,16 @@ int LocationApiPbMsgConv::convertLocationToPB(const Location &location,
     // uint32 techMask = 12; - PBLocationTechnologyMask
     pbLocation->set_techmask(getPBMaskForLocationTechnologyMask(location.techMask));
 
-    LOC_LOGd("LocApiPB: location - Timestamp: %" PRIu64" Lat:%lf, Lon:%lf, Alt:%lf, TechMask:%x",
+    // uint64 elapsedRealTime = 13;
+    pbLocation->set_elapsedrealtime(location.elapsedRealTime);
+
+    // uint64 elapsedRealTimeUnc = 14;
+    pbLocation->set_elapsedrealtimeunc(location.elapsedRealTimeUnc);
+
+    LOC_LOGv("LocApiPB: location - Timestamp: %" PRIu64" Lat:%lf, Lon:%lf, Alt:%lf, TechMask:%x",
             location.timestamp, location.latitude, location.longitude, location.altitude,
             location.techMask);
-    LocApiPb_LOGd("LocApiPB: location - speed:%f, bear:%f, HorzAcc:%f, VertAcc:%f, SpeedAcc:%f, "
+    LocApiPb_LOGv("LocApiPB: location - speed:%f, bear:%f, HorzAcc:%f, VertAcc:%f, SpeedAcc:%f, "
             "BearAcc:%f", location.speed, location.bearing, location.accuracy,
             location.verticalAccuracy, location.speedAccuracy, location.bearingAccuracy);
     return 0;
@@ -3330,7 +3342,7 @@ int LocationApiPbMsgConv::convertLocAPIBatchingNotifMsgToPB(
         return 1;
     }
     int count = locApiBatchNotifMsg.location.size();
-    LOC_LOGd("LocApiPB: locApiBatchNotifMsg - BatchStat: %d, Loc count:%d",
+    LOC_LOGv("LocApiPB: locApiBatchNotifMsg - BatchStat: %d, Loc count:%d",
             locApiBatchNotifMsg.status, count);
     // PBBatchingStatus status = 1;
     pbLocApiBatchNotifMsg->set_status(
@@ -3360,7 +3372,7 @@ int LocationApiPbMsgConv::convertLocAPIGfBreachNotifToPB(
         return 1;
     }
     int gfBreachCnt = locApiGfBreachNotif.id.size();
-    LOC_LOGd("LocApiPB: locApiGfBreachNotif - BreachTypMask: %x, timestamp: %" PRIu64 \
+    LOC_LOGv("LocApiPB: locApiGfBreachNotif - BreachTypMask: %x, timestamp: %" PRIu64 \
             "count:%d", locApiGfBreachNotif.type, locApiGfBreachNotif.timestamp, gfBreachCnt);
 
     // uint64 timestamp = 1;
@@ -3515,7 +3527,7 @@ int LocationApiPbMsgConv::convertGnssLocInfoNotifToPB(
 
     // repeated PBGnssMeasUsageInfo measUsageInfo = 29; (Max array len - GNSS_SV_MAX)
     uint8_t count = gnssLocInfoNotif.numOfMeasReceived;
-    LOC_LOGd("LocApiPB: gnssLocInfoNotif numOfMeasReceived : %u", count);
+    LOC_LOGv("LocApiPB: gnssLocInfoNotif numOfMeasReceived : %u", count);
     for (uint8_t iter = 0; iter < count; iter++) {
         PBGnssMeasUsageInfo *gnssMeasUsageInfo = pbGnssLocInfoNotif->add_measusageinfo();
         if (nullptr != gnssMeasUsageInfo) {
@@ -3570,7 +3582,7 @@ int LocationApiPbMsgConv::convertGnssLocInfoNotifToPB(
 
     // repeated float enuVelocityVRPBased = 38; - Max array length 3
     for (int i = 0; i < 3; i++) {
-        LOC_LOGd("LocApiPB: gnssLocInfoNotif - jammerInd: %lf",
+        LOC_LOGv("LocApiPB: gnssLocInfoNotif - jammerInd: %lf",
                 gnssLocInfoNotif.enuVelocityVRPBased[i]);
         pbGnssLocInfoNotif->add_enuvelocityvrpbased(gnssLocInfoNotif.enuVelocityVRPBased[i]);
     }
@@ -3600,14 +3612,14 @@ int LocationApiPbMsgConv::convertGnssLocInfoNotifToPB(
     // float    protectVertical = 46;
     pbGnssLocInfoNotif->set_protectvertical(gnssLocInfoNotif.protectVertical);
 
-    LocApiPb_LOGd("LocApiPB: gnssLocInfoNotif - GLocInfoFlgMask:%u, pdop:%f, hdop:%f, vdop:%f",
+    LocApiPb_LOGv("LocApiPB: gnssLocInfoNotif - GLocInfoFlgMask:%u, pdop:%f, hdop:%f, vdop:%f",
             gnssLocInfoNotif.flags, gnssLocInfoNotif.pdop, gnssLocInfoNotif.hdop,
             gnssLocInfoNotif.vdop);
-    LocApiPb_LOGd("LocApiPB: gnssLocInfoNotif - HorReliab:%d, VerReliab:%d, HorUnc-SemiMajor:%f "
+    LocApiPb_LOGv("LocApiPB: gnssLocInfoNotif - HorReliab:%d, VerReliab:%d, HorUnc-SemiMajor:%f "
             "SemiMinor:%f",
             gnssLocInfoNotif.horReliability, gnssLocInfoNotif.verReliability,
             gnssLocInfoNotif.horUncEllipseSemiMajor, gnssLocInfoNotif.horUncEllipseSemiMinor);
-    LOC_LOGd("LocApiPB: gnssLocInfoNotif - NavSolMask:%x, NumMeasRcvd:%u, "\
+    LOC_LOGv("LocApiPB: gnssLocInfoNotif - NavSolMask:%x, NumMeasRcvd:%u, "\
             "LocOpEngType:%d, PosEngMask:%x,  NumSvUsedInPos:%u",
             gnssLocInfoNotif.navSolutionMask, gnssLocInfoNotif.numOfMeasReceived,
             gnssLocInfoNotif.locOutputEngType, gnssLocInfoNotif.locOutputEngMask,
@@ -3621,7 +3633,7 @@ int LocationApiPbMsgConv::convertLocSysInfoToPB(const LocationSystemInfo &locSys
         LOC_LOGe("pbLocSysInfo is NULL!, return");
         return 1;
     }
-    LOC_LOGd("LocApiPB: locSysInfo - sysInfoMask: %x", locSysInfo.systemInfoMask);
+    LOC_LOGv("LocApiPB: locSysInfo - sysInfoMask: %x", locSysInfo.systemInfoMask);
     // uint32 systemInfoMask = 1; - bitwise OR of PBLocationSystemInfoMask
     pbLocSysInfo->set_systeminfomask(getPBMaskForLocSysInfoMask(locSysInfo.systemInfoMask));
 
@@ -3650,7 +3662,7 @@ int LocationApiPbMsgConv::convertGnssMeasNotifToPB(
 
     // repeated PBGnssMeasurementsData measurements = 1; Max array len - GNSS_MEASUREMENTS_MAX
     uint32_t count = gnssMeasNotif.count;
-    LOC_LOGd("LocApiPB: gnssMeasNotif - MeasNotif count:%d, isNhz:%d", count, gnssMeasNotif.isNhz);
+    LOC_LOGv("LocApiPB: gnssMeasNotif - MeasNotif count:%d, isNhz:%d", count, gnssMeasNotif.isNhz);
     for (int i=0; i < count; i++) {
         PBGnssMeasurementsData* gnssMeasData = pbGnssMeasNotif->add_measurements();
         if (nullptr != gnssMeasData) {
@@ -3737,7 +3749,7 @@ int LocationApiPbMsgConv::convertGnssSvNotifToPB(const GnssSvNotification &gnssS
 
     // repeated PBLocApiGnssSv gnssSvs = 2; (max - GNSS_SV_MAX)
     uint32_t count = gnssSvNotif.count;
-    LOC_LOGd("LocApiPB: gnssSvNotif - SvNotif count:%d", count);
+    LOC_LOGv("LocApiPB: gnssSvNotif - SvNotif count:%d", count);
     for (int i=0; i < count; i++) {
         PBLocApiGnssSv* gnssSv = pbGnssSvNotif->add_gnsssvs();
         if (nullptr != gnssSv) {
@@ -3769,7 +3781,7 @@ int LocationApiPbMsgConv::convertLeverArmParamsToPB(const LeverArmParams &leverA
     // float upOffsetMeters = 3;
     pbLeverArmParams->set_upoffsetmeters(leverArmParams.upOffsetMeters);
 
-    LOC_LOGd("LocApiPB: leverArmParams: Offset - Fwd: %f, Side: %f, Up: %f",
+    LOC_LOGv("LocApiPB: leverArmParams: Offset - Fwd: %f, Side: %f, Up: %f",
             leverArmParams.forwardOffsetMeters, leverArmParams.sidewaysOffsetMeters,
             leverArmParams.upOffsetMeters);
     return 0;
@@ -3803,7 +3815,7 @@ int LocationApiPbMsgConv::convertLeapSecondSystemInfoToPB(
         return 1;
     }
 
-    LOC_LOGd("LocApiPB: leapSecSysInfo - LeapSecondInfoMask:%x, LeapSecCurr: %u",
+    LOC_LOGv("LocApiPB: leapSecSysInfo - LeapSecondInfoMask:%x, LeapSecCurr: %u",
             leapSecSysInfo.leapSecondInfoMask, leapSecSysInfo.leapSecondCurrent);
     return 0;
 }
@@ -3869,11 +3881,11 @@ int LocationApiPbMsgConv::convertGnssSystemTimeStructTypeToPB(
     // uint32 numClockResets = 7;
     pbGnssSysTimeStructType->set_numclockresets(gnssSysTimeStructType.numClockResets);
 
-    LocApiPb_LOGd("LocApiPB: gnssSysTimeStruct - ValidityMsk: %x, SysWeek: %u, SysMsec: %u, "\
+    LocApiPb_LOGv("LocApiPB: gnssSysTimeStruct - ValidityMsk: %x, SysWeek: %u, SysMsec: %u, "\
             "SysClkTimeBias: %f", gnssSysTimeStructType.validityMask,
             gnssSysTimeStructType.systemWeek, gnssSysTimeStructType.systemMsec,
             gnssSysTimeStructType.systemClkTimeBias);
-    LocApiPb_LOGd("LocApiPB: gnssSysTimeStruct - SysClkTimeUnc: %f, RefCnt: %u, NumClkReset:%u",
+    LocApiPb_LOGv("LocApiPB: gnssSysTimeStruct - SysClkTimeUnc: %f, RefCnt: %u, NumClkReset:%u",
             gnssSysTimeStructType.systemClkTimeUncMs, gnssSysTimeStructType.refFCount,
             gnssSysTimeStructType.numClockResets);
     return 0;
@@ -3911,10 +3923,10 @@ int LocationApiPbMsgConv::convertGnssGloTimeStructTypeToPB(
     // uint32 numClockResets = 8;
     pbgnssGloTime->set_numclockresets(gnssGloTime.numClockResets);
 
-    LOC_LOGd("LocApiPB: gnssGloTime - GloValidityMsk: %x, GloFourYear: %u, GloDays: %u, "\
+    LOC_LOGv("LocApiPB: gnssGloTime - GloValidityMsk: %x, GloFourYear: %u, GloDays: %u, "\
             "GloMsec:%u", gnssGloTime.validityMask, gnssGloTime.gloFourYear, gnssGloTime.gloDays,
              gnssGloTime.gloMsec);
-    LOC_LOGd("LocApiPB: gnssGloTime - GloClkTimeBias: %f, GloClkTimeUnc: %f, RefFCnt: %u, "\
+    LOC_LOGv("LocApiPB: gnssGloTime - GloClkTimeBias: %f, GloClkTimeUnc: %f, RefFCnt: %u, "\
             "NumClkReset:%u", gnssGloTime.gloClkTimeBias, gnssGloTime.gloClkTimeUncMs,
             gnssGloTime.refFCount, gnssGloTime.numClockResets);
     return 0;
@@ -4006,20 +4018,20 @@ int LocationApiPbMsgConv::convertGnssMeasDataToPB(const GnssMeasurementsData &gn
     pbGnssMeasData->set_receivedsvtimesubns(gnssMeasData.receivedSvTimeSubNs);
 
 
-    LOC_LOGd("LocApiPB: gnssMeasData - GnssMeasDataFlags:%x, Svid:%d, SvType:%d, StateMsk:%x, "\
+    LOC_LOGv("LocApiPB: gnssMeasData - GnssMeasDataFlags:%x, Svid:%d, SvType:%d, StateMsk:%x, "\
             "RcvSvTime:%"  PRIu64", RcvSvTimeUnc:%" PRIu64", CNoDb:%lf", gnssMeasData.flags,
             gnssMeasData.svId, gnssMeasData.svType, gnssMeasData.stateMask,
             gnssMeasData.receivedSvTimeNs, gnssMeasData.receivedSvTimeUncertaintyNs,
             gnssMeasData.carrierToNoiseDbHz);
 
-    LocApiPb_LOGd("LocApiPB: gnssMeasData - TimeOffset:%lf, PseuRngRt:%lf, PseuRngRtUnc:%lf,"\
+    LocApiPb_LOGv("LocApiPB: gnssMeasData - TimeOffset:%lf, PseuRngRt:%lf, PseuRngRtUnc:%lf,"\
             "AdrStateMask:%x, AdrMeters:%lf, AdrUncMeters:%lf, CarierFreq:%f, CarierCyc:%" PRIu64,
             gnssMeasData.timeOffsetNs, gnssMeasData.pseudorangeRateMps,
             gnssMeasData.pseudorangeRateUncertaintyMps, gnssMeasData.adrStateMask,
             gnssMeasData.adrMeters, gnssMeasData.adrUncertaintyMeters,
             gnssMeasData.carrierFrequencyHz, gnssMeasData.carrierCycles);
 
-    LocApiPb_LOGd("LocApiPB: gnssMeasData - CarierPhase:%lf, CarierPhaseUnc:%lf, MultiPathInd:%d"\
+    LocApiPb_LOGv("LocApiPB: gnssMeasData - CarierPhase:%lf, CarierPhaseUnc:%lf, MultiPathInd:%d"\
             "CNoRatio:%lf, AgcLevel:%lf", gnssMeasData.carrierPhase,
             gnssMeasData.carrierPhaseUncertainty, gnssMeasData.multipathIndicator,
             gnssMeasData.signalToNoiseRatioDb, gnssMeasData.agcLevelDb);
@@ -4054,7 +4066,7 @@ int LocationApiPbMsgConv::convertGnssMeasClockToPB(const GnssMeasurementsClock &
     // uint32 hwClockDiscontinuityCount= 10;
     pbGnssMeasClock->set_hwclockdiscontinuitycount(gnssMeasClock.hwClockDiscontinuityCount);
 
-    LOC_LOGd("LocApiPB: gnssMeasClock - GnssMeasClockFlags:%x, leapSecond:%u, TimeNs:%" PRIu64\
+    LOC_LOGv("LocApiPB: gnssMeasClock - GnssMeasClockFlags:%x, leapSecond:%u, TimeNs:%" PRIu64\
         "TimeUnc:%lf FullBiasNs:%" PRIu64" BiasNs:%lf, BiasUncNs:%lf, DriftNs:%lf, DriftUncNs:%lf"
         "HwDiscCnt:%u",
         gnssMeasClock.flags, gnssMeasClock.leapSecond, gnssMeasClock.timeNs,
@@ -4101,7 +4113,7 @@ int LocationApiPbMsgConv::convertGnssSvToPB(const GnssSv &gnssSv,
     // uint32 gloFrequency = 10;
     pbGnssSv->set_glofrequency(gnssSv.gloFrequency);
 
-    LocApiPb_LOGd("LocApiPB: gnssSv - SvId:%d, SvType:%d, CNo:%f, Elev:%f, Azi:%f, SvOptMask:%x, "\
+    LocApiPb_LOGv("LocApiPB: gnssSv - SvId:%d, SvType:%d, CNo:%f, Elev:%f, Azi:%f, SvOptMask:%x, "\
             "CarrierFreq:%f, SignalTypeMask:%x, gloFrequency:%d",
             gnssSv.svId, gnssSv.type, gnssSv.cN0Dbhz, gnssSv.elevation,
             gnssSv.azimuth, gnssSv.gnssSvOptionsMask,
@@ -4134,7 +4146,7 @@ int LocationApiPbMsgConv::convertGnssLocSvUsedInPosToPB(
     // uint64 navicSvUsedIdsMask = 6;
     pbGnssLocSvUsedInPos->set_navicsvusedidsmask(gnssLocSvUsedInPos.navicSvUsedIdsMask);
 
-    LOC_LOGd("LocApiPB: gnssLocSvUsedInPos - Gps:%" PRIu64", Glo:%" PRIu64", Gal:%" PRIu64\
+    LOC_LOGv("LocApiPB: gnssLocSvUsedInPos - Gps:%" PRIu64", Glo:%" PRIu64", Gal:%" PRIu64\
             ", Bds:%" PRIu64", Qzss:%" PRIu64", Navic:%" PRIu64,
             gnssLocSvUsedInPos.gpsSvUsedIdsMask, gnssLocSvUsedInPos.gloSvUsedIdsMask,
             gnssLocSvUsedInPos.galSvUsedIdsMask, gnssLocSvUsedInPos.bdsSvUsedIdsMask,
@@ -4166,7 +4178,7 @@ int LocationApiPbMsgConv::convertGnssSystemTimeToPB(const GnssSystemTime &gnssSy
         return 1;
     }
 
-    LocApiPb_LOGd("LocApiPB: gnssSysTime - SysTimeSrc:%d", gnssSysTime.gnssSystemTimeSrc);
+    LocApiPb_LOGv("LocApiPB: gnssSysTime - SysTimeSrc:%d", gnssSysTime.gnssSystemTimeSrc);
     return 0;
 }
 
@@ -4222,10 +4234,10 @@ int LocationApiPbMsgConv::convertGnssLocationPositionDynamicsToPB(
     pbGnssLocPosDyn->set_yawrate(gnssLocPosDyn.yawRate);
     pbGnssLocPosDyn->set_yawrateunc(gnssLocPosDyn.yawRateUnc);
 
-    LOC_LOGd("LocApiPB: gnssLocPosDyn - Mask:%x, MaskExt:%x, Accel-Long:%f Lat:%f Vert:%f",
+    LOC_LOGv("LocApiPB: gnssLocPosDyn - Mask:%x, MaskExt:%x, Accel-Long:%f Lat:%f Vert:%f",
             gnssLocPosDyn.bodyFrameDataMask, gnssLocPosDynExt.bodyFrameDataMask,
             gnssLocPosDyn.longAccel, gnssLocPosDyn.latAccel, gnssLocPosDyn.vertAccel);
-    LocApiPb_LOGd("LocApiPB: Pitch:%f, PitchRate:%f, Roll:%f, RollRate:%f, Yaw:%f, YawRate:%f",
+    LocApiPb_LOGv("LocApiPB: Pitch:%f, PitchRate:%f, Roll:%f, RollRate:%f, Yaw:%f, YawRate:%f",
             gnssLocPosDyn.pitch, gnssLocPosDynExt.pitchRate, gnssLocPosDynExt.roll,
             gnssLocPosDynExt.rollRate, gnssLocPosDynExt.yaw, gnssLocPosDyn.yawRate);
     return 0;
@@ -4243,7 +4255,7 @@ int LocationApiPbMsgConv::convertLLAInfoToPB(const LLAInfo &llaInfo,
     pbLlaInfo->set_longitude(llaInfo.longitude);
     // float altitude = 3;
     pbLlaInfo->set_altitude(llaInfo.altitude);
-    LOC_LOGd("LocApiPB: llaInfo - Lat:%lf, Lon:%lf, Alt:%f", llaInfo.latitude,
+    LOC_LOGv("LocApiPB: llaInfo - Lat:%lf, Lon:%lf, Alt:%f", llaInfo.latitude,
             llaInfo.longitude, llaInfo.altitude);
     return 0;
 }
@@ -4265,7 +4277,7 @@ int LocationApiPbMsgConv::convertGnssMeasUsageInfoToPB(const GnssMeasUsageInfo &
     pbGnssMeasUsageInfo->set_gnsssignaltype(
             getPBMaskForGnssSignalTypeMask(gnssMeasUsageInfo.gnssSignalType));
 
-    LocApiPb_LOGd("LocApiPB: gnssMeasUsageInfo - Constl:%d, SvId:%d, SignalTypeMask:%x",
+    LocApiPb_LOGv("LocApiPB: gnssMeasUsageInfo - Constl:%d, SvId:%d, SignalTypeMask:%x",
             gnssMeasUsageInfo.gnssConstellation, gnssMeasUsageInfo.gnssSvId,
             gnssMeasUsageInfo.gnssSignalType);
     return 0;
@@ -4394,7 +4406,7 @@ int LocationApiPbMsgConv::convertSystemTimeStructUnionToPB(
             retVal = 0;
             break;
     }
-    LocApiPb_LOGd("LocApiPB: sysTimeStructUnion - gnssLocSvSysEnumType:%d, return %d",
+    LocApiPb_LOGv("LocApiPB: sysTimeStructUnion - gnssLocSvSysEnumType:%d, return %d",
             gnssLocSvSysEnumType, retVal);
     return retVal;
 }
@@ -4412,7 +4424,7 @@ int LocationApiPbMsgConv::convertGeofenceInfoToPB(const GeofenceInfo &gfInfo,
     // double radius = 3;
     pbGfInfo->set_radius(gfInfo.radius);
 
-    LOC_LOGd("LocApiPB: gfInfo - Lat:%lf, Lon:%lf, Rad:%lf", gfInfo.latitude, gfInfo.longitude,
+    LOC_LOGv("LocApiPB: gfInfo - Lat:%lf, Lon:%lf, Rad:%lf", gfInfo.latitude, gfInfo.longitude,
             gfInfo.radius);
     return 0;
 }
@@ -4431,7 +4443,7 @@ int LocationApiPbMsgConv::convertGeofenceOptionToPB(const GeofenceOption &gfOpt,
     // uint32 dwellTime = 3;
     pbGfOpt->set_dwelltime(gfOpt.dwellTime);
 
-    LOC_LOGd("LocApiPB: gfOpt - BreachTypeMask:%x Resp:%u, DwellTime:%u",
+    LOC_LOGv("LocApiPB: gfOpt - BreachTypeMask:%x Resp:%u, DwellTime:%u",
             gfOpt.breachTypeMask, gfOpt.responsiveness, gfOpt.dwellTime);
     return 0;
 }
@@ -4456,7 +4468,7 @@ int LocationApiPbMsgConv::pbConvertToGnssConfigRobustLocation(
     gnssCfgRobLoc.version.major = pbGnssCfgRobLoc.version().major();
     gnssCfgRobLoc.version.minor = pbGnssCfgRobLoc.version().minor();
 
-    LOC_LOGd("LocApiPB: pbGnssCfgRobLoc - CfgRobustLocMask:%x, Enabled:%d, EnabForE911:%d, "\
+    LOC_LOGv("LocApiPB: pbGnssCfgRobLoc - CfgRobustLocMask:%x, Enabled:%d, EnabForE911:%d, "\
            "MajorVer:%d, MinorVer:%d", gnssCfgRobLoc.validMask, gnssCfgRobLoc.enabled,
            gnssCfgRobLoc.enabledForE911, gnssCfgRobLoc.version.major, gnssCfgRobLoc.version.minor);
     return 0;
@@ -4519,9 +4531,15 @@ int LocationApiPbMsgConv::pbConvertToLocation(const PBLocation &pbLoc, Location 
     // uint32 techMask = 12; - bitwise OR of PBLocationTechnologyMask
     loc.techMask = getLocationFlagsMaskFromPB(pbLoc.techmask());
 
-    LOC_LOGd("LocApiPB: pbLoc - Timestamp: %" PRIu64" Lat:%lf, Lon:%lf, Alt:%lf, TechMask:%x",
+    // uint64 elapsedRealTime = 13;
+    loc.elapsedRealTime = pbLoc.elapsedrealtime();
+
+    // uint64 elapsedRealTimeUnc = 14;
+    loc.elapsedRealTimeUnc = pbLoc.elapsedrealtimeunc();
+
+    LOC_LOGv("LocApiPB: pbLoc - Timestamp: %" PRIu64" Lat:%lf, Lon:%lf, Alt:%lf, TechMask:%x",
             loc.timestamp, loc.latitude, loc.longitude, loc.altitude, loc.techMask);
-    LocApiPb_LOGd("LocApiPB: pbLoc - speed:%f, bearing:%f, HorzAcc:%f, VertAcc:%f, SpeedAcc:%f, "\
+    LocApiPb_LOGv("LocApiPB: pbLoc - speed:%f, bearing:%f, HorzAcc:%f, VertAcc:%f, SpeedAcc:%f, "\
             "BearAcc:%f", loc.speed, loc.bearing, loc.accuracy, loc.verticalAccuracy,
             loc.speedAccuracy, loc.bearingAccuracy);
     return 0;
@@ -4541,7 +4559,7 @@ int LocationApiPbMsgConv::pbConvertToLocAPIBatchNotification(
         locBatchNotif.location.push_back(batchLoc);
     }
 
-    LOC_LOGd("LocApiPB: pbLocBatchNotif - BatchStat: %d, Loc count:%u",
+    LOC_LOGv("LocApiPB: pbLocBatchNotif - BatchStat: %d, Loc count:%u",
             locBatchNotif.status, count);
     return 0;
 }
@@ -4560,12 +4578,12 @@ int LocationApiPbMsgConv::pbConvertToLocAPIGfBreachNotification(
 
     // repeated uint32 id = 4;
     uint32_t gfBreachCnt = pbLocApiGfBreachNotif.id_size();
-    LOC_LOGd("LocApiPB: gfBreachCnt: %lu", gfBreachCnt);
+    LOC_LOGv("LocApiPB: gfBreachCnt: %lu", gfBreachCnt);
     for (uint32_t i=0; i < gfBreachCnt; i++) {
         locApiGfBreachNotif.id.push_back(pbLocApiGfBreachNotif.id(0));
     }
 
-    LOC_LOGd("LocApiPB: pbLocApiGfBreachNotif - BreachTypMask: %x, timestamp: %" PRIu64,
+    LOC_LOGv("LocApiPB: pbLocApiGfBreachNotif - BreachTypMask: %x, timestamp: %" PRIu64,
             locApiGfBreachNotif.type, locApiGfBreachNotif.timestamp);
     return 0;
 }
@@ -4689,7 +4707,7 @@ int LocationApiPbMsgConv::pbConvertToGnssLocInfoNotif(
     // repeated float enuVelocityVRPBased = 38; - Max array length 3
     for (int i=0; i < 3; i++) {
         gnssLocInfoNotif.enuVelocityVRPBased[i] = pbGnssLocInfoNotif.enuvelocityvrpbased(i);
-        LocApiPb_LOGd("LocApiPB: enuVelocityVRPBased[%d]:%f", i,
+        LocApiPb_LOGv("LocApiPB: enuVelocityVRPBased[%d]:%f", i,
                 gnssLocInfoNotif.enuVelocityVRPBased[i]);
     }
 
@@ -4714,14 +4732,14 @@ int LocationApiPbMsgConv::pbConvertToGnssLocInfoNotif(
     // float    protectVertical = 46;
     gnssLocInfoNotif.protectVertical = pbGnssLocInfoNotif.protectvertical();
 
-    LOC_LOGd("LocApiPB: pbGnssLocInfoNotif -GLocInfoFlgMask:%u, pdop:%f, hdop:%f, vdop:%f",
+    LOC_LOGv("LocApiPB: pbGnssLocInfoNotif -GLocInfoFlgMask:%u, pdop:%f, hdop:%f, vdop:%f",
             gnssLocInfoNotif.flags, gnssLocInfoNotif.pdop, gnssLocInfoNotif.hdop,
             gnssLocInfoNotif.vdop);
-    LOC_LOGd("HorReliab:%d, VerReliab:%d, HorUncElps-SemiMajor:%f SemiMinor:%f, NumSvUsedInPos:%u",
+    LOC_LOGv("HorReliab:%d, VerReliab:%d, HorUncElps-SemiMajor:%f SemiMinor:%f, NumSvUsedInPos:%u",
             gnssLocInfoNotif.horReliability, gnssLocInfoNotif.verReliability,
             gnssLocInfoNotif.horUncEllipseSemiMajor, gnssLocInfoNotif.horUncEllipseSemiMinor,
             gnssLocInfoNotif.numSvUsedInPosition);
-    LOC_LOGd("NavSolMask:%x, NumMeasRcvd:%u, LocOpEngType:%d, PosEngMask:%x",
+    LOC_LOGv("NavSolMask:%x, NumMeasRcvd:%u, LocOpEngType:%d, PosEngMask:%x",
             gnssLocInfoNotif.navSolutionMask, gnssLocInfoNotif.numOfMeasReceived,
             gnssLocInfoNotif.locOutputEngType, gnssLocInfoNotif.locOutputEngMask);
     return 0;
@@ -4737,7 +4755,7 @@ int LocationApiPbMsgConv::pbConvertToGnssSvNotif(const PBLocApiGnssSvNotificatio
     // information on a number of SVs (max - GNSS_SV_MAX)
     // repeated PBLocApiGnssSv gnssSvs = 2;
     gnssSvNotif.count = min(pbGnssSvNotif.gnsssvs_size(), (int)GNSS_SV_MAX);
-    LOC_LOGd("LocApiPB: pbGnssSvNotif- num svs %d", gnssSvNotif.count);
+    LOC_LOGv("LocApiPB: pbGnssSvNotif- num svs %d", gnssSvNotif.count);
     for (int i=0; i < gnssSvNotif.count; i++) {
         PBLocApiGnssSv pPbGnssSv = pbGnssSvNotif.gnsssvs(i);
         gnssSvNotif.gnssSvs[i].size = sizeof(GnssSv);
@@ -4775,7 +4793,7 @@ int LocationApiPbMsgConv::pbConvertToGnssSvNotif(const PBLocApiGnssSvNotificatio
 
         // uint32 gloFrequency = 10;
         gnssSvNotif.gnssSvs[i].gloFrequency = pPbGnssSv.glofrequency();
-        LocApiPb_LOGd("LocApiPB: gnssSv[%d] - SvId:%d, CNo:%f, SvOptMask:%x, SignalTypeMask:%x, "\
+        LocApiPb_LOGv("LocApiPB: gnssSv[%d] - SvId:%d, CNo:%f, SvOptMask:%x, SignalTypeMask:%x, "\
                 "gloFrequency:%d",
                 i, gnssSvNotif.gnssSvs[i].svId, gnssSvNotif.gnssSvs[i].cN0Dbhz,
                 gnssSvNotif.gnssSvs[i].gnssSvOptionsMask,
@@ -4837,7 +4855,7 @@ int LocationApiPbMsgConv::pbConvertToGnssMeasNotification(
     // bool isNhz = 3;
     gnssMeasNotif.isNhz = pbGnssMeasNotif.isnhz();
 
-    LOC_LOGd("LocApiPB: pbGnssMeasNotif - count:%u, isNhz:%d", count, gnssMeasNotif.isNhz);
+    LOC_LOGv("LocApiPB: pbGnssMeasNotif - count:%u, isNhz:%d", count, gnssMeasNotif.isNhz);
 
     return 0;
 }
@@ -4851,7 +4869,7 @@ int LocationApiPbMsgConv::pbConvertToLocationSystemInfo(const PBLocationSystemIn
     // PBLeapSecondSystemInfo   leapSecondSysInfo = 2;
     pbConvertToLeapSecSysInfo(pbLocSysInfo.leapsecondsysinfo(), locSysInfo.leapSecondSysInfo);
 
-    LOC_LOGd("LocApiPB: pbLocSysInfo - sysInfoMask: %x", locSysInfo.systemInfoMask);
+    LOC_LOGv("LocApiPB: pbLocSysInfo - sysInfoMask: %x", locSysInfo.systemInfoMask);
     return 0;
 }
 
@@ -4884,7 +4902,7 @@ int LocationApiPbMsgConv::pbConvertToGfAddReqPayload(
     // repeated PBGeofencePayload gfPayload = 1;
     uint32_t gfCount = pbGfAddReqPload.gfpayload_size();
     gfAddReqPload.count = gfCount;
-    LOC_LOGd("LocApiPB: pbGfAddReqPload- count %d", gfCount);
+    LOC_LOGv("LocApiPB: pbGfAddReqPload- count %d", gfCount);
     for (int i=0; i < gfCount; i++) {
         PBGeofencePayload pbGfPayload = pbGfAddReqPload.gfpayload(i);
         // uint32 gfClientId = 1;
@@ -4905,7 +4923,7 @@ int LocationApiPbMsgConv::pbConvertToGfReqClientIdPayload(
     // repeated uint32 gfIds = 1;
     gfReqClientIdPload.count = pbGfReqClientIdPload.gfids_size();
     uint32_t gfCount = gfReqClientIdPload.count;
-    LOC_LOGd("LocApiPB: gfReqClientIdPload count %u", gfCount);
+    LOC_LOGv("LocApiPB: gfReqClientIdPload count %u", gfCount);
     for (uint32_t i=0; i < gfCount; i++) {
         gfReqClientIdPload.gfIds[i] = pbGfReqClientIdPload.gfids(i);
         LocApiPb_LOGv("LocApiPB: gfReqClientIdPload gfIds[%u]: %u", i,
@@ -4927,7 +4945,7 @@ int LocationApiPbMsgConv::pbConvertToGnssSvTypeConfig(const PBGnssSvTypeConfig &
     gnssSvTypeConfig.blacklistedSvTypesMask = getGnssSvTypesMaskFromPB(
             pbGnssSvTypeConfig.blacklistedsvtypesmask());
 
-    LOC_LOGd("LocApiPB: pbGnssSvTypesMask - Enable Sv types: %" PRIu64 \
+    LOC_LOGv("LocApiPB: pbGnssSvTypesMask - Enable Sv types: %" PRIu64 \
             " Blacklist Sv Types: %" PRIu64, gnssSvTypeConfig.enabledSvTypesMask,
             gnssSvTypeConfig.blacklistedSvTypesMask);
     return 0;
@@ -4954,7 +4972,7 @@ int LocationApiPbMsgConv::pbConvertToGnssSvIdConfig(const PBGnssSvIdConfig &pbGn
     // uint64_t navicBlacklistSvMask = 6;
     gnssSvIdConfig.navicBlacklistSvMask = pbGnssSvIdConfig.navicblacklistsvmask();
 
-    LOC_LOGd("LocApiPB: BlackListSvMask - Glo: %" PRIu64 ",Bds: %" PRIu64 ",Qzss: %" PRIu64 \
+    LOC_LOGv("LocApiPB: BlackListSvMask - Glo: %" PRIu64 ",Bds: %" PRIu64 ",Qzss: %" PRIu64 \
             ",Gal: %" PRIu64 ",Sbas: %" PRIu64",Nav: %" PRIu64, gnssSvIdConfig.gloBlacklistSvMask,
             gnssSvIdConfig.bdsBlacklistSvMask, gnssSvIdConfig.qzssBlacklistSvMask,
             gnssSvIdConfig.galBlacklistSvMask, gnssSvIdConfig.sbasBlacklistSvMask,
@@ -4980,7 +4998,7 @@ int LocationApiPbMsgConv::pbConvertToGnssAidingData(const PBAidingData &pbGnssAi
     // uint32 posEngineMask = 4;
     gnssAidData.posEngineMask = getEnumForPBPositioningEngineMask(pbGnssAidData.posenginemask());
 
-    LOC_LOGd("LocApiPB: pbGnssAidData deleteAll:%d, svMask: %x, PosEngMask:%x",
+    LOC_LOGv("LocApiPB: pbGnssAidData deleteAll:%d, svMask: %x, PosEngMask:%x",
             gnssAidData.deleteAll, gnssAidData.sv.svMask, gnssAidData.posEngineMask);
     return 0;
 }
@@ -5002,7 +5020,7 @@ int LocationApiPbMsgConv::pbConvertToLeverArmConfigInfo(
     // PBLIALeverArmParams   veppImuToGnss = 4;
     pbConvertToLeverArmParams(pbLeverArmCfgInfo.veppimutognss(), leverArmCfgInfo.veppImuToGnss);
 
-    LOC_LOGd("LocApiPB: pbLeverArmCfgInfo - leverArmValidMask: %x",
+    LOC_LOGv("LocApiPB: pbLeverArmCfgInfo - leverArmValidMask: %x",
             leverArmCfgInfo.leverArmValidMask);
     return 0;
 }
@@ -5019,7 +5037,7 @@ int LocationApiPbMsgConv::pbConvertToBodyToSensorMountParams(
     // float offsetUnc = 4;
     body2SensorMntParam.offsetUnc = pbBody2SensorMntParam.offsetunc();
 
-    LOC_LOGd("LocApiPB: pbBody2SensorMntParam: Offset - Roll:%f, Yaw:%f, Pitch:%f, Unc:%f",
+    LOC_LOGv("LocApiPB: pbBody2SensorMntParam: Offset - Roll:%f, Yaw:%f, Pitch:%f, Unc:%f",
             body2SensorMntParam.rollOffset, body2SensorMntParam.yawOffset,
             body2SensorMntParam.pitchOffset, body2SensorMntParam.offsetUnc);
     return 0;
@@ -5044,7 +5062,7 @@ int LocationApiPbMsgConv::pbConvertToDeadReckoningEngineConfig(
     // float gyroScaleFactorUnc = 6;
     drEngConfig.gyroScaleFactorUnc = pbDrEngConfig.gyroscalefactorunc();
 
-    LOC_LOGd("LocApiPB: pbDrEngConfig - DrEngConfigValidMask:%"  PRIu64", VehSpeedScale: %f"
+    LOC_LOGv("LocApiPB: pbDrEngConfig - DrEngConfigValidMask:%"  PRIu64", VehSpeedScale: %f"
             " VehSpeedScaleUnc: %f, GyroScale: %f, GyroScaleUnc: %f", drEngConfig.validMask,
             drEngConfig.vehicleSpeedScaleFactor, drEngConfig.vehicleSpeedScaleFactorUnc,
             drEngConfig.gyroScaleFactor, drEngConfig.gyroScaleFactorUnc);
@@ -5060,7 +5078,7 @@ int LocationApiPbMsgConv::pbConvertToLeverArmParams(const PBLIALeverArmParams &p
     // float upOffsetMeters = 3;
     leverArmParams.upOffsetMeters = pbLeverArmParams.upoffsetmeters();
 
-    LOC_LOGd("LocApiPB: pbLeverArmParams: Offset - Fwd: %f, Side: %f, Up: %f",
+    LOC_LOGv("LocApiPB: pbLeverArmParams: Offset - Fwd: %f, Side: %f, Up: %f",
             leverArmParams.forwardOffsetMeters, leverArmParams.sidewaysOffsetMeters,
             leverArmParams.upOffsetMeters);
     return 0;
@@ -5080,7 +5098,7 @@ int LocationApiPbMsgConv::pbConvertToLeapSecSysInfo(const PBLeapSecondSystemInfo
     pbConvertToLeapSecChgInfo(pbLeapSecSysInfo.leapsecondchangeinfo(),
             leapSecSysInfo.leapSecondChangeInfo);
 
-    LOC_LOGd("LocApiPB: pbLeapSecSysInfo - LeapSecondInfoMask:%x, LeapSecCurr: %u",
+    LOC_LOGv("LocApiPB: pbLeapSecSysInfo - LeapSecondInfoMask:%x, LeapSecCurr: %u",
             leapSecSysInfo.leapSecondInfoMask, leapSecSysInfo.leapSecondCurrent);
     return 0;
 }
@@ -5097,7 +5115,7 @@ int LocationApiPbMsgConv::pbConvertToLeapSecChgInfo(const PBLeapSecondChangeInfo
     // uint32 leapSecondsAfterChange = 3;
     leapSecChgInfo.leapSecondsAfterChange = pbLeapSecChgInfo.leapsecondsafterchange();
 
-    LOC_LOGd("LocApiPB: pbLeapSecChgInfo - LeapSecs Before: %u, After:%u",
+    LOC_LOGv("LocApiPB: pbLeapSecChgInfo - LeapSecs Before: %u, After:%u",
             leapSecChgInfo.leapSecondsBeforeChange, leapSecChgInfo.leapSecondsAfterChange);
     return 0;
 }
@@ -5128,10 +5146,10 @@ int LocationApiPbMsgConv::pbConvertToGnssSystemTimeStructType(
     // uint32 numClockResets = 7;
     gnssSysTimeStrct.numClockResets = pbGnssSysTimeStrct.numclockresets();
 
-    LOC_LOGd("LocApiPB: pbGnssSysTimeStrct - ValidityMsk: %x, SysWeek: %u, SysMsec: %u, "\
+    LOC_LOGv("LocApiPB: pbGnssSysTimeStrct - ValidityMsk: %x, SysWeek: %u, SysMsec: %u, "\
             "SysClkTimeBias: %f", gnssSysTimeStrct.validityMask, gnssSysTimeStrct.systemWeek,
             gnssSysTimeStrct.systemMsec, gnssSysTimeStrct.systemClkTimeBias);
-    LocApiPb_LOGd("LocApiPB: pbGnssSysTimeStrct - SysClkTimeUnc: %f, RefCnt: %u, NumClkReset:%u",
+    LocApiPb_LOGv("LocApiPB: pbGnssSysTimeStrct - SysClkTimeUnc: %f, RefCnt: %u, NumClkReset:%u",
             gnssSysTimeStrct.systemClkTimeUncMs, gnssSysTimeStrct.refFCount,
             gnssSysTimeStrct.numClockResets);
     return 0;
@@ -5222,20 +5240,20 @@ int LocationApiPbMsgConv::pbConvertToGnssMeasurementsData(
     // int64 receivedSvTimeSubNs = 26;
     gnssMeasData.receivedSvTimeSubNs = pbGnssMeasData.receivedsvtimesubns();
 
-    LOC_LOGd("LocApiPB: pbGnssMeasData - GnssMeasDataFlags:%x, Svid:%d, SvType:%d, StateMsk:%x, "\
+    LOC_LOGv("LocApiPB: pbGnssMeasData - GnssMeasDataFlags:%x, Svid:%d, SvType:%d, StateMsk:%x, "\
             "RcvSvTime:%"  PRIu64", RcvSvTimeUnc:%" PRIu64", CNoDb:%lf", gnssMeasData.flags,
             gnssMeasData.svId, gnssMeasData.svType, gnssMeasData.stateMask,
             gnssMeasData.receivedSvTimeNs, gnssMeasData.receivedSvTimeUncertaintyNs,
             gnssMeasData.carrierToNoiseDbHz);
 
-    LocApiPb_LOGd("LocApiPB: pbGnssMeasData - TimeOffset:%lf, PseuRngRt:%lf, PseuRngRtUnc:%lf,"\
+    LocApiPb_LOGv("LocApiPB: pbGnssMeasData - TimeOffset:%lf, PseuRngRt:%lf, PseuRngRtUnc:%lf,"\
             "AdrStateMask:%x, AdrMeters:%lf, AdrUncMeters:%lf, CarierFreq:%f, CarierCyc:%" PRIu64,
             gnssMeasData.timeOffsetNs, gnssMeasData.pseudorangeRateMps,
             gnssMeasData.pseudorangeRateUncertaintyMps, gnssMeasData.adrStateMask,
             gnssMeasData.adrMeters, gnssMeasData.adrUncertaintyMeters,
             gnssMeasData.carrierFrequencyHz, gnssMeasData.carrierCycles);
 
-    LocApiPb_LOGd("LocApiPB: pbGnssMeasData - CarierPhase:%lf, CarierPhaseUnc:%lf, MultiPathInd:%d"\
+    LocApiPb_LOGv("LocApiPB: pbGnssMeasData - CarierPhase:%lf, CarierPhaseUnc:%lf, MultiPathInd:%d"\
             "CNoRatio:%lf, AgcLevel:%lf", gnssMeasData.carrierPhase,
             gnssMeasData.carrierPhaseUncertainty, gnssMeasData.multipathIndicator,
             gnssMeasData.signalToNoiseRatioDb, gnssMeasData.agcLevelDb);
@@ -5267,7 +5285,7 @@ int LocationApiPbMsgConv::pbConvertToGnssMeasurementsClock(
     // uint32 hwClockDiscontinuityCount= 10;
     gnssMeasClock.hwClockDiscontinuityCount = pbGnssMeasClock.hwclockdiscontinuitycount();
 
-    LOC_LOGd("LocApiPB: pbGnssMeasClock - GnssMeasClockFlags:%x, leapSecond:%u, TimeNs:%" PRIu64\
+    LOC_LOGv("LocApiPB: pbGnssMeasClock - GnssMeasClockFlags:%x, leapSecond:%u, TimeNs:%" PRIu64\
         "TimeUnc:%lf FullBiasNs:%" PRIu64" BiasNs:%lf, BiasUncNs:%lf, DriftNs:%lf, DriftUncNs:%lf"
         "HwDiscCnt:%u",
         gnssMeasClock.flags, gnssMeasClock.leapSecond, gnssMeasClock.timeNs,
@@ -5293,7 +5311,7 @@ int LocationApiPbMsgConv::pbConvertToGnssLocationSvUsedInPosition(
     gnssLocSvUsedInPos.qzssSvUsedIdsMask = pbGnssLocSvUsedInPos.qzsssvusedidsmask();
     // uint64 navicSvUsedIdsMask = 6;
     gnssLocSvUsedInPos.navicSvUsedIdsMask = pbGnssLocSvUsedInPos.navicsvusedidsmask();
-    LOC_LOGd("LocApiPB: pbGnssLocSvUsedInPos - Gps:%" PRIu64", Glo:%" PRIu64", Gal:%" PRIu64\
+    LOC_LOGv("LocApiPB: pbGnssLocSvUsedInPos - Gps:%" PRIu64", Glo:%" PRIu64", Gal:%" PRIu64\
             ", Bds:%" PRIu64", Qzss:%" PRIu64", Navic:%" PRIu64,
             gnssLocSvUsedInPos.gpsSvUsedIdsMask, gnssLocSvUsedInPos.gloSvUsedIdsMask,
             gnssLocSvUsedInPos.galSvUsedIdsMask, gnssLocSvUsedInPos.bdsSvUsedIdsMask,
@@ -5311,7 +5329,7 @@ int LocationApiPbMsgConv::pbConvertToLLAInfo(const PBLLAInfo &pbLlaInfo, LLAInfo
     // float altitude = 3;
     llaInfo.altitude = pbLlaInfo.altitude();
 
-    LOC_LOGd("LocApiPB: pbLlaInfo - Lat:%lf, Lon:%lf, Alt:%f", llaInfo.latitude,
+    LOC_LOGv("LocApiPB: pbLlaInfo - Lat:%lf, Lon:%lf, Alt:%f", llaInfo.latitude,
             llaInfo.longitude, llaInfo.altitude);
     return 0;
 }
@@ -5367,10 +5385,10 @@ int LocationApiPbMsgConv::pbConvertToGnssLocationPositionDynamics(
     gnssLocPosDyn.yawRate = pbGnssLocPosDyn.yawrate();
     gnssLocPosDyn.yawRateUnc = pbGnssLocPosDyn.yawrateunc();
 
-    LOC_LOGd("LocApiPB: pbGnssLocPosDyn - Mask:%x, MaskExt:%x, Accel-Long:%f Lat:%f Vert:%f",
+    LOC_LOGv("LocApiPB: pbGnssLocPosDyn - Mask:%x, MaskExt:%x, Accel-Long:%f Lat:%f Vert:%f",
             gnssLocPosDyn.bodyFrameDataMask, gnssLocPosDynExt.bodyFrameDataMask,
             gnssLocPosDyn.longAccel, gnssLocPosDyn.latAccel, gnssLocPosDyn.vertAccel);
-    LocApiPb_LOGd("LocApiPB: Pitch:%f, PitchRate:%f, Roll:%f, RollRate:%f, Yaw:%f, YawRate:%f",
+    LocApiPb_LOGv("LocApiPB: Pitch:%f, PitchRate:%f, Roll:%f, RollRate:%f, Yaw:%f, YawRate:%f",
             gnssLocPosDyn.pitch, gnssLocPosDynExt.pitchRate, gnssLocPosDynExt.roll,
             gnssLocPosDynExt.rollRate, gnssLocPosDynExt.yaw, gnssLocPosDyn.yawRate);
     return 0;
@@ -5384,7 +5402,7 @@ int LocationApiPbMsgConv::pbConvertToGnssSystemTime(const PBLocApiGnssSystemTime
     // PBLocApiSystemTimeStructUnion u = 2;
     pbConvertToSystemTimeStructUnion(gnssSysTime.gnssSystemTimeSrc,
             pbGnssSysTime.u(), gnssSysTime.u);
-    LOC_LOGd("LocApiPB: pbGnssSysTime - GnssLocSvSystem %d", gnssSysTime.gnssSystemTimeSrc);
+    LOC_LOGv("LocApiPB: pbGnssSysTime - GnssLocSvSystem %d", gnssSysTime.gnssSystemTimeSrc);
     return 0;
 }
 
@@ -5402,7 +5420,7 @@ int LocationApiPbMsgConv::pbConvertToGnssMeasUsageInfo(
     gnssMeasUsageInfo.gnssSignalType =
         getGnssSignalTypeMaskFromPB(pbGnssMeasUsageInfo.gnsssignaltype());
 
-    LocApiPb_LOGd("LocApiPB: pbGnssMeasUsageInfo - Constl:%d, SvId:%d, SignalTypeMask:%x",
+    LocApiPb_LOGv("LocApiPB: pbGnssMeasUsageInfo - Constl:%d, SvId:%d, SignalTypeMask:%x",
             gnssMeasUsageInfo.gnssConstellation, gnssMeasUsageInfo.gnssSvId,
             gnssMeasUsageInfo.gnssSignalType);
     return 0;
@@ -5412,7 +5430,7 @@ int LocationApiPbMsgConv::pbConvertToSystemTimeStructUnion(
         const Gnss_LocSvSystemEnumType &gnssLocSvSysEnumType,
         const PBLocApiSystemTimeStructUnion &pbSysTimeStructUnion,
         SystemTimeStructUnion &sysTimeStructUnion) const {
-    LOC_LOGd("LocApiPB: pbSysTimeStructUnion - gnssLocSvSysEnumType:%d", gnssLocSvSysEnumType);
+    LOC_LOGv("LocApiPB: pbSysTimeStructUnion - gnssLocSvSysEnumType:%d", gnssLocSvSysEnumType);
     switch (gnssLocSvSysEnumType) {
         case GNSS_LOC_SV_SYSTEM_GPS:
             // PBLocApiGnssSystemTimeStructType gpsSystemTime = 1;
@@ -5477,10 +5495,10 @@ int LocationApiPbMsgConv::pbConvertToGnssGloTimeStructType(
     // uint32 numClockResets = 8;
     gnssGloTime.numClockResets = pbGnssGloTime.numclockresets();
 
-    LOC_LOGd("LocApiPB: pbGnssGloTime - GloValidityMsk: %x, GloFourYear: %u, GloDays: %u, "\
+    LOC_LOGv("LocApiPB: pbGnssGloTime - GloValidityMsk: %x, GloFourYear: %u, GloDays: %u, "\
             "GloMsec:%u", gnssGloTime.validityMask, gnssGloTime.gloFourYear, gnssGloTime.gloDays,
              gnssGloTime.gloMsec);
-    LocApiPb_LOGd("LocApiPB: pbGnssGloTime - GloClkTimeBias: %f, GloClkTimeUnc: %f, RefFCnt: %u, "\
+    LocApiPb_LOGv("LocApiPB: pbGnssGloTime - GloClkTimeBias: %f, GloClkTimeUnc: %f, RefFCnt: %u, "\
             "NumClkReset:%u", gnssGloTime.gloClkTimeBias, gnssGloTime.gloClkTimeUncMs,
             gnssGloTime.refFCount, gnssGloTime.numClockResets);
     return 0;
@@ -5496,7 +5514,7 @@ int LocationApiPbMsgConv::pbConvertToGeofenceOption(const PBGeofenceOption &pbGf
     gfOpt.responsiveness = pbGfOpt.responsiveness();
     // uint32 dwellTime = 3;
     gfOpt.dwellTime = pbGfOpt.dwelltime();
-    LOC_LOGd("LocApiPB: pbGfOpt - BreachTypeMask:%x Resp:%u, DwellTime:%u", gfOpt.breachTypeMask,
+    LOC_LOGv("LocApiPB: pbGfOpt - BreachTypeMask:%x Resp:%u, DwellTime:%u", gfOpt.breachTypeMask,
             gfOpt.responsiveness, gfOpt.dwellTime);
     return 0;
 }
@@ -5510,7 +5528,7 @@ int LocationApiPbMsgConv::pbConvertToGeofenceInfo(const PBGeofenceInfo &pbGfInfo
     gfInfo.longitude = pbGfInfo.longitude();
     // double radius = 3;
     gfInfo.radius = pbGfInfo.radius();
-    LOC_LOGd("LocApiPB: pbGfInfo - Lat:%lf, Lon:%lf, Rad:%lf", gfInfo.latitude, gfInfo.longitude,
+    LOC_LOGv("LocApiPB: pbGfInfo - Lat:%lf, Lon:%lf, Rad:%lf", gfInfo.latitude, gfInfo.longitude,
             gfInfo.radius);
     return 0;
 }
