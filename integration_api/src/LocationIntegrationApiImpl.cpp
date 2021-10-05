@@ -153,7 +153,7 @@ public:
                                 shared_ptr<LocIpcSender>& sender,
                                 MsgTask& msgTask) :
             LocIpcQrtrWatcher({LOCATION_CLIENT_API_QSOCKET_HALDAEMON_SERVICE_ID}),
-            mIpcListener(listener), mIpcSender(sender)
+            mIpcListener(listener), mIpcSender(sender),
             mMsgTask(msgTask), mKnownStatus(LocIpcQrtrWatcher::ServiceStatus::DOWN) {
     }
     inline virtual void onServiceStatusChange(int serviceId, int instanceId,
