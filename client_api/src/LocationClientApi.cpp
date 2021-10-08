@@ -546,7 +546,9 @@ DECLARE_TBL(GnssSvOptionsMask) = {
     {GNSS_SV_OPTIONS_HAS_ALMANAC_BIT, "ALM"},
     {GNSS_SV_OPTIONS_USED_IN_FIX_BIT, "USED_IN_FIX"},
     {GNSS_SV_OPTIONS_HAS_CARRIER_FREQUENCY_BIT, "CARRIER_FREQ"},
-    {GNSS_SV_OPTIONS_HAS_GNSS_SIGNAL_TYPE_BIT, "SIG_TYPES"}
+    {GNSS_SV_OPTIONS_HAS_GNSS_SIGNAL_TYPE_BIT, "SIG_TYPES"},
+    {GNSS_SV_OPTIONS_HAS_ELEVATION_BIT, "ELEVATION"},
+    {GNSS_SV_OPTIONS_HAS_AZIMUTH_BIT,   "AZIMUTH"},
 };
 // LocationFlagsMask
 DECLARE_TBL(LocationFlagsMask) = {
@@ -1053,6 +1055,8 @@ string GnssLocation::toString() const {
     out += FIELDVAL_DEC(protectAlongTrack);
     out += FIELDVAL_DEC(protectCrossTrack);
     out += FIELDVAL_DEC(protectVertical);
+    out += FIELDVAL_DEC(elapsedRealTimeNs);
+    out += FIELDVAL_DEC(elapsedRealTimeUncNs);
     uint32_t count = 0;
     for (auto dgnssId : dgnssStationId) {
         out += "dgnssStationId[";

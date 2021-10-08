@@ -146,7 +146,14 @@ enum GnssSvOptionsMask {
     /** This SV has valid GnssSv::carrierFrequencyHz. <br/> */
     GNSS_SV_OPTIONS_HAS_CARRIER_FREQUENCY_BIT   = (1<<3),
     /** This SV has valid GnssSv::gnssSignalTypeMask. <br/>   */
-    GNSS_SV_OPTIONS_HAS_GNSS_SIGNAL_TYPE_BIT    = (1<<4)
+    GNSS_SV_OPTIONS_HAS_GNSS_SIGNAL_TYPE_BIT    = (1<<4),
+    /** This SV has valid GnssSv::basebandCarrierToNoiseDbHz.
+    *  <br/> */
+    GNSS_SV_OPTIONS_HAS_BASEBAND_CARRIER_TO_NOISE_BIT = (1<<5),
+    /** This SV has valid GnssSv::elevation. <br/> */
+    GNSS_SV_OPTIONS_HAS_ELEVATION_BIT                 = (1<<6),
+    /** This SV has valid GnssSv::azimuth. <br/> */
+    GNSS_SV_OPTIONS_HAS_AZIMUTH_BIT                   = (1<<7),
 };
 
 /**
