@@ -1190,6 +1190,7 @@ LocationClientApiImpl::LocationClientApiImpl(CapabilitiesCb capabitiescb) :
         mCallbacksMask(0),
         mCapsMask((LocationCapabilitiesMask)0),
         mYearOfHw(0),
+        mSessionStartBootTimestampNs(0),
         mLastAddedClientIds({}),
         mCapabilitiesCb(capabitiescb),
         mResponseCb(nullptr),
@@ -1407,6 +1408,11 @@ void LocationClientApiImpl::updateCallbacks(LocationCallbacks& callbacks) {
         void proc() const {
             // set up the flag to indicate that responseCb is pending
             mApiImpl->mPositionSessionResponseCbPending = true;
+            if (mApiImpl->mSessionStartBootTimestampNs == 0) {
+                struct timespec ts;
+                clock_gettime(CLOCK_BOOTTIME, &ts);
+                mApiImpl->mSessionStartBootTimestampNs = ts.tv_sec * 1000000000ULL + ts.tv_nsec;
+            }
 
             //convert callbacks to callBacksMask
             LocationCallbacksMask callBacksMask = 0;
@@ -1570,6 +1576,7 @@ void LocationClientApiImpl::stopTracking(uint32_t) {
                     mApiImpl->mCallbacksMask |= E_LOC_CB_SYSTEM_INFO_BIT;
                 }
             }
+            mApiImpl->mSessionStartBootTimestampNs = 0;
             mApiImpl->mSessionId = LOCATION_CLIENT_SESSION_ID_INVALID;
         }
         LocationClientApiImpl* mApiImpl;
@@ -2468,7 +2475,8 @@ void IpcListener::onReceive(const char* data, uint32_t length,
                     gnssLocation.elapsedRealTimeNs  = location.elapsedRealTimeNs;
                     gnssLocation.elapsedRealTimeUncNs = location.elapsedRealTimeUncNs;
 
-                    mApiImpl.mLogger.log(gnssLocation, mApiImpl.mCapsMask);
+                    mApiImpl.mLogger.log(gnssLocation, mApiImpl.mCapsMask,
+                                         mApiImpl.mSessionStartBootTimestampNs);
                 }
                 break;
             }
@@ -2563,7 +2571,8 @@ void IpcListener::onReceive(const char* data, uint32_t length,
                     if (mApiImpl.mGnssLocationCb) {
                         mApiImpl.mGnssLocationCb(gnssLocation);
                     }
-                    mApiImpl.mLogger.log(gnssLocation, mApiImpl.mCapsMask);
+                    mApiImpl.mLogger.log(gnssLocation, mApiImpl.mCapsMask,
+                                         mApiImpl.mSessionStartBootTimestampNs);
                 }
                 break;
             }
@@ -2594,7 +2603,8 @@ void IpcListener::onReceive(const char* data, uint32_t length,
                         GnssLocation gnssLocation =
                             parseLocationInfo(pEngLocationsInfoIndMsg->engineLocationsInfo[i]);
                         engLocationsVector.push_back(gnssLocation);
-                        mApiImpl.mLogger.log(gnssLocation, mApiImpl.mCapsMask);
+                        mApiImpl.mLogger.log(gnssLocation, mApiImpl.mCapsMask,
+                                             mApiImpl.mSessionStartBootTimestampNs);
                     }
 
                     if (mApiImpl.mEngLocationsCb) {
