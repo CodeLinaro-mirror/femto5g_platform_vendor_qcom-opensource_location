@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018-2021, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -41,7 +41,7 @@
     #include <unordered_map>
 #endif
 
-#include <LocationAPI.h>
+#include <ILocationAPI.h>
 #include <LocIpc.h>
 #include <LocationApiPbMsgConv.h>
 
@@ -61,6 +61,8 @@ public:
                 mService(service),
                 mName(clientname),
                 mClientType(clientType),
+                mServiceId(-1),
+                mInstanceId(-1),
                 mCapabilityMask(0),
                 mTracking(false),
                 mBatching(false),
@@ -83,7 +85,12 @@ public:
             mSubscriptionMask = 0;
             mLocationApi = LocationAPI::createInstance(mCallbacks);
         }
-        updateSubscription(0);
+        if (mName.compare(0, sizeof(sEAP)-1, sEAP) == 0) {
+            SockNode::getId1Id2(mName.c_str(), mName.length(),
+                                mServiceId, mInstanceId);
+            LOC_LOGi("EAP client: clientname %s, service id: %d, instance id: %d",
+                     mName.c_str(), mServiceId, mInstanceId);
+        }
     }
 
     static shared_ptr<LocIpcSender> createSender(const string socket);
@@ -123,6 +130,8 @@ public:
     void sendTerrestrialFix(LocationError error, const Location& location);
 
     inline shared_ptr<LocIpcSender> getIpcSender () {return mIpcSender;};
+    inline int getServiceId() {return mServiceId;}  // for EAP client
+    inline int getInstanceId() {return mInstanceId;} // for EAP client
 
     void pingTest();
 
@@ -178,12 +187,14 @@ private:
     // name of this client
     const std::string mName;
     ClientType mClientType;
+    int mServiceId;  // For EAP client
+    int mInstanceId; // For EAP client
 
     // LocationAPI interface
     LocationCapabilitiesMask mCapabilityMask;
     uint32_t mSessionId;
     uint32_t mBatchingId;
-    LocationAPI* mLocationApi;
+    ILocationAPI* mLocationApi;
     LocationCallbacks mCallbacks;
     TrackingOptions mOptions;
     BatchingOptions mBatchOptions;

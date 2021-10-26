@@ -290,7 +290,7 @@ static void getInterSystemTimeBias(const char* interSystem,
                                    Gnss_InterSystemBiasStructType &interSystemBias,
                                    const qmiLocInterSystemBiasStructT_v02* pInterSysBias)
 {
-    LOC_LOGd("%s] Mask:%d, TimeBias:%f, TimeBiasUnc:%f,\n",
+    LOC_LOGv("%s] Mask:%d, TimeBias:%f, TimeBiasUnc:%f,\n",
              interSystem, pInterSysBias->validMask, pInterSysBias->timeBias,
              pInterSysBias->timeBiasUnc);
 
@@ -2912,7 +2912,7 @@ void LocApiV02 :: reportPosition (
                             location_report_ptr->gnssSvUsedSignalTypeList[idx];
                     GnssSignalTypeMask gnssSignalTypeMask =
                             convertQmiGnssSignalType(qmiGnssSignalType);
-                    LOC_LOGd("sv id %d, qmi signal type: 0x%" PRIx64 ", hal signal type: 0x%x",
+                    LOC_LOGv("sv id %d, qmi signal type: 0x%" PRIx64 ", hal signal type: 0x%x",
                              gnssSvIdUsed, qmiGnssSignalType, gnssSignalTypeMask);
 
                     if (gnssSvIdUsed <= GPS_SV_PRN_MAX)
@@ -3595,7 +3595,7 @@ void  LocApiV02 :: reportSv (
                             mask |= GNSS_SV_OPTIONS_HAS_CARRIER_FREQUENCY_BIT;
                             gnssSv_ref.gnssSignalTypeMask = convertQmiGnssSignalType(
                                     gnss_report_ptr->gnssSignalTypeList[i]);
-                            LOC_LOGd("sv id %d, qmi signal type: 0x%" PRIx64 ", "
+                            LOC_LOGv("sv id %d, qmi signal type: 0x%" PRIx64 ", "
                                      "hal signal type: 0x%x", gnssSv_ref.svId,
                                      gnss_report_ptr->gnssSignalTypeList[i],
                                      gnssSv_ref.gnssSignalTypeMask);
@@ -4763,20 +4763,20 @@ void LocApiV02 :: reportAtlRequest(
     LOC_LOGd("handle=%d agpsType=0x%X apnTypeMask=0x%X",
         connHandle, agpsType, apnTypeMask);
 
-    LocSubId agpsSubId = LOC_DEFAULT_SUB;
+    SubId agpsSubId = DEFAULT_SUB;
     if (server_request_ptr->subId_valid) {
         switch (server_request_ptr->subId) {
         case eQMI_LOC_SYS_MODEM_AS_ID_1_V02:
-            agpsSubId = LOC_PRIMARY_SUB;
+            agpsSubId = PRIMARY_SUB;
             break;
         case eQMI_LOC_SYS_MODEM_AS_ID_2_V02:
-            agpsSubId = LOC_SECONDARY_SUB;
+            agpsSubId = SECONDARY_SUB;
             break;
         case eQMI_LOC_SYS_MODEM_AS_ID_3_V02:
-            agpsSubId = LOC_TERTIARY_SUB;
+            agpsSubId = TERTIARY_SUB;
             break;
         default:
-            agpsSubId = LOC_DEFAULT_SUB;
+            agpsSubId = DEFAULT_SUB;
             break;
         }
     }
@@ -5298,6 +5298,18 @@ void LocApiV02::setGnssBiases() {
             }
             break;
 
+        case GNSS_SIGNAL_GPS_L2:
+        case GNSS_SIGNAL_QZSS_L2:
+            if (mTimeBiases.flags & BIAS_GPSL1_GPSL2C_VALID) {
+                measData->fullInterSignalBiasNs = mTimeBiases.gpsL1_gpsL2c;
+                measData->flags |= GNSS_MEASUREMENTS_DATA_FULL_ISB_BIT;
+            }
+            if (mTimeBiases.flags & BIAS_GPSL1_GPSL2C_UNC_VALID) {
+                measData->fullInterSignalBiasUncertaintyNs = mTimeBiases.gpsL1_gpsL2cUnc;
+                measData->flags |= GNSS_MEASUREMENTS_DATA_FULL_ISB_UNCERTAINTY_BIT;
+            }
+            break;
+
         case GNSS_SIGNAL_GLONASS_G1:
             if (mTimeBiases.flags & BIAS_GPSL1_GLOG1_VALID) {
                 measData->fullInterSignalBiasNs = -mTimeBiases.gpsL1_gloG1;
@@ -5332,6 +5344,22 @@ void LocApiV02::setGnssBiases() {
             if (tempFlagUnc == (mTimeBiases.flags & tempFlagUnc)) {
                 measData->fullInterSignalBiasUncertaintyNs =
                         mTimeBiases.gpsL1Unc + mTimeBiases.galE1Unc + mTimeBiases.galE1_galE5aUnc;
+                measData->flags |= GNSS_MEASUREMENTS_DATA_FULL_ISB_UNCERTAINTY_BIT;
+            }
+            break;
+
+        case GNSS_SIGNAL_GALILEO_E5B:
+            tempFlag = BIAS_GPSL1_VALID | BIAS_GALE1_VALID | BIAS_GALE1_GALE5B_VALID;
+            tempFlagUnc =
+                    BIAS_GPSL1_UNC_VALID | BIAS_GALE1_UNC_VALID | BIAS_GALE1_GALE5B_UNC_VALID;
+            if (tempFlag == (mTimeBiases.flags & tempFlag)) {
+                measData->fullInterSignalBiasNs =
+                        -mTimeBiases.gpsL1 + mTimeBiases.galE1 + mTimeBiases.galE1_galE5b;
+                measData->flags |= GNSS_MEASUREMENTS_DATA_FULL_ISB_BIT;
+            }
+            if (tempFlagUnc == (mTimeBiases.flags & tempFlagUnc)) {
+                measData->fullInterSignalBiasUncertaintyNs =
+                        mTimeBiases.gpsL1Unc + mTimeBiases.galE1Unc + mTimeBiases.galE1_galE5bUnc;
                 measData->flags |= GNSS_MEASUREMENTS_DATA_FULL_ISB_UNCERTAINTY_BIT;
             }
             break;
@@ -5405,10 +5433,7 @@ void LocApiV02::setGnssBiases() {
 
         /* not supported */
         case GNSS_SIGNAL_GPS_L1C:
-        case GNSS_SIGNAL_GPS_L2:
         case GNSS_SIGNAL_GLONASS_G2:
-        case GNSS_SIGNAL_GALILEO_E5B:
-        case GNSS_SIGNAL_QZSS_L2:
         case GNSS_SIGNAL_BEIDOU_B2I:
         case GNSS_SIGNAL_BEIDOU_B2AI:
         default:
@@ -5754,6 +5779,14 @@ void LocApiV02::convertGnssMeasurementsHeader(const Gnss_LocSvSystemEnumType loc
         getInterSystemTimeBias("gpsL1L2cTimeBias",
                                svMeasSetHead.gpsL1L2cTimeBias, interSystemBias);
         svMeasSetHead.flags |= GNSS_SV_MEAS_HEADER_HAS_GPSL1L2C_TIME_BIAS;
+        if (interSystemBias->validMask & QMI_LOC_SYS_TIME_BIAS_VALID_V02) {
+            mTimeBiases.gpsL1_gpsL2c = interSystemBias->timeBias * 1000000;
+            mTimeBiases.flags |= BIAS_GPSL1_GPSL2C_VALID;
+        }
+        if (interSystemBias->validMask & QMI_LOC_SYS_TIME_BIAS_UNC_VALID_V02) {
+            mTimeBiases.gpsL1_gpsL2cUnc = interSystemBias->timeBiasUnc * 1000000;
+            mTimeBiases.flags |= BIAS_GPSL1_GPSL2C_UNC_VALID;
+        }
     }
 
     if (1 == gnss_measurement_info.GloG1G2TimeBias_valid) {
@@ -5781,6 +5814,14 @@ void LocApiV02::convertGnssMeasurementsHeader(const Gnss_LocSvSystemEnumType loc
         getInterSystemTimeBias("galE1E5bTimeBias",
                                svMeasSetHead.galE1E5bTimeBias, interSystemBias);
         svMeasSetHead.flags |= GNSS_SV_MEAS_HEADER_HAS_GALE1E5B_TIME_BIAS;
+        if (interSystemBias->validMask & QMI_LOC_SYS_TIME_BIAS_VALID_V02) {
+            mTimeBiases.galE1_galE5b = interSystemBias->timeBias * 1000000;
+            mTimeBiases.flags |= BIAS_GALE1_GALE5B_VALID;
+        }
+        if (interSystemBias->validMask & QMI_LOC_SYS_TIME_BIAS_UNC_VALID_V02) {
+            mTimeBiases.galE1_galE5bUnc = interSystemBias->timeBiasUnc * 1000000;
+            mTimeBiases.flags |= BIAS_GALE1_GALE5B_UNC_VALID;
+        }
     }
 
     if (1 == gnss_measurement_info.gloTime_valid) {
