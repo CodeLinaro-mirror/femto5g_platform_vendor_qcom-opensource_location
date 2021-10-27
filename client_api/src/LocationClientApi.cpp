@@ -85,7 +85,6 @@ bool LocationClientApi::startPositionSession(
     ClientCallbacks cbs = {0};
     cbs.responsecb = responseCallback;
     cbs.locationcb = locationCallback;
-    mApiImpl->updateCallbackFunctions(cbs);
 
     // callback masks
     LocationCallbacks callbacksOption = {0};
@@ -97,7 +96,6 @@ bool LocationClientApi::startPositionSession(
         // for time based, register gnss location cb
         callbacksOption.gnssLocationInfoCb = [](::GnssLocationInfoNotification n) {};
     }
-    mApiImpl->updateCallbacks(callbacksOption);
 
     // options
     LocationOptions locationOption;
@@ -106,7 +104,7 @@ bool LocationClientApi::startPositionSession(
     locationOption.minInterval = intervalInMs;
     locationOption.minDistance = distanceInMeters;
     trackingOption.setLocationOptions(locationOption);
-    mApiImpl->startTracking(trackingOption);
+    mApiImpl->startPositionSession(cbs, REPORT_CB_TYPE_NONE, callbacksOption, trackingOption);
     return true;
 }
 
@@ -127,7 +125,6 @@ bool LocationClientApi::startPositionSession(
     ClientCallbacks cbs = {0};
     cbs.responsecb = responseCallback;
     cbs.gnssreportcbs = gnssReportCallbacks;
-    mApiImpl->updateCallbackFunctions(cbs, REPORT_CB_GNSS_INFO);
 
     // callback masks
     LocationCallbacks callbacksOption = {0};
@@ -154,7 +151,6 @@ bool LocationClientApi::startPositionSession(
             callbacksOption.gnssNHzMeasurementsCb = [](::GnssMeasurementsNotification n) {};
         }
     }
-    mApiImpl->updateCallbacks(callbacksOption);
 
     // options
     LocationOptions locationOption;
@@ -163,7 +159,7 @@ bool LocationClientApi::startPositionSession(
     locationOption.minInterval = intervalInMs;
     locationOption.minDistance = 0;
     trackingOption.setLocationOptions(locationOption);
-    mApiImpl->startTracking(trackingOption);
+    mApiImpl->startPositionSession(cbs, REPORT_CB_GNSS_INFO, callbacksOption, trackingOption);
     return true;
 }
 
@@ -184,7 +180,6 @@ bool LocationClientApi::startPositionSession(
     ClientCallbacks cbs = {0};
     cbs.responsecb = responseCallback;
     cbs.engreportcbs = engReportCallbacks;
-    mApiImpl->updateCallbackFunctions(cbs, REPORT_CB_ENGINE_INFO);
 
     // callback masks
     LocationCallbacks callbacksOption = {0};
@@ -213,7 +208,6 @@ bool LocationClientApi::startPositionSession(
             callbacksOption.gnssNHzMeasurementsCb = [](::GnssMeasurementsNotification n) {};
         }
     }
-    mApiImpl->updateCallbacks(callbacksOption);
 
     // options
     LocationOptions locationOption;
@@ -224,7 +218,7 @@ bool LocationClientApi::startPositionSession(
     locationOption.locReqEngTypeMask =(::LocReqEngineTypeMask)locEngReqMask;
     trackingOption.setLocationOptions(locationOption);
 
-    mApiImpl->startTracking(trackingOption);
+    mApiImpl->startPositionSession(cbs, REPORT_CB_ENGINE_INFO, callbacksOption, trackingOption);
     return true;
 }
 
@@ -250,7 +244,6 @@ bool LocationClientApi::startTripBatchingSession(uint32_t minInterval, uint32_t 
     ClientCallbacks cbs = {0};
     cbs.responsecb = responseCallback;
     cbs.batchingcb = batchingCallback;
-    mApiImpl->updateCallbackFunctions(cbs);
 
     // callback masks
     LocationCallbacks callbacksOption = {0};
@@ -259,7 +252,6 @@ bool LocationClientApi::startTripBatchingSession(uint32_t minInterval, uint32_t 
             BatchingOptions batchingOptions) {};
     callbacksOption.batchingStatusCb = [](BatchingStatusInfo batchingStatus,
             std::list<uint32_t>& listOfcompletedTrips) {};
-    mApiImpl->updateCallbacks(callbacksOption);
 
     LocationOptions locOption = {};
     locOption.size = sizeof(locOption);
@@ -271,7 +263,8 @@ bool LocationClientApi::startTripBatchingSession(uint32_t minInterval, uint32_t 
     batchOption.size = sizeof(batchOption);
     batchOption.batchingMode = BATCHING_MODE_TRIP;
     batchOption.setLocationOptions(locOption);
-    mApiImpl->startBatching(batchOption);
+
+    mApiImpl->startBatchingSession(cbs, REPORT_CB_TYPE_NONE, callbacksOption, batchOption);
     return true;
 }
 
@@ -291,14 +284,12 @@ bool LocationClientApi::startRoutineBatchingSession(uint32_t minInterval, uint32
     ClientCallbacks cbs = {0};
     cbs.responsecb = responseCallback;
     cbs.batchingcb = batchingCallback;
-    mApiImpl->updateCallbackFunctions(cbs);
 
     // callback masks
     LocationCallbacks callbacksOption = {0};
     callbacksOption.responseCb = [](::LocationError err, uint32_t id) {};
     callbacksOption.batchingCb = [](size_t count, ::Location* location,
             BatchingOptions batchingOptions) {};
-    mApiImpl->updateCallbacks(callbacksOption);
 
     LocationOptions locOption = {};
     locOption.size = sizeof(locOption);
@@ -310,7 +301,7 @@ bool LocationClientApi::startRoutineBatchingSession(uint32_t minInterval, uint32
     batchOption.size = sizeof(batchOption);
     batchOption.batchingMode = BATCHING_MODE_ROUTINE;
     batchOption.setLocationOptions(locOption);
-    mApiImpl->startBatching(batchOption);
+    mApiImpl->startBatchingSession(cbs, REPORT_CB_TYPE_NONE, callbacksOption, batchOption);
     return true;
 }
 
@@ -336,43 +327,26 @@ void LocationClientApi::addGeofences(std::vector<Geofence>& geofences,
     ClientCallbacks cbs = {0};
     cbs.collectivecb = responseCallback;
     cbs.gfbreachcb = gfBreachCb;
-    mApiImpl->updateCallbackFunctions(cbs);
 
     // callback masks
     LocationCallbacks callbacksOption = {0};
     callbacksOption.responseCb = [](LocationError err, uint32_t id) {};
     callbacksOption.collectiveResponseCb = [](size_t, LocationError*, uint32_t*) {};
-    callbacksOption.geofenceBreachCb = [](GeofenceBreachNotification geofenceBreachNotification)
-            {};
-    mApiImpl->updateCallbacks(callbacksOption);
-    size_t count = geofences.size();
-    mApiImpl->mLastAddedClientIds.clear();
-    if (count > 0) {
-        GeofenceOption* gfOptions = (GeofenceOption*)malloc(sizeof(GeofenceOption) * count);
-        GeofenceInfo* gfInfos = (GeofenceInfo*)malloc(sizeof(GeofenceInfo) * count);
+    callbacksOption.geofenceBreachCb =
+            [](GeofenceBreachNotification geofenceBreachNotification) {};
 
-        for (int i=0; i<count; ++i) {
-            if (geofences[i].mGeofenceImpl) {
-                continue;
-            }
-            gfOptions[i].breachTypeMask = geofences[i].getBreachType();
-            gfOptions[i].responsiveness = geofences[i].getResponsiveness();
-            gfOptions[i].dwellTime = geofences[i].getDwellTime();
-            gfOptions[i].size = sizeof(gfOptions[i]);
-            gfInfos[i].latitude = geofences[i].getLatitude();
-            gfInfos[i].longitude = geofences[i].getLongitude();
-            gfInfos[i].radius = geofences[i].getRadius();
-            gfInfos[i].size = sizeof(gfInfos[i]);
-            std::shared_ptr<GeofenceImpl> gfImpl(new GeofenceImpl(&geofences[i]));
-            gfImpl->bindGeofence(&geofences[i]);
-            mApiImpl->mLastAddedClientIds.push_back(gfImpl->getClientId());
-            LOC_LOGd("Geofence LastAddedClientId: %d", gfImpl->getClientId());
-            mApiImpl->addGeofenceMap(mApiImpl->mLastAddedClientIds[i], geofences[i]);
+    std::vector<Geofence> geofencesToAdd;
+    for (int i = 0; i < geofences.size(); ++i) {
+        if (!geofences[i].mGeofenceImpl) {
+            geofencesToAdd.emplace_back(geofences[i]);
         }
-
-        mApiImpl->addGeofences(geofences.size(), reinterpret_cast<GeofenceOption*>(gfOptions),
-                reinterpret_cast<GeofenceInfo*>(gfInfos));
     }
+
+    if (!geofencesToAdd.size()) {
+        LOC_LOGe ("Empty geofences");
+        return;
+    }
+    mApiImpl->addGeofences(cbs, REPORT_CB_TYPE_NONE, callbacksOption, geofencesToAdd);
 }
 void LocationClientApi::removeGeofences(std::vector<Geofence>& geofences) {
     if (!mApiImpl) {
@@ -390,11 +364,6 @@ void LocationClientApi::removeGeofences(std::vector<Geofence>& geofences) {
             }
             gfIds[i] = geofences[i].mGeofenceImpl->getClientId();
             LOC_LOGd("removeGeofences id : %d", gfIds[i]);
-        }
-        if (!mApiImpl->checkGeofenceMap(geofences.size(), gfIds)) {
-            LOC_LOGe ("Wrong geofence IDs");
-            free(gfIds);
-            return;
         }
         mApiImpl->removeGeofences(count, gfIds);
     }
@@ -422,12 +391,7 @@ void LocationClientApi::modifyGeofences(std::vector<Geofence>& geofences) {
             gfIds[i] = geofences[i].mGeofenceImpl->getClientId();
             LOC_LOGd("modifyGeofences id : %d", gfIds[i]);
         }
-        if (!mApiImpl->checkGeofenceMap(geofences.size(), gfIds)) {
-            LOC_LOGe ("Wrong geofence IDs");
-            free(gfIds);
-            free(gfOptions);
-            return;
-        }
+
         mApiImpl->modifyGeofences(geofences.size(), const_cast<uint32_t*>(gfIds),
                 reinterpret_cast<GeofenceOption*>(gfOptions));
     }
@@ -450,11 +414,6 @@ void LocationClientApi::pauseGeofences(std::vector<Geofence>& geofences) {
             gfIds[i] = geofences[i].mGeofenceImpl->getClientId();
             LOC_LOGd("pauseGeofences id : %d", gfIds[i]);
         }
-        if (!mApiImpl->checkGeofenceMap(geofences.size(), gfIds)) {
-            LOC_LOGe ("Wrong geofence IDs");
-            free(gfIds);
-            return;
-        }
         mApiImpl->pauseGeofences(count, gfIds);
     }
 }
@@ -475,11 +434,6 @@ void LocationClientApi::resumeGeofences(std::vector<Geofence>& geofences) {
             }
             gfIds[i] = geofences[i].mGeofenceImpl->getClientId();
             LOC_LOGd("resumeGeofences id : %d", gfIds[i]);
-        }
-        if (!mApiImpl->checkGeofenceMap(geofences.size(), gfIds)) {
-            LOC_LOGe ("Wrong geofence IDs");
-            free(gfIds);
-            return;
         }
         mApiImpl->resumeGeofences(count, gfIds);
     }
