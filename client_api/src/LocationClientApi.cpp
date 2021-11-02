@@ -820,9 +820,11 @@ DECLARE_TBL(GnssMeasurementsDataFlagsMask) = {
     {GNSS_MEASUREMENTS_DATA_MULTIPATH_INDICATOR_BIT, "multipathIndicator"},
     {GNSS_MEASUREMENTS_DATA_SIGNAL_TO_NOISE_RATIO_BIT, "signalToNoiseRatioDb"},
     {GNSS_MEASUREMENTS_DATA_AUTOMATIC_GAIN_CONTROL_BIT, "agcLevelDb"},
-    {GNSS_MEASUREMENTS_DATA_FULL_ISB_BIT, "interSignalBiasNs"},
-    {GNSS_MEASUREMENTS_DATA_FULL_ISB_UNCERTAINTY_BIT, "interSignalBiasUncertaintyNs"},
-    {GNSS_MEASUREMENTS_DATA_CYCLE_SLIP_COUNT_BIT, "cycleSlipCount"}
+    {GNSS_MEASUREMENTS_DATA_FULL_ISB_BIT, "fullInterSignalBiasNs"},
+    {GNSS_MEASUREMENTS_DATA_FULL_ISB_UNCERTAINTY_BIT, "fullInterSignalBiasUncertaintyNs"},
+    {GNSS_MEASUREMENTS_DATA_CYCLE_SLIP_COUNT_BIT, "cycleSlipCount"},
+    {GNSS_MEASUREMENTS_DATA_GNSS_SIGNAL_TYPE_BIT, "gnssSignalType"},
+    {GNSS_MEASUREMENTS_DATA_BASEBAND_CARRIER_TO_NOISE_BIT, "basebandCarrierToNoiseDbHz"}
 };
 // GnssMeasurementsStateMask
 DECLARE_TBL(GnssMeasurementsStateMask) = {
@@ -1093,7 +1095,12 @@ string GnssLocation::toString() const {
     out += FIELDVAL_DEC(enuVelocityVRPBased[1]);
     out += FIELDVAL_DEC(enuVelocityVRPBased[2]);
     out += FIELDVAL_MASK(drSolutionStatusMask, DrSolutionStatusMask_tbl);
+    out += FIELDVAL_DEC(altitudeAssumed);
     out += FIELDVAL_MASK(sessionStatus, LocSessionStatus_tbl);
+    out += FIELDVAL_DEC(integrityRiskUsed);
+    out += FIELDVAL_DEC(protectAlongTrack);
+    out += FIELDVAL_DEC(protectCrossTrack);
+    out += FIELDVAL_DEC(protectVertical);
 
     return out;
 }
@@ -1157,9 +1164,10 @@ string GnssMeasurementsData::toString() const {
     out += FIELDVAL_DEC(agcLevelDb);
     out += FIELDVAL_DEC(basebandCarrierToNoiseDbHz);
     out += FIELDVAL_MASK(gnssSignalType, GnssSignalTypeMask_tbl);
-    out += FIELDVAL_DEC(interSignalBiasNs);
-    out += FIELDVAL_DEC(interSignalBiasUncertaintyNs);
+    out += FIELDVAL_DEC(fullInterSignalBiasNs);
+    out += FIELDVAL_DEC(fullInterSignalBiasUncertaintyNs);
     out += FIELDVAL_DEC(cycleSlipCount);
+    out += FIELDVAL_DEC(basebandCarrierToNoiseDbHz);
 
     return out;
 }
