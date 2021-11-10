@@ -123,6 +123,25 @@ public:
 };
 
 /******************************************************************************
+LocIpcQrtrWatcher override
+******************************************************************************/
+class HalDaemonQrtrClientWatcher : public LocIpcQrtrWatcher {
+    LocationApiService* mService;
+public:
+    inline HalDaemonQrtrClientWatcher(LocationApiService* service) :
+            LocIpcQrtrWatcher({LOCATION_CLIENT_API_QSOCKET_CLIENT_SERVICE_ID}),
+            mService(service) {
+    }
+    inline virtual void onServiceStatusChange(int serviceId, int instanceId,
+            LocIpcQrtrWatcher::ServiceStatus status, const LocIpcSender& refSender) {
+        if (LocIpcQrtrWatcher::ServiceStatus::DOWN == status) {
+             LOC_LOGi(">-- client deleted by qrtr: (%d, %d)", serviceId, instanceId);
+             mService->deleteEapClientByIds(serviceId, instanceId);
+        }
+    }
+};
+
+/******************************************************************************
 LocationApiService - constructors
 ******************************************************************************/
 LocationApiService::LocationApiService(const configParamToRead & configParamRead) :
@@ -161,7 +180,7 @@ LocationApiService::LocationApiService(const configParamToRead & configParamRead
         onGnssConfigCallback(sessionId, config);
     };
 
-    mLocationControlApi = LocationControlAPI::createInstance(mControlCallabcks);
+    mLocationControlApi = LocationControlAPI::getInstance(mControlCallabcks);
     if (nullptr == mLocationControlApi) {
         LOC_LOGd("Failed to create LocationControlAPI");
         return;
@@ -223,9 +242,11 @@ LocationApiService::LocationApiService(const configParamToRead & configParamRead
     // blocking: set to false
     mIpc.startNonBlockingListening(recver);
 
-    mBlockingRecver = LocIpc::getLocIpcQrtrRecver(make_shared<LocHaldIpcListener>(*this),
+    mBlockingRecver = LocIpc::getLocIpcQrtrRecver(
+            make_shared<LocHaldIpcListener>(*this),
             LOCATION_CLIENT_API_QSOCKET_HALDAEMON_SERVICE_ID,
-            LOCATION_CLIENT_API_QSOCKET_HALDAEMON_INSTANCE_ID);
+            LOCATION_CLIENT_API_QSOCKET_HALDAEMON_INSTANCE_ID,
+            make_shared<HalDaemonQrtrClientWatcher>(this));
     mIpc.startBlockingListening(*mBlockingRecver);
 }
 
@@ -612,6 +633,19 @@ void LocationApiService::processClientMsg(const char* data, uint32_t length) {
             break;
         }
 
+        case E_INTAPI_CONFIG_ENGINE_INTEGRITY_RISK_MSG_ID : {
+            PBLocConfigEngineIntegrityRiskReqMsg pbLocConfEngineIntegrityRisk;
+            if (0 == pbLocConfEngineIntegrityRisk.ParseFromString(pbLocApiMsg.payload())) {
+                LOC_LOGe("Failed to parse pbLocConfEngineIntegrityRisk from payload!!");
+                return;
+            }
+            LocConfigEngineIntegrityRiskReqMsg msg(sockName.c_str(),
+                                                   pbLocConfEngineIntegrityRisk,
+                                                   &mPbufMsgConv);
+            configEngineIntegrityRisk(reinterpret_cast<LocConfigEngineIntegrityRiskReqMsg*>(&msg));
+            break;
+        }
+
         case E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID: {
             getGnssConfig(&locApiMsg, GNSS_CONFIG_FLAGS_ROBUST_LOCATION_BIT);
             break;
@@ -687,6 +721,19 @@ void LocationApiService::deleteClientbyName(const std::string clientname) {
     mTerrestrialFixReqs.erase(clientname);
     pClient->cleanup();
 }
+
+void LocationApiService::deleteEapClientByIds(int serviceId, int instanceId) {
+
+    std::lock_guard<std::mutex> lock(mMutex);
+
+    const char* clientName = getClientNameByIds(serviceId, instanceId);
+    if (clientName) {
+        LOC_LOGi(">-- service id: %d, instance id: %d, client name: %s",
+                 serviceId, instanceId, clientName);
+        deleteClientbyName(std::string(clientName));
+    }
+}
+
 /******************************************************************************
 LocationApiService - implementation - tracking
 ******************************************************************************/
@@ -1293,6 +1340,20 @@ void LocationApiService::configOutputNmeaTypes(const LocConfigOutputNmeaTypesReq
 
     LOC_LOGi(">-- client %s, mEnabledNmeaTypes 0x%x",  pMsg->mSocketName, pMsg->mEnabledNmeaTypes);
     uint32_t sessionId = mLocationControlApi->configOutputNmeaTypes(pMsg->mEnabledNmeaTypes);
+    addConfigRequestToMap(sessionId, pMsg);
+}
+
+void LocationApiService::configEngineIntegrityRisk(const LocConfigEngineIntegrityRiskReqMsg* pMsg) {
+    if (!pMsg) {
+        return;
+    }
+    std::lock_guard<std::mutex> lock(mMutex);
+
+    LOC_LOGi("client %s, eng type 0x%x, integrity risk %d",
+             pMsg->mSocketName, pMsg->mEngType, pMsg->mIntegrityRisk);
+
+    uint32_t sessionId =
+            mLocationControlApi->configEngineIntegrityRisk(pMsg->mEngType, pMsg->mIntegrityRisk);
     addConfigRequestToMap(sessionId, pMsg);
 }
 
