@@ -8299,6 +8299,9 @@ LocPosTechMask LocApiV02 :: convertPosTechMask(
    if (mask & QMI_LOC_POS_TECH_MASK_PDR_V02)
       locTechMask |= LOC_POS_TECH_MASK_PDR;
 
+   if (mask & QMI_LOC_POS_TECH_MASK_PROPAGATED_V02)
+      locTechMask |= LOC_POS_TECH_MASK_PROPAGATED;
+
    return locTechMask;
 }
 
