@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2020, 2022, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -62,8 +62,8 @@
  *THIS IS AN AUTO GENERATED FILE. DO NOT ALTER IN ANY WAY
  *====*====*====*====*====*====*====*====*====*====*====*====*====*====*====*/
 
-/* This file was generated with Tool version 6.14.9
-   It was generated on: Tue Jun 15 2021 (Spin 0)
+/* This file was generated with Tool version 6.14.7
+   It was generated on: Mon Nov  8 2021 (Spin 0)
    From IDL File: location_service_v02.idl */
 
 /** @defgroup loc_qmi_consts Constant values defined in the IDL */
@@ -89,7 +89,7 @@ extern "C" {
 /** Major Version Number of the IDL used to generate this file */
 #define LOC_V02_IDL_MAJOR_VERS 0x02
 /** Revision Number of the IDL used to generate this file */
-#define LOC_V02_IDL_MINOR_VERS 0x8F
+#define LOC_V02_IDL_MINOR_VERS 0x93
 /** Major Version Number of the qmi_idl_compiler used to generate this file */
 #define LOC_V02_IDL_TOOL_VERS 0x06
 /** Maximum Defined Message ID */
@@ -1198,7 +1198,8 @@ typedef uint32_t qmiLocPosTechMaskT_v02;
         generate the fix. \n  */
 #define QMI_LOC_POS_TECH_MASK_DRE_V02 ((qmiLocPosTechMaskT_v02)0x00000100) /**<  Dead reckoning engine (DRE) was used to generate the fix. \n  */
 #define QMI_LOC_POS_TECH_MASK_INS_V02 ((qmiLocPosTechMaskT_v02)0x00000200) /**<  INS was used to generate the fix. \n  */
-#define QMI_LOC_POS_TECH_MASK_PDR_V02 ((qmiLocPosTechMaskT_v02)0x00000400) /**<  PDR was used to generate the fix.  */
+#define QMI_LOC_POS_TECH_MASK_PDR_V02 ((qmiLocPosTechMaskT_v02)0x00000400) /**<  PDR was used to generate the fix. \n  */
+#define QMI_LOC_POS_TECH_MASK_PROPAGATED_V02 ((qmiLocPosTechMaskT_v02)0x00000800) /**<  Fix generated is a propagated fix.  */
 /** @addtogroup loc_qmi_enums
     @{
   */
@@ -1691,7 +1692,8 @@ typedef struct {
         generate the fix. \n
       - QMI_LOC_POS_TECH_MASK_DRE (0x00000100) --  Dead reckoning engine (DRE) was used to generate the fix. \n
       - QMI_LOC_POS_TECH_MASK_INS (0x00000200) --  INS was used to generate the fix. \n
-      - QMI_LOC_POS_TECH_MASK_PDR (0x00000400) --  PDR was used to generate the fix.
+      - QMI_LOC_POS_TECH_MASK_PDR (0x00000400) --  PDR was used to generate the fix. \n
+      - QMI_LOC_POS_TECH_MASK_PROPAGATED (0x00000800) --  Fix generated is a propagated fix.
  */
 
   /* Optional */
@@ -3465,11 +3467,11 @@ typedef struct {
        - 0x00 (FALSE) -- Civic Address is not needed \n
        - 0x01 (TRUE) -- Civic Address is needed
 
-    NOTE: If the civic address is available with the AP, the AP Shall inject
-    the same using the new QMI API QMI_LOC_INJECT_LOCATION_CIVIC_ADDRESS.
+	NOTE: If the civic address is available with the AP, the AP Shall inject
+	the same using the new QMI API QMI_LOC_INJECT_LOCATION_CIVIC_ADDRESS.
 
         If the civic address is not available, the AP shall NOT use the new QMI API
-    QMI_LOC_INJECT_LOCATION_CIVIC_ADDRESS. The existing DBH injection API should
+	QMI_LOC_INJECT_LOCATION_CIVIC_ADDRESS. The existing DBH injection API should
         be used to inject hybrid location is available.
   */
 }qmiLocEventWifiReqIndMsgT_v02;  /* Message */
@@ -5543,8 +5545,9 @@ typedef enum {
   eQMI_LOC_POSITION_SRC_GNSS_TERRESTRIAL_HYBRID_V02 = 5, /**<  Position source is GNSS Terrestrial Hybrid \n  */
   eQMI_LOC_POSITION_SRC_OTHER_V02 = 6, /**<  Other sources \n  */
   eQMI_LOC_POSITION_SRC_DRE_V02 = 7, /**<  Position source is the dead reckoning engine \n  */
-  eQMI_LOC_POSITION_SRC_FLP_V02 = 8, /**<  Position source is Fused Location Provider  */
-  eQMI_LOC_POSITION_SRC_NLP_V02 = 9, /**<  Position source is Network Location Provider  */
+  eQMI_LOC_POSITION_SRC_FLP_V02 = 8, /**<  Position source is Fused Location Provider \n */
+  eQMI_LOC_POSITION_SRC_NLP_V02 = 9, /**<  Position source is Network Location Provider \n  */
+  eQMI_LOC_POSITION_SRC_FLP_ALE_V02 = 10, /**<  Position source is derived from Source MPSS  */
   QMILOCPOSITIONSRCENUMT_MAX_ENUM_VAL_V02 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
 }qmiLocPositionSrcEnumT_v02;
 /**
@@ -5710,8 +5713,9 @@ typedef struct {
       - eQMI_LOC_POSITION_SRC_GNSS_TERRESTRIAL_HYBRID (5) --  Position source is GNSS Terrestrial Hybrid \n
       - eQMI_LOC_POSITION_SRC_OTHER (6) --  Other sources \n
       - eQMI_LOC_POSITION_SRC_DRE (7) --  Position source is the dead reckoning engine \n
-      - eQMI_LOC_POSITION_SRC_FLP (8) --  Position source is Fused Location Provider
-      - eQMI_LOC_POSITION_SRC_NLP (9) --  Position source is Network Location Provider  \n
+      - eQMI_LOC_POSITION_SRC_FLP (8) --  Position source is Fused Location Provider \n
+      - eQMI_LOC_POSITION_SRC_NLP (9) --  Position source is Network Location Provider \n
+      - eQMI_LOC_POSITION_SRC_FLP_ALE (10) --  Position source is derived from Source MPSS  \n
  If altitude is specified and the altitude source is not specified, the engine
  assumes that the altitude was obtained using the specified position source. \n
  If both altitude and altitude source are specified, the engine assumes
@@ -5932,7 +5936,10 @@ typedef struct {
   /*  Clients Config   */
   uint8_t clientsConfig_valid;  /**< Must be set to true if clientsConfig is being passed */
   qmiLocClientsMaskT_v02 clientsConfig;
-  /**<   Bitmask indicating the Clients location request Lock Configuration \n
+  /**<   Bitmask indicating the Clients location request Lock Configuration
+ Bit field value description:
+ 1 - Client Locked
+ 0 - Client Unlocked \n
  Valid bitmasks: \n
       - QMI_LOC_MASK_UTH_CLIENT_IMS (0x00000001) --  Lock/Unlock IMS Client \n
       - QMI_LOC_MASK_UTH_CLIENT_SIM (0x00000002) --  Lock/Unlock SIM Client \n
@@ -6065,7 +6072,10 @@ typedef struct {
   /*  Clients Config   */
   uint8_t clientsConfig_valid;  /**< Must be set to true if clientsConfig is being passed */
   qmiLocClientsMaskT_v02 clientsConfig;
-  /**<   Bitmask indicating the Clients location request Lock Configuration \n
+  /**<   Bitmask indicating the Clients location request Lock Configuration
+ Bit field value description:
+ 1 - Client Locked
+ 0 - Client Unlocked \n
  Valid bitmasks: \n
       - QMI_LOC_MASK_UTH_CLIENT_IMS (0x00000001) --  Lock/Unlock IMS Client \n
       - QMI_LOC_MASK_UTH_CLIENT_SIM (0x00000002) --  Lock/Unlock SIM Client \n
@@ -11520,7 +11530,8 @@ typedef struct {
         generate the fix. \n
       - QMI_LOC_POS_TECH_MASK_DRE (0x00000100) --  Dead reckoning engine (DRE) was used to generate the fix. \n
       - QMI_LOC_POS_TECH_MASK_INS (0x00000200) --  INS was used to generate the fix. \n
-      - QMI_LOC_POS_TECH_MASK_PDR (0x00000400) --  PDR was used to generate the fix.
+      - QMI_LOC_POS_TECH_MASK_PDR (0x00000400) --  PDR was used to generate the fix. \n
+      - QMI_LOC_POS_TECH_MASK_PROPAGATED (0x00000800) --  Fix generated is a propagated fix.
  */
 
   /* Optional */
@@ -12752,7 +12763,8 @@ typedef struct {
         generate the fix. \n
       - QMI_LOC_POS_TECH_MASK_DRE (0x00000100) --  Dead reckoning engine (DRE) was used to generate the fix. \n
       - QMI_LOC_POS_TECH_MASK_INS (0x00000200) --  INS was used to generate the fix. \n
-      - QMI_LOC_POS_TECH_MASK_PDR (0x00000400) --  PDR was used to generate the fix.
+      - QMI_LOC_POS_TECH_MASK_PDR (0x00000400) --  PDR was used to generate the fix. \n
+      - QMI_LOC_POS_TECH_MASK_PROPAGATED (0x00000800) --  Fix generated is a propagated fix.
  */
 
   uint64_t timestampUtc;
@@ -13037,7 +13049,7 @@ typedef struct {
        - 0x01 (TRUE) -- GPS engine is in E911 mode \n
        - 0x00 (FALSE) -- GPS engine is not in E911 mode
 
-       Note: e911Mode shall be set as TRUE for Non-E911 Wifi Ap injections.
+	   Note: e911Mode shall be set as TRUE for Non-E911 Wifi Ap injections.
     */
 }qmiLocEventInjectWifiApDataReqIndMsgT_v02;  /* Message */
 /**
@@ -16857,8 +16869,9 @@ typedef struct {
       - eQMI_LOC_POSITION_SRC_GNSS_TERRESTRIAL_HYBRID (5) --  Position source is GNSS Terrestrial Hybrid \n
       - eQMI_LOC_POSITION_SRC_OTHER (6) --  Other sources \n
       - eQMI_LOC_POSITION_SRC_DRE (7) --  Position source is the dead reckoning engine \n
-      - eQMI_LOC_POSITION_SRC_FLP (8) --  Position source is Fused Location Provider
-      - eQMI_LOC_POSITION_SRC_NLP (9) --  Position source is Network Location Provider
+      - eQMI_LOC_POSITION_SRC_FLP (8) --  Position source is Fused Location Provider \n
+      - eQMI_LOC_POSITION_SRC_NLP (9) --  Position source is Network Location Provider \n
+      - eQMI_LOC_POSITION_SRC_FLP_ALE (10) --  Position source is derived from Source MPSS
  */
 
   /* Optional */
@@ -18122,6 +18135,7 @@ typedef enum {
   eQMI_LOC_SUPPORTED_FEATURE_MULTIBAND_CONFIG_V02 = 14, /**<  Support the multiband GNSS configuration feature  */
   eQMI_LOC_SUPPORTED_FEATURE_QMI_AGNSS_CONFIG_DISABLED_V02 = 15, /**<  Support the AGNSS configuration for DSDA   */
   eQMI_LOC_SUPPORTED_FEATURE_MULTIPLE_ATTRIBUTION_APPS_V02 = 16, /**<  Support the Multiple Attribution Apps(UTH clients Lock control) feature    */
+  eQMI_LOC_SUPPORTED_FEATURE_FLP_NLP_SOURCE_V02 = 17, /**<  Support the FLP, NLP Z-Source provider feature  */
   QMILOCSUPPORTEDFEATUREENUMT_MAX_ENUM_VAL_V02 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
 }qmiLocSupportedFeatureEnumT_v02;
 /**
@@ -19999,9 +20013,9 @@ typedef enum {
 typedef struct {
 
   /* Mandatory */
-  /*  Engine State */
+  /*  Engine State (Deprecated) */
   qmiLocEngineLockStateEnumT_v02 engineLockState;
-  /**<   Location engine lock state.
+  /**<   (Deprecated) Location engine lock state.
  Values: \n
       - eQMI_LOC_ENGINE_LOCK_STATE_ENABLED (1) --  Location engine is enabled \n
       - eQMI_LOC_ENGINE_LOCK_STATE_DISABLED (2) --  location engine is disabled for mobile-initiated sessions
@@ -22557,6 +22571,13 @@ typedef enum {
   QMILOCPARAMETERTYPEENUMT_MIN_ENUM_VAL_V02 = -2147483647, /**< To force a 32 bit signed enum.  Do not change or use*/
   eQMI_LOC_PARAMETER_TYPE_RESERVED_V02 = 0, /**<  Do not use.  */
   eQMI_LOC_PARAMETER_TYPE_MINIMUM_SV_ELEVATION_V02 = 1, /**<  Minimum SV elevation to use for computing position.  */
+  eQMI_LOC_PARAMETER_TYPE_CONSTELLATION_DISABLE_CONFIG_V02 = 2, /**<  GNSS constellation disable config to be written to non-volatile memory.
+       This parameter is only supported on certain legacy SPs where alternative
+       API(s) to disable constellation(s) are not available. \n
+
+       Note: Only constellations than can be disabled via NV shall be supported. \n
+       For ex. GPS and QZSS cannot be disabled via NV and will be ignored, if set. \n
+       NAVIC may be disabled only if supported and NV controllable.  */
   QMILOCPARAMETERTYPEENUMT_MAX_ENUM_VAL_V02 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
 }qmiLocParameterTypeEnumT_v02;
 /**
@@ -22576,6 +22597,13 @@ typedef struct {
   /**<   Parameter type. Values: \n
       - eQMI_LOC_PARAMETER_TYPE_RESERVED (0) --  Do not use.
       - eQMI_LOC_PARAMETER_TYPE_MINIMUM_SV_ELEVATION (1) --  Minimum SV elevation to use for computing position.
+      - eQMI_LOC_PARAMETER_TYPE_CONSTELLATION_DISABLE_CONFIG (2) --  GNSS constellation disable config to be written to non-volatile memory.
+       This parameter is only supported on certain legacy SPs where alternative
+       API(s) to disable constellation(s) are not available. \n
+
+       Note: Only constellations than can be disabled via NV shall be supported. \n
+       For ex. GPS and QZSS cannot be disabled via NV and will be ignored, if set. \n
+       NAVIC may be disabled only if supported and NV controllable.
  */
 
   /* Optional */
@@ -22588,6 +22616,19 @@ typedef struct {
        - Units -- Degrees \n
        - Range -- 0 - 90
   */
+
+  /* Optional */
+  /*  GNSS Constellation Configuration */
+  uint8_t constellationConfig_valid;  /**< Must be set to true if constellationConfig is being passed */
+  qmiLocGNSSConstellEnumT_v02 constellationConfig;
+  /**<   Constellation Configuration. Valid values: \n
+      - eQMI_SYSTEM_GPS (0x01) --  Enable GPS \n
+      - eQMI_SYSTEM_GLO (0x02) --  Enable GLONASS \n
+      - eQMI_SYSTEM_BDS (0x04) --  Enable BDS \n
+      - eQMI_SYSTEM_GAL (0x08) --  Enable Galileo \n
+      - eQMI_SYSTEM_QZSS (0x10) --  Enable QZSS \n
+      - eQMI_SYSTEM_NAVIC (0x20) --  Enable NavIC
+ */
 }qmiLocSetParameterReqMsgT_v02;  /* Message */
 /**
     @}
@@ -22606,6 +22647,13 @@ typedef struct {
   /**<   Parameter type. Values:
       - eQMI_LOC_PARAMETER_TYPE_RESERVED (0) --  Do not use.
       - eQMI_LOC_PARAMETER_TYPE_MINIMUM_SV_ELEVATION (1) --  Minimum SV elevation to use for computing position.
+      - eQMI_LOC_PARAMETER_TYPE_CONSTELLATION_DISABLE_CONFIG (2) --  GNSS constellation disable config to be written to non-volatile memory.
+       This parameter is only supported on certain legacy SPs where alternative
+       API(s) to disable constellation(s) are not available. \n
+
+       Note: Only constellations than can be disabled via NV shall be supported. \n
+       For ex. GPS and QZSS cannot be disabled via NV and will be ignored, if set. \n
+       NAVIC may be disabled only if supported and NV controllable.
  */
 }qmiLocGetParameterReqMsgT_v02;  /* Message */
 /**
@@ -22643,6 +22691,13 @@ typedef struct {
   /**<   Parameter type. Values: \n
       - eQMI_LOC_PARAMETER_TYPE_RESERVED (0) --  Do not use.
       - eQMI_LOC_PARAMETER_TYPE_MINIMUM_SV_ELEVATION (1) --  Minimum SV elevation to use for computing position.
+      - eQMI_LOC_PARAMETER_TYPE_CONSTELLATION_DISABLE_CONFIG (2) --  GNSS constellation disable config to be written to non-volatile memory.
+       This parameter is only supported on certain legacy SPs where alternative
+       API(s) to disable constellation(s) are not available. \n
+
+       Note: Only constellations than can be disabled via NV shall be supported. \n
+       For ex. GPS and QZSS cannot be disabled via NV and will be ignored, if set. \n
+       NAVIC may be disabled only if supported and NV controllable.
  */
 
   /* Optional */
@@ -22655,6 +22710,19 @@ typedef struct {
        - Units -- Degrees \n
        - Range -- 0 - 90
   */
+
+  /* Optional */
+  /*  GNSS Constellation Configuration */
+  uint8_t constellationConfig_valid;  /**< Must be set to true if constellationConfig is being passed */
+  qmiLocGNSSConstellEnumT_v02 constellationConfig;
+  /**<   Constellation Configuration. Valid values: \n
+      - eQMI_SYSTEM_GPS (0x01) --  Enable GPS \n
+      - eQMI_SYSTEM_GLO (0x02) --  Enable GLONASS \n
+      - eQMI_SYSTEM_BDS (0x04) --  Enable BDS \n
+      - eQMI_SYSTEM_GAL (0x08) --  Enable Galileo \n
+      - eQMI_SYSTEM_QZSS (0x10) --  Enable QZSS \n
+      - eQMI_SYSTEM_NAVIC (0x20) --  Enable NavIC
+ */
 }qmiLocGetParameterIndMsgT_v02;  /* Message */
 /**
     @}
@@ -22945,6 +23013,15 @@ typedef struct {
   float clkTimeBiasUnc;
   /**<   One-sided maximum time bias uncertainty in float. \n
          - Units -- Milliseconds */
+
+  /* Optional */
+  /*  PDR Engagement Rate  */
+  uint8_t pdrEngagementRate_valid;  /**< Must be set to true if pdrEngagementRate is being passed */
+  uint8_t pdrEngagementRate;
+  /**<   PDR Engagement Rate as a percentage.
+       It is defined as the rate of total number of fix reports with
+       PED mode engaged over the total number of fix reports. \n
+        - Range -- 0 to 100  */
 }qmiLocGnssStatisticsReportIndMsgT_v02;  /* Message */
 /**
     @}
@@ -23273,8 +23350,8 @@ typedef struct {
         - Units -- Degrees \n
         - Range -- -90.0 to 90.0 \n
 
-        Note: Positive values indicate northern latitude,
-        Negative values indicate southern latitude
+		Note: Positive values indicate northern latitude,
+		Negative values indicate southern latitude
    */
 
   /* Optional */
@@ -23285,8 +23362,8 @@ typedef struct {
         - Units -- Degrees \n
         - Range -- -180.0 to 180.0 \n
 
-        Note: Positive values indicate eastern longitude,
-        Negative values indicate western longitude
+		Note: Positive values indicate eastern longitude,
+		Negative values indicate western longitude
    */
 
   /* Optional */
@@ -23306,7 +23383,7 @@ typedef struct {
         - 0, 101 to 255 -- invalid value\n
         - If 100 is received, reinterpret to 99 \n
 
-        Note: This field must be specified together with horizontal uncertainty.
+		Note: This field must be specified together with horizontal uncertainty.
         If not specified when horUncCircular is set, the default value is 50.
    */
 
@@ -23316,8 +23393,8 @@ typedef struct {
   float altitudeWrtEllipsoid;
   /**<   Altitude with respect to the WGS84 ellipsoid.\n
         - Units -- Meters
-        - Positive = height
-        - Negative = depth
+		- Positive = height
+		- Negative = depth
    */
 
   /* Optional */
@@ -23343,13 +23420,13 @@ typedef struct {
   uint8_t vertConfidence;
   /**<   Vertical confidence, as defined by ETSI TS 101 109. \n
         - Units -- Percent (0-99)\n
-        - 0 -- invalid value \n
-        - 100 to 256 -- not used \n
-        - If 100 is received, reinterpret to 99 \n
+		- 0 -- invalid value \n
+		- 100 to 256 -- not used \n
+		- If 100 is received, reinterpret to 99 \n
 
-        Note: This field must be specified together with the vertical uncertainty.
+		Note: This field must be specified together with the vertical uncertainty.
         If not specified, the default value is 50.
-    */
+	*/
 
   /* Optional */
   /*  Altitude Source */
@@ -23399,8 +23476,9 @@ typedef struct {
       - eQMI_LOC_POSITION_SRC_GNSS_TERRESTRIAL_HYBRID (5) --  Position source is GNSS Terrestrial Hybrid \n
       - eQMI_LOC_POSITION_SRC_OTHER (6) --  Other sources \n
       - eQMI_LOC_POSITION_SRC_DRE (7) --  Position source is the dead reckoning engine \n
-      - eQMI_LOC_POSITION_SRC_FLP (8) --  Position source is Fused Location Provider
-      - eQMI_LOC_POSITION_SRC_NLP (9) --  Position source is Network Location Provider
+      - eQMI_LOC_POSITION_SRC_FLP (8) --  Position source is Fused Location Provider \n
+      - eQMI_LOC_POSITION_SRC_NLP (9) --  Position source is Network Location Provider \n
+      - eQMI_LOC_POSITION_SRC_FLP_ALE (10) --  Position source is derived from Source MPSS
 
  If altitude is specified and the altitude source is not specified, the engine
  assumes that the altitude was obtained using the specified position source. \n
