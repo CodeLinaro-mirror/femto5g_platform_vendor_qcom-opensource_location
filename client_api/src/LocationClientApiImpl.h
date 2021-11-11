@@ -33,7 +33,6 @@
 
 #include <loc_pla.h>
 #include <LocIpc.h>
-#include <LocationDataTypes.h>
 #include <ILocationAPI.h>
 #include <LocationClientApi.h>
 #include <MsgTask.h>
@@ -103,7 +102,7 @@ class LocationClientApiImpl : public ILocationAPI {
     friend IpcListener;
 public:
     LocationClientApiImpl(CapabilitiesCb capabitiescb);
-    void destroy();
+    virtual void destroy(locationApiDestroyCompleteCallback destroyCompleteCb=nullptr) override;
 
     // Tracking
     virtual void updateCallbacks(LocationCallbacks&) override;
@@ -199,6 +198,7 @@ private:
     //Year of HW information, 0 is invalid
     uint16_t                   mYearOfHw;
     bool                       mPositionSessionResponseCbPending;
+    uint64_t                   mSessionStartBootTimestampNs;
 
     // callbacks
     CapabilitiesCb          mCapabilitiesCb;
