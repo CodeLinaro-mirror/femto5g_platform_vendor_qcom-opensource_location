@@ -65,7 +65,7 @@ AC_ARG_ENABLE(target,
   [TARGET=$enableval],
   [TARGET=none]
 )
-AM_CONDITIONAL(TARGET_LV_BUILD, [test "x$TARGET" = "xsa6155" -o "x$TARGET" = "xsa8155"])
+AM_CONDITIONAL(TARGET_LV_BUILD, [test "x$TARGET" = "xsa6155" -o "x$TARGET" = "xsa81x5"])
 
 AC_ARG_WITH([systemd],
       AC_HELP_STRING([--with-systemd],
