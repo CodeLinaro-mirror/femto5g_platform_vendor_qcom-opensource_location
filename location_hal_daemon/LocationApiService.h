@@ -47,9 +47,12 @@
 #include <LocHalDaemonClientHandler.h>
 
 #ifdef NO_UNORDERED_SET_OR_MAP
+    #include <set>
     #include <map>
+    #define unordered_set set
     #define unordered_map map
 #else
+    #include <unordered_set>
     #include <unordered_map>
 #endif
 
@@ -244,12 +247,18 @@ private:
             LocConfigUserConsentTerrestrialPositioningReqMsg* pMsg);
     void configOutputNmeaTypes(const LocConfigOutputNmeaTypesReqMsg* pMsg);
     void configEngineIntegrityRisk(const LocConfigEngineIntegrityRiskReqMsg* pMsg);
+    void configXtraParams(const LocConfigXtraReqMsg* pMsg);
 
     // Location configuration API get/read requests
     void getGnssConfig(const LocAPIMsgHeader* pReqMsg,
                        GnssConfigFlagsBits configFlag);
     void getConstellationSecondaryBandConfig(
             const LocConfigGetConstellationSecondaryBandConfigReqMsg* pReqMsg);
+    void getXtraStatus(const LocConfigGetXtraStatusReqMsg* pReqMsg);
+    void registerXtraStatusUpdate(
+            const LocConfigRegisterXtraStatusUpdateReqMsg * pReqMsg);
+    void deregisterXtraStatusUpdate(
+            const LocConfigDeregisterXtraStatusUpdateReqMsg * pReqMsg);
 
     // Location configuration API util routines
     void addConfigRequestToMap(uint32_t sessionId,
@@ -329,6 +338,8 @@ private:
     // -1: not set, 0: user not opt-in, 1: user opt in
     int mOptInTerrestrialService;
     SingleTerrestrialFixClientMap mTerrestrialFixReqs;
+   // LIA clients that register for xtra status update
+    std::unordered_set<std::string> mClientsRegForXtraStatus;
 };
 
 #endif //LOCATIONAPISERVICE_H
