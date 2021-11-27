@@ -2509,32 +2509,33 @@ locClientEventMaskType LocApiV02 :: convertLocClientEventMask(
 
 qmiLocLockEnumT_v02 LocApiV02 ::convertGpsLockFromAPItoQMI(GnssConfigGpsLock lock)
 {
-    switch (lock)
-    {
-      case GNSS_CONFIG_GPS_LOCK_MO_AND_NI:
-        return eQMI_LOC_LOCK_ALL_V02;
-      case GNSS_CONFIG_GPS_LOCK_MO:
-        return eQMI_LOC_LOCK_MI_V02;
-      case GNSS_CONFIG_GPS_LOCK_NI:
-        return eQMI_LOC_LOCK_MT_V02;
-      case GNSS_CONFIG_GPS_LOCK_NONE:
-      default:
-        return eQMI_LOC_LOCK_NONE_V02;
+    bool isAfwLocked = (lock & GNSS_CONFIG_GPS_LOCK_MO);
+    bool areCpAndSuplLocked;
+    if (ContextBase::isFeatureSupported(LOC_SUPPORTED_FEATURE_MULTIPLE_ATTRIBUTION_APPS)) {
+        areCpAndSuplLocked = (lock & GNSS_CONFIG_GPS_LOCK_NFW_CP) &&
+                             (lock & GNSS_CONFIG_GPS_LOCK_NFW_SUPL);
+        LOC_LOGv("Multiple attribution apps supported isAfwLocked = %d "
+                 "areCpAndSuplLocked = %d",
+                 isAfwLocked, areCpAndSuplLocked);
+    } else {
+        areCpAndSuplLocked = (lock & GNSS_CONFIG_GPS_LOCK_NFW_ALL);
+        LOC_LOGv("Multiple attribution apps not supported isAfwLocked = %d "
+                 "areCpAndSuplLocked = %d",
+                 isAfwLocked, areCpAndSuplLocked);
     }
-}
 
-GnssConfigGpsLock LocApiV02::convertGpsLockFromQMItoAPI(qmiLocLockEnumT_v02 lock)
-{
-    switch (lock) {
-      case eQMI_LOC_LOCK_MI_V02:
-        return GNSS_CONFIG_GPS_LOCK_MO;
-      case eQMI_LOC_LOCK_MT_V02:
-        return GNSS_CONFIG_GPS_LOCK_NI;
-      case eQMI_LOC_LOCK_ALL_V02:
-        return GNSS_CONFIG_GPS_LOCK_MO_AND_NI;
-      case eQMI_LOC_LOCK_NONE_V02:
-      default:
-        return GNSS_CONFIG_GPS_LOCK_NONE;
+    if (areCpAndSuplLocked) {
+        if (isAfwLocked) {
+            return eQMI_LOC_LOCK_ALL_V02;
+        } else {
+            return eQMI_LOC_LOCK_MT_V02;
+        }
+    } else {
+        if (isAfwLocked) {
+            return eQMI_LOC_LOCK_MI_V02;
+        } else {
+            return eQMI_LOC_LOCK_NONE_V02;
+        }
     }
 }
 
@@ -3564,10 +3565,12 @@ void  LocApiV02 :: reportSv (
 
                 if (sv_info_ptr->validMask & QMI_LOC_SV_INFO_MASK_VALID_ELEVATION_V02) {
                     gnssSv_ref.elevation = sv_info_ptr->elevation;
+                    mask |= GNSS_SV_OPTIONS_HAS_ELEVATION_BIT;
                 }
 
                 if (sv_info_ptr->validMask & QMI_LOC_SV_INFO_MASK_VALID_AZIMUTH_V02) {
                     gnssSv_ref.azimuth = sv_info_ptr->azimuth;
+                    mask |= GNSS_SV_OPTIONS_HAS_AZIMUTH_BIT;
                 }
 
                 if (sv_info_ptr->validMask &
@@ -4613,10 +4616,46 @@ void LocApiV02::reportLocationRequestNotification(
         strlcpy(notification.requestorId,
                 loc_req_notif->requestorId,
                 sizeof(notification.requestorId));
+
+        const char* nfwClient[] = { "NFW_CLIENT_CP", "NFW_CLIENT_SUPL", "NFW_CLIENT_IMS",
+                                    "NFW_CLIENT_SIM", "NFW_CLIENT_MDT", "NFW_CLIENT_TLOC",
+                                    "NFW_CLIENT_OTHER", "NFW_CLIENT_RLOC", "NFW_CLIENT_V2X",
+                                    "NFW_CLIENT_R1", "NFW_CLIENT_R2", "NFW_CLIENT_R3" };
+        char packageName[LOC_MAX_PARAM_STRING];
+
         // proxyAppPackageName is "" for emergency
-        strlcpy(notification.proxyAppPackageName,
-                ContextBase::mGps_conf.PROXY_APP_PACKAGE_NAME,
-                sizeof(notification.proxyAppPackageName));
+        if (ContextBase::isFeatureSupported(LOC_SUPPORTED_FEATURE_MULTIPLE_ATTRIBUTION_APPS) &&
+            loc_req_notif->protocolStack >= eQMI_LOC_CTRL_PLANE_V02 &&
+            loc_req_notif->protocolStack <= eQMI_LOC_R3_V02 &&
+            eQMI_LOC_OTHER_V02 != loc_req_notif->protocolStack) {
+
+            if (mPackageName[loc_req_notif->protocolStack].empty()) {
+                const loc_param_s_type nfw_packages_table[] =
+                {
+                    {nfwClient[loc_req_notif->protocolStack], &packageName,  NULL, 's' },
+                };
+                UTIL_READ_CONF(LOC_PATH_GPS_CONF_STR, nfw_packages_table);
+                mPackageName[loc_req_notif->protocolStack] = packageName;
+            }
+            strlcpy(notification.proxyAppPackageName,
+                    mPackageName[loc_req_notif->protocolStack].c_str(),
+                    sizeof(notification.proxyAppPackageName));
+        } else {
+            // we need any of the apps in this case, all should
+            // be provisioned with the same package name
+            // so we will use NFW_CLIENT_CP for simplicity
+            if (mPackageName[eQMI_LOC_CTRL_PLANE_V02].empty()) {
+                const loc_param_s_type nfw_packages_table[] =
+                {
+                    {nfwClient[eQMI_LOC_CTRL_PLANE_V02], &packageName,  NULL, 's' },
+                };
+                UTIL_READ_CONF(LOC_PATH_GPS_CONF_STR, nfw_packages_table);
+                mPackageName[eQMI_LOC_CTRL_PLANE_V02] = packageName;
+            }
+            strlcpy(notification.proxyAppPackageName,
+                    mPackageName[eQMI_LOC_CTRL_PLANE_V02].c_str(),
+                    sizeof(notification.proxyAppPackageName));
+        }
     }
 
     if (!isImpossibleScenario) {
@@ -6761,6 +6800,7 @@ int LocApiV02 :: convertGnssClock (GnssMeasurementsClock& clock,
 
         // timeNs & timeUncertaintyNs
         clock.timeNs = (int64_t)gnss_measurement_info.systemTimeExt.refFCount * 1e6;
+        flags |= GNSS_MEASUREMENTS_CLOCK_FLAGS_TIME_BIT;
         clock.hwClockDiscontinuityCount = localDiscCount;
         clock.timeUncertaintyNs = 0.0;
 
@@ -7077,14 +7117,21 @@ LocationError LocApiV02 :: setGpsLockSync(GnssConfigGpsLock lock)
     qmiLocSetEngineLockIndMsgT_v02 setEngineLockInd;
     locClientStatusEnumType status;
     locClientReqUnionType req_union;
+    uint32_t nfwControlBits = lock >> 1;
 
     memset(&setEngineLockReq, 0, sizeof(setEngineLockReq));
-    setEngineLockReq.lockType = convertGpsLockFromAPItoQMI((GnssConfigGpsLock)lock);;
+    setEngineLockReq.lockType = convertGpsLockFromAPItoQMI((GnssConfigGpsLock)lock);
     setEngineLockReq.subType_valid = true;
     setEngineLockReq.subType = eQMI_LOC_LOCK_ALL_SUB_V02;
     setEngineLockReq.lockClient_valid = false;
+    setEngineLockReq.clientsConfig_valid = true;
+    setEngineLockReq.clientsConfig = (uint64_t)nfwControlBits;
     req_union.pSetEngineLockReq = &setEngineLockReq;
-    LOC_LOGd("API lock type = 0x%X QMI lockType = %d", lock, setEngineLockReq.lockType);
+
+    LOC_LOGd("API lock type = 0x%X QMI lockType = %d "
+             "nfwControlBits = 0x%X clientsConfig = 0x%" PRIx64"",
+             lock, setEngineLockReq.lockType, nfwControlBits,
+             setEngineLockReq.clientsConfig);
     memset(&setEngineLockInd, 0, sizeof(setEngineLockInd));
     status = locSyncSendReq(QMI_LOC_SET_ENGINE_LOCK_REQ_V02,
                             req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
@@ -7115,48 +7162,6 @@ void LocApiV02::requestForAidingData(GnssAidingDataSvMask svDataMask)
 
         sendRequestForAidingData(qmiMask);
     }));
-}
-
-/*
-  Returns
-  Current value of GPS Lock on success
-  -1 on failure
-*/
-int LocApiV02 :: getGpsLock(uint8_t subType)
-{
-    qmiLocGetEngineLockReqMsgT_v02 getEngineLockReq;
-    qmiLocGetEngineLockIndMsgT_v02 getEngineLockInd;
-    locClientStatusEnumType status;
-    locClientReqUnionType req_union;
-    int ret=0;
-    memset(&getEngineLockInd, 0, sizeof(getEngineLockInd));
-
-    //Passing req_union as a parameter even though this request has no payload
-    //since NULL or 0 gives an error during compilation
-    getEngineLockReq.subType_valid = true;
-    getEngineLockReq.subType = (qmiLocLockSubInfoEnumT_v02)subType;
-    req_union.pGetEngineLockReq = &getEngineLockReq;
-    status = locSyncSendReq(QMI_LOC_GET_ENGINE_LOCK_REQ_V02,
-                            req_union, LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
-                            QMI_LOC_GET_ENGINE_LOCK_IND_V02,
-                            &getEngineLockInd);
-    if(status != eLOC_CLIENT_SUCCESS || getEngineLockInd.status != eQMI_LOC_SUCCESS_V02) {
-        LOC_LOGE("%s:%d]: Set engine lock failed. status: %s, ind status:%s\n",
-                 __func__, __LINE__,
-                 loc_get_v02_client_status_name(status),
-                 loc_get_v02_qmi_status_name(getEngineLockInd.status));
-        ret = -1;
-    }
-    else {
-        if(getEngineLockInd.lockType_valid) {
-            ret = (int)convertGpsLockFromQMItoAPI(getEngineLockInd.lockType);
-        }
-        else {
-            LOC_LOGE("%s:%d]: Lock Type not valid\n", __func__, __LINE__);
-            ret = -1;
-        }
-    }
-    return ret;
 }
 
 LocationError
