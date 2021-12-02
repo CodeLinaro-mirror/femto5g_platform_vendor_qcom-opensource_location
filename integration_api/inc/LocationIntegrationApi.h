@@ -26,6 +26,42 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/*
+Changes from Qualcomm Innovation Center are provided under the following license:
+
+Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted (subject to the limitations in the
+disclaimer below) provided that the following conditions are met:
+
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+
+    * Redistributions in binary form must reproduce the above
+      copyright notice, this list of conditions and the following
+      disclaimer in the documentation and/or other materials provided
+      with the distribution.
+
+    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
+      contributors may be used to endorse or promote products derived
+      from this software without specific prior written permission.
+
+NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
 #ifndef LOCATION_INTEGRATION_API_H
 #define LOCATION_INTEGRATION_API_H
 
@@ -767,6 +803,24 @@ struct XtraConfigParams {
      *  Example of valid ntp server URL is:
      *  ntp.exampleserver.com:123. <br/> */
     std::array<std::string, 3> ntpServerURLs;
+
+    /** Enable or disable XTRA integrity download. Parameter is only
+     *  applicable if XTRA data download is enabled. <br/>
+     *
+     *  true: enable XTRA integrity download. <br/>
+     *  false: disable XTRA integrity download. <br/> */
+    bool xtraIntegrityDownloadEnable;
+
+    /** XTRA integrity download interval, only applicable if XTRA
+     *  integrity download is enabled. <br/>
+     *
+     *  If 0 is specified, the download timeout value will use
+     *  device default values. <br/>
+     *
+     *  Valid range is 360 minutes (6 hours) to 2880 minutes
+     *  (48 hours), in unit of minutes. <br/> */
+    uint32_t xtraIntegrityDownloadIntervalMinute;
+
     /** Level of debug log messages that will be logged. <br/> */
     DebugLogLevel xtraDaemonDebugLogLevel;
 };
@@ -1440,11 +1494,13 @@ public:
         request of configXtraParams without waiting for the finish of the
         previous configXtraParams request.  <br/>
 
-        Please note that configXtraParams is not incremental, as a
-        second call of configXtraParams will always overwrite the
-        settings in the previous call. Also, the configured xtra
-        parameters will be made persistent. However, to be
-        consistent with other location integration API, it is
+        Please note that if configXtraParams has never been called
+        since device first time bootup, the default behavior will be
+        maintained. Also, configXtraParams is not incremental, as a
+        successful call of configXtraParams will always overwrite
+        the settings in the previous call. In addition, the
+        configured xtra parameters will be made persistent. However,
+        to be consistent with other location integration API, it is
         recommended to config xtra params using location integration
         API upon every device bootup. <br/>
 
@@ -1464,7 +1520,9 @@ public:
         @return true, if the request is accepted for further
                 processing. When returning true, configCb will be
                 invoked to deliver asynchronous processing status.
-                <br/>
+                If this API is called when XTRA feature is disabled via
+                modem NV, the API will return
+                LOC_INT_RESPONSE_NOT_SUPPORTED. <br/>
 
         @return false, if the request is not accepted for further
                 processing. When returning false, configCb will not
