@@ -1,0 +1,29 @@
+From 102d3841e4ad00180ed0a63645477850664bd6e6 Mon Sep 17 00:00:00 2001
+From: Madhanraj Chelladurai <quic_mchellad@quicinc.com>
+Date: Wed, 8 Dec 2021 12:40:39 +0530
+Subject: [PATCH] gps: update chrony socket path for SNAP environment
+
+Socket path needs update as per SNAP specifications
+
+Signed-off-by: Madhanraj Chelladurai <quic_mchellad@quicinc.com>
+---
+ timehint.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/timehint.c b/timehint.c
+index 7d58fcc..44bdc4c 100644
+--- a/timehint.c
++++ b/timehint.c
+@@ -275,7 +275,8 @@ static void init_hook(struct gps_device_t *session)
+          * only root can use /var/run.
+ 	 */
+ 	(void)snprintf(chrony_path, sizeof (chrony_path),
+-		"/var/run/chrony.%s.sock", basename(session->gpsdata.dev.path));
++		"/var/snap/chronyd/common/run/chrony.%s.sock", basename(session->gpsdata.dev.path));
++		//"/var/run/chrony.%s.sock", basename(session->gpsdata.dev.path));
+     } else {
+ 	(void)snprintf(chrony_path, sizeof (chrony_path),
+ 		"/tmp/chrony.%s.sock", 	basename(session->gpsdata.dev.path));
+-- 
+1.9.1
+
