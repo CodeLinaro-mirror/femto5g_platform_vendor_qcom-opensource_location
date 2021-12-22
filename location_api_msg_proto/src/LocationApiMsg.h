@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018-2021, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -30,6 +30,7 @@
 #define LOCATIONAPIMSG_H
 
 #include <string>
+#include <vector>
 #include <memory>
 #include <algorithm>
 #include <loc_pla.h> // for strlcpy
@@ -37,7 +38,7 @@
 #include <log_util.h>
 #include <LocIpc.h>
 #include <LocationDataTypes.h>
-#include <errno.h>
+#include <stdlib.h>
 
 // Protobuf message headers
 #include "LocationApiMsg.pb.h"
@@ -83,12 +84,9 @@ public:
     SockNode(SockNode&& node) :
             SockNode(node.mId1, node.mId2, move(node.mNodePathnamePrefix)) {
     }
-    static SockNode create(const string fullPathName) {
-        return create(fullPathName.c_str(), fullPathName.size());
-    }
-    static SockNode create(const char* fullPathName, int32_t length = -1) {
+    static int getId1Id2(const char* fullPathName, int32_t length, int32_t& id1, int32_t& id2) {
         uint32_t count = 0;
-        int32_t indx = 0, id1 = -1, id2 = -1;
+        int32_t indx = 0;
 
         if (nullptr == fullPathName) {
             fullPathName = "";
@@ -107,9 +105,20 @@ public:
         } else {
             indx = 0;
         }
+        return indx;
+    }
+
+    static SockNode create(const string fullPathName) {
+        return create(fullPathName.c_str(), fullPathName.size());
+    }
+
+    static SockNode create(const char* fullPathName, int32_t length = -1) {
+        int32_t indx = 0, id1 = -1, id2 = -1;
+        indx = getId1Id2(fullPathName, length, id1, id2);
 
         return SockNode(id1, id2, string(fullPathName, indx));
     }
+
     inline int getId1() const { return mId1; }
     inline int getId2() const { return mId2; }
     inline const string& getNodePathnamePrefix() const { return mNodePathnamePrefix; }
@@ -152,20 +161,23 @@ public:
         SockNode(pid, tid, getSockNodeLocalPrefix(type)) {}
 
     inline static string getSockNodeLocalPrefix(ClientType type) {
-
-        int program_name_length = strlen(program_invocation_short_name);
-        if (program_name_length > MAX_PROGRAM_NAME_LENGTH) {
-            program_name_length = MAX_PROGRAM_NAME_LENGTH;
+        int program_name_length = 0;
+        const char * progName = getprogname();
+        if (nullptr != progName) {
+            program_name_length = strlen(progName);
+            if (program_name_length > MAX_PROGRAM_NAME_LENGTH) {
+                program_name_length = MAX_PROGRAM_NAME_LENGTH;
+            }
         }
+
         if (LOCATION_CLIENT_API == type) {
-            return string(s_CLIENTAPI_LOCAL).append(1, '_').
-                    append(program_invocation_short_name, program_name_length);
+            return string(s_CLIENTAPI_LOCAL).append(1, '_').append(progName, program_name_length);
         } else {
-            return string(s_INTAPI_LOCAL).append(1, '_').
-                    append(program_invocation_short_name, program_name_length);
+            return string(s_INTAPI_LOCAL).append(1, '_').append(progName, program_name_length);
         }
     }
 };
+
 
 class SockNodeEap : public SockNode {
 public:
@@ -173,13 +185,19 @@ public:
         SockNode(service, instance, getSockNodeEapPrefix()) {}
 
     inline static string getSockNodeEapPrefix() {
-        int program_name_length = strlen (program_invocation_short_name);
-        if (program_name_length > MAX_PROGRAM_NAME_LENGTH) {
-            program_name_length = MAX_PROGRAM_NAME_LENGTH;
+        int program_name_length = 0;
+        const char * progName = getprogname();
+        if (nullptr != progName) {
+            program_name_length = strlen(progName);
+
+            if (program_name_length > MAX_PROGRAM_NAME_LENGTH) {
+                program_name_length = MAX_PROGRAM_NAME_LENGTH;
+            }
         }
-        return string(sEAP).append(1, '_').
-                append(program_invocation_short_name, program_name_length);
+
+        return string(sEAP).append(1, '_').append(progName, program_name_length);
     }
+
 };
 
 /******************************************************************************
@@ -261,6 +279,8 @@ enum ELocMsgID {
     E_INTAPI_CONFIG_CONSTELLATION_SECONDARY_BAND_MSG_ID  = 209,
     E_INTAPI_CONFIG_ENGINE_RUN_STATE_MSG_ID = 210,
     E_INTAPI_CONFIG_USER_CONSENT_TERRESTRIAL_POSITIONING_MSG_ID = 211,
+    E_INTAPI_CONFIG_OUTPUT_NMEA_TYPES_MSG_ID = 212,
+    E_INTAPI_CONFIG_ENGINE_INTEGRITY_RISK_MSG_ID = 213,
 
     // integration API config retrieval request/response
     E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID  = 300,
@@ -278,7 +298,7 @@ enum ELocMsgID {
 
 typedef uint32_t LocationCallbacksMask;
 enum ELocationCallbacksOption {
-    E_LOC_CB_DISTANCE_BASED_TRACKING_BIT= (1<<0), /**< Register for DBT location report */
+    E_LOC_CB_TRACKING_BIT               = (1<<0), /**< Register for DBT location report */
     E_LOC_CB_GNSS_LOCATION_INFO_BIT     = (1<<1), /**< Register for GNSS Location */
     E_LOC_CB_GNSS_SV_BIT                = (1<<2), /**< Register for GNSS SV */
     E_LOC_CB_GNSS_NMEA_BIT              = (1<<3), /**< Register for GNSS NMEA */
@@ -290,14 +310,16 @@ enum ELocationCallbacksOption {
     E_LOC_CB_ENGINE_LOCATIONS_INFO_BIT  = (1<<9), /**< Register for multiple engine reports */
     E_LOC_CB_SIMPLE_LOCATION_INFO_BIT   = (1<<10), /**< Register for simple location */
     E_LOC_CB_GNSS_MEAS_BIT              = (1<<11), /**< Register for GNSS Measurements */
+    E_LOC_CB_GNSS_NHZ_MEAS_BIT          = (1<<12), /**< Register for NHZ GNSS Measurements */
 };
 
 // Mask related to all info that are tied with a position session and need to be unsubscribed
 // when session is stopped
-#define LOCATION_SESSON_ALL_INFO_MASK (E_LOC_CB_DISTANCE_BASED_TRACKING_BIT|\
+#define LOCATION_SESSON_ALL_INFO_MASK (E_LOC_CB_TRACKING_BIT|\
                                        E_LOC_CB_GNSS_LOCATION_INFO_BIT|\
                                        E_LOC_CB_GNSS_SV_BIT|E_LOC_CB_GNSS_NMEA_BIT|\
                                        E_LOC_CB_GNSS_DATA_BIT|E_LOC_CB_GNSS_MEAS_BIT|\
+                                       E_LOC_CB_GNSS_NHZ_MEAS_BIT|\
                                        E_LOC_CB_ENGINE_LOCATIONS_INFO_BIT|\
                                        E_LOC_CB_SIMPLE_LOCATION_INFO_BIT)
 
@@ -319,21 +341,15 @@ struct LocAPINmeaSerializedPayload {
 };
 
 struct LocAPIBatchNotification {
-    // do not use size_t as data type for size_t is architecture dependent
-    uint32_t size;
-    uint32_t count;
     BatchingStatus status;
-    Location location[1];
+    std::vector<Location> location;
 };
 
 struct LocAPIGeofenceBreachNotification {
-    // do not use size_t as data type for size_t is architecture dependent
-    uint32_t size;
-    uint32_t count;
     uint64_t timestamp;
     GeofenceBreachTypeMask type; //type of breach
     Location location;   //location associated with breach
-    uint32_t id[1];
+    std::vector<uint32_t> id;
 };
 
 struct GeofencePayload {
@@ -358,10 +374,7 @@ struct GeofenceResponse {
 };
 
 struct CollectiveResPayload {
-    // do not use size_t as data type for size_t is architecture dependent
-    uint32_t size;
-    uint32_t count;
-    GeofenceResponse resp[1];
+    std::vector<GeofenceResponse> resp;
 };
 /******************************************************************************
 IPC message header structure
@@ -390,6 +403,8 @@ struct LocAPIMsgHeader
             memset(mSocketName, 0, MAX_SOCKET_PATHNAME_LENGTH);
             strlcpy(mSocketName, name, MAX_SOCKET_PATHNAME_LENGTH);
         }
+
+    virtual ~LocAPIMsgHeader() = default;
 
     /** Serialize message to protobuf format. Return length of serialized string.*/
     virtual int serializeToProtobuf(string& protoStr) {return 0;}
@@ -504,6 +519,9 @@ struct LocAPICollectiveRespMsg: LocAPIMsgHeader
 {
     CollectiveResPayload collectiveRes;
 
+    inline LocAPICollectiveRespMsg(const char* name, ELocMsgID msgId,
+            const LocationApiPbMsgConv *pbMsgConv) :
+        LocAPIMsgHeader(name, msgId, pbMsgConv) { }
     inline LocAPICollectiveRespMsg(const char* name, ELocMsgID msgId,
             CollectiveResPayload& response, const LocationApiPbMsgConv *pbMsgConv) :
         LocAPIMsgHeader(name, msgId, pbMsgConv),
@@ -801,6 +819,8 @@ struct LocAPIBatchingIndMsg: LocAPIMsgHeader
 {
     LocAPIBatchNotification batchNotification;
 
+    inline LocAPIBatchingIndMsg(const char* name, const LocationApiPbMsgConv *pbMsgConv) :
+        LocAPIMsgHeader(name, E_LOCAPI_BATCHING_MSG_ID, pbMsgConv) { }
     inline LocAPIBatchingIndMsg(const char* name, LocAPIBatchNotification& batchNotif,
             const LocationApiPbMsgConv *pbMsgConv) :
         LocAPIMsgHeader(name, E_LOCAPI_BATCHING_MSG_ID, pbMsgConv),
@@ -816,6 +836,8 @@ struct LocAPIGeofenceBreachIndMsg: LocAPIMsgHeader
 {
     LocAPIGeofenceBreachNotification gfBreachNotification;
 
+    inline LocAPIGeofenceBreachIndMsg(const char* name, const LocationApiPbMsgConv *pbMsgConv) :
+        LocAPIMsgHeader(name, E_LOCAPI_GEOFENCE_BREACH_MSG_ID, pbMsgConv) { }
     inline LocAPIGeofenceBreachIndMsg(const char* name,
             LocAPIGeofenceBreachNotification& gfBreachNotif,
             const LocationApiPbMsgConv *pbMsgConv) :
@@ -1182,6 +1204,45 @@ struct LocConfigUserConsentTerrestrialPositioningReqMsg: LocAPIMsgHeader
 
     LocConfigUserConsentTerrestrialPositioningReqMsg(const char* name,
             const PBLocConfigUserConsentTerrestrialPositioningReqMsg &pbMsg,
+            const LocationApiPbMsgConv *pbMsgConv);
+
+    int serializeToProtobuf(string& protoStr) override;
+};
+
+struct LocConfigOutputNmeaTypesReqMsg: LocAPIMsgHeader
+{
+    GnssNmeaTypesMask mEnabledNmeaTypes;
+
+    inline LocConfigOutputNmeaTypesReqMsg(
+            const char* name, GnssNmeaTypesMask enabledNmeaTypes,
+            const LocationApiPbMsgConv *pbMsgConv) :
+        LocAPIMsgHeader(name,
+                        E_INTAPI_CONFIG_OUTPUT_NMEA_TYPES_MSG_ID,
+                        pbMsgConv),
+        mEnabledNmeaTypes(enabledNmeaTypes) { }
+
+    LocConfigOutputNmeaTypesReqMsg(const char* name,
+            const PBLocConfigOutputNmeaTypesReqMsg &pbMsg,
+            const LocationApiPbMsgConv *pbMsgConv);
+
+    int serializeToProtobuf(string& protoStr) override;
+};
+
+struct LocConfigEngineIntegrityRiskReqMsg: LocAPIMsgHeader
+{
+    // In this API, only one engine is configured at a time
+    PositioningEngineMask mEngType;
+    uint32_t mIntegrityRisk;
+
+    inline LocConfigEngineIntegrityRiskReqMsg(const char* name,
+                                              PositioningEngineMask engType,
+                                              uint32_t integrityRisk,
+                                              const LocationApiPbMsgConv *pbMsgConv) :
+        LocAPIMsgHeader(name, E_INTAPI_CONFIG_ENGINE_INTEGRITY_RISK_MSG_ID, pbMsgConv),
+        mEngType(engType), mIntegrityRisk(integrityRisk) { }
+
+    LocConfigEngineIntegrityRiskReqMsg(const char* name,
+            const PBLocConfigEngineIntegrityRiskReqMsg &pbConfigEngineIntegrityRiskMsg,
             const LocationApiPbMsgConv *pbMsgConv);
 
     int serializeToProtobuf(string& protoStr) override;

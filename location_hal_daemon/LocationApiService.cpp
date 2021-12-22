@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2020 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018-2021 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -49,6 +49,8 @@ using namespace std;
 #define AUTO_START_CLIENT_NAME "default"
 
 typedef void* (getLocationInterface)();
+typedef void  (createOSFramework)();
+typedef void  (destroyOSFramework)();
 
 /******************************************************************************
 LocationApiService - static members
@@ -121,6 +123,25 @@ public:
 };
 
 /******************************************************************************
+LocIpcQrtrWatcher override
+******************************************************************************/
+class HalDaemonQrtrClientWatcher : public LocIpcQrtrWatcher {
+    LocationApiService* mService;
+public:
+    inline HalDaemonQrtrClientWatcher(LocationApiService* service) :
+            LocIpcQrtrWatcher({LOCATION_CLIENT_API_QSOCKET_CLIENT_SERVICE_ID}),
+            mService(service) {
+    }
+    inline virtual void onServiceStatusChange(int serviceId, int instanceId,
+            LocIpcQrtrWatcher::ServiceStatus status, const LocIpcSender& refSender) {
+        if (LocIpcQrtrWatcher::ServiceStatus::DOWN == status) {
+             LOC_LOGi(">-- client deleted by qrtr: (%d, %d)", serviceId, instanceId);
+             mService->deleteEapClientByIds(serviceId, instanceId);
+        }
+    }
+};
+
+/******************************************************************************
 LocationApiService - constructors
 ******************************************************************************/
 LocationApiService::LocationApiService(const configParamToRead & configParamRead) :
@@ -129,10 +150,11 @@ LocationApiService::LocationApiService(const configParamToRead & configParamRead
     mAutoStartGnss(configParamRead.autoStartGnss),
     mPowerState(POWER_STATE_UNKNOWN),
     mPositionMode((GnssSuplMode)configParamRead.positionMode),
-    mMsgTask("LocHalDaemonMaintenanceMsgTask"),
+    mMsgTask("HalMaintMsgTask"),
     mMaintTimer(this),
     mGtpWwanSsLocationApi(nullptr),
-    mOptInTerrestrialService(-1)
+    mOptInTerrestrialService(-1),
+    mGtpWwanSsLocationApiCallbacks{}
 #ifdef POWERMANAGER_ENABLED
     ,mPowerEventObserver(nullptr)
 #endif
@@ -158,7 +180,7 @@ LocationApiService::LocationApiService(const configParamToRead & configParamRead
         onGnssConfigCallback(sessionId, config);
     };
 
-    mLocationControlApi = LocationControlAPI::createInstance(mControlCallabcks);
+    mLocationControlApi = LocationControlAPI::getInstance(mControlCallabcks);
     if (nullptr == mLocationControlApi) {
         LOC_LOGd("Failed to create LocationControlAPI");
         return;
@@ -177,6 +199,9 @@ LocationApiService::LocationApiService(const configParamToRead & configParamRead
         return;
     }
 #endif
+
+    // Create OSFramework and IzatManager instance
+    createOSFrameworkInstance();
 
     mMaintTimer.start(MAINT_TIMER_INTERVAL_MSEC, false);
 
@@ -205,7 +230,6 @@ LocationApiService::LocationApiService(const configParamToRead & configParamRead
         locationOption.mode = mPositionMode;
 
         pClient->startTracking(locationOption);
-        pClient->mTracking = true;
         loc_boot_kpi_marker("L - Auto Session Start");
         pClient->mPendingMessages.push(E_LOCAPI_START_TRACKING_MSG_ID);
     }
@@ -217,9 +241,11 @@ LocationApiService::LocationApiService(const configParamToRead & configParamRead
     // blocking: set to false
     mIpc.startNonBlockingListening(recver);
 
-    mBlockingRecver = LocIpc::getLocIpcQrtrRecver(make_shared<LocHaldIpcListener>(*this),
+    mBlockingRecver = LocIpc::getLocIpcQrtrRecver(
+            make_shared<LocHaldIpcListener>(*this),
             LOCATION_CLIENT_API_QSOCKET_HALDAEMON_SERVICE_ID,
-            LOCATION_CLIENT_API_QSOCKET_HALDAEMON_INSTANCE_ID);
+            LOCATION_CLIENT_API_QSOCKET_HALDAEMON_INSTANCE_ID,
+            make_shared<HalDaemonQrtrClientWatcher>(this));
     mIpc.startBlockingListening(*mBlockingRecver);
 }
 
@@ -232,6 +258,9 @@ LocationApiService::~LocationApiService() {
         LOC_LOGd(">-- deleted client [%s]", each.first.c_str());
         each.second->cleanup();
     }
+
+    // Destroy OSFramework instance
+    destroyOSFrameworkInstance();
 
     // delete location contorol API handle
     mLocationControlApi->disable(mLocationControlId);
@@ -592,6 +621,30 @@ void LocationApiService::processClientMsg(const char* data, uint32_t length) {
             break;
         }
 
+        case E_INTAPI_CONFIG_OUTPUT_NMEA_TYPES_MSG_ID: {
+            PBLocConfigOutputNmeaTypesReqMsg pbMsg;
+            if (0 == pbMsg.ParseFromString(pbLocApiMsg.payload())) {
+                LOC_LOGe("Failed to parse PBLocConfigOutputNmeaTypesReqMsg from payload!!");
+                return;
+            }
+            LocConfigOutputNmeaTypesReqMsg msg(sockName.c_str(), pbMsg, &mPbufMsgConv);
+            configOutputNmeaTypes(reinterpret_cast<LocConfigOutputNmeaTypesReqMsg*>(&msg));
+            break;
+        }
+
+        case E_INTAPI_CONFIG_ENGINE_INTEGRITY_RISK_MSG_ID : {
+            PBLocConfigEngineIntegrityRiskReqMsg pbLocConfEngineIntegrityRisk;
+            if (0 == pbLocConfEngineIntegrityRisk.ParseFromString(pbLocApiMsg.payload())) {
+                LOC_LOGe("Failed to parse pbLocConfEngineIntegrityRisk from payload!!");
+                return;
+            }
+            LocConfigEngineIntegrityRiskReqMsg msg(sockName.c_str(),
+                                                   pbLocConfEngineIntegrityRisk,
+                                                   &mPbufMsgConv);
+            configEngineIntegrityRisk(reinterpret_cast<LocConfigEngineIntegrityRiskReqMsg*>(&msg));
+            break;
+        }
+
         case E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID: {
             getGnssConfig(&locApiMsg, GNSS_CONFIG_FLAGS_ROBUST_LOCATION_BIT);
             break;
@@ -667,6 +720,19 @@ void LocationApiService::deleteClientbyName(const std::string clientname) {
     mTerrestrialFixReqs.erase(clientname);
     pClient->cleanup();
 }
+
+void LocationApiService::deleteEapClientByIds(int serviceId, int instanceId) {
+
+    std::lock_guard<std::mutex> lock(mMutex);
+
+    const char* clientName = getClientNameByIds(serviceId, instanceId);
+    if (clientName) {
+        LOC_LOGi(">-- service id: %d, instance id: %d, client name: %s",
+                 serviceId, instanceId, clientName);
+        deleteClientbyName(std::string(clientName));
+    }
+}
+
 /******************************************************************************
 LocationApiService - implementation - tracking
 ******************************************************************************/
@@ -685,14 +751,7 @@ void LocationApiService::startTracking(LocAPIStartTrackingReqMsg *pMsg) {
 
     if (!pClient->startTracking(locationOption)) {
         LOC_LOGe("Failed to start session");
-        return;
     }
-    // success
-    pClient->mTracking = true;
-    pClient->mPendingMessages.push(E_LOCAPI_START_TRACKING_MSG_ID);
-
-    LOC_LOGi(">-- start started session");
-    return;
 }
 
 void LocationApiService::stopTracking(LocAPIStopTrackingReqMsg *pMsg) {
@@ -704,39 +763,30 @@ void LocationApiService::stopTracking(LocAPIStopTrackingReqMsg *pMsg) {
         return;
     }
 
-    pClient->mTracking = false;
     pClient->unsubscribeLocationSessionCb();
     pClient->stopTracking();
-    pClient->mPendingMessages.push(E_LOCAPI_STOP_TRACKING_MSG_ID);
     LOC_LOGi(">-- stopping session");
 }
 
 // no need to hold the lock as lock has been held on calling functions
 void LocationApiService::suspendAllTrackingSessions() {
+    LOC_LOGi("--> enter");
     for (auto client : mClients) {
         // stop session if running
-        if (client.second && client.second->mTracking) {
-            client.second->stopTracking();
-            client.second->mPendingMessages.push(E_LOCAPI_STOP_TRACKING_MSG_ID);
-            LOC_LOGi("--> suspended");
+        if (client.second) {
+            client.second->pauseTracking();
         }
     }
 }
 
 // no need to hold the lock as lock has been held on calling functions
 void LocationApiService::resumeAllTrackingSessions() {
+    LOC_LOGi("--> enter");
     for (auto client : mClients) {
         // start session if not running
-        if (client.second && client.second->mTracking) {
-
+        if (client.second) {
             // resume session with preserved options
-            if (!client.second->startTracking()) {
-                LOC_LOGe("Failed to start session");
-                return;
-            }
-            // success
-            client.second->mPendingMessages.push(E_LOCAPI_START_TRACKING_MSG_ID);
-            LOC_LOGi("--> resumed");
+            client.second->resumeTracking();
         }
     }
 }
@@ -1265,6 +1315,31 @@ void LocationApiService::configUserConsentTerrestrialPositioning(
     addConfigRequestToMap(sessionId, pMsg);
 }
 
+void LocationApiService::configOutputNmeaTypes(const LocConfigOutputNmeaTypesReqMsg* pMsg) {
+    if (!pMsg) {
+        return;
+    }
+    std::lock_guard<std::mutex> lock(mMutex);
+
+    LOC_LOGi(">-- client %s, mEnabledNmeaTypes 0x%x",  pMsg->mSocketName, pMsg->mEnabledNmeaTypes);
+    uint32_t sessionId = mLocationControlApi->configOutputNmeaTypes(pMsg->mEnabledNmeaTypes);
+    addConfigRequestToMap(sessionId, pMsg);
+}
+
+void LocationApiService::configEngineIntegrityRisk(const LocConfigEngineIntegrityRiskReqMsg* pMsg) {
+    if (!pMsg) {
+        return;
+    }
+    std::lock_guard<std::mutex> lock(mMutex);
+
+    LOC_LOGi("client %s, eng type 0x%x, integrity risk %d",
+             pMsg->mSocketName, pMsg->mEngType, pMsg->mIntegrityRisk);
+
+    uint32_t sessionId =
+            mLocationControlApi->configEngineIntegrityRisk(pMsg->mEngType, pMsg->mIntegrityRisk);
+    addConfigRequestToMap(sessionId, pMsg);
+}
+
 void LocationApiService::getGnssConfig(const LocAPIMsgHeader* pReqMsg,
                                        GnssConfigFlagsBits configFlag) {
 
@@ -1407,7 +1482,9 @@ void LocationApiService::onGtpWwanTrackingCallback(Location location) {
 
         for (auto it = mTerrestrialFixReqs.begin(); it != mTerrestrialFixReqs.end();) {
             LocHalDaemonClientHandler* pClient = getClient(it->first);
-            pClient->sendTerrestrialFix(LOCATION_ERROR_SUCCESS, location);
+            if (pClient) {
+                pClient->sendTerrestrialFix(LOCATION_ERROR_SUCCESS, location);
+            }
             ++it;
         }
         mTerrestrialFixReqs.clear();
@@ -1422,21 +1499,9 @@ LocationApiService - power event handlers
 void LocationApiService::onPowerEvent(PowerStateType powerState) {
     std::lock_guard<std::mutex> lock(mMutex);
     LOC_LOGd("--< onPowerEvent %d", powerState);
-
     mPowerState = powerState;
-    if ((POWER_STATE_SUSPEND == powerState) ||
-            (POWER_STATE_SHUTDOWN == powerState)) {
-        suspendAllTrackingSessions();
-    } else if (POWER_STATE_RESUME == powerState) {
-        resumeAllTrackingSessions();
-    }
-
-    GnssInterface* gnssInterface = getGnssInterface();
-    if (!gnssInterface) {
-        LOC_LOGe(">-- getGnssEnergyConsumed null GnssInterface");
-        return;
-    }
-    gnssInterface->updateSystemPowerState(powerState);
+    /*GnssAdapter handles session management for suspend/resume power events*/
+    mLocationControlApi->powerStateEvent(powerState);
 }
 #endif
 
@@ -1475,6 +1540,30 @@ GnssInterface* LocationApiService::getGnssInterface() {
         }
     }
     return gnssInterface;
+}
+
+// Create OSFramework instance
+void LocationApiService::createOSFrameworkInstance() {
+    void* libHandle = nullptr;
+    createOSFramework* getter = (createOSFramework*)dlGetSymFromLib(libHandle,
+        "liblocationservice_glue.so", "createOSFramework");
+    if (getter != nullptr) {
+        (*getter)();
+    } else {
+        LOC_LOGe("dlGetSymFromLib failed for liblocationservice_glue.so");
+    }
+}
+
+// Destroy OSFramework instance
+void LocationApiService::destroyOSFrameworkInstance() {
+    void* libHandle = nullptr;
+    destroyOSFramework* getter = (destroyOSFramework*)dlGetSymFromLib(libHandle,
+        "liblocationservice_glue.so", "destroyOSFramework");
+    if (getter != nullptr) {
+        (*getter)();
+    } else {
+        LOC_LOGe("dlGetSymFromLib failed for liblocationservice_glue.so");
+    }
 }
 
 void LocationApiService::performMaintenance() {
@@ -1554,16 +1643,24 @@ void LocationApiService::getSingleTerrestrialPos(
             pClient->sendTerrestrialFix(LOCATION_ERROR_NOT_SUPPORTED, location);
         }
     } else {
+        bool terrestrialSessionStarted = (mTerrestrialFixReqs.size() != 0);
+
+        // if the request for the client is already pending
+        // remove the request first
+        auto it = mTerrestrialFixReqs.find(clientName);
+        if (it != mTerrestrialFixReqs.end()) {
+            mTerrestrialFixReqs.erase(clientName);
+        }
+
         mTerrestrialFixReqs.emplace(std::piecewise_construct,
                                     std::forward_as_tuple(clientName),
                                     std::forward_as_tuple(this, clientName));
-
-        auto it = mTerrestrialFixReqs.find(clientName);
+        it = mTerrestrialFixReqs.find(clientName);
         if (it != mTerrestrialFixReqs.end()) {
             it->second.start(pReqMsg->mTimeoutMsec, false);
         }
 
-        if (mTerrestrialFixReqs.size() == 1) {
+        if (terrestrialSessionStarted == false) {
             mGtpWwanSsLocationApi->startNetworkLocation(&mGtpWwanPosCallback);
         }
     }

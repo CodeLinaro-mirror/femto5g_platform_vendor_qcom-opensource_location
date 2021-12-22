@@ -1,4 +1,4 @@
-/* Copyright (c) 2018-2020 The Linux Foundation. All rights reserved.
+/* Copyright (c) 2018-2021 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -32,6 +32,7 @@
 #include <string>
 #include <mutex>
 
+#include <loc_pla.h>
 #include <MsgTask.h>
 #include <loc_cfg.h>
 #include <LocIpc.h>
@@ -40,13 +41,14 @@
 #include <PowerEvtHandler.h>
 #endif
 #include <location_interface.h>
-#include <LocationAPI.h>
+#include <ILocationAPI.h>
 #include <LocationApiMsg.h>
 
 #include <LocHalDaemonClientHandler.h>
 
 #ifdef NO_UNORDERED_SET_OR_MAP
     #include <map>
+    #define unordered_map map
 #else
     #include <unordered_map>
 #endif
@@ -152,6 +154,7 @@ public:
 
     // other APIs
     void deleteClientbyName(const std::string name);
+    void deleteEapClientByIds(int id1, int id2);
 
     // protobuf conversion util class
     LocationApiPbMsgConv mPbufMsgConv;
@@ -238,6 +241,8 @@ private:
     void configEngineRunState(const LocConfigEngineRunStateReqMsg* pMsg);
     void configUserConsentTerrestrialPositioning(
             LocConfigUserConsentTerrestrialPositioningReqMsg* pMsg);
+    void configOutputNmeaTypes(const LocConfigOutputNmeaTypesReqMsg* pMsg);
+    void configEngineIntegrityRisk(const LocConfigEngineIntegrityRiskReqMsg* pMsg);
 
     // Location configuration API get/read requests
     void getGnssConfig(const LocAPIMsgHeader* pReqMsg,
@@ -268,7 +273,19 @@ private:
         return getClient(clientname);
     }
 
+    inline const char* getClientNameByIds(int id1, int id2) {
+        for (auto it = mClients.begin(); it != mClients.end(); ++it) {
+            if (it->second->getServiceId() == id1 && it->second->getInstanceId() == id2) {
+                return it->first.c_str();
+            }
+        }
+        return nullptr;
+    }
+
     GnssInterface* getGnssInterface();
+    // OSFramework instance
+    void createOSFrameworkInstance();
+    void destroyOSFrameworkInstance();
 
 #ifdef POWERMANAGER_ENABLED
     // power event observer
@@ -289,7 +306,7 @@ private:
     // Location Control API interface
     uint32_t mLocationControlId;
     LocationControlCallbacks mControlCallabcks;
-    LocationControlAPI *mLocationControlApi;
+    ILocationControlAPI *mLocationControlApi;
 
     // Configration
     const uint32_t mAutoStartGnss;
@@ -305,7 +322,7 @@ private:
 
     // Terrestrial service related APIs
     // Location api interface for single short wwan fix
-    LocationAPI* mGtpWwanSsLocationApi;
+    ILocationAPI* mGtpWwanSsLocationApi;
     LocationCallbacks mGtpWwanSsLocationApiCallbacks;
     trackingCallback mGtpWwanPosCallback;
     // -1: not set, 0: user not opt-in, 1: user opt in
