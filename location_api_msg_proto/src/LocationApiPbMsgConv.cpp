@@ -25,6 +25,41 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
+/*
+Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted (subject to the limitations in the
+disclaimer below) provided that the following conditions are met:
+
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+
+    * Redistributions in binary form must reproduce the above
+      copyright notice, this list of conditions and the following
+      disclaimer in the documentation and/or other materials provided
+      with the distribution.
+
+    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
+      contributors may be used to endorse or promote products derived
+      from this software without specific prior written permission.
+
+NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
 #define LOG_TAG "LocSvc_LocationApiPbMsgConv"
 
 #include <inttypes.h>
@@ -624,7 +659,6 @@ GnssSvType LocationApiPbMsgConv::getGnssSvTypeFromPBGnssLocSvSystemEnumType(
     return gnssSvType;
 }
 
-/********** XTRA weic */
 // PBDebugLogLevel to DebugLogLevel
 DebugLogLevel LocationApiPbMsgConv::getDebugLogLevelFromPB (
         const PBDebugLogLevel &pbLogLevel) const {
@@ -3300,7 +3334,6 @@ int LocationApiPbMsgConv::convertDeadReckoningEngineConfigToPB(
     return 0;
 }
 
-/*** XTRA weic */
 int LocationApiPbMsgConv::convertXtraConfigParamsToPB(
         const XtraConfigParams& xtraParams, PBXtraConfigParams* pbXtraParams) const {
     pbXtraParams->set_xtradownloadintervalminute(xtraParams.xtraDownloadIntervalMinute);
@@ -3310,15 +3343,21 @@ int LocationApiPbMsgConv::convertXtraConfigParamsToPB(
     pbXtraParams->set_xtracapath(xtraParams.xtraCaPath);
     for (int index = 0; index < xtraParams.xtraServerURLsCount; index++) {
         pbXtraParams->add_xtraserverurls(xtraParams.xtraServerURLs[index]);
-        LOC_LOGe("add %s", xtraParams.xtraServerURLs[index]);
+        LOC_LOGv("add %s", xtraParams.xtraServerURLs[index]);
     }
     for (int index = 0; index < xtraParams.ntpServerURLsCount; index++) {
         pbXtraParams->add_ntpserverurls(xtraParams.ntpServerURLs[index]);
-        LOC_LOGe("add %s", xtraParams.ntpServerURLs[index]);
+        LOC_LOGv("add %s", xtraParams.ntpServerURLs[index]);
     }
+
     // conversion routine for debug level
     pbXtraParams->set_xtradaemondebugloglevel(
             getPBEnumForDebugLogLevel(xtraParams.xtraDaemonDebugLogLevel));
+
+    pbXtraParams->set_xtraintegritydownloadenable(
+            xtraParams.xtraIntegrityDownloadEnable);
+    pbXtraParams->set_xtraintegritydownloadintervalminute(
+            xtraParams.xtraIntegrityDownloadIntervalMinute);
     return 0;
 }
 
@@ -3337,19 +3376,23 @@ int LocationApiPbMsgConv::pbConvertToXtraConfig(const PBXtraConfigParams &pbXtra
     for (int index = 0; index < pbXtraParams.xtraserverurls_size(); index++) {
         strlcpy(xtraParams.xtraServerURLs[index], pbXtraParams.xtraserverurls(index).c_str(),
                 sizeof(xtraParams.xtraServerURLs[index]));
-        LOC_LOGe("xtra server url: %d %s", index, xtraParams.xtraServerURLs[index]);
+        LOC_LOGv("xtra server url: %d %s", index, xtraParams.xtraServerURLs[index]);
     }
     xtraParams.xtraServerURLsCount = pbXtraParams.xtraserverurls_size();
 
     for (int index = 0; index < pbXtraParams.ntpserverurls_size(); index++) {
         strlcpy(xtraParams.ntpServerURLs[index], pbXtraParams.ntpserverurls(index).c_str(),
                 sizeof(xtraParams.ntpServerURLs[index]));
-        LOC_LOGe("ntp server url: %d %s", index, xtraParams.ntpServerURLs[index]);
+        LOC_LOGv("ntp server url: %d %s", index, xtraParams.ntpServerURLs[index]);
     }
     xtraParams.ntpServerURLsCount = pbXtraParams.ntpserverurls_size();
 
     xtraParams.xtraDaemonDebugLogLevel =
             getDebugLogLevelFromPB(pbXtraParams.xtradaemondebugloglevel());
+
+    xtraParams.xtraIntegrityDownloadEnable = pbXtraParams.xtraintegritydownloadenable();
+    xtraParams.xtraIntegrityDownloadIntervalMinute =
+            pbXtraParams.xtraintegritydownloadintervalminute();
     return 0;
 }
 
@@ -3360,7 +3403,7 @@ int LocationApiPbMsgConv::convertXtraStatusToPB(
         pbXtraStatus->set_xtradatastatus(getPBEnumForXtraDataStatus(xtraStatus.xtraDataStatus));
         pbXtraStatus->set_xtravalidforhours(xtraStatus.xtraValidForHours);
     }
-    LOC_LOGe("pb xtra status %d %d %d", pbXtraStatus->featureenabled(), pbXtraStatus->xtradatastatus(),
+    LOC_LOGv("pb xtra status %d %d %d", pbXtraStatus->featureenabled(), pbXtraStatus->xtradatastatus(),
              pbXtraStatus->xtravalidforhours());
     return 0;
 }
