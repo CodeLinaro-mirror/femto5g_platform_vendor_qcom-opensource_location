@@ -25,12 +25,46 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+/*
+Changes from Qualcomm Innovation Center are provided under the following license:
+
+Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted (subject to the limitations in the
+disclaimer below) provided that the following conditions are met:
+
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+
+    * Redistributions in binary form must reproduce the above
+      copyright notice, this list of conditions and the following
+      disclaimer in the documentation and/or other materials provided
+      with the distribution.
+
+    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
+      contributors may be used to endorse or promote products derived
+      from this software without specific prior written permission.
+
+NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include <sys/stat.h>
 #include <grp.h>
 #include <unistd.h>
 #include <sys/prctl.h>
@@ -42,22 +76,6 @@
 #include "LocationApiService.h"
 
 #define HAL_DAEMON_VERSION "1.1.0"
-
-// this function will block until the directory specified in
-// dirName has been created
-static inline void waitForDir(const char* dirName) {
-    // wait for parent direcoty to be created...
-    struct stat buf_stat;
-    while (1) {
-        LOC_LOGd("waiting for %s...", dirName);
-        int rc = stat(dirName, &buf_stat);
-        if (!rc) {
-            break;
-        }
-        usleep(100000); //100ms
-    }
-    LOC_LOGd("done");
-}
 
 int main(int argc, char *argv[])
 {
@@ -88,9 +106,10 @@ int main(int argc, char *argv[])
     LOC_LOGi("location hal daemon - ver %s", HAL_DAEMON_VERSION);
     loc_boot_kpi_marker("L - Location Probe Start");
 
-    waitForDir(SOCKET_DIR_LOCATION);
-    waitForDir(SOCKET_LOC_CLIENT_DIR);
-    waitForDir(SOCKET_DIR_EHUB);
+    //Wait for SYSVINIT initd or systemd tmpfilesd  to create socket folders
+    locUtilWaitForDir(SOCKET_DIR_LOCATION);
+    locUtilWaitForDir(SOCKET_LOC_CLIENT_DIR);
+    locUtilWaitForDir(SOCKET_DIR_EHUB);
 
     LOC_LOGd("starting loc_hal_daemon");
 
