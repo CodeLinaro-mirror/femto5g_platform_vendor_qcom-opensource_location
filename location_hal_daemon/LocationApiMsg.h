@@ -256,6 +256,7 @@ enum ELocMsgID {
     E_INTAPI_CONFIG_ODCPI_INJECT_CB_MSG_ID = 214,
     E_INTAPI_CONFIG_ODCPI_INJECT_MSG_ID = 215,
     E_INTAPI_CONFIG_ENGINE_INTEGRITY_RISK_MSG_ID = 216,
+    E_INTAPI_CONFIG_XTRA_PARAMS_MSG_ID = 217,
 
     // integration API config retrieval request/response
     E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID  = 300,
@@ -266,6 +267,12 @@ enum ELocMsgID {
 
     E_INTAPI_GET_MIN_SV_ELEVATION_REQ_MSG_ID  = 304,
     E_INTAPI_GET_MIN_SV_ELEVATION_RESP_MSG_ID  = 305,
+
+    E_INTAPI_GET_XTRA_STATUS_REQ_MSG_ID = 306,
+    E_INTAPI_GET_XTRA_STATUS_RESP_MSG_ID = 307,
+
+    E_INTAPI_REGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID = 308,
+    E_INTAPI_DEREGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID = 309,
 };
 
 typedef uint32_t LocationCallbacksMask;
@@ -963,6 +970,17 @@ struct LocConfigEngineIntegrityRiskReqMsg: LocAPIMsgHeader
         mEngType(engType), mIntegrityRisk(integrityRisk) { }
 };
 
+struct LocConfigXtraReqMsg: LocAPIMsgHeader
+{
+    bool mEnable;
+    XtraConfigParams mXtraParams;
+
+    inline LocConfigXtraReqMsg(const char* name, bool enable, XtraConfigParams xtraParams) :
+        LocAPIMsgHeader(name, E_INTAPI_CONFIG_XTRA_PARAMS_MSG_ID),
+        mEnable(enable),
+        mXtraParams(xtraParams) { }
+};
+
 /******************************************************************************
 IPC message structure - Location Integration API Get request/response message
 ******************************************************************************/
@@ -1011,6 +1029,37 @@ struct LocConfigGetMinSvElevationRespMsg: LocAPIMsgHeader
                                              uint8_t minSvElevation) :
         LocAPIMsgHeader(name, E_INTAPI_GET_MIN_SV_ELEVATION_RESP_MSG_ID),
         mMinSvElevation(minSvElevation) { }
+};
+
+/**************** XTRA related section **********************/
+struct LocConfigGetXtraStatusReqMsg: LocAPIMsgHeader
+{
+    inline LocConfigGetXtraStatusReqMsg(const char* name) :
+        LocAPIMsgHeader(name, E_INTAPI_GET_XTRA_STATUS_REQ_MSG_ID) { }
+};
+
+struct LocConfigRegisterXtraStatusUpdateReqMsg: LocAPIMsgHeader
+{
+    inline LocConfigRegisterXtraStatusUpdateReqMsg(const char* name) :
+        LocAPIMsgHeader(name, E_INTAPI_REGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID) { }
+};
+
+struct LocConfigDeregisterXtraStatusUpdateReqMsg: LocAPIMsgHeader
+{
+    inline LocConfigDeregisterXtraStatusUpdateReqMsg(const char* name) :
+        LocAPIMsgHeader(name, E_INTAPI_DEREGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID) { }
+};
+
+struct LocConfigGetXtraStatusRespMsg: LocAPIMsgHeader
+{
+    XtraStatusUpdateType mUpdateType;
+    XtraStatus           mXtraStatus;
+
+    inline LocConfigGetXtraStatusRespMsg(const char* name,
+                                         XtraStatusUpdateType updateType,
+                                         XtraStatus           xtraStatus) :
+        LocAPIMsgHeader(name, E_INTAPI_GET_XTRA_STATUS_RESP_MSG_ID),
+        mUpdateType(updateType), mXtraStatus(xtraStatus) { }
 };
 
 /******************************************************************************

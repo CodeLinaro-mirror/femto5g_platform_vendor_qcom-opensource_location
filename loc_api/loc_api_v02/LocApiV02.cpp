@@ -2430,6 +2430,10 @@ locClientEventMaskType LocApiV02 :: convertMask(
   if (mask & LOC_API_ADAPTER_BIT_ASSISTANCE_DATA_REQUEST)
   {
     eventMask |= QMI_LOC_EVENT_MASK_INJECT_PREDICTED_ORBITS_REQ_V02;
+  }
+
+  if (mask & LOC_API_ADAPTER_BIT_ASSISTANCE_TIME_REQUEST)
+  {
     eventMask |= QMI_LOC_EVENT_MASK_INJECT_TIME_REQ_V02;
   }
 

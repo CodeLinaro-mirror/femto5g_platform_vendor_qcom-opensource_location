@@ -238,10 +238,17 @@ private:
     void odcpiInit(const LocConfigOdcpiInitReqMsg* pMsg);
     void odcpiInject(const LocConfigOdcpiInjectReqMsg* pMsg);
     void configEngineIntegrityRisk(const LocConfigEngineIntegrityRiskReqMsg* pMsg);
+    void configXtraParams(const LocConfigXtraReqMsg* pMsg);
 
     // Location configuration API get/read requests
     void getGnssConfig(const LocAPIMsgHeader* pReqMsg,
                        GnssConfigFlagsBits configFlag);
+
+    void getXtraStatus(const LocConfigGetXtraStatusReqMsg* pReqMsg);
+    void registerXtraStatusUpdate(
+            const LocConfigRegisterXtraStatusUpdateReqMsg * pReqMsg);
+    void deregisterXtraStatusUpdate(
+            const LocConfigDeregisterXtraStatusUpdateReqMsg * pReqMsg);
 
     // Location configuration API util routines
     void addConfigRequestToMap(uint32_t sessionId,
@@ -319,6 +326,8 @@ private:
     // -1: not set, 0: user not opt-in, 1: user opt in
     int mOptInTerrestrialService;
     SingleTerrestrialFixClientMap mTerrestrialFixReqs;
+   // LIA clients that register for xtra status update
+    std::unordered_set<std::string> mClientsRegForXtraStatus;
 };
 
 #endif //LOCATIONAPISERVICE_H

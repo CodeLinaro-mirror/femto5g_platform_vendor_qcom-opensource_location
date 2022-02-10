@@ -139,6 +139,10 @@ public:
     uint32_t registerLocationInjector(
             LocRequestLocationInjectionCb requestLocationInjectionCb);
 
+    uint32_t configXtraParams(bool enable, const ::XtraConfigParams& configParams);
+    uint32_t getXtraStatus();
+    uint32_t registerXtraStatusUpdate(bool register);
+
 private:
     ~LocationIntegrationApiImpl();
     bool integrationClientAllowed();
@@ -157,6 +161,8 @@ private:
     void processGetMinGpsWeekRespCb(const LocConfigGetMinGpsWeekRespMsg* pRespMsg);
     void processGetMinSvElevationRespCb(const LocConfigGetMinSvElevationRespMsg* pRespMsg);
     void odcpiRequestCb(const OdcpiRequestInfo& request);
+    void processGetXtraStatusRespCb(
+            const LocConfigGetXtraStatusRespMsg* pRespMsg);
 
     // internal session parameter
     static mutex             mMutex;
@@ -180,6 +186,8 @@ private:
     NmeaConfigInfo                mNmeaConfigInfo;
     GtpUserConsentConfigInfo      mGtpUserConsentConfigInfo;
     LocRequestLocationInjectionCb mRequestLocationInjectionCb;
+    bool                          mRegisterXtraUpdate;
+    bool                          mXtraUpdateUponRegisterPending;
 
     LocConfigReqCntMap       mConfigReqCntMap;
     LocIntegrationCbs        mIntegrationCbs;

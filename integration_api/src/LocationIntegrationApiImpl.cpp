@@ -26,7 +26,7 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#define LOG_TAG "LocSvc_LocationIntegrationApi"
+#define LOG_TAG "LocSvc_LocationIntegrationApiImpl"
 
 #include <sys/types.h>
 #include <unistd.h>
@@ -34,6 +34,11 @@
 #include <LocationIntegrationApiImpl.h>
 #include <log_util.h>
 #include <gps_extended_c.h>
+
+static uint32_t sXtraTestEnabled = 0;
+static const loc_param_s_type gConfigTable[] = {
+    {"XTRA_TEST_ENABLED", &sXtraTestEnabled, NULL, 'n'}
+};
 
 namespace location_integration {
 
@@ -80,6 +85,9 @@ static LocConfigTypeEnum getLocConfigTypeFromMsgId(ELocMsgID  msgId) {
     case E_INTAPI_CONFIG_ENGINE_INTEGRITY_RISK_MSG_ID:
         configType = CONFIG_ENGINE_INTEGRITY_RISK;
         break;
+    case E_INTAPI_CONFIG_XTRA_PARAMS_MSG_ID:
+        configType = CONFIG_XTRA_PARAMS;
+        break;
     case E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID:
     case E_INTAPI_GET_ROBUST_LOCATION_CONFIG_RESP_MSG_ID:
         configType = GET_ROBUST_LOCATION_CONFIG;
@@ -91,6 +99,14 @@ static LocConfigTypeEnum getLocConfigTypeFromMsgId(ELocMsgID  msgId) {
     case E_INTAPI_GET_MIN_SV_ELEVATION_REQ_MSG_ID:
     case E_INTAPI_GET_MIN_SV_ELEVATION_RESP_MSG_ID:
         configType = GET_MIN_SV_ELEVATION;
+        break;
+    case E_INTAPI_GET_XTRA_STATUS_REQ_MSG_ID:
+    case E_INTAPI_GET_XTRA_STATUS_RESP_MSG_ID:
+        configType = GET_XTRA_STATUS;
+        break;
+    case E_INTAPI_REGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID:
+    case E_INTAPI_DEREGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID:
+        configType = REGISTER_XTRA_STATUS_UPDATE;
         break;
     default:
         break;
@@ -190,10 +206,17 @@ LocationIntegrationApiImpl::LocationIntegrationApiImpl(LocIntegrationCbs& integr
         mRobustLocationConfigInfo{},
         mDreConfigInfo{},
         mGtpUserConsentConfigInfo{},
-        mRequestLocationInjectionCb(nullptr) {
+        mRequestLocationInjectionCb(nullptr),
+        mNmeaConfigInfo{},
+        mRegisterXtraUpdate(false),
+        mXtraUpdateUponRegisterPending(false) {
+
     if (integrationClientAllowed() == false) {
         return;
     }
+
+    // read configuration file
+    UTIL_READ_CONF(LOC_PATH_GPS_CONF, gConfigTable);
 
     mMsgTask = new MsgTask("IntegrationApiImpl", false);
     // get pid to generate sokect name
@@ -351,9 +374,13 @@ void IpcListener::onReceive(const char* data, uint32_t length,
             case E_INTAPI_CONFIG_OUTPUT_NMEA_TYPES_MSG_ID:
             case E_INTAPI_CONFIG_USER_CONSENT_TERRESTRIAL_POSITIONING_MSG_ID:
             case E_INTAPI_CONFIG_ENGINE_INTEGRITY_RISK_MSG_ID:
+            case E_INTAPI_CONFIG_XTRA_PARAMS_MSG_ID:
             case E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID:
             case E_INTAPI_GET_MIN_GPS_WEEK_REQ_MSG_ID:
             case E_INTAPI_GET_MIN_SV_ELEVATION_REQ_MSG_ID:
+            case E_INTAPI_GET_XTRA_STATUS_REQ_MSG_ID:
+            case E_INTAPI_REGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID:
+            case E_INTAPI_DEREGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID:
             {
                 if (sizeof(LocAPIGenericRespMsg) != mMsgData.length()) {
                     LOC_LOGw("payload size does not match for message with id: %d",
@@ -406,6 +433,17 @@ void IpcListener::onReceive(const char* data, uint32_t length,
                 break;
             }
 
+            case E_INTAPI_GET_XTRA_STATUS_RESP_MSG_ID:
+            {
+                if (sizeof(LocConfigGetXtraStatusRespMsg) != mMsgData.length()) {
+                    LOC_LOGw("payload size does not match for message with id: %d",
+                             pMsg->msgId);
+                    return;
+                }
+
+                mApiImpl.processGetXtraStatusRespCb((LocConfigGetXtraStatusRespMsg*)pMsg);
+                break;
+            }
 
             default:
                 LOC_LOGw("<<< unknown message %d", pMsg->msgId);
@@ -940,6 +978,126 @@ uint32_t LocationIntegrationApiImpl::configEngineIntegrityRisk(
     return 0;
 }
 
+uint32_t LocationIntegrationApiImpl::configXtraParams(
+        bool enable, const ::XtraConfigParams& configParams) {
+    struct ConfigXtraReq : public LocMsg {
+        ConfigXtraReq(LocationIntegrationApiImpl* apiImpl,
+                      bool enable, const ::XtraConfigParams& configParams) :
+                mApiImpl(apiImpl), mEnable(enable), mConfigParams(configParams) {}
+        virtual ~ConfigXtraReq() {}
+        void proc() const {
+            if (1 != sXtraTestEnabled) {
+                // download interval: 48 hours and 168 hours
+                if (mConfigParams.xtraDownloadIntervalMinute != 0) {
+                    if (mConfigParams.xtraDownloadIntervalMinute < 48 * 60) {
+                        mConfigParams.xtraDownloadIntervalMinute = 48 * 60;
+                    } else if (mConfigParams.xtraDownloadIntervalMinute > 168 * 60) {
+                        mConfigParams.xtraDownloadIntervalMinute = 168 * 60;
+                    }
+                }
+
+                // download timeout: maximum of 300 secs and minimum of 3 secs
+                if (mConfigParams.xtraDownloadTimeoutSec != 0) {
+                    if (mConfigParams.xtraDownloadTimeoutSec < 3) {
+                        mConfigParams.xtraDownloadTimeoutSec = 3;
+                    } else if (mConfigParams.xtraDownloadTimeoutSec > 300) {
+                        mConfigParams.xtraDownloadTimeoutSec = 300;
+                    }
+                }
+
+                // retry interval: a maximum of 1 day and a minimum of 3 minutes.
+                if (mConfigParams.xtraDownloadRetryIntervalMinute != 0) {
+                    if (mConfigParams.xtraDownloadRetryIntervalMinute < 3) {
+                        mConfigParams.xtraDownloadRetryIntervalMinute = 3;
+                    } else if (mConfigParams.xtraDownloadRetryIntervalMinute > 24 * 60) {
+                        mConfigParams.xtraDownloadRetryIntervalMinute = 24 * 60;
+                    }
+                }
+
+                // retry attempts: maximum number of allowed retry is 6 per
+                // download interval.
+                if (mConfigParams.xtraDownloadRetryAttempts > 6) {
+                    mConfigParams.xtraDownloadRetryAttempts = 6;
+                }
+            }
+
+            LocConfigXtraReqMsg msg(mApiImpl->mSocketName, mEnable, mConfigParams);
+            mApiImpl->sendConfigMsgToHalDaemon(
+                        CONFIG_XTRA_PARAMS, reinterpret_cast<uint8_t*>(&msg),
+                        sizeof(msg));
+        }
+
+        LocationIntegrationApiImpl* mApiImpl;
+        bool mEnable;
+        mutable ::XtraConfigParams mConfigParams;
+    };
+
+    mMsgTask->sendMsg(new (nothrow) ConfigXtraReq(this, enable, configParams));
+    return 0;
+}
+
+uint32_t LocationIntegrationApiImpl::getXtraStatus() {
+
+    struct GetXtraStatusReq : public LocMsg {
+        GetXtraStatusReq(LocationIntegrationApiImpl* apiImpl) :
+                mApiImpl(apiImpl) {}
+        virtual ~GetXtraStatusReq() {}
+        void proc() const {
+            string pbStr;
+            LocConfigGetXtraStatusReqMsg msg(mApiImpl->mSocketName);
+            mApiImpl->sendConfigMsgToHalDaemon(GET_XTRA_STATUS,
+                                                reinterpret_cast<uint8_t*>(&msg),
+                                                sizeof(msg));
+        }
+        LocationIntegrationApiImpl* mApiImpl;
+    };
+
+    if (mIntegrationCbs.getXtraStatusCb == nullptr) {
+        LOC_LOGe("no callback passed in constructor to receive xtra status");
+        // return 1 to signal error
+        return 1;
+    }
+    mMsgTask->sendMsg(new (nothrow) GetXtraStatusReq(this));
+    return 0;
+}
+
+uint32_t LocationIntegrationApiImpl::registerXtraStatusUpdate(bool registerUpdate) {
+
+    struct RegisterXtraStatusUpdateReq : public LocMsg {
+        RegisterXtraStatusUpdateReq(LocationIntegrationApiImpl* apiImpl,
+                      bool registerUpdate) :
+                mApiImpl(apiImpl), mRegisterUpdate(registerUpdate) {}
+        virtual ~RegisterXtraStatusUpdateReq() {}
+        void proc() const {
+            LOC_LOGe("registerXtraStatusUpdate: %d", mRegisterUpdate);
+            string pbStr;
+            mApiImpl->mRegisterXtraUpdate = mRegisterUpdate;
+            if (mRegisterUpdate == true) {
+                mApiImpl->mXtraUpdateUponRegisterPending = true;
+                LocConfigRegisterXtraStatusUpdateReqMsg msg(mApiImpl->mSocketName);
+                mApiImpl->sendConfigMsgToHalDaemon(REGISTER_XTRA_STATUS_UPDATE,
+                        reinterpret_cast<uint8_t*>(&msg), sizeof(msg));
+            } else {
+                mApiImpl->mXtraUpdateUponRegisterPending = false;
+                LocConfigDeregisterXtraStatusUpdateReqMsg msg(mApiImpl->mSocketName);
+                mApiImpl->sendConfigMsgToHalDaemon(REGISTER_XTRA_STATUS_UPDATE,
+                        reinterpret_cast<uint8_t*>(&msg), sizeof(msg));
+            }
+        }
+
+        LocationIntegrationApiImpl* mApiImpl;
+        bool mRegisterUpdate;
+    };
+
+    if (mIntegrationCbs.getXtraStatusCb == nullptr) {
+        LOC_LOGe("no callback passed in constructor to receive xtra status");
+        // return 1 to signal error
+        return 1;
+    }
+    mMsgTask->sendMsg(new (nothrow) RegisterXtraStatusUpdateReq(this, registerUpdate));
+    return 0;
+}
+
 void LocationIntegrationApiImpl::sendConfigMsgToHalDaemon(
         LocConfigTypeEnum configType, uint8_t* pMsg,
         size_t msgSize, bool invokeResponseCb) {
@@ -1066,6 +1224,13 @@ void LocationIntegrationApiImpl::processHalReadyMsg() {
                                   reinterpret_cast<uint8_t*>(&msg),
                                   sizeof(msg));
     }
+
+    // resend XTRA status registration message request
+    if (mRegisterXtraUpdate) {
+        LocConfigRegisterXtraStatusUpdateReqMsg msg(mSocketName);
+        sendConfigMsgToHalDaemon(REGISTER_XTRA_STATUS_UPDATE,
+                                 reinterpret_cast<uint8_t*>(&msg), sizeof(msg));
+    }
 }
 
 void LocationIntegrationApiImpl::addConfigReq(LocConfigTypeEnum configType) {
@@ -1170,6 +1335,65 @@ void LocationIntegrationApiImpl::processGetMinSvElevationRespCb(
     if (mIntegrationCbs.getMinSvElevationCb) {
         mIntegrationCbs.getMinSvElevationCb(pRespMsg->mMinSvElevation);
     }
+}
+
+void LocationIntegrationApiImpl::processGetXtraStatusRespCb(
+        const LocConfigGetXtraStatusRespMsg* pRespMsg) {
+
+    if (!mIntegrationCbs.getXtraStatusCb) {
+        return;
+    }
+
+    XtraStatus xtraStatus = {};
+    XtraStatusUpdateTrigger updateTrigger = (XtraStatusUpdateTrigger) 0;
+    switch (pRespMsg->mUpdateType) {
+    case ::XTRA_STATUS_UPDATE_UPON_QUERY:
+        updateTrigger = XTRA_STATUS_UPDATE_UPON_QUERY;
+        break;
+    case ::XTRA_STATUS_UPDATE_UPON_REGISTRATION:
+        updateTrigger = XTRA_STATUS_UPDATE_UPON_REGISTRATION;
+        break;
+    case ::XTRA_STATUS_UPDATE_UPON_STATUS_CHANGE:
+        updateTrigger = XTRA_STATUS_UPDATE_UPON_STATUS_CHANGE;
+        break;
+    default:
+        break;
+    }
+
+    LOC_LOGi("update type %d, register for update %d, register for update pending %d",
+             updateTrigger, mRegisterXtraUpdate, mXtraUpdateUponRegisterPending);
+    if (updateTrigger == XTRA_STATUS_UPDATE_UPON_REGISTRATION) {
+        if ((mRegisterXtraUpdate == false) ||
+            (mXtraUpdateUponRegisterPending == false)) {
+            // if client has de-registered update or this is due to hal daemon restart
+            return;
+        }
+        mXtraUpdateUponRegisterPending = false;
+    }
+
+    xtraStatus.featureEnabled = pRespMsg->mXtraStatus.featureEnabled;
+    if (xtraStatus.featureEnabled == true) {
+        xtraStatus.xtraDataStatus = (XtraDataStatus) XTRA_DATA_STATUS_UNKNOWN;
+        switch (pRespMsg->mXtraStatus.xtraDataStatus) {
+        case ::XTRA_DATA_STATUS_NOT_AVAIL:
+            xtraStatus.xtraDataStatus = XTRA_DATA_STATUS_NOT_AVAIL;
+            break;
+        case ::XTRA_DATA_STATUS_NOT_VALID:
+            xtraStatus.xtraDataStatus = XTRA_DATA_STATUS_NOT_VALID;
+            break;
+        case ::XTRA_DATA_STATUS_VALID:
+            xtraStatus.xtraDataStatus = XTRA_DATA_STATUS_VALID;
+            break;
+        }
+
+        if (xtraStatus.xtraDataStatus == XTRA_DATA_STATUS_VALID) {
+            xtraStatus.xtraValidForHours = pRespMsg->mXtraStatus.xtraValidForHours;
+        }
+    }
+
+    LOC_LOGd("send out xtra status: %d %d %d %d", updateTrigger, xtraStatus.featureEnabled,
+             xtraStatus.xtraDataStatus, xtraStatus.xtraValidForHours);
+    mIntegrationCbs.getXtraStatusCb(updateTrigger, xtraStatus);
 }
 
 /******************************************************************************

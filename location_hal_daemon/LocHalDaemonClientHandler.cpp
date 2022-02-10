@@ -638,6 +638,35 @@ void LocHalDaemonClientHandler::onGnssConfigCb(ELocMsgID configMsgId,
             msgLen = sizeof (LocConfigGetMinSvElevationRespMsg);
         }
         break;
+
+    case E_INTAPI_GET_XTRA_STATUS_REQ_MSG_ID:
+        if (gnssConfig.flags & GNSS_CONFIG_FLAGS_XTRA_STATUS_BIT)
+        {
+            LOC_LOGd("--< onGnssConfigCb, xtra status received, %d %d %d",
+                     gnssConfig.xtraStatus.featureEnabled,
+                     gnssConfig.xtraStatus.xtraDataStatus,
+                     gnssConfig.xtraStatus.xtraValidForHours);
+            msg = (uint8_t*) new LocConfigGetXtraStatusRespMsg(
+                    SERVICE_NAME, XTRA_STATUS_UPDATE_UPON_QUERY,
+                    gnssConfig.xtraStatus);
+            LOC_LOGe("--< onGnssConfigCb, xtra status received, %d %d %d",
+                     ((LocConfigGetXtraStatusRespMsg*)msg)->mXtraStatus.featureEnabled,
+                     ((LocConfigGetXtraStatusRespMsg*)msg)->mXtraStatus.xtraDataStatus,
+                     ((LocConfigGetXtraStatusRespMsg*)msg)->mXtraStatus.xtraValidForHours);
+            msgLen = sizeof(LocConfigGetXtraStatusRespMsg);
+        }
+        break;
+
+    case E_INTAPI_REGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID:
+        if (gnssConfig.flags & GNSS_CONFIG_FLAGS_XTRA_STATUS_BIT)
+        {
+            msg = (uint8_t*) new LocConfigGetXtraStatusRespMsg(
+                    SERVICE_NAME, XTRA_STATUS_UPDATE_UPON_REGISTRATION,
+                    gnssConfig.xtraStatus);
+            msgLen = sizeof(LocConfigGetXtraStatusRespMsg);
+        }
+        break;
+
     default:
         break;
     }
@@ -650,18 +679,31 @@ void LocHalDaemonClientHandler::onGnssConfigCb(ELocMsgID configMsgId,
             mService->deleteClientbyName(mName);
         }
     }
+}
 
-    // cleanup
-    if (nullptr != msg) {
-        delete msg;
-        msg = nullptr;
+void LocHalDaemonClientHandler::onXtraStatusUpdateCb(const XtraStatus &xtraStatus) {
+
+    LocConfigGetXtraStatusRespMsg msg(SERVICE_NAME, XTRA_STATUS_UPDATE_UPON_STATUS_CHANGE,
+                                      xtraStatus);
+    bool rc = sendMessage(msg);
+    // purge this client if failed
+    if (!rc) {
+        LOC_LOGe("failed rc=%d purging client=%s", rc, mName.c_str());
+        mService->deleteClientbyName(mName);
     }
 }
 
 void LocHalDaemonClientHandler::sendTerrestrialFix(LocationError error,
                                                    const Location& location) {
+    std::lock_guard<std::mutex> lock(LocationApiService::mMutex);
+
     LocAPIGetSingleTerrestrialPosRespMsg msg(SERVICE_NAME, error, location);
-    sendMessage(msg);
+    bool rc = sendMessage(msg);
+    // purge this client if failed
+    if (!rc) {
+        LOC_LOGe("failed rc=%d purging client=%s", rc, mName.c_str());
+        mService->deleteClientbyName(mName);
+    }
 }
 
 /******************************************************************************
@@ -1010,9 +1052,10 @@ LocHalDaemonClientHandler - Engine info related functionality
 // as this is single shot request, the corresponding mask will be cleared
 // as well
 void LocHalDaemonClientHandler::onGnssEnergyConsumedInfoAvailable(
-   LocAPIGnssEnergyConsumedIndMsg &msg) {
+    LocAPIGnssEnergyConsumedIndMsg &msg) {
+    std::lock_guard<std::mutex> lock(LocationApiService::mMutex);
 
-   if ((nullptr != mIpcSender) &&
+    if ((nullptr != mIpcSender) &&
             (mEngineInfoRequestMask & E_ENGINE_INFO_CB_GNSS_ENERGY_CONSUMED_BIT)) {
 
         bool rc = sendMessage(msg);
