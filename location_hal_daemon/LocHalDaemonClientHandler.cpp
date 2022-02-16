@@ -226,9 +226,7 @@ uint32_t LocHalDaemonClientHandler::startTracking(LocationOptions & locOptions) 
              locOptions.locReqEngTypeMask);
     if (mSessionId == 0 && mLocationApi) {
         // update option
-        mOptions = locOptions;
-        // allow all the fix report in LE session, even failed fix
-        mOptions.qualityLevelAccepted = QUALITY_ANY_OR_FAILED_FIX;
+        mOptions.setLocationOptions(locOptions);
         // set interval to engine supported interval
         mOptions.minInterval = getSupportedTbf(mOptions.minInterval);
         mSessionId = mLocationApi->startTracking(mOptions);
@@ -293,12 +291,9 @@ void LocHalDaemonClientHandler::updateTrackingOptions(LocationOptions & locOptio
              locOptions.minDistance, locOptions.minInterval,
              locOptions.locReqEngTypeMask);
 
-        TrackingOptions trackingOption;
-        trackingOption.setLocationOptions(locOptions);
+        TrackingOptions trackingOption(locOptions);
         // set tbf to device supported tbf
         trackingOption.minInterval = getSupportedTbf(trackingOption.minInterval);
-        // allow all the fix report in LE session, even failed fix
-        trackingOption.qualityLevelAccepted = QUALITY_ANY_OR_FAILED_FIX;
         mLocationApi->updateTrackingOptions(mSessionId, trackingOption);
 
         // save the trackingOption: eng req type that will be used in filtering
