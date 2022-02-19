@@ -25,6 +25,43 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
+/*
+Changes from Qualcomm Innovation Center are provided under the following license:
+
+Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted (subject to the limitations in the
+disclaimer below) provided that the following conditions are met:
+
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+
+    * Redistributions in binary form must reproduce the above
+      copyright notice, this list of conditions and the following
+      disclaimer in the documentation and/or other materials provided
+      with the distribution.
+
+    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
+      contributors may be used to endorse or promote products derived
+      from this software without specific prior written permission.
+
+NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
 #define LOG_TAG "LocSvc_LocationApiMsg"
 
 #include <inttypes.h>
@@ -1545,6 +1582,56 @@ int LocAPILocationSystemInfoIndMsg::serializeToProtobuf(string& protoStr) {
     return protoStr.size();
 }
 
+// Convert LocAPIDcReportIndMsg -> PBLocAPIDcReportIndMsg
+int LocAPIDcReportIndMsg::serializeToProtobuf(string& protoStr) {
+    PBLocAPIMsgHeader pLocApiMsgHdr;
+    PBLocAPIDcReportIndMsg pbMsg;
+
+    if (nullptr == pLocApiPbMsgConv) {
+        LOC_LOGe("pLocApiPbMsgConv is null!");
+        return 0;
+    }
+    // string      mSocketName = 1;
+    pLocApiMsgHdr.set_msocketname(mSocketName);
+    // PBELocMsgID  msgId = 2;
+    pLocApiMsgHdr.set_msgid(pLocApiPbMsgConv->getPBEnumForELocMsgID(msgId));
+    // uint32   msgVersion = 3;
+    pLocApiMsgHdr.set_msgversion(msgVersion);
+
+    PBGnssDcReportInfo* pbDcReportInfo = pbMsg.mutable_dcreportinfo();
+    if (nullptr != pbDcReportInfo) {
+        if (pLocApiPbMsgConv->convertGnssDcReportToPB(dcReportInfo, pbDcReportInfo)) {
+            LOC_LOGe("convertGnssDcReportToPB failed");
+            pbMsg.clear_dcreportinfo();
+            return 0;
+        }
+    } else {
+        LOC_LOGe("mutable_dcreportinfo failed");
+        return 0;
+    }
+
+    string pbStr;
+    if (!pbMsg.SerializeToString(&pbStr)) {
+        LOC_LOGe("SerializeToString on pbMsg failed!");
+        pbMsg.clear_dcreportinfo();
+        return 0;
+    }
+    // bytes       payload = 4;
+    pLocApiMsgHdr.set_payload(pbStr);
+
+    // uint32   payloadSize = 5;
+    pLocApiMsgHdr.set_payloadsize(sizeof(LocAPIDcReportIndMsg));
+
+    if (!pLocApiMsgHdr.SerializeToString(&protoStr)) {
+        LOC_LOGe("SerializeToString on pLocApiMsgHdr failed!");
+        pbMsg.clear_dcreportinfo();
+        return 0;
+    }
+    // free memory
+    pbMsg.clear_dcreportinfo();
+    return protoStr.size();
+}
+
 // Convert LocConfigConstrainedTuncReqMsg -> PBLocConfigConstrainedTuncReqMsg
 int LocConfigConstrainedTuncReqMsg::serializeToProtobuf(string& protoStr) {
     PBLocAPIMsgHeader pLocApiMsgHdr;
@@ -2996,6 +3083,17 @@ LocAPILocationSystemInfoIndMsg::LocAPILocationSystemInfoIndMsg(const char* name,
     // PBLocationSystemInfo locationSystemInfo = 1;
     pLocApiPbMsgConv->pbConvertToLocationSystemInfo(pbLocApiLocSysInfoIndMsg.locationsysteminfo(),
             locationSystemInfo);
+}
+
+// Decode PBLocAPIDcReportIndMsg -> LocAPIDcReportIndMsg
+LocAPIDcReportIndMsg::LocAPIDcReportIndMsg(const char* name,
+            const PBLocAPIDcReportIndMsg &pbMsg, const LocationApiPbMsgConv *pbMsgConv):
+        LocAPIMsgHeader(name, E_LOCAPI_DC_REPORT_MSG_ID, pbMsgConv) {
+    if (nullptr == pLocApiPbMsgConv) {
+        LOC_LOGe("pLocApiPbMsgConv is null!");
+        return;
+    }
+    pLocApiPbMsgConv->pbConvertToDcReport(pbMsg.dcreportinfo(), dcReportInfo);
 }
 
 // Decode PBLocConfigConstrainedTuncReqMsg -> LocConfigConstrainedTuncReqMsg

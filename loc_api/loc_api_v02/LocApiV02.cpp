@@ -2611,6 +2611,10 @@ locClientEventMaskType LocApiV02 :: convertLocClientEventMask(
       eventMask |= QMI_LOC_EVENT_MASK_LATENCY_INFORMATION_REPORT_V02;
   }
 
+   if (mask & LOC_API_ADAPTER_BIT_DISASTER_CRISIS_REPORT) {
+      eventMask |= QMI_LOC_EVENT_MASK_DC_REPORT_V02;
+  }
+
   return eventMask;
 }
 
@@ -5326,6 +5330,36 @@ void  LocApiV02 :: reportSystemInfo(
     }
 }
 
+/* report disaster and crisis message */
+void LocApiV02 :: reportDcMessage(const qmiLocEventDcReportIndMsgT_v02* pDcReportIndMsg)
+{
+    if (pDcReportIndMsg->msgType_valid &&
+            pDcReportIndMsg->numValidBits_valid && (pDcReportIndMsg->numValidBits > 0) &&
+            pDcReportIndMsg->dcReportData_valid && (pDcReportIndMsg->dcReportData_len > 0)) {
+        GnssDcReportInfo dcReportInfo = {};
+        LOC_LOGi("dc report type %d, num bits %d, num bytes %d",
+                 pDcReportIndMsg->msgType, (uint32_t)pDcReportIndMsg->numValidBits,
+                 pDcReportIndMsg->dcReportData_len);
+
+        switch (pDcReportIndMsg->msgType) {
+        case eQMI_LOC_QZSS_JMA_DISASTER_PREVENTION_INFO_V02:
+            dcReportInfo.dcReportType = QZSS_JMA_DISASTER_PREVENTION_INFO;
+            break;
+        case eQMI_LOC_QZSS_NON_JMA_DISASTER_PREVENTION_INFO_V02:
+            dcReportInfo.dcReportType = QZSS_NON_JMA_DISASTER_PREVENTION_INFO;
+        default:
+            LOC_LOGe("unknown qmi dc report type: %d", pDcReportIndMsg->msgType);
+            return;
+        }
+        dcReportInfo.numValidBits = pDcReportIndMsg->numValidBits;
+        dcReportInfo.dcReportData.resize(pDcReportIndMsg->dcReportData_len);
+        for (uint32_t i = 0; i < pDcReportIndMsg->dcReportData_len; i++) {
+            dcReportInfo.dcReportData[i] = pDcReportIndMsg->dcReportData[i];
+        }
+        LocApiBase::reportDcMessage(dcReportInfo);
+    }
+}
+
 /* convert engine state report to loc eng format and send the converted
    report to loc eng */
 void LocApiV02 :: reportEngineState (
@@ -6825,6 +6859,10 @@ void LocApiV02 :: eventCb(locClientHandleType /*clientHandle*/,
 
     case QMI_LOC_EVENT_PLATFORM_POWER_STATE_CHANGED_IND_V02:
       reportPowerStateChangeInfo(eventPayload.pPowerStateChangedIndMsg);
+      break;
+
+    case QMI_LOC_DC_REPORT_IND_V02:
+      reportDcMessage(eventPayload.pDcReportIndMsg);
       break;
   }
 }
