@@ -25,6 +25,43 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
+/*
+Changes from Qualcomm Innovation Center are provided under the following license:
+
+Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted (subject to the limitations in the
+disclaimer below) provided that the following conditions are met:
+
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+
+    * Redistributions in binary form must reproduce the above
+      copyright notice, this list of conditions and the following
+      disclaimer in the documentation and/or other materials provided
+      with the distribution.
+
+    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
+      contributors may be used to endorse or promote products derived
+      from this software without specific prior written permission.
+
+NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
 #define LOG_TAG "LocSvc_LocationIntegrationApi"
 
 
@@ -391,11 +428,13 @@ bool LocationIntegrationApi::configBodyToSensorMountParams(
     return false;
 }
 
+#define FLOAT_EPSILON 0.0000001
 bool LocationIntegrationApi::configDeadReckoningEngineParams(
         const DeadReckoningEngineConfig& dreConfig) {
 
     if (mApiImpl) {
-        LOC_LOGd("mask 0x%x, roll offset %f, pitch offset %f, yaw offset %f, offset unc %f",
+        LOC_LOGi("mask 0x%x, roll offset %f, pitch offset %f, yaw offset %f, offset unc %f,"
+                 "speed scale %f, spped scale unc %f, gyro scale %f, gyro scale factor %f",
                  dreConfig.validMask,
                  dreConfig.bodyToSensorMountParams.rollOffset,
                  dreConfig.bodyToSensorMountParams.pitchOffset,
@@ -429,8 +468,8 @@ bool LocationIntegrationApi::configDeadReckoningEngineParams(
                     dreConfig.bodyToSensorMountParams.offsetUnc;
         }
         if (dreConfig.validMask & VEHICLE_SPEED_SCALE_FACTOR_VALID) {
-            if (dreConfig.vehicleSpeedScaleFactor < 0.9 ||
-                    dreConfig.vehicleSpeedScaleFactor > 1.1) {
+            if (dreConfig.vehicleSpeedScaleFactor < (0.9 - FLOAT_EPSILON) ||
+                    dreConfig.vehicleSpeedScaleFactor > (1.1 + FLOAT_EPSILON)) {
                 LOC_LOGe("invalid vehicle speed scale factor, range is [0.9, 1,1]");
                 return false;
             }
@@ -438,18 +477,20 @@ bool LocationIntegrationApi::configDeadReckoningEngineParams(
             halConfig.vehicleSpeedScaleFactor = dreConfig.vehicleSpeedScaleFactor;
         }
         if (dreConfig.validMask & VEHICLE_SPEED_SCALE_FACTOR_UNC_VALID) {
-            if (dreConfig.vehicleSpeedScaleFactorUnc < 0.0 ||
-                    dreConfig.vehicleSpeedScaleFactorUnc > 0.1) {
-                LOC_LOGe("invalid vehicle speed scale factor uncertainty, range is [0.0, 0.1]");
+            if (dreConfig.vehicleSpeedScaleFactorUnc < 0.0  ||
+                    dreConfig.vehicleSpeedScaleFactorUnc > (0.1 + FLOAT_EPSILON)) {
+                LOC_LOGe("invalid vehicle speed scale factor uncertainty %10f, range is [0.0, 0.1]",
+                         dreConfig.vehicleSpeedScaleFactorUnc);
                 return false;
             }
             halConfig.validMask |= ::VEHICLE_SPEED_SCALE_FACTOR_UNC_VALID;
             halConfig.vehicleSpeedScaleFactorUnc = dreConfig.vehicleSpeedScaleFactorUnc;
         }
         if (dreConfig.validMask & GYRO_SCALE_FACTOR_VALID) {
-            if (dreConfig.gyroScaleFactor < 0.9 ||
-                    dreConfig.gyroScaleFactor > 1.1) {
-                LOC_LOGe("invalid gyro scale factor, range is [0.9, 1,1]");
+            if (dreConfig.gyroScaleFactor < (0.9 - FLOAT_EPSILON)||
+                    dreConfig.gyroScaleFactor > (1.1 + FLOAT_EPSILON)) {
+                LOC_LOGe("invalid gyro scale factor %10f, range is [0.9, 1,1]",
+                         dreConfig.gyroScaleFactor);
                 return false;
             }
             halConfig.validMask |= ::GYRO_SCALE_FACTOR_VALID;
@@ -457,7 +498,7 @@ bool LocationIntegrationApi::configDeadReckoningEngineParams(
         }
         if (dreConfig.validMask & GYRO_SCALE_FACTOR_UNC_VALID) {
             if (dreConfig.gyroScaleFactorUnc < 0.0 ||
-                    dreConfig.gyroScaleFactorUnc > 0.1) {
+                    dreConfig.gyroScaleFactorUnc > (0.1 + FLOAT_EPSILON)) {
                 LOC_LOGe("invalid gyro scale factor uncertainty, range is [0.0, 0.1]");
                 return false;
             }
