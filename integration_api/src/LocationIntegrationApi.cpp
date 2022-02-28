@@ -426,11 +426,13 @@ bool LocationIntegrationApi::configBodyToSensorMountParams(
     return false;
 }
 
+#define FLOAT_EPSILON 0.0000001
 bool LocationIntegrationApi::configDeadReckoningEngineParams(
         const DeadReckoningEngineConfig& dreConfig) {
 
     if (mApiImpl) {
-        LOC_LOGd("mask 0x%x, roll offset %f, pitch offset %f, yaw offset %f, offset unc %f",
+        LOC_LOGi("mask 0x%x, roll offset %f, pitch offset %f, yaw offset %f, offset unc %f,"
+                 "speed scale %f, spped scale unc %f, gyro scale %f, gyro scale factor %f",
                  dreConfig.validMask,
                  dreConfig.bodyToSensorMountParams.rollOffset,
                  dreConfig.bodyToSensorMountParams.pitchOffset,
@@ -464,8 +466,8 @@ bool LocationIntegrationApi::configDeadReckoningEngineParams(
                     dreConfig.bodyToSensorMountParams.offsetUnc;
         }
         if (dreConfig.validMask & VEHICLE_SPEED_SCALE_FACTOR_VALID) {
-            if (dreConfig.vehicleSpeedScaleFactor < 0.9 ||
-                    dreConfig.vehicleSpeedScaleFactor > 1.1) {
+            if (dreConfig.vehicleSpeedScaleFactor < (0.9 - FLOAT_EPSILON) ||
+                    dreConfig.vehicleSpeedScaleFactor > (1.1 + FLOAT_EPSILON)) {
                 LOC_LOGe("invalid vehicle speed scale factor, range is [0.9, 1,1]");
                 return false;
             }
@@ -473,18 +475,20 @@ bool LocationIntegrationApi::configDeadReckoningEngineParams(
             halConfig.vehicleSpeedScaleFactor = dreConfig.vehicleSpeedScaleFactor;
         }
         if (dreConfig.validMask & VEHICLE_SPEED_SCALE_FACTOR_UNC_VALID) {
-            if (dreConfig.vehicleSpeedScaleFactorUnc < 0.0 ||
-                    dreConfig.vehicleSpeedScaleFactorUnc > 0.1) {
-                LOC_LOGe("invalid vehicle speed scale factor uncertainty, range is [0.0, 0.1]");
+            if (dreConfig.vehicleSpeedScaleFactorUnc < 0.0  ||
+                    dreConfig.vehicleSpeedScaleFactorUnc > (0.1 + FLOAT_EPSILON)) {
+                LOC_LOGe("invalid vehicle speed scale factor uncertainty %10f, range is [0.0, 0.1]",
+                         dreConfig.vehicleSpeedScaleFactorUnc);
                 return false;
             }
             halConfig.validMask |= ::VEHICLE_SPEED_SCALE_FACTOR_UNC_VALID;
             halConfig.vehicleSpeedScaleFactorUnc = dreConfig.vehicleSpeedScaleFactorUnc;
         }
         if (dreConfig.validMask & GYRO_SCALE_FACTOR_VALID) {
-            if (dreConfig.gyroScaleFactor < 0.9 ||
-                    dreConfig.gyroScaleFactor > 1.1) {
-                LOC_LOGe("invalid gyro scale factor, range is [0.9, 1,1]");
+            if (dreConfig.gyroScaleFactor < (0.9 - FLOAT_EPSILON)||
+                    dreConfig.gyroScaleFactor > (1.1 + FLOAT_EPSILON)) {
+                LOC_LOGe("invalid gyro scale factor %10f, range is [0.9, 1,1]",
+                         dreConfig.gyroScaleFactor);
                 return false;
             }
             halConfig.validMask |= ::GYRO_SCALE_FACTOR_VALID;
@@ -492,7 +496,7 @@ bool LocationIntegrationApi::configDeadReckoningEngineParams(
         }
         if (dreConfig.validMask & GYRO_SCALE_FACTOR_UNC_VALID) {
             if (dreConfig.gyroScaleFactorUnc < 0.0 ||
-                    dreConfig.gyroScaleFactorUnc > 0.1) {
+                    dreConfig.gyroScaleFactorUnc > (0.1 + FLOAT_EPSILON)) {
                 LOC_LOGe("invalid gyro scale factor uncertainty, range is [0.0, 0.1]");
                 return false;
             }
