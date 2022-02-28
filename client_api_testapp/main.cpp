@@ -600,9 +600,12 @@ void parseDreConfig (char* buf, DeadReckoningEngineConfig& dreConfig) {
     do {
         token = strtok_r(NULL, " ", &save);
         if (token == NULL) {
-            printf("missing key word b2s, speed, or gyro\n");
+            if (validMask == 0) {
+                 printf("missing b2s/speed/gyro");
+            }
             break;
         }
+
         if (strncmp(token, "b2s", strlen("b2s"))==0) {
             token = strtok_r(NULL, " ", &save); // skip the token of "b2s"
             if (token == NULL) {
@@ -665,6 +668,8 @@ void parseDreConfig (char* buf, DeadReckoningEngineConfig& dreConfig) {
             }
             dreConfig.gyroScaleFactorUnc = atof(token);
             validMask |= GYRO_SCALE_FACTOR_UNC_VALID;
+        } else {
+            printf("unknown token %s\n", token);
         }
     } while (1);
 
@@ -1168,10 +1173,17 @@ int main(int argc, char *argv[]) {
         } else if (strncmp(buf, CONFIG_DR_ENGINE, strlen(CONFIG_DR_ENGINE)) == 0) {
             DeadReckoningEngineConfig dreConfig = {};
             parseDreConfig(buf, dreConfig);
-            printf("mask 0x%x, roll %f, speed %f, yaw %f\n", dreConfig.validMask,
-                   dreConfig.bodyToSensorMountParams.rollOffset, dreConfig.vehicleSpeedScaleFactor,
-                   dreConfig.gyroScaleFactor);
-            retVal = pIntClient->configDeadReckoningEngineParams(dreConfig);
+            printf("mask 0x%x, roll offset %f, pitch offset %f, yaw offset %f, offset unc, %f\n"
+                   "speed scale factor %f, speed scale factor unc %10f,\n"
+                   "dreConfig.gyroScaleFactor %f, dreConfig.gyroScaleFactorUnc %10f\n",
+                   dreConfig.validMask,
+                   dreConfig.bodyToSensorMountParams.rollOffset,
+                   dreConfig.bodyToSensorMountParams.pitchOffset,
+                   dreConfig.bodyToSensorMountParams.yawOffset,
+                   dreConfig.bodyToSensorMountParams.offsetUnc,
+                   dreConfig.vehicleSpeedScaleFactor, dreConfig.vehicleSpeedScaleFactorUnc,
+                   dreConfig.gyroScaleFactor, dreConfig.gyroScaleFactorUnc);
+            pIntClient->configDeadReckoningEngineParams(dreConfig);
         } else if (strncmp(buf, CONFIG_MIN_SV_ELEVATION, strlen(CONFIG_MIN_SV_ELEVATION)) == 0) {
             static char *save = nullptr;
             uint8_t minSvElevation = 0;
