@@ -28,7 +28,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -187,6 +187,7 @@ static void parseLocation(const ::Location &halLocation, Location& location) {
     uint32_t flags = 0;
 
     location.timestamp = halLocation.timestamp;
+    location.timeUncMs = halLocation.timeUncMs;
     location.latitude = halLocation.latitude;
     location.longitude = halLocation.longitude;
     location.altitude = halLocation.altitude;
@@ -206,6 +207,9 @@ static void parseLocation(const ::Location &halLocation, Location& location) {
 
     if (0 != halLocation.timestamp) {
         flags |= LOCATION_HAS_TIMESTAMP_BIT;
+    }
+    if (::LOCATION_HAS_TIME_UNC_BIT & halLocation.flags) {
+        flags |= LOCATION_HAS_TIME_UNC_BIT;
     }
     if (::LOCATION_HAS_LAT_LONG_BIT & halLocation.flags) {
         flags |= LOCATION_HAS_LAT_LONG_BIT;
@@ -692,7 +696,7 @@ static GnssLocation parseLocationInfo(const ::GnssLocationInfoNotification &halL
     if (::GNSS_LOCATION_INFO_LEAP_SECONDS_BIT & halLocationInfo.flags) {
        flags |= GNSS_LOCATION_INFO_LEAP_SECONDS_BIT;
     }
-    if (::GNSS_LOCATION_INFO_TIME_UNC_BIT & halLocationInfo.flags) {
+    if (::LOCATION_HAS_TIME_UNC_BIT & halLocationInfo.location.flags) {
         flags |= GNSS_LOCATION_INFO_TIME_UNC_BIT;
     }
     if (::GNSS_LOCATION_INFO_NUM_SV_USED_IN_POSITION_BIT & halLocationInfo.flags) {
@@ -842,7 +846,6 @@ static GnssLocation parseLocationInfo(const ::GnssLocationInfoNotification &halL
             halLocationInfo.bodyFrameData, halLocationInfo.bodyFrameDataExt);
     locationInfo.gnssSystemTime = parseSystemTime(halLocationInfo.gnssSystemTime);
     locationInfo.leapSeconds = halLocationInfo.leapSeconds;
-    locationInfo.timeUncMs = halLocationInfo.timeUncMs;
 
     return locationInfo;
 }

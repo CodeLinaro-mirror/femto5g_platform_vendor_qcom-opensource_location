@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -1078,6 +1078,11 @@ void LocApiV02::injectPosition(const Location& location, bool onDemandCpi)
         injectPositionReq.vertConfidence = 68;
     }
 
+    if (LOCATION_HAS_TIME_UNC_BIT & location.flags) {
+        injectPositionReq.timeUnc_valid = 1;
+        injectPositionReq.timeUnc = location.timeUncMs;
+    }
+
     injectPositionReq.positionSrc_valid = 1;
     injectPositionReq.positionSrc = eQMI_LOC_POSITION_SRC_OTHER_V02;
 
@@ -1109,6 +1114,12 @@ void LocApiV02::injectPosition(const GnssLocationInfoNotification &locationInfo,
     if (location.timestamp > 0) {
         injectPositionReq.timestampUtc_valid = 1;
         injectPositionReq.timestampUtc = location.timestamp;
+    }
+
+    // time uncertainty
+    if (LOCATION_HAS_TIME_UNC_BIT & location.flags) {
+        injectPositionReq.timeUnc_valid = 1;
+        injectPositionReq.timeUnc = location.timeUncMs;
     }
 
     if (LOCATION_HAS_LAT_LONG_BIT & location.flags) {
@@ -1213,12 +1224,6 @@ void LocApiV02::injectPosition(const GnssLocationInfoNotification &locationInfo,
         injectPositionReq.velUncEnu[0] = locationInfo.eastVelocityStdDeviation;
         injectPositionReq.velUncEnu[1] = locationInfo.northVelocityStdDeviation;
         injectPositionReq.velUncEnu[2]  = locationInfo.upVelocityStdDeviation;
-    }
-
-    // time uncertainty
-    if (GNSS_LOCATION_INFO_TIME_UNC_BIT & locationInfo.flags) {
-        injectPositionReq.timeUnc_valid = 1;
-        injectPositionReq.timeUnc = locationInfo.timeUncMs;
     }
 
     // number of SV used info, this replaces expandedGnssSvUsedList as the payload
