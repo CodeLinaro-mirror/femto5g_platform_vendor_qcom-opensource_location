@@ -182,7 +182,7 @@ public:
     void deleteClientbyName(const std::string name);
     void deleteEapClientByIds(int id1, int id2);
 
-    static std::mutex mMutex;
+    static std::recursive_mutex mMutex;
 
     // Utility routine used by maintenance timer
     void performMaintenance();
