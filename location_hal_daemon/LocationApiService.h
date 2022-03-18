@@ -60,7 +60,6 @@ IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-
 #ifndef LOCATIONAPISERVICE_H
 #define LOCATIONAPISERVICE_H
 
@@ -181,7 +180,7 @@ public:
     // other APIs
     void deleteClientbyName(const std::string name);
 
-    static std::mutex mMutex;
+    static std::recursive_mutex mMutex;
 
     // Utility routine used by maintenance timer
     void performMaintenance();
