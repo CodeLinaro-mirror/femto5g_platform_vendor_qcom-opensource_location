@@ -1429,6 +1429,33 @@ struct GnssData {
     string toString() const;
 };
 
+/** Disaster and crisis report type that are currently supported
+ *  by the GNSS engine. <br/> */
+enum GnssDcReportType {
+    /** Disaster Prevention information provided by Japan
+     *  Meteolorogical Agency. <br/>  */
+    QZSS_JMA_DISASTER_PREVENTION_INFO = 43,
+    /** Disaster Prevention information provided by other
+     *  organizations. <br/> */
+    QZSS_NON_JMA_DISASTER_PREVENTION_INFO = 44,
+};
+
+/** Specify the type and data payload contained in the disaster
+ *  and crisis report received from GNSS engine. <br/>  */
+struct GnssDcReport {
+    /** disaster and crisis report type, as defined in standard.
+     *  <br/> */
+    GnssDcReportType     dcReportType;
+    /** number of valid bits that client should make use in
+    the payload specififed in GnssDcReport::dcReportData. <br/>  */
+    uint32_t             numValidBits;
+    /** dc report data, packed into uint8_t. <br/>  */
+    std::vector<uint8_t> dcReportData;
+    /** Method to print the struct to human readable form, for logging.
+     *  <br/> */
+    string toString() const;
+};
+
 /** Specify valid fields in
  *  GnssMeasurementsData.  <br/>   */
 enum GnssMeasurementsDataFlagsMask{
@@ -1995,6 +2022,16 @@ typedef std::function<void(
 )> GnssMeasurementsCb;
 
 /** @brief
+    GnssDcReportCb is for receiving GnssDcReport information
+    when LocationClientApi is in a positioning session. <br/>
+
+    @param gnssDcReport: GNSS disaster and crisis report. <br/>
+*/
+typedef std::function<void(
+    const GnssDcReport& gnssDcReport
+)> GnssDcReportCb;
+
+/** @brief
     LocationSystemInfoCb is for receiving rare occuring location
     system information update as defined in
     LocationSystemInfo. <br/>
@@ -2069,6 +2106,9 @@ struct GnssReportCbs {
     /** Callback to receive NHz GnssMeasurements from modem GNSS
      *  engine. <br/> */
     GnssMeasurementsCb gnssNHzMeasurementsCallback;
+    /** Callback to receive disaster and crisis report from modem
+     *  GNSS engine. <br/> */
+    GnssDcReportCb gnssDcReportCallback;
 };
 
 /** Specify the set of callbacks to receive the reports when
@@ -2100,6 +2140,9 @@ struct EngineReportCbs {
     /** Callback to receive NHz GnssMeasurements from modem GNSS
      *  engine. <br/> */
     GnssMeasurementsCb gnssNHzMeasurementsCallback;
+    /** Callback to receive disaster and crisis report from modem
+     *  GNSS engine. <br/> */
+    GnssDcReportCb gnssDcReportCallback;
 };
 
 /**
