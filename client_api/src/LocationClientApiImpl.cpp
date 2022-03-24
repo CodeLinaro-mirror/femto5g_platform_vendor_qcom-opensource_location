@@ -1199,8 +1199,8 @@ public:
 
             virtual ~onHalServiceStatusChangeHandler() {}
             void proc() const {
+                LOC_LOGi("LocIpcQrtrWatcher:: HAL Daemon service status %d", mStatus);
                 if (LocIpcQrtrWatcher::ServiceStatus::UP == mStatus) {
-                    LOC_LOGi("LocIpcQrtrWatcher:: HAL Daemon ServiceStatus::UP");
                     auto sender = mWatcher.mIpcSender.lock();
                     if (nullptr != sender && sender->copyDestAddrFrom(mRefSender)) {
                         sleep(2);
@@ -1514,6 +1514,9 @@ void LocationClientApiImpl::updateCallbacks(LocationCallbacks& callbacks) {
 }
 
 uint32_t LocationClientApiImpl::startTracking(TrackingOptions& option) {
+    LOC_LOGi("client name %s, session id %d, hal registered %d",
+             mSocketName, mSessionId, mHalRegistered);
+
     // check if option is updated
     bool isOptionUpdated = false;
 
@@ -1527,7 +1530,6 @@ uint32_t LocationClientApiImpl::startTracking(TrackingOptions& option) {
         mLocationOptions = option;
         // need to set session id so when hal is ready, the session can be resumed
         mSessionId = mClientId;
-        LOC_LOGe(">>> startTracking - Not registered yet");
         return LOCATION_ERROR_SUCCESS;
     }
 
@@ -2477,7 +2479,7 @@ void IpcListener::onReceive(const char* data, uint32_t length,
             switch (locApiMsg.msgId) {
             case E_LOCAPI_CAPABILILTIES_MSG_ID:
             {
-                LOC_LOGd("<<< capabilities indication");
+                LOC_LOGi("<<< capabilities indication for client: %s", mApiImpl.mSocketName);
                 PBLocAPICapabilitiesIndMsg pbLocApiCapIndMsg;
                 if (0 == pbLocApiCapIndMsg.ParseFromString(pbLocApiMsg.payload())) {
                     LOC_LOGe("Failed to parse pbLocApiCapIndMsg from payload!!");
@@ -2491,7 +2493,7 @@ void IpcListener::onReceive(const char* data, uint32_t length,
 
             case E_LOCAPI_HAL_READY_MSG_ID:
             {
-                LOC_LOGd("<<< HAL ready");
+                LOC_LOGi("<<< HAL ready message for client: %s", mApiImpl.mSocketName);
 
                 // location hal deamon has restarted, need to set this
                 // flag to false to prevent messages to be sent to hal
