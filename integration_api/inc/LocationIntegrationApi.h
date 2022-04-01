@@ -25,8 +25,9 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
 /*
+Changes from Qualcomm Innovation Center are provided under the following license:
+
 Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -128,6 +129,8 @@ enum LocConfigTypeEnum{
     /** Config the xtra parameters used by the standard position
      *  engine (SPE). <br/> */
     CONFIG_XTRA_PARAMS = 16,
+    /** Max config enum supported. <br/> */
+    CONFIG_ENUM_MAX = 99,
 
     /** Get configuration regarding robust location setting used by
      *  the GNSS standard position engine (SPE).  <br/> */
