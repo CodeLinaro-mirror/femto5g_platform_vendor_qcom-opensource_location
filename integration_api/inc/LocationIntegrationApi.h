@@ -163,6 +163,8 @@ enum LocConfigTypeEnum{
     /** Config the xtra parameters used by the standard position
      *  engine (SPE). <br/> */
     CONFIG_XTRA_PARAMS = 16,
+    /** Max config enum supported. <br/> */
+    CONFIG_ENUM_MAX = 99,
 
     /** Get configuration regarding robust location setting used by
      *  the GNSS standard position engine (SPE).  <br/> */
