@@ -2559,6 +2559,7 @@ LocationClientApiImpl - LocIpc onReceive handler
 ******************************************************************************/
 void LocationClientApiImpl::capabilitesCallback(ELocMsgID msgId, const void* msgData) {
 
+    bool oldHalRegisterd = mHalRegistered;
     mHalRegistered = true;
     const LocAPICapabilitiesIndMsg* pCapabilitiesIndMsg =
             (LocAPICapabilitiesIndMsg*)(msgData);
@@ -2581,6 +2582,11 @@ void LocationClientApiImpl::capabilitesCallback(ELocMsgID msgId, const void* msg
         } else {
             LOC_LOGe("LocAPIUpdateCallbacksReqMsg serializeToProtobuf failed");
         }
+    }
+
+    if (oldHalRegisterd == true) {
+        LOC_LOGi("hal is not restarted, return");
+        return;
     }
 
     LOC_LOGe(">>> session id %d, cap mask 0x%" PRIx64, mSessionId, mCapsMask);
