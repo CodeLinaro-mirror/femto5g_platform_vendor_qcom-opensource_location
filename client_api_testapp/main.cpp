@@ -78,6 +78,8 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <loc_pla.h>
 #include <loc_cfg.h>
 #include <loc_misc_utils.h>
+#include <thread>
+
 #ifdef NO_UNORDERED_SET_OR_MAP
     #include <map>
     #define unordered_map map
@@ -108,6 +110,8 @@ static sem_t semCompleted;
 static int fixCnt = 0x7fffffff;
 static uint64_t autoTestStartTimeMs = 0;
 static int autoTestTimeoutSec = 0x7FFFFFFF;
+static uint32_t gtpFixCnt = 0;
+static uint32_t singleShotFixCnt = 0;
 
 enum ReportType {
     POSITION_REPORT = 1 << 0,
@@ -155,6 +159,8 @@ enum TrackingSessionType {
 #define CANCEL_SINGLE_GTP_WWAN_FIX "cancelSingleGtpWwanFix"
 #define CONFIG_NMEA_TYPES          "configOutputNmeaTypes"
 #define GET_ENERGY_CONSUMED        "getEnergyConsumed"
+#define GET_SINGLE_FUSED_FIX       "getSingleFusedFix"
+#define CANCEL_SINGLE_FUSED_FIX    "cancelSingleFusedFix"
 
 // debug utility
 static uint64_t getTimestampMs() {
@@ -237,7 +243,33 @@ static void onGtpLocationCb(const location_client::Location& location) {
                location.longitude,
                location.altitude);
     }
+}
 
+static void onSingleShotResponseCb(location_client::LocationResponse response) {
+    printf("<<< onSingleShotResponseCb err=%u\n", response);
+    if (response != LOCATION_RESPONSE_SUCCESS && response != LOCATION_RESPONSE_TIMEOUT) {
+        sem_post(&semCompleted);
+    }
+}
+
+static void onSingleShotLocationCb(const location_client::Location& location) {
+    sem_post(&semCompleted);
+
+    if (!outputEnabled) {
+        return;
+    }
+    if (detailedOutputEnabled) {
+        printf("<<< onSingleShotLocationCb: %s\n", location.toString().c_str());
+    } else {
+        printf("<<< onSingleShotLocationCb time=%" PRIu64" mask=0x%x lat=%f lon=%f "
+               "alt=%f accuracy=%f\n",
+               location.timestamp,
+               location.flags,
+               location.latitude,
+               location.longitude,
+               location.altitude,
+               location.horizontalAccuracy);
+    }
 }
 
 static void onGnssLocationCb(const location_client::GnssLocation& location) {
@@ -412,6 +444,7 @@ static void printHelp() {
     printf("\n************* options *************\n");
     printf("e reprottype tbf: Concurrent engine report session with 100 ms interval\n");
     printf("g reporttype tbf engmask: Gnss report session with 100 ms interval\n");
+    printf("b interval distance: routine batching\n");
     printf("u: Update a session with 2000 ms interval\n");
     printf("m: Interleaving fix session with 1000 and 2000 ms interval, change every 3 seconds\n");
     printf("s: Stop a session \n");
@@ -447,6 +480,8 @@ static void printHelp() {
     printf("%s: config nmea types \n", CONFIG_NMEA_TYPES);
     printf("%s: config engine integrity risk \n", CONFIG_ENGINE_INTEGRITY_RISK);
     printf("%s: get gnss energy consumed \n", GET_ENERGY_CONSUMED);
+    printf("%s: get single shot fix with qos and timeout \n", GET_SINGLE_FUSED_FIX );
+    printf("%s: cancle single shot fix \n", CANCEL_SINGLE_FUSED_FIX );
 }
 
 void setRequiredPermToRunAsLocClient() {
@@ -705,8 +740,6 @@ void parseDreConfig (char* buf, DeadReckoningEngineConfig& dreConfig) {
 }
 
 void getGtpWwanFixes (bool multipleFixes, char* buf) {
-    // global variables for multiple gtp fixes
-    uint32_t gtpFixCnt      = 0;
     uint32_t gtpFixTbfMsec  = 0;
     uint32_t gtpTimeoutMsec = 0;
     float    gtpHorQoS      = 0.0;
@@ -806,6 +839,78 @@ static void setupEngineReportCbs(uint32_t reportType, EngineReportCbs& reportcbs
     }
     if (reportType & NHZ_MEAS_REPORT) {
         reportcbs.gnssNHzMeasurementsCallback = GnssMeasurementsCb(onGnssMeasurementsCb);
+    }
+}
+
+void getMultipleFusedFixes(uint32_t timeoutMsec, float horQoS,
+                           uint32_t fixTbfMsec) {
+    while (singleShotFixCnt > 0) {
+        printf("fix cnt needed: %d, sleep %d seconds",
+               singleShotFixCnt, fixTbfMsec/1000);
+        pLcaClient->getSinglePosition(timeoutMsec, horQoS,
+                                      onSingleShotLocationCb,
+                                      onSingleShotResponseCb);
+        sem_wait(&semCompleted);
+        singleShotFixCnt--;
+        sleep(fixTbfMsec/1000);
+    }
+}
+
+void getFusedFixes(char* buf) {
+    uint32_t fixTbfMsec  = 5000;
+    uint32_t timeoutMsec = 60000;
+    float    horQoS      = 1000;
+
+    static char *save = nullptr;
+    char* token = strtok_r(buf, " ", &save); // skip first token
+
+    // get timeout
+    token = strtok_r(NULL, " ", &save);
+    if (token != NULL) {
+        timeoutMsec = atoi(token);
+    }
+
+    // get qos
+    token = strtok_r(NULL, " ", &save);
+    if (token != NULL) {
+        horQoS = atof(token);
+    }
+
+    // get fix cnt
+    singleShotFixCnt = 1;
+    token = strtok_r(NULL, " ", &save);
+    if (token != NULL) {
+        singleShotFixCnt = atoi(token);
+    } else {
+        singleShotFixCnt = 1;
+    }
+
+    // get tbf
+    token = strtok_r(NULL, " ", &save);
+    if (token != NULL) {
+        fixTbfMsec = atoi(token);
+    } else {
+        fixTbfMsec = 1000;
+    }
+
+    printf("timeout msec %d, horQoS %f, number of fixes %d, tbf %d msec\n",
+           timeoutMsec, horQoS, singleShotFixCnt, fixTbfMsec);
+
+    if (!pLcaClient) {
+        pLcaClient = new LocationClientApi(onCapabilitiesCb);
+    }
+
+    if (pLcaClient) {
+        if (singleShotFixCnt == 1) {
+            pLcaClient->getSinglePosition(timeoutMsec, horQoS,
+                                          onSingleShotLocationCb,
+                                          onSingleShotResponseCb);
+        } else {
+            std::thread t([timeoutMsec, horQoS, fixTbfMsec] {
+                getMultipleFusedFixes(timeoutMsec, horQoS, fixTbfMsec);
+            });
+            t.detach();
+        }
     }
 }
 
@@ -1264,6 +1369,25 @@ int main(int argc, char *argv[]) {
             }
             printf("nmeaTypes 0x%x\n", nmeaTypes);
             retVal = pIntClient->configOutputNmeaTypes(nmeaTypes);
+        } else if (strncmp(buf, GET_SINGLE_FUSED_FIX,
+                           strlen(GET_SINGLE_FUSED_FIX)) == 0) {
+            printf("usage: getSingleFusedFix timeout qos fixcnt tbf\n");
+            if (!pLcaClient) {
+                pLcaClient = new LocationClientApi(onCapabilitiesCb);
+            }
+            if (pLcaClient) {
+                getFusedFixes(buf);
+            }
+        } else if (strncmp(buf, CANCEL_SINGLE_FUSED_FIX,
+                           strlen(CANCEL_SINGLE_FUSED_FIX)) == 0) {
+            printf("usage: cancelSingleFusedFix\n");
+            if (!pLcaClient) {
+                pLcaClient = new LocationClientApi(onCapabilitiesCb);
+            }
+            if (pLcaClient) {
+                pLcaClient->getSinglePosition(0, 0, nullptr, onSingleShotResponseCb);
+            }
+            singleShotFixCnt = 0;
         } else {
             int command = buf[0];
             switch(command) {
