@@ -1358,7 +1358,7 @@ void LocationClientApiImpl::destroy(locationApiDestroyCompleteCallback destroyCo
                          mApiImpl->mClientIdGenerator, mApiImpl->mClientId);
             }
 #endif //FEATURE_EXTERNAL_AP
-            if (!mDestroyCompleteCb) {
+            if (mDestroyCompleteCb) {
                 (mDestroyCompleteCb) ();
             }
 
