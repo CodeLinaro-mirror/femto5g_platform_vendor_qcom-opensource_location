@@ -25,6 +25,7 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
@@ -99,7 +100,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *====*====*====*====*====*====*====*====*====*====*====*====*====*====*====*/
 
 /* This file was generated with Tool version 6.14.9
-   It was generated on: Mon Jan 24 2022 (Spin 0)
+   It was generated on: Mon Apr  4 2022 (Spin 1)
    From IDL File: location_service_v02.idl */
 
 /** @defgroup loc_qmi_consts Constant values defined in the IDL */
@@ -125,7 +126,7 @@ extern "C" {
 /** Major Version Number of the IDL used to generate this file */
 #define LOC_V02_IDL_MAJOR_VERS 0x02
 /** Revision Number of the IDL used to generate this file */
-#define LOC_V02_IDL_MINOR_VERS 0x96
+#define LOC_V02_IDL_MINOR_VERS 0x98
 /** Major Version Number of the qmi_idl_compiler used to generate this file */
 #define LOC_V02_IDL_TOOL_VERS 0x06
 /** Maximum Defined Message ID */
@@ -1530,6 +1531,46 @@ typedef struct {
     @}
   */
 
+/** @addtogroup loc_qmi_aggregates
+    @{
+  */
+typedef struct {
+
+  qmiLocGnssSignalTypeMaskT_v02 gnssSignalType;
+  /**<   GNSS signal type. \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L1CA (0x00000001) --  GPS L1CA RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L1C (0x00000002) --  GPS L1C RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L2C_L (0x00000004) --  GPS L2C_L RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L5_Q (0x00000008) --  GPS L5_Q RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GLONASS_G1 (0x00000010) --  GLONASS G1 (L1OF) RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GLONASS_G2 (0x00000020) --  GLONASS G2 (L2OF) RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GALILEO_E1_C (0x00000040) --  Galileo E1_C RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GALILEO_E5A_Q (0x00000080) --  Galileo E5A_Q RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GALILEO_E5B_Q (0x00000100) --  Galileo E5B_Q RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B1_I (0x00000200) --  BeiDou B1_I RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B1C (0x00000400) --  BeiDou B1C RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2_I (0x00000800) --  BeiDou B2_I RF band
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2A_I (0x00001000) --  BeiDou B2A_I RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1CA (0x00002000) --  QZSS L1CA RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1S (0x00004000) --  QZSS L1S RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L2C_L (0x00008000) --  QZSS L2C_L RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L5_Q (0x00010000) --  QZSS L5_Q RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_SBAS_L1_CA (0x00020000) --  SBAS L1_CA RF band
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_NAVIC_L5 (0x00040000) --  NavIC L5 RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2A_Q (0x00080000) --  BeiDou B2A_Q RF band
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_I (0x00100000) --  BeiDou B2B_I RF band (Data)
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q (0x00200000) --  BeiDou B2B_Q RF band (Pilot)  */
+
+  int32_t agcMetricDb;
+  /**<   AGC metric in 0.01 dB */
+
+  int32_t bpMetricDb;
+  /**<   BP metric in 0.01 dB */
+}qmiLocJammerIndicatorExtStructT_v02;  /* Type */
+/**
+    @}
+  */
+
 typedef uint64_t qmiLocGNSSConstellEnumT_v02;
 #define eQMI_SYSTEM_GPS_V02 ((qmiLocGNSSConstellEnumT_v02)0x01ull) /**<  Enable GPS \n  */
 #define eQMI_SYSTEM_GLO_V02 ((qmiLocGNSSConstellEnumT_v02)0x02ull) /**<  Enable GLONASS \n  */
@@ -2090,6 +2131,13 @@ typedef struct {
   uint32_t payload_len;  /**< Must be set to # of elements in payload */
   uint8_t payload[4096];
   /**<   Data blob payload  */
+
+  /* Optional */
+  /*  Jammer Indicator for GNSS Signals */
+  uint8_t jammerIndicatorListExt_valid;  /**< Must be set to true if jammerIndicatorListExt is being passed */
+  uint32_t jammerIndicatorListExt_len;  /**< Must be set to # of elements in jammerIndicatorListExt */
+  qmiLocJammerIndicatorExtStructT_v02 jammerIndicatorListExt[QMI_LOC_MAX_GNSS_SIGNAL_TYPE_EXT_V02];
+  /**<   Indicates the jammer indicator for GNSS signals */
 }qmiLocEventPositionReportIndMsgT_v02;  /* Message */
 /**
     @}
@@ -3536,11 +3584,11 @@ typedef struct {
        - 0x00 (FALSE) -- Civic Address is not needed \n
        - 0x01 (TRUE) -- Civic Address is needed
 
-    NOTE: If the civic address is available with the AP, the AP Shall inject
-    the same using the new QMI API QMI_LOC_INJECT_LOCATION_CIVIC_ADDRESS.
+	NOTE: If the civic address is available with the AP, the AP Shall inject
+	the same using the new QMI API QMI_LOC_INJECT_LOCATION_CIVIC_ADDRESS.
 
         If the civic address is not available, the AP shall NOT use the new QMI API
-    QMI_LOC_INJECT_LOCATION_CIVIC_ADDRESS. The existing DBH injection API should
+	QMI_LOC_INJECT_LOCATION_CIVIC_ADDRESS. The existing DBH injection API should
         be used to inject hybrid location is available.
   */
 }qmiLocEventWifiReqIndMsgT_v02;  /* Message */
@@ -13146,7 +13194,7 @@ typedef struct {
        - 0x01 (TRUE) -- GPS engine is in E911 mode \n
        - 0x00 (FALSE) -- GPS engine is not in E911 mode
 
-       Note: e911Mode shall be set as TRUE for Non-E911 Wifi Ap injections.
+	   Note: e911Mode shall be set as TRUE for Non-E911 Wifi Ap injections.
     */
 }qmiLocEventInjectWifiApDataReqIndMsgT_v02;  /* Message */
 /**
@@ -15348,6 +15396,21 @@ typedef uint64_t qmiLocSignalHealthMaskT_v02;
 #define QMI_LOC_SIGNAL_HEALTH_MASK_L2B_HEALTHY_V02 ((qmiLocSignalHealthMaskT_v02)0x0200ull) /**<  L2B signal is healthy \n */
 #define QMI_LOC_SIGNAL_HEALTH_MASK_L2B_UNKNOWN_V02 ((qmiLocSignalHealthMaskT_v02)0x0400ull) /**<  L2B signal health is unknown \n */
 #define QMI_LOC_SIGNAL_HEALTH_MASK_L2B_UNHEALTHY_V02 ((qmiLocSignalHealthMaskT_v02)0x0800ull) /**<  L2B signal is unhealthy  */
+/** @addtogroup loc_qmi_enums
+    @{
+  */
+typedef enum {
+  QMILOCEPHEMERISSOURCEENUMT_MIN_ENUM_VAL_V02 = -2147483647, /**< To force a 32 bit signed enum.  Do not change or use*/
+  eQMI_LOC_EPHEMERIS_SOURCE_OTA_V02 = 1, /**<  Ephemeris decoded over-the-air \n */
+  eQMI_LOC_EPHEMERIS_SOURCE_XTRA_V02 = 2, /**<  Ephemeris from the XTRA file \n */
+  eQMI_LOC_EPHEMERIS_SOURCE_NETWORK_INJECTED_V02 = 3, /**<  Network-injected ephemeris \n */
+  eQMI_LOC_EPHEMERIS_SOURCE_EFS_V02 = 4, /**<  Source is EFS  */
+  QMILOCEPHEMERISSOURCEENUMT_MAX_ENUM_VAL_V02 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
+}qmiLocEphemerisSourceEnumT_v02;
+/**
+    @}
+  */
+
 /** @addtogroup loc_qmi_messages
     @{
   */
@@ -15699,6 +15762,50 @@ typedef struct {
   /**<   Intersignal correction between BDS B2B_I (Data) and pilot channels. \n
        - Units -- Milliseconds
   */
+
+  /* Optional */
+  /*  Clock Data Reference Time of Week */
+  uint8_t toc_valid;  /**< Must be set to true if toc is being passed */
+  uint32_t toc;
+  /**<   Clock data reference time of week.  \n
+       - Units -- Seconds \n
+	   If source is ephemeris, \n
+         for GPS/QZSS/BDS/GAL/NAVIC - value is decoded over the air in full GPS seconds \n
+         for GLONASS - same as GLO TOE in full GPS seconds. \n
+       If source is XTRA, \n
+         for GPS/QZSS/BDS/GAL/GLO - same as XTRA Time of Applicability in full GPS seconds. */
+
+  /* Optional */
+  /*  Issue of Data, Clock */
+  uint8_t IODC_valid;  /**< Must be set to true if IODC is being passed */
+  uint16_t IODC;
+  /**<   Issue of data, clock (unitless).
+    */
+
+  /* Optional */
+  /*  Reference Time Ephemeris */
+  uint8_t toe_valid;  /**< Must be set to true if toe is being passed */
+  uint32_t toe;
+  /**<   Reference time of ephemeris. \n
+       - Units -- Seconds \n
+	   If source is ephemeris, \n
+         for GPS/QZSS/GAL/BDS - value is decoded over the air. \n
+         for GLO - value corresponds to ephemeris Tb. \n
+       If source is XTRA, \n
+         for GPS/QZSS/GAL/BDS - value is set to 0. \n
+         for GLO - value is set to the XTRA fit interval. */
+
+  /* Optional */
+  /*  Ephemeris Source */
+  uint8_t ephemerisSrc_valid;  /**< Must be set to true if ephemerisSrc is being passed */
+  qmiLocEphemerisSourceEnumT_v02 ephemerisSrc;
+  /**<   Source of ephemeris if polynomials are based on ephemeris. Valid Values: \n
+      - eQMI_LOC_EPHEMERIS_SOURCE_OTA (1) --  Ephemeris decoded over-the-air \n
+      - eQMI_LOC_EPHEMERIS_SOURCE_XTRA (2) --  Ephemeris from the XTRA file \n
+      - eQMI_LOC_EPHEMERIS_SOURCE_NETWORK_INJECTED (3) --  Network-injected ephemeris \n
+      - eQMI_LOC_EPHEMERIS_SOURCE_EFS (4) --  Source is EFS
+
+ */
 }qmiLocEventGnssSvPolyIndMsgT_v02;  /* Message */
 /**
     @}
@@ -20031,11 +20138,11 @@ typedef struct {
   */
 
 typedef uint64_t qmiLocConstellationMaskT_v02;
-#define QMI_LOC_CONSTELLATION_GLO_V02 ((qmiLocConstellationMaskT_v02)0x00000001ull) /**<  Enable GLONASS. \n  */
-#define QMI_LOC_CONSTELLATION_BDS_V02 ((qmiLocConstellationMaskT_v02)0x00000002ull) /**<  Enable BDS.\n  */
-#define QMI_LOC_CONSTELLATION_QZSS_V02 ((qmiLocConstellationMaskT_v02)0x00000004ull) /**<  Enable QZSS. \n */
-#define QMI_LOC_CONSTELLATION_GAL_V02 ((qmiLocConstellationMaskT_v02)0x00000008ull) /**<  Enable Galileo. \n */
-#define QMI_LOC_CONSTELLATION_NAVIC_V02 ((qmiLocConstellationMaskT_v02)0x00000010ull) /**<  Enable NavIC.  */
+#define QMI_LOC_CONSTELLATION_GLO_V02 ((qmiLocConstellationMaskT_v02)0x00000001ull) /**<  GLONASS. \n  */
+#define QMI_LOC_CONSTELLATION_BDS_V02 ((qmiLocConstellationMaskT_v02)0x00000002ull) /**<  BDS.\n  */
+#define QMI_LOC_CONSTELLATION_QZSS_V02 ((qmiLocConstellationMaskT_v02)0x00000004ull) /**<  QZSS. \n */
+#define QMI_LOC_CONSTELLATION_GAL_V02 ((qmiLocConstellationMaskT_v02)0x00000008ull) /**<  Galileo. \n */
+#define QMI_LOC_CONSTELLATION_NAVIC_V02 ((qmiLocConstellationMaskT_v02)0x00000010ull) /**<  NavIC.  */
 /** @addtogroup loc_qmi_messages
     @{
   */
@@ -20060,11 +20167,11 @@ typedef struct {
  GPS is always enabled.
  Valid only when resetConstellations is FALSE.
  Valid bitmasks: \n
-      - QMI_LOC_CONSTELLATION_GLO (0x00000001) --  Enable GLONASS. \n
-      - QMI_LOC_CONSTELLATION_BDS (0x00000002) --  Enable BDS.\n
-      - QMI_LOC_CONSTELLATION_QZSS (0x00000004) --  Enable QZSS. \n
-      - QMI_LOC_CONSTELLATION_GAL (0x00000008) --  Enable Galileo. \n
-      - QMI_LOC_CONSTELLATION_NAVIC (0x00000010) --  Enable NavIC.  */
+      - QMI_LOC_CONSTELLATION_GLO (0x00000001) --  GLONASS. \n
+      - QMI_LOC_CONSTELLATION_BDS (0x00000002) --  BDS.\n
+      - QMI_LOC_CONSTELLATION_QZSS (0x00000004) --  QZSS. \n
+      - QMI_LOC_CONSTELLATION_GAL (0x00000008) --  Galileo. \n
+      - QMI_LOC_CONSTELLATION_NAVIC (0x00000010) --  NavIC.  */
 
   /* Optional */
   /*  GNSS Constellations to Disable */
@@ -20074,11 +20181,11 @@ typedef struct {
  GPS cannot be disabled.
  Valid only when resetConstellations is FALSE.
  Valid bitmasks: \n
-      - QMI_LOC_CONSTELLATION_GLO (0x00000001) --  Enable GLONASS. \n
-      - QMI_LOC_CONSTELLATION_BDS (0x00000002) --  Enable BDS.\n
-      - QMI_LOC_CONSTELLATION_QZSS (0x00000004) --  Enable QZSS. \n
-      - QMI_LOC_CONSTELLATION_GAL (0x00000008) --  Enable Galileo. \n
-      - QMI_LOC_CONSTELLATION_NAVIC (0x00000010) --  Enable NavIC.  */
+      - QMI_LOC_CONSTELLATION_GLO (0x00000001) --  GLONASS. \n
+      - QMI_LOC_CONSTELLATION_BDS (0x00000002) --  BDS.\n
+      - QMI_LOC_CONSTELLATION_QZSS (0x00000004) --  QZSS. \n
+      - QMI_LOC_CONSTELLATION_GAL (0x00000008) --  Galileo. \n
+      - QMI_LOC_CONSTELLATION_NAVIC (0x00000010) --  NavIC.  */
 }qmiLocSetConstellationConfigReqMsgT_v02;  /* Message */
 /**
     @}
@@ -23531,8 +23638,8 @@ typedef struct {
         - Units -- Degrees \n
         - Range -- -90.0 to 90.0 \n
 
-        Note: Positive values indicate northern latitude,
-        Negative values indicate southern latitude
+		Note: Positive values indicate northern latitude,
+		Negative values indicate southern latitude
    */
 
   /* Optional */
@@ -23543,8 +23650,8 @@ typedef struct {
         - Units -- Degrees \n
         - Range -- -180.0 to 180.0 \n
 
-        Note: Positive values indicate eastern longitude,
-        Negative values indicate western longitude
+		Note: Positive values indicate eastern longitude,
+		Negative values indicate western longitude
    */
 
   /* Optional */
@@ -23564,7 +23671,7 @@ typedef struct {
         - 0, 101 to 255 -- invalid value\n
         - If 100 is received, reinterpret to 99 \n
 
-        Note: This field must be specified together with horizontal uncertainty.
+		Note: This field must be specified together with horizontal uncertainty.
         If not specified when horUncCircular is set, the default value is 50.
    */
 
@@ -23574,8 +23681,8 @@ typedef struct {
   float altitudeWrtEllipsoid;
   /**<   Altitude with respect to the WGS84 ellipsoid.\n
         - Units -- Meters
-        - Positive = height
-        - Negative = depth
+		- Positive = height
+		- Negative = depth
    */
 
   /* Optional */
@@ -23601,13 +23708,13 @@ typedef struct {
   uint8_t vertConfidence;
   /**<   Vertical confidence, as defined by ETSI TS 101 109. \n
         - Units -- Percent (0-99)\n
-        - 0 -- invalid value \n
-        - 100 to 256 -- not used \n
-        - If 100 is received, reinterpret to 99 \n
+		- 0 -- invalid value \n
+		- 100 to 256 -- not used \n
+		- If 100 is received, reinterpret to 99 \n
 
-        Note: This field must be specified together with the vertical uncertainty.
+		Note: This field must be specified together with the vertical uncertainty.
         If not specified, the default value is 50.
-    */
+	*/
 
   /* Optional */
   /*  Altitude Source */
@@ -24315,14 +24422,11 @@ typedef struct {
       - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q (0x00200000) --  BeiDou B2B_Q RF band (Pilot)  */
 
   /* Optional */
-  /*  Jammer Indicator of each GNSS Signal */
+  /*  Jammer Indicator for GNSS Signals */
   uint8_t jammerIndicatorList_valid;  /**< Must be set to true if jammerIndicatorList is being passed */
   uint32_t jammerIndicatorList_len;  /**< Must be set to # of elements in jammerIndicatorList */
-  qmiLocJammerIndicatorStructT_v02 jammerIndicatorList[QMI_LOC_MAX_GNSS_SIGNAL_TYPE_EXT_V02];
-  /**<   Indicates the jammer indicator of each signal.
-       -- Values: [INT32_MIN, INT32_MAX)
-       Note: The enumerator qmiLocGnssSignalTypeEnumT specifies
-             the index for each GNSS signal type */
+  qmiLocJammerIndicatorExtStructT_v02 jammerIndicatorList[QMI_LOC_MAX_GNSS_SIGNAL_TYPE_EXT_V02];
+  /**<   Indicates the jammer indicator for GNSS signals */
 
   /* Optional */
   /*  UTC Time of EPI */
