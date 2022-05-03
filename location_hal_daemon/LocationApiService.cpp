@@ -857,7 +857,7 @@ void LocationApiService::suspendAllTrackingSessions() {
     }
 
     // pause the tracking session started by single shot api
-    if (mSingleFixTrackingSessionId) {
+    if (mSingleFixLocationApi && mSingleFixTrackingSessionId) {
         LOC_LOGi("pause tracking session %d for single shot fix clients",
                  mSingleFixTrackingSessionId);
         mSingleFixLocationApi->stopTracking(mSingleFixTrackingSessionId);
@@ -1863,9 +1863,12 @@ void LocationApiService::getSinglePos(LocAPIGetSinglePosReqMsg* pReqMsg) {
         };
 
         mSingleFixLocationApi = LocationAPI::createInstance(mSingleFixLocationApiCallbacks);
-        if (mSingleFixLocationApi) {
-            mSingleFixLocationApi->enableNetworkProvider();
+
+        if (!mSingleFixLocationApi) {
+            LOC_LOGe("failed to create LocationAPI to serve single shot fix requests");
+            return;
         }
+        mSingleFixLocationApi->enableNetworkProvider();
     }
 
     mSingleFixReqMap.erase(clientName);
@@ -1881,7 +1884,7 @@ void LocationApiService::getSinglePos(LocAPIGetSinglePosReqMsg* pReqMsg) {
         }
 
         // start tracking with TBF of 1 second
-        if (!mSingleFixTrackingSessionId) {
+        if (mSingleFixLocationApi && !mSingleFixTrackingSessionId) {
             TrackingOptions options = {};
             options.size = sizeof(options);
             options.minInterval = 1000;
@@ -1900,7 +1903,7 @@ void LocationApiService::stopTrackingSessionForSingleFixes() {
     // stop tracking if there is no more request
     if (mSingleFixReqMap.size() == 0) {
         mSingleFixLastLocation = {};
-        if (mSingleFixTrackingSessionId) {
+        if (mSingleFixLocationApi && mSingleFixTrackingSessionId) {
             LOC_LOGd("no more single shot client, stop tracking session %d",
                      mSingleFixTrackingSessionId);
             mSingleFixLocationApi->stopTracking(mSingleFixTrackingSessionId);
