@@ -125,7 +125,8 @@ extern "C" {
 /** Major Version Number of the IDL used to generate this file */
 #define LOC_V02_IDL_MAJOR_VERS 0x02
 /** Revision Number of the IDL used to generate this file */
-#define LOC_V02_IDL_MINOR_VERS 0x8F
+#define LOC_V02_IDL_MINOR_VERS 0x99
+
 /** Major Version Number of the qmi_idl_compiler used to generate this file */
 #define LOC_V02_IDL_TOOL_VERS 0x06
 /** Maximum Defined Message ID */
@@ -350,6 +351,9 @@ extern "C" {
 
 /**  Maximum buffer length of the encrypted data blob for the QMI_LOC_SECURE_GET_AVAILABLE_POSITION_REQ request. */
 #define QMI_LOC_SECURE_GET_AVAILABLE_POS_REQUEST_ENCRYPTED_MAX_V02 256
+
+/**  Maximum number of GNSS signal type  */
+#define QMI_LOC_MAX_GNSS_SIGNAL_TYPE_EXT_V02 64
 
 /**  Horizontal uncertainty circular
  Altitude With respect to ellipsoid
@@ -742,7 +746,7 @@ typedef uint64_t qmiLocEventRegMaskT_v02;
 #define QMI_LOC_EVENT_MASK_SAP_INS_PARAMETERS_REPORT_V02 ((qmiLocEventRegMaskT_v02)0x400000000000ull) /**<  QMI_LOC_EVENT_SAP_INS_PARAMETERS indication. \n  */
 #define QMI_LOC_EVENT_MASK_LATENCY_INFORMATION_REPORT_V02 ((qmiLocEventRegMaskT_v02)0x800000000000ull) /**<  QMI_LOC_LATENCY_INFORMATION indication.       */
 #define QMI_LOC_EVENT_MASK_PLATFORM_POWER_STATE_CHANGED_V02 ((qmiLocEventRegMaskT_v02)0x0001000000000000ull) /**<  QMI_LOC_EVENT_PLATFORM_POWER_STATE_CHANGED indication.  */
-
+#define QMI_LOC_EVENT_MASK_FEATURE_STATUS_V02 ((qmiLocEventRegMaskT_v02)0x0004000000000000ull) /**<  QMI_LOC_EVENT_REPORT indication when featureStatusReport is valid  */
 /** @addtogroup loc_qmi_enums
     @{
   */
@@ -854,6 +858,9 @@ typedef struct {
       - QMI_LOC_EVENT_MASK_QUERY_XTRA_INFO (0x200000000000) --  Event indication to trigger XTRA config query from the control point. \n
       - QMI_LOC_EVENT_MASK_SAP_INS_PARAMETERS_REPORT (0x400000000000) --  QMI_LOC_EVENT_SAP_INS_PARAMETERS indication. \n
       - QMI_LOC_EVENT_MASK_LATENCY_INFORMATION_REPORT (0x800000000000) --  QMI_LOC_LATENCY_INFORMATION indication.
+      - QMI_LOC_EVENT_MASK_PLATFORM_POWER_STATE_CHANGED (0x0001000000000000) --  QMI_LOC_EVENT_PLATFORM_POWER_STATE_CHANGED indication.
+      - QMI_LOC_EVENT_MASK_ENGINE_DEBUG_DATA_REPORT (0x0002000000000000) --  QMI_LOC_ENGINE_DEBUG_DATA indication.
+      - QMI_LOC_EVENT_MASK_FEATURE_STATUS (0x0004000000000000) --  QMI_LOC_EVENT_REPORT indication when featureStatusReport is valid
 
  Multiple events can be registered by ORing the individual masks and
  sending them in this TLV. Set all unused bits in this mask to 0.
@@ -1500,6 +1507,46 @@ typedef struct {
     @}
   */
 
+/** @addtogroup loc_qmi_aggregates
+    @{
+  */
+typedef struct {
+
+  qmiLocGnssSignalTypeMaskT_v02 gnssSignalType;
+  /**<   GNSS signal type. \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L1CA (0x00000001) --  GPS L1CA RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L1C (0x00000002) --  GPS L1C RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L2C_L (0x00000004) --  GPS L2C_L RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L5_Q (0x00000008) --  GPS L5_Q RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GLONASS_G1 (0x00000010) --  GLONASS G1 (L1OF) RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GLONASS_G2 (0x00000020) --  GLONASS G2 (L2OF) RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GALILEO_E1_C (0x00000040) --  Galileo E1_C RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GALILEO_E5A_Q (0x00000080) --  Galileo E5A_Q RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GALILEO_E5B_Q (0x00000100) --  Galileo E5B_Q RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B1_I (0x00000200) --  BeiDou B1_I RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B1C (0x00000400) --  BeiDou B1C RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2_I (0x00000800) --  BeiDou B2_I RF band
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2A_I (0x00001000) --  BeiDou B2A_I RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1CA (0x00002000) --  QZSS L1CA RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1S (0x00004000) --  QZSS L1S RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L2C_L (0x00008000) --  QZSS L2C_L RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L5_Q (0x00010000) --  QZSS L5_Q RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_SBAS_L1_CA (0x00020000) --  SBAS L1_CA RF band
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_NAVIC_L5 (0x00040000) --  NavIC L5 RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2A_Q (0x00080000) --  BeiDou B2A_Q RF band
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_I (0x00100000) --  BeiDou B2B_I RF band (Data)
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q (0x00200000) --  BeiDou B2B_Q RF band (Pilot)  */
+
+  int32_t agcMetricDb;
+  /**<   AGC metric in 0.01 dB */
+
+  int32_t bpMetricDb;
+  /**<   BP metric in 0.01 dB */
+}qmiLocJammerIndicatorExtStructT_v02;  /* Type */
+/**
+    @}
+  */
+
 typedef uint64_t qmiLocGNSSConstellEnumT_v02;
 #define eQMI_SYSTEM_GPS_V02 ((qmiLocGNSSConstellEnumT_v02)0x01ull) /**<  Enable GPS \n  */
 #define eQMI_SYSTEM_GLO_V02 ((qmiLocGNSSConstellEnumT_v02)0x02ull) /**<  Enable GLONASS \n  */
@@ -2057,6 +2104,13 @@ typedef struct {
   uint32_t payload_len;  /**< Must be set to # of elements in payload */
   uint8_t payload[4096];
   /**<   Data blob payload  */
+
+  /* Optional */
+  /*  Jammer Indicator for GNSS Signals */
+  uint8_t jammerIndicatorListExt_valid;  /**< Must be set to true if jammerIndicatorListExt is being passed */
+  uint32_t jammerIndicatorListExt_len;  /**< Must be set to # of elements in jammerIndicatorListExt */
+  qmiLocJammerIndicatorExtStructT_v02 jammerIndicatorListExt[QMI_LOC_MAX_GNSS_SIGNAL_TYPE_EXT_V02];
+  /**<   Indicates the jammer indicator for GNSS signals */
 }qmiLocEventPositionReportIndMsgT_v02;  /* Message */
 /**
     @}
@@ -3504,9 +3558,9 @@ typedef struct {
     NOTE: If the civic address is available with the AP, the AP Shall inject
     the same using the new QMI API QMI_LOC_INJECT_LOCATION_CIVIC_ADDRESS.
 
-        If the civic address is not available, the AP shall NOT use the new QMI API
+    If the civic address is not available, the AP shall NOT use the new QMI API
     QMI_LOC_INJECT_LOCATION_CIVIC_ADDRESS. The existing DBH injection API should
-        be used to inject hybrid location is available.
+    be used to inject hybrid location is available.
   */
 }qmiLocEventWifiReqIndMsgT_v02;  /* Message */
 /**
@@ -7557,6 +7611,9 @@ typedef struct {
       - QMI_LOC_EVENT_MASK_QUERY_XTRA_INFO (0x200000000000) --  Event indication to trigger XTRA config query from the control point. \n
       - QMI_LOC_EVENT_MASK_SAP_INS_PARAMETERS_REPORT (0x400000000000) --  QMI_LOC_EVENT_SAP_INS_PARAMETERS indication. \n
       - QMI_LOC_EVENT_MASK_LATENCY_INFORMATION_REPORT (0x800000000000) --  QMI_LOC_LATENCY_INFORMATION indication.
+      - QMI_LOC_EVENT_MASK_PLATFORM_POWER_STATE_CHANGED (0x0001000000000000) --  QMI_LOC_EVENT_PLATFORM_POWER_STATE_CHANGED indication.
+      - QMI_LOC_EVENT_MASK_ENGINE_DEBUG_DATA_REPORT (0x0002000000000000) --  QMI_LOC_ENGINE_DEBUG_DATA indication.
+      - QMI_LOC_EVENT_MASK_FEATURE_STATUS (0x0004000000000000) --  QMI_LOC_EVENT_REPORT indication when featureStatusReport is valid
  */
 }qmiLocGetRegisteredEventsIndMsgT_v02;  /* Message */
 /**
@@ -15203,6 +15260,21 @@ typedef uint64_t qmiLocSignalHealthMaskT_v02;
 #define QMI_LOC_SIGNAL_HEALTH_MASK_L1_UNHEALTHY_V02 ((qmiLocSignalHealthMaskT_v02)0x0040ull) /**<  L1 signal is unhealthy \n */
 #define QMI_LOC_SIGNAL_HEALTH_MASK_L2_UNHEALTHY_V02 ((qmiLocSignalHealthMaskT_v02)0x0080ull) /**<  L2 signal is unhealthy \n */
 #define QMI_LOC_SIGNAL_HEALTH_MASK_L5_UNHEALTHY_V02 ((qmiLocSignalHealthMaskT_v02)0x0100ull) /**<  L5 signal is unhealthy  */
+/** @addtogroup loc_qmi_enums
+    @{
+  */
+typedef enum {
+  QMILOCEPHEMERISSOURCEENUMT_MIN_ENUM_VAL_V02 = -2147483647, /**< To force a 32 bit signed enum.  Do not change or use*/
+  eQMI_LOC_EPHEMERIS_SOURCE_OTA_V02 = 1, /**<  Ephemeris decoded over-the-air \n */
+  eQMI_LOC_EPHEMERIS_SOURCE_XTRA_V02 = 2, /**<  Ephemeris from the XTRA file \n */
+  eQMI_LOC_EPHEMERIS_SOURCE_NETWORK_INJECTED_V02 = 3, /**<  Network-injected ephemeris \n */
+  eQMI_LOC_EPHEMERIS_SOURCE_EFS_V02 = 4, /**<  Source is EFS  */
+  QMILOCEPHEMERISSOURCEENUMT_MAX_ENUM_VAL_V02 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
+}qmiLocEphemerisSourceEnumT_v02;
+/**
+    @}
+  */
+
 /** @addtogroup loc_qmi_messages
     @{
   */
@@ -15533,6 +15605,49 @@ typedef struct {
       - QMI_LOC_SIGNAL_HEALTH_MASK_L1_UNHEALTHY (0x0040) --  L1 signal is unhealthy \n
       - QMI_LOC_SIGNAL_HEALTH_MASK_L2_UNHEALTHY (0x0080) --  L2 signal is unhealthy \n
       - QMI_LOC_SIGNAL_HEALTH_MASK_L5_UNHEALTHY (0x0100) --  L5 signal is unhealthy
+ */
+  /* Optional */
+  /*  Clock Data Reference Time of Week */
+  uint8_t toc_valid;  /**< Must be set to true if toc is being passed */
+  uint32_t toc;
+  /**<   Clock data reference time of week.  \n
+       - Units -- Seconds \n
+       If source is ephemeris, \n
+         for GPS/QZSS/BDS/GAL/NAVIC - value is decoded over the air in full GPS seconds \n
+         for GLONASS - same as GLO TOE in full GPS seconds. \n
+       If source is XTRA, \n
+         for GPS/QZSS/BDS/GAL/GLO - same as XTRA Time of Applicability in full GPS seconds. */
+
+  /* Optional */
+  /*  Issue of Data, Clock */
+  uint8_t IODC_valid;  /**< Must be set to true if IODC is being passed */
+  uint16_t IODC;
+  /**<   Issue of data, clock (unitless).
+    */
+
+  /* Optional */
+  /*  Reference Time Ephemeris */
+  uint8_t toe_valid;  /**< Must be set to true if toe is being passed */
+  uint32_t toe;
+  /**<   Reference time of ephemeris. \n
+       - Units -- Seconds \n
+       If source is ephemeris, \n
+         for GPS/QZSS/GAL/BDS - value is decoded over the air. \n
+         for GLO - value corresponds to ephemeris Tb. \n
+       If source is XTRA, \n
+         for GPS/QZSS/GAL/BDS - value is set to 0. \n
+         for GLO - value is set to the XTRA fit interval. */
+
+  /* Optional */
+  /*  Ephemeris Source */
+  uint8_t ephemerisSrc_valid;  /**< Must be set to true if ephemerisSrc is being passed */
+  qmiLocEphemerisSourceEnumT_v02 ephemerisSrc;
+  /**<   Source of ephemeris if polynomials are based on ephemeris. Valid Values: \n
+      - eQMI_LOC_EPHEMERIS_SOURCE_OTA (1) --  Ephemeris decoded over-the-air \n
+      - eQMI_LOC_EPHEMERIS_SOURCE_XTRA (2) --  Ephemeris from the XTRA file \n
+      - eQMI_LOC_EPHEMERIS_SOURCE_NETWORK_INJECTED (3) --  Network-injected ephemeris \n
+      - eQMI_LOC_EPHEMERIS_SOURCE_EFS (4) --  Source is EFS
+
  */
 }qmiLocEventGnssSvPolyIndMsgT_v02;  /* Message */
 /**
@@ -18155,6 +18270,7 @@ typedef enum {
   eQMI_LOC_SUPPORTED_FEATURE_MULTIBAND_CONFIG_V02 = 14, /**<  Support the multiband GNSS configuration feature  */
   eQMI_LOC_SUPPORTED_FEATURE_QMI_AGNSS_CONFIG_DISABLED_V02 = 15, /**<  Support the AGNSS configuration for DSDA   */
   eQMI_LOC_SUPPORTED_FEATURE_MULTIPLE_ATTRIBUTION_APPS_V02 = 16, /**<  Support the Multiple Attribution Apps(UTH clients Lock control) feature    */
+  eQMI_LOC_SUPPORTED_FEATURE_DYNAMIC_FEATURE_STATUS_V02 = 19, /**<  Support the feature to dynamically report feature status on update */
   QMILOCSUPPORTEDFEATUREENUMT_MAX_ENUM_VAL_V02 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
 }qmiLocSupportedFeatureEnumT_v02;
 /**
@@ -18944,6 +19060,16 @@ typedef struct {
   /*  SIM MCC(Mobile Country Code) Value */
   uint8_t mccTertiarySimSlot_valid;  /**< Must be set to true if mccTertiarySimSlot is being passed */
   uint16_t mccTertiarySimSlot;
+
+  /* Optional */
+  /*  XTRA File Generation Time */
+  uint8_t xtraFileGenerationTime_valid;  /**< Must be set to true if xtraFileGenerationTime is being passed */
+  uint64_t xtraFileGenerationTime;
+
+  /* Optional */
+  /*  XTRA Remaining Valid Age in Minutes */
+  uint8_t xtraRemValidDuration_valid;  /**< Must be set to true if xtraRemValidDuration is being passed */
+  uint32_t xtraRemValidDuration;
 }qmiLocQueryXtraInfoIndMsgT_v02;  /* Message */
 /**
     @}
@@ -19852,11 +19978,11 @@ typedef struct {
   */
 
 typedef uint64_t qmiLocConstellationMaskT_v02;
-#define QMI_LOC_CONSTELLATION_GLO_V02 ((qmiLocConstellationMaskT_v02)0x00000001ull) /**<  Enable GLONASS. \n  */
-#define QMI_LOC_CONSTELLATION_BDS_V02 ((qmiLocConstellationMaskT_v02)0x00000002ull) /**<  Enable BDS.\n  */
-#define QMI_LOC_CONSTELLATION_QZSS_V02 ((qmiLocConstellationMaskT_v02)0x00000004ull) /**<  Enable QZSS. \n */
-#define QMI_LOC_CONSTELLATION_GAL_V02 ((qmiLocConstellationMaskT_v02)0x00000008ull) /**<  Enable Galileo. \n */
-#define QMI_LOC_CONSTELLATION_NAVIC_V02 ((qmiLocConstellationMaskT_v02)0x00000010ull) /**<  Enable NavIC.  */
+#define QMI_LOC_CONSTELLATION_GLO_V02 ((qmiLocConstellationMaskT_v02)0x00000001ull) /**<  GLONASS. \n  */
+#define QMI_LOC_CONSTELLATION_BDS_V02 ((qmiLocConstellationMaskT_v02)0x00000002ull) /**<  BDS.\n  */
+#define QMI_LOC_CONSTELLATION_QZSS_V02 ((qmiLocConstellationMaskT_v02)0x00000004ull) /**<  QZSS. \n */
+#define QMI_LOC_CONSTELLATION_GAL_V02 ((qmiLocConstellationMaskT_v02)0x00000008ull) /**<  Galileo. \n */
+#define QMI_LOC_CONSTELLATION_NAVIC_V02 ((qmiLocConstellationMaskT_v02)0x00000010ull) /**<  NavIC.  */
 /** @addtogroup loc_qmi_messages
     @{
   */
@@ -19881,11 +20007,11 @@ typedef struct {
  GPS is always enabled.
  Valid only when resetConstellations is FALSE.
  Valid bitmasks: \n
-      - QMI_LOC_CONSTELLATION_GLO (0x00000001) --  Enable GLONASS. \n
-      - QMI_LOC_CONSTELLATION_BDS (0x00000002) --  Enable BDS.\n
-      - QMI_LOC_CONSTELLATION_QZSS (0x00000004) --  Enable QZSS. \n
-      - QMI_LOC_CONSTELLATION_GAL (0x00000008) --  Enable Galileo. \n
-      - QMI_LOC_CONSTELLATION_NAVIC (0x00000010) --  Enable NavIC.  */
+      - QMI_LOC_CONSTELLATION_GLO (0x00000001) --  GLONASS. \n
+      - QMI_LOC_CONSTELLATION_BDS (0x00000002) --  BDS.\n
+      - QMI_LOC_CONSTELLATION_QZSS (0x00000004) --  QZSS. \n
+      - QMI_LOC_CONSTELLATION_GAL (0x00000008) --  Galileo. \n
+      - QMI_LOC_CONSTELLATION_NAVIC (0x00000010) --  NavIC.  */
 
   /* Optional */
   /*  GNSS Constellations to Disable */
@@ -19895,11 +20021,11 @@ typedef struct {
  GPS cannot be disabled.
  Valid only when resetConstellations is FALSE.
  Valid bitmasks: \n
-      - QMI_LOC_CONSTELLATION_GLO (0x00000001) --  Enable GLONASS. \n
-      - QMI_LOC_CONSTELLATION_BDS (0x00000002) --  Enable BDS.\n
-      - QMI_LOC_CONSTELLATION_QZSS (0x00000004) --  Enable QZSS. \n
-      - QMI_LOC_CONSTELLATION_GAL (0x00000008) --  Enable Galileo. \n
-      - QMI_LOC_CONSTELLATION_NAVIC (0x00000010) --  Enable NavIC.  */
+      - QMI_LOC_CONSTELLATION_GLO (0x00000001) --  GLONASS. \n
+      - QMI_LOC_CONSTELLATION_BDS (0x00000002) --  BDS.\n
+      - QMI_LOC_CONSTELLATION_QZSS (0x00000004) --  QZSS. \n
+      - QMI_LOC_CONSTELLATION_GAL (0x00000008) --  Galileo. \n
+      - QMI_LOC_CONSTELLATION_NAVIC (0x00000010) --  NavIC.  */
 }qmiLocSetConstellationConfigReqMsgT_v02;  /* Message */
 /**
     @}
@@ -22572,6 +22698,16 @@ typedef struct {
   /*  SIM MCC(Mobile Country Code) Value */
   uint8_t mccTertiarySimSlot_valid;  /**< Must be set to true if mccTertiarySimSlot is being passed */
   uint16_t mccTertiarySimSlot;
+
+  /* Optional */
+  /*  XTRA File Generation Time */
+  uint8_t xtraFileGenerationTime_valid;  /**< Must be set to true if xtraFileGenerationTime is being passed */
+  uint64_t xtraFileGenerationTime;
+
+  /* Optional */
+  /*  XTRA Remaining Valid Age in Minutes */
+  uint8_t xtraRemValidDuration_valid;  /**< Must be set to true if xtraRemValidDuration is being passed */
+  uint32_t xtraRemValidDuration;
 }qmiLocEventQueryXtraInfoReqIndMsgT_v02;  /* Message */
 /**
     @}
