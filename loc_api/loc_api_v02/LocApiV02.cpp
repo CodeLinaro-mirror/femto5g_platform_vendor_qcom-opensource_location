@@ -1059,6 +1059,11 @@ void LocApiV02::injectPosition(const Location& location, bool onDemandCpi)
         injectPositionReq.vertConfidence = 68;
     }
 
+    if (LOCATION_HAS_TIME_UNC_BIT & location.flags) {
+        injectPositionReq.timeUnc_valid = 1;
+        injectPositionReq.timeUnc = location.timeUncMs;
+    }
+
     injectPositionReq.positionSrc_valid = 1;
     injectPositionReq.positionSrc = eQMI_LOC_POSITION_SRC_OTHER_V02;
 
@@ -1090,6 +1095,12 @@ void LocApiV02::injectPosition(const GnssLocationInfoNotification &locationInfo,
     if (location.timestamp > 0) {
         injectPositionReq.timestampUtc_valid = 1;
         injectPositionReq.timestampUtc = location.timestamp;
+    }
+
+    // time uncertainty
+    if (LOCATION_HAS_TIME_UNC_BIT & location.flags) {
+        injectPositionReq.timeUnc_valid = 1;
+        injectPositionReq.timeUnc = location.timeUncMs;
     }
 
     if (LOCATION_HAS_LAT_LONG_BIT & location.flags) {
@@ -1194,12 +1205,6 @@ void LocApiV02::injectPosition(const GnssLocationInfoNotification &locationInfo,
         injectPositionReq.velUncEnu[0] = locationInfo.eastVelocityStdDeviation;
         injectPositionReq.velUncEnu[1] = locationInfo.northVelocityStdDeviation;
         injectPositionReq.velUncEnu[2]  = locationInfo.upVelocityStdDeviation;
-    }
-
-    // time uncertainty
-    if (GNSS_LOCATION_INFO_TIME_UNC_BIT & locationInfo.flags) {
-        injectPositionReq.timeUnc_valid = 1;
-        injectPositionReq.timeUnc = locationInfo.timeUncMs;
     }
 
     // number of SV used info, this replaces expandedGnssSvUsedList as the payload
@@ -2611,6 +2616,10 @@ locClientEventMaskType LocApiV02 :: convertLocClientEventMask(
       eventMask |= QMI_LOC_EVENT_MASK_LATENCY_INFORMATION_REPORT_V02;
   }
 
+   if (mask & LOC_API_ADAPTER_BIT_DISASTER_CRISIS_REPORT) {
+      eventMask |= QMI_LOC_EVENT_MASK_DC_REPORT_V02;
+  }
+
   return eventMask;
 }
 
@@ -2736,7 +2745,24 @@ void LocApiV02 :: reportPosition (
     memset(&dataNotify, 0, sizeof(dataNotify));
     msInWeek = (int)location_report_ptr->gpsTime.gpsTimeOfWeekMs;
 
-    if (location_report_ptr->jammerIndicatorList_valid) {
+    if (location_report_ptr->jammerIndicatorListExt_valid) {
+        msInWeek = -2;
+        for (uint32_t i = 0; i < location_report_ptr->jammerIndicatorListExt_len; i++) {
+            int signalId = log2(location_report_ptr->jammerIndicatorListExt[i].gnssSignalType);
+            if (signalId < GNSS_LOC_MAX_NUMBER_OF_SIGNAL_TYPES) {
+                LOC_LOGv("signal type %d, agcMetricDb=%d, bpMetricDb=%d",
+                        signalId, -location_report_ptr->jammerIndicatorListExt[i].bpMetricDb,
+                        location_report_ptr->jammerIndicatorListExt[i].bpMetricDb);
+                dataNotify.gnssDataMask[signalId] |=
+                    GNSS_LOC_DATA_AGC_BIT | GNSS_LOC_DATA_JAMMER_IND_BIT;
+                dataNotify.agc[signalId] =
+                    -(double)location_report_ptr->jammerIndicatorListExt[i].bpMetricDb / 100.0;
+                dataNotify.jammerInd[signalId] =
+                    (double)location_report_ptr->jammerIndicatorListExt[i].bpMetricDb / 100.0;
+                msInWeek = -1;
+            }
+        }
+    } else if (location_report_ptr->jammerIndicatorList_valid) {
         LOC_LOGV("%s:%d jammerIndicator is present len=%d",
                  __func__, __LINE__,
                  location_report_ptr->jammerIndicatorList_len);
@@ -3030,17 +3056,10 @@ void LocApiV02 :: reportPosition (
                 multiBandTypesAvailable = true;
             }
 
-            LOC_LOGv("sv length %d ", gnssSvUsedList_len);
-
-            locationExtended.numOfMeasReceived = gnssSvUsedList_len;
-            memset(locationExtended.measUsageInfo, 0, sizeof(locationExtended.measUsageInfo));
-            // Set of used_in_fix SV ID
-            bool reported = LocApiBase::needReport(location,
-                                                   (eQMI_LOC_SESS_STATUS_IN_PROGRESS_V02 ==
-                                                   location_report_ptr->sessionStatus ?
-                                                   LOC_SESS_INTERMEDIATE : LOC_SESS_SUCCESS),
-                                                   locationExtended.tech_mask);
-            if (unpropagatedPosition || reported) {
+            LOC_LOGv("gnssSvUsedList_len %d ", gnssSvUsedList_len);
+            if ((eQMI_LOC_SESS_STATUS_SUCCESS_V02 == location_report_ptr->sessionStatus) ||
+                    unpropagatedPosition) {
+                locationExtended.numOfMeasReceived = gnssSvUsedList_len;
                 for (idx = 0; idx < gnssSvUsedList_len; idx++)
                 {
                     gnssSvIdUsed = svUsedList[idx];
@@ -5326,6 +5345,36 @@ void  LocApiV02 :: reportSystemInfo(
     }
 }
 
+/* report disaster and crisis message */
+void LocApiV02 :: reportDcMessage(const qmiLocEventDcReportIndMsgT_v02* pDcReportIndMsg)
+{
+    if (pDcReportIndMsg->msgType_valid &&
+            pDcReportIndMsg->numValidBits_valid && (pDcReportIndMsg->numValidBits > 0) &&
+            pDcReportIndMsg->dcReportData_valid && (pDcReportIndMsg->dcReportData_len > 0)) {
+        GnssDcReportInfo dcReportInfo = {};
+        LOC_LOGi("dc report type %d, num bits %d, num bytes %d",
+                 pDcReportIndMsg->msgType, (uint32_t)pDcReportIndMsg->numValidBits,
+                 pDcReportIndMsg->dcReportData_len);
+
+        switch (pDcReportIndMsg->msgType) {
+        case eQMI_LOC_QZSS_JMA_DISASTER_PREVENTION_INFO_V02:
+            dcReportInfo.dcReportType = QZSS_JMA_DISASTER_PREVENTION_INFO;
+            break;
+        case eQMI_LOC_QZSS_NON_JMA_DISASTER_PREVENTION_INFO_V02:
+            dcReportInfo.dcReportType = QZSS_NON_JMA_DISASTER_PREVENTION_INFO;
+        default:
+            LOC_LOGe("unknown qmi dc report type: %d", pDcReportIndMsg->msgType);
+            return;
+        }
+        dcReportInfo.numValidBits = pDcReportIndMsg->numValidBits;
+        dcReportInfo.dcReportData.resize(pDcReportIndMsg->dcReportData_len);
+        for (uint32_t i = 0; i < pDcReportIndMsg->dcReportData_len; i++) {
+            dcReportInfo.dcReportData[i] = pDcReportIndMsg->dcReportData[i];
+        }
+        LocApiBase::reportDcMessage(dcReportInfo);
+    }
+}
+
 /* convert engine state report to loc eng format and send the converted
    report to loc eng */
 void LocApiV02 :: reportEngineState (
@@ -6825,6 +6874,10 @@ void LocApiV02 :: eventCb(locClientHandleType /*clientHandle*/,
 
     case QMI_LOC_EVENT_PLATFORM_POWER_STATE_CHANGED_IND_V02:
       reportPowerStateChangeInfo(eventPayload.pPowerStateChangedIndMsg);
+      break;
+
+    case QMI_LOC_DC_REPORT_IND_V02:
+      reportDcMessage(eventPayload.pDcReportIndMsg);
       break;
   }
 }
