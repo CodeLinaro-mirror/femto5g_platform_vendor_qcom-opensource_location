@@ -5025,7 +5025,7 @@ void  LocApiV02 :: reportSystemInfo(
         return;
     }
 
-    LOC_LOGe("system info type: %d, leap second valid: %d "
+    LOC_LOGd("system info type: %d, leap second valid: %d "
              "current gps time:valid:%d, week: %d, msec: %d,"
              "current leap second:valid %d, seconds %d, "
              "next gps time: valid %d, week: %d, msec: %d,"
@@ -7242,7 +7242,7 @@ void LocApiV02 :: getMinGpsWeek(uint32_t sessionId, LocApiResponse *adapterRespo
             getInd.minGpsWeekNumber_valid) {
         minGpsWeek = getInd.minGpsWeekNumber;
         err = LOCATION_ERROR_SUCCESS;
-        LOC_LOGe("min GPS week is: %d ", getInd.minGpsWeekNumber);
+        LOC_LOGd("min GPS week is: %d ", getInd.minGpsWeekNumber);
     }else {
         LOC_LOGe("failed. status: %s, ind status:%s",
                  loc_get_v02_client_status_name(status),
@@ -7265,7 +7265,7 @@ void LocApiV02 :: getMinGpsWeek(uint32_t sessionId, LocApiResponse *adapterRespo
         LocApiBase::reportGnssConfig(sessionId, config);
     }
 
-    LOC_LOGe("Exit. err: %u", err);
+    LOC_LOGd("Exit. err: %u", err);
     }));
 }
 
@@ -7312,7 +7312,7 @@ LocationError LocApiV02::setParameterSync(const GnssConfig & gnssConfig) {
 void LocApiV02 :: getParameter(uint32_t sessionId, GnssConfigFlagsMask flags,
                                LocApiResponse* adapterResponse) {
 
-    LOC_LOGe ("get parameter 0x%x", flags);
+    LOC_LOGd ("get parameter 0x%x", flags);
     sendMsg(new LocApiMsg([this, sessionId, flags, adapterResponse] () {
 
     LocationError err = LOCATION_ERROR_GENERAL_FAILURE;
