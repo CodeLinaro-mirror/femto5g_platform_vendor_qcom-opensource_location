@@ -25,6 +25,43 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
+/*
+Changes from Qualcomm Innovation Center are provided under the following license:
+
+Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted (subject to the limitations in the
+disclaimer below) provided that the following conditions are met:
+
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+
+    * Redistributions in binary form must reproduce the above
+      copyright notice, this list of conditions and the following
+      disclaimer in the documentation and/or other materials provided
+      with the distribution.
+
+    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
+      contributors may be used to endorse or promote products derived
+      from this software without specific prior written permission.
+
+NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
 #define LOG_NDEBUG 0
 #define LOG_TAG "LocSvc_ApiV02"
 
@@ -4573,9 +4610,10 @@ void LocApiV02::reportLocEvent(const qmiLocEventReportIndMsgT_v02 *event_report_
 {
     GnssAidingData aidingData;
     memset(&aidingData, 0, sizeof(aidingData));
-    LOC_LOGd("Loc event report: %" PRIu64 " KlobucharIonoMode_valid:%d: leapSec_valid:%d: tauC_valid:%d",
-            event_report_ptr->eventReport, event_report_ptr->klobucharIonoModel_valid,
-            event_report_ptr->leapSec_valid, event_report_ptr->tauC_valid);
+    LOC_LOGd("Loc event report: %" PRIu64 " KlobucharIonoMode_valid:%d: leapSec_valid:%d: "
+             "tauC_valid:%d", event_report_ptr->eventReport,
+              event_report_ptr->klobucharIonoModel_valid, event_report_ptr->leapSec_valid,
+              event_report_ptr->tauC_valid);
 
     if (event_report_ptr->eventReport & QMI_LOC_DELETE_GPS_EPHEMERIS_ALL_V02) {
         aidingData.sv.svMask |= GNSS_AIDING_DATA_SV_EPHEMERIS_BIT;
@@ -5026,7 +5064,7 @@ void  LocApiV02 :: reportSystemInfo(
         return;
     }
 
-    LOC_LOGe("system info type: %d, leap second valid: %d "
+    LOC_LOGd("system info type: %d, leap second valid: %d "
              "current gps time:valid:%d, week: %d, msec: %d,"
              "current leap second:valid %d, seconds %d, "
              "next gps time: valid %d, week: %d, msec: %d,"
@@ -7229,7 +7267,7 @@ void LocApiV02 :: getMinGpsWeek(uint32_t sessionId, LocApiResponse *adapterRespo
             getInd.minGpsWeekNumber_valid) {
         minGpsWeek = getInd.minGpsWeekNumber;
         err = LOCATION_ERROR_SUCCESS;
-        LOC_LOGe("min GPS week is: %d ", getInd.minGpsWeekNumber);
+        LOC_LOGd("min GPS week is: %d ", getInd.minGpsWeekNumber);
     }else {
         LOC_LOGe("failed. status: %s, ind status:%s",
                  loc_get_v02_client_status_name(status),
@@ -7252,7 +7290,7 @@ void LocApiV02 :: getMinGpsWeek(uint32_t sessionId, LocApiResponse *adapterRespo
         LocApiBase::reportGnssConfig(sessionId, config);
     }
 
-    LOC_LOGe("Exit. err: %u", err);
+    LOC_LOGd("Exit. err: %u", err);
     }));
 }
 
@@ -7299,7 +7337,7 @@ LocationError LocApiV02::setParameterSync(const GnssConfig & gnssConfig) {
 void LocApiV02 :: getParameter(uint32_t sessionId, GnssConfigFlagsMask flags,
                                LocApiResponse* adapterResponse) {
 
-    LOC_LOGe ("get parameter 0x%x", flags);
+    LOC_LOGd ("get parameter 0x%x", flags);
     sendMsg(new LocApiMsg([this, sessionId, flags, adapterResponse] () {
 
     LocationError err = LOCATION_ERROR_GENERAL_FAILURE;
