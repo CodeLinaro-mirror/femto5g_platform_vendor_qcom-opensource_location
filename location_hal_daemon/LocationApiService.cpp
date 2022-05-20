@@ -1052,7 +1052,7 @@ void LocationApiService::deregisterXtraStatusUpdate(
         }
 
         std::lock_guard<std::recursive_mutex> lock(mMutex);
-        // register xtra status update
+        // deregister xtra status update
         uint32_t sessionId = gnssInterface->gnssRegisterXtraStatusUpdate(false);
 
         // if sessionId is 0, e.g.: error callback will be delivered
@@ -1062,8 +1062,10 @@ void LocationApiService::deregisterXtraStatusUpdate(
         std::string clientname(pReqMsg->mSocketName);
         LocHalDaemonClientHandler* pClient = getClient(clientname);
         // inform client that request has been processed successfully
-        pClient->onControlResponseCb(LOCATION_ERROR_SUCCESS,
-                                     E_INTAPI_DEREGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID);
+        if (pClient) {
+            pClient->onControlResponseCb(LOCATION_ERROR_SUCCESS,
+                                         E_INTAPI_DEREGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID);
+        }
     }
 }
 
