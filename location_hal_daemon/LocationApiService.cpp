@@ -1961,6 +1961,7 @@ void LocationApiService::getSinglePos(LocAPIGetSinglePosReqMsg* pReqMsg) {
             options.size = sizeof(options);
             options.minInterval = 1000;
             options.minDistance = 0;
+            options.qualityLevelAccepted = QUALITY_ANY_OR_FAILED_FIX;
             mSingleFixTrackingSessionId = mSingleFixLocationApi->startTracking(options);
         }
     } else {
