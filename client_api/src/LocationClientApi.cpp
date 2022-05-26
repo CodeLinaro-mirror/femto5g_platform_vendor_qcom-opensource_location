@@ -26,6 +26,42 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/*
+Changes from Qualcomm Innovation Center are provided under the following license:
+
+Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted (subject to the limitations in the
+disclaimer below) provided that the following conditions are met:
+
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+
+    * Redistributions in binary form must reproduce the above
+      copyright notice, this list of conditions and the following
+      disclaimer in the documentation and/or other materials provided
+      with the distribution.
+
+    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
+      contributors may be used to endorse or promote products derived
+      from this software without specific prior written permission.
+
+NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
 #define LOG_TAG "LocSvc_LocationClientApi"
 
 #include <loc_cfg.h>
@@ -484,6 +520,7 @@ void LocationClientApi::getSingleTerrestrialPosition(
     LOC_LOGd("timeout msec = %u, horQoS = %f,"
              "techMask = 0x%x", timeoutMsec, horQoS, techMask);
 
+    // null terrestrialPositionCallback means cancelling request
     if ((terrestrialPositionCallback != nullptr) &&
             ((timeoutMsec == 0) || (techMask != TERRESTRIAL_TECH_GTP_WWAN) ||
              (horQoS != 0.0))) {
@@ -495,6 +532,38 @@ void LocationClientApi::getSingleTerrestrialPosition(
     } else if (mApiImpl) {
         mApiImpl->getSingleTerrestrialPos(timeoutMsec, ::TERRESTRIAL_TECH_GTP_WWAN, horQoS,
                                           terrestrialPositionCallback, responseCallback);
+    } else {
+        LOC_LOGe ("NULL mApiImpl");
+    }
+}
+
+void LocationClientApi::getSinglePosition(uint32_t timeoutMsec,
+                                          float horQoS,
+                                          LocationCb positionCallback,
+                                          ResponseCb responseCallback) {
+
+    LOC_LOGd("timeout msec = %u, horQoS = %f", timeoutMsec, horQoS);
+
+    if (positionCallback != nullptr) {
+        if ((timeoutMsec == 0) || (horQoS == 0)) {
+            LOC_LOGd("invalid parameter to request single shot fix:"
+                     "timeout %d msec, horQoS %f", timeoutMsec, horQoS);
+            if (responseCallback) {
+                responseCallback(LOCATION_RESPONSE_PARAM_INVALID);
+            }
+            return;
+        }
+    } else {
+        LOC_LOGd("null pos cb, cancel the requeset");
+        // null positionCallback means cancelling callback
+        // set below two parameters to zero when cancelling the request
+        timeoutMsec = 0;
+        horQoS = 0;
+    }
+
+    if (mApiImpl) {
+        mApiImpl->getSinglePos(timeoutMsec, horQoS,
+                               positionCallback, responseCallback);
     } else {
         LOC_LOGe ("NULL mApiImpl");
     }

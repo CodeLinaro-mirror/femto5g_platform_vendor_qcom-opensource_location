@@ -26,6 +26,42 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/*
+Changes from Qualcomm Innovation Center are provided under the following license:
+
+Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted (subject to the limitations in the
+disclaimer below) provided that the following conditions are met:
+
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+
+    * Redistributions in binary form must reproduce the above
+      copyright notice, this list of conditions and the following
+      disclaimer in the documentation and/or other materials provided
+      with the distribution.
+
+    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
+      contributors may be used to endorse or promote products derived
+      from this software without specific prior written permission.
+
+NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
 #ifndef LOCATIONCLIENTAPI_H
 #define LOCATIONCLIENTAPI_H
 
@@ -155,7 +191,8 @@ enum GnssSvOptionsMask {
     GNSS_SV_OPTIONS_HAS_EPHEMER_BIT             = (1<<0),
     /** Almanac is available for this SV. <br/>   */
     GNSS_SV_OPTIONS_HAS_ALMANAC_BIT             = (1<<1),
-    /** This SV is used in the position fix. <br/>   */
+    /** This SV is used in the position fix that has output
+     *  engine type set to LOC_OUTPUT_ENGINE_SPE. <br/> */
     GNSS_SV_OPTIONS_USED_IN_FIX_BIT             = (1<<2),
     /** This SV has valid GnssSv::carrierFrequencyHz. <br/> */
     GNSS_SV_OPTIONS_HAS_CARRIER_FREQUENCY_BIT   = (1<<3),
@@ -1772,10 +1809,10 @@ struct LeapSecondSystemInfo {
      *     use this field to retrieve the current leap second. <br/>
      */
     uint8_t               leapSecondCurrent;
-    /** GPS timestamp that corresponds to the last known leap second
-     *  change event. <br/>
-     *  The info can be available on two scenario: <br/> 1: this
-     *  leap second change event has been scheduled and yet
+    /** GPS timestamp that corrresponds to the last known leap
+     *  second change event. <br/>
+     *  The info can be available on two scenario: <br/>
+     *  1: this leap second change event has been scheduled and yet
      *     to happen and GPS receiver has decoded this info since
      *     device last bootup. <br/
      *  2: this leap second change event happened after device was
@@ -1784,7 +1821,7 @@ struct LeapSecondSystemInfo {
      *     second change has happened, this info will become
      *     unavailable. <br/>
      *
-     *   If leap second change info is available, to figure out the
+     *   If leap second change info is avaiable, to figure out the
      *   current leap second info, compare current gps time with
      *   LeapSecondChangeInfo::gpsTimestampLsChange to know whether
      *   to choose leapSecondBefore or leapSecondAfter as current
@@ -2356,15 +2393,17 @@ public:
         specified terrestrial technologies. <br/>
 
         For this phase, only TERRESTRIAL_TECH_GTP_WWAN will be
-        supported and this will return cell-based position. <br/.
+        supported and this will return cell-based position. <br/>.
 
         This API can be invoked with on-going tracking session
-        initiated via startPositionSession(). <br/
+        initiated via startPositionSession() and/or single shot
+        terrestrial fix request initiated via getSinglePosition().
+        <br/>
 
         If this API is invoked with single-shot terrestrial position
         already in progress, the request will fail and the
         responseCallback will get invoked with
-        LOCATION_RESPONSE_REQUEST_ALREADY_IN_PROGRESS. <br/
+        LOCATION_RESPONSE_REQUEST_ALREADY_IN_PROGRESS. <br/>
 
         @param timeoutMsec
         The amount of time that user is willing to wait for
@@ -2397,18 +2436,18 @@ public:
         available. <br/>
 
         This callback will only be invoked when
-        responseCallback is invoked with ResponseCb with processing
-        status set to LOCATION_RESPONSE_SUCCESS. <br/>
+        responseCallback is invoked with processing status set to
+        LOCATION_RESPONSE_SUCCESS. <br/>
 
         Null terrestrialPositionCallback will cancel the current
-        request. If responseCallback is none-null,
+        request. If responseCallback is non-null,
         LOCATION_RESPONSE_SUCCESS will be delivered. <br/>
 
         @param responseCallback
         Callback to receive processing status, e.g.: success or
         failure code: e.g.: timeout. If null responseCallback is
-        passed, client will not be informed of processing status,
-        e.g.:LOCATION_RESPONSE_PARAM_INVALID. <br/>
+        passed, client will not be informed of processing status.
+        <br/>
 
         When the processing status is LOCATION_RESPONSE_SUCCESS, the
         terrestrialPositionCallback will be invoked to deliver the
@@ -2429,6 +2468,75 @@ public:
                                       float horQos,
                                       LocationCb terrestrialPositionCallback,
                                       ResponseCb responseCallback);
+
+    /** @brief
+        Retrieve single-shot position using the position
+        technologies supported and enabled on the device. <br/>
+
+        This API can be invoked with on-going tracking session
+        initiated via startPositionSession() and single shot
+        terrestrial fix request initiated via
+        getSingleTerrestrialPosition(). <br/>
+
+        @param timeoutMsec
+        The amount of time that user is willing to wait for
+        the the position to meet the QoS requirement. When
+        timeoutMsec has passed, the latest position received will be
+        delivered to the client and responseCallback is invoked with
+        processing status set to LOCATION_RESPONSE_TIMEOUT. If
+        timeoutMsec is set to 0, responseCallback will get invoked
+        with LOCATION_RESPONSE_PARAM_INVALID. <br/>
+
+        @param horQoS
+        horizontal accuracy requirement for the terrestrial fix. If
+        horQoS is set to 0, responseCallback will get invoked with
+        LOCATION_RESPONSE_PARAM_INVALID. <br/>
+
+        @param positionCallback
+        callback to receive the position fix. Some fields in
+        LocationClientApi::Location, e.g.: speed, bearing and their
+        uncertainty may not be available, e.g.: when the position is
+        produced with terrestria position technology. Please check
+        Location::flags for the fields that are available. <br/>
+
+        This callback will only be invoked when
+        responseCallback is invoked with processing status set to
+        LOCATION_RESPONSE_SUCCESS or LOCATION_RESPONSE_TIMEOUT.
+        <br/>
+
+        Null positionCallback will cancel the current request. If
+        responseCallback is non-null, LOCATION_RESPONSE_SUCCESS
+        will be delivered. <br/>
+
+        @param responseCallback
+        Callback to receive processing status, e.g.: success or
+        failure code: e.g.: timeout. If null responseCallback is
+        passed, client will not be informed of processing status.
+        <br/>
+
+        When the processing status is LOCATION_RESPONSE_SUCCESS, the
+        positionCallback will be invoked to deliver the
+        single-shot position report that meets the QoS requirement.
+        When timeoutMsec has passed, the latest position received
+        will be delivered to the client and responseCallback is
+        invoked with processing status set to
+        LOCATION_RESPONSE_TIMEOUT. Please note that the position
+        received for timeout scenarion may not be fresh and it will
+        not satisfy the QoS requirement. <br/>
+
+        If this API is invoked with invalid parameter, e.g.: 0
+        milli-seconds timeout, or horQoS set to zero value, the
+        responseCallback will get invoked with
+        LOCATION_RESPONSE_PARAM_INVALID. <br/>
+
+        If this API is invoked with single-shot position
+        already in progress, the request will fail and the
+        responseCallback will get invoked with
+        LOCATION_RESPONSE_REQUEST_ALREADY_IN_PROGRESS. <br/> */
+    void getSinglePosition(uint32_t timeoutMsec,
+                           float horQos,
+                           LocationCb positionCallback,
+                           ResponseCb responseCallback);
 
     /** @example example1:testDetailedGnssReportApi
     *
