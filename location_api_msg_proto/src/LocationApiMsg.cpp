@@ -25,6 +25,43 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
+/*
+Changes from Qualcomm Innovation Center are provided under the following license:
+
+Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted (subject to the limitations in the
+disclaimer below) provided that the following conditions are met:
+
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+
+    * Redistributions in binary form must reproduce the above
+      copyright notice, this list of conditions and the following
+      disclaimer in the documentation and/or other materials provided
+      with the distribution.
+
+    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
+      contributors may be used to endorse or promote products derived
+      from this software without specific prior written permission.
+
+NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
 #define LOG_TAG "LocSvc_LocationApiMsg"
 
 #include <inttypes.h>
@@ -987,6 +1024,127 @@ LocAPIGetSingleTerrestrialPosRespMsg::LocAPIGetSingleTerrestrialPosRespMsg(
     // PBLocation locationNotification = 1;
     if (pbLocGetTerrestrialPosResp.has_location()) {
         pLocApiPbMsgConv->pbConvertToLocation(pbLocGetTerrestrialPosResp.location(),
+                mLocation);
+    }
+}
+
+// Convert LocAPIGetSinglePosReqMsg ->
+// PBLocAPIGetSinglePosReqMsg
+int LocAPIGetSinglePosReqMsg::serializeToProtobuf(string& protoStr) {
+    PBLocAPIMsgHeader pLocApiMsgHdr;
+    PBLocAPIGetSinglePosReqMsg pbLocGetPosReq;
+
+    if (nullptr == pLocApiPbMsgConv) {
+        LOC_LOGe("pLocApiPbMsgConv is null!");
+        return 0;
+    }
+    // string      mSocketName = 1;
+    pLocApiMsgHdr.set_msocketname(mSocketName);
+    // PBELocMsgID  msgId = 2;
+    pLocApiMsgHdr.set_msgid(pLocApiPbMsgConv->getPBEnumForELocMsgID(msgId));
+    // uint32   msgVersion = 3;
+    pLocApiMsgHdr.set_msgversion(msgVersion);
+
+    // Convert payload to PBLocAPIGetGnssEnergyConsumedReqMsg
+    // uint32 timeoutMsec = 1;
+    pbLocGetPosReq.set_timeoutmsec(mTimeoutMsec);
+    // float horQoS = 2;
+    pbLocGetPosReq.set_horqos(mHorQoS);
+
+    string pbStr;
+    if (!pbLocGetPosReq.SerializeToString(&pbStr)) {
+        LOC_LOGe("SerializeToString on pbLocGetPosReq failed!");
+        return 0;
+    }
+
+    pLocApiMsgHdr.set_payload(pbStr);
+    pLocApiMsgHdr.set_payloadsize(sizeof(LocAPIGetSinglePosReqMsg));
+
+    if (!pLocApiMsgHdr.SerializeToString(&protoStr)) {
+        LOC_LOGe("SerializeToString on pLocApiMsgHdr failed!");
+        return 0;
+    }
+    return protoStr.size();
+}
+
+// Decode PBLocAPIGetSinglePosRespMsg -> LocAPIGetSinglePosRespMsg
+LocAPIGetSinglePosReqMsg::LocAPIGetSinglePosReqMsg(
+            const char* name,
+            const PBLocAPIGetSinglePosReqMsg &pbLocGetPosReq,
+            const LocationApiPbMsgConv *pbMsgConv):
+        LocAPIMsgHeader(name, E_LOCAPI_GET_SINGLE_POS_REQ_MSG_ID, pbMsgConv) {
+    // >>>> PBLocAPIGetSinglePosReqMsg conversion
+    mTimeoutMsec = pbLocGetPosReq.timeoutmsec();
+    mHorQoS = pbLocGetPosReq.horqos();
+}
+
+// Encode LocAPIGetSinglePosRespMsg -> PBLocAPIGetSinglePosRespMsg
+int LocAPIGetSinglePosRespMsg::serializeToProtobuf(string& protoStr) {
+    PBLocAPIMsgHeader pLocApiMsgHdr;
+    PBLocAPIGetSinglePosRespMsg pbLocGetPosResp;
+
+    if (nullptr == pLocApiPbMsgConv) {
+        LOC_LOGe("pLocApiPbMsgConv is null!");
+        return 0;
+    }
+    // string      mSocketName = 1;
+    pLocApiMsgHdr.set_msocketname(mSocketName);
+    // PBELocMsgID  msgId = 2;
+    pLocApiMsgHdr.set_msgid(pLocApiPbMsgConv->getPBEnumForELocMsgID(msgId));
+    // uint32   msgVersion = 3;
+    pLocApiMsgHdr.set_msgversion(msgVersion);
+
+    // PBLocationError errorCode = 1;
+    pbLocGetPosResp.set_errorcode(
+            (::PBLocationError) pLocApiPbMsgConv->getPBEnumForLocationError(mErrorCode));
+
+    // PBLocation      location = 2;
+    PBLocation* pbLocation = pbLocGetPosResp.mutable_location();
+    if (nullptr != pbLocation) {
+        if (pLocApiPbMsgConv->convertLocationToPB(mLocation, pbLocation)) {
+            LOC_LOGe("convertLocationToPB failed");
+            pbLocGetPosResp.clear_location();
+            return 0;
+        }
+    } else {
+        LOC_LOGe("mutable_locationnotification failed");
+        return 0;
+    }
+
+    string pbStr;
+    if (!pbLocGetPosResp.SerializeToString(&pbStr)) {
+        LOC_LOGe("SerializeToString on pbLocGetPosResp failed!");
+        pbLocGetPosResp.clear_location();
+        return 0;
+    }
+
+    pLocApiMsgHdr.set_payload(pbStr);
+    pLocApiMsgHdr.set_payloadsize(sizeof(LocAPIGetSinglePosRespMsg));
+
+    if (!pLocApiMsgHdr.SerializeToString(&protoStr)) {
+        LOC_LOGe("SerializeToString on pLocApiMsgHdr failed!");
+        pbLocGetPosResp.clear_location();
+        return 0;
+    }
+
+    // free the location
+    pbLocGetPosResp.clear_location();
+    return protoStr.size();
+}
+
+// Decode PBLocAPIGetSinglePosRespMsg -> LocAPIGetSinglePosRespMsg
+LocAPIGetSinglePosRespMsg::LocAPIGetSinglePosRespMsg(
+            const char* name,
+            const PBLocAPIGetSinglePosRespMsg &pbLocGetPosResp,
+            const LocationApiPbMsgConv *pbMsgConv):
+        LocAPIMsgHeader(name, E_LOCAPI_GET_SINGLE_POS_RESP_MSG_ID, pbMsgConv) {
+
+    mErrorCode = pLocApiPbMsgConv->getEnumForPBLocationError(
+            pbLocGetPosResp.errorcode());
+
+    memset(&mLocation, 0, sizeof(mLocation));
+    if (pbLocGetPosResp.has_location()) {
+        pLocApiPbMsgConv->pbConvertToLocation(pbLocGetPosResp.location(),
                 mLocation);
     }
 }
