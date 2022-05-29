@@ -6556,7 +6556,7 @@ int LocationApiPbMsgConv::convert2DimensionDoubleVectorToPB(
     pbDoubleArrarys->set_row(row);
 
     //uint32 column = 2;
-    uint32_t column;
+    uint32_t column = 0;
     //repeated double value = 3;
     for (uint32_t i = 0; i < row; i++) {
         column = doubleArrays[i].size();
