@@ -25,6 +25,43 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
+/*
+Changes from Qualcomm Innovation Center are provided under the following license:
+
+Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted (subject to the limitations in the
+disclaimer below) provided that the following conditions are met:
+
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+
+    * Redistributions in binary form must reproduce the above
+      copyright notice, this list of conditions and the following
+      disclaimer in the documentation and/or other materials provided
+      with the distribution.
+
+    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
+      contributors may be used to endorse or promote products derived
+      from this software without specific prior written permission.
+
+NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
 #define LOG_TAG "LocSvc_LocationApiPbMsgConv"
 
 #include <inttypes.h>
@@ -171,6 +208,12 @@ ELocMsgID LocationApiPbMsgConv::getEnumForPBELocMsgID(const PBELocMsgID &pbLocMs
         case PB_E_LOCAPI_GET_SINGLE_TERRESTRIAL_POS_RESP_MSG_ID:
             eLocMsgId = E_LOCAPI_GET_SINGLE_TERRESTRIAL_POS_RESP_MSG_ID;
             break;
+        case PB_E_LOCAPI_GET_SINGLE_POS_REQ_MSG_ID:
+            eLocMsgId = E_LOCAPI_GET_SINGLE_POS_REQ_MSG_ID;
+            break;
+        case PB_E_LOCAPI_GET_SINGLE_POS_RESP_MSG_ID:
+            eLocMsgId = E_LOCAPI_GET_SINGLE_POS_RESP_MSG_ID;
+            break;
         case PB_E_LOCAPI_PINGTEST_MSG_ID:
             eLocMsgId = E_LOCAPI_PINGTEST_MSG_ID;
             break;
@@ -216,6 +259,9 @@ ELocMsgID LocationApiPbMsgConv::getEnumForPBELocMsgID(const PBELocMsgID &pbLocMs
         case PB_E_INTAPI_CONFIG_ENGINE_INTEGRITY_RISK_MSG_ID:
             eLocMsgId = E_INTAPI_CONFIG_ENGINE_INTEGRITY_RISK_MSG_ID;
             break;
+        case PB_E_INTAPI_CONFIG_XTRA_PARAMS_MSG_ID:
+            eLocMsgId = E_INTAPI_CONFIG_XTRA_PARAMS_MSG_ID;
+            break;
         case PB_E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID:
             eLocMsgId = E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID;
             break;
@@ -239,6 +285,18 @@ ELocMsgID LocationApiPbMsgConv::getEnumForPBELocMsgID(const PBELocMsgID &pbLocMs
             break;
         case PB_E_INTAPI_GET_CONSTELLATION_SECONDARY_BAND_CONFIG_RESP_MSG_ID:
             eLocMsgId = E_INTAPI_GET_CONSTELLATION_SECONDARY_BAND_CONFIG_RESP_MSG_ID;
+            break;
+        case PB_E_INTAPI_GET_XTRA_STATUS_REQ_MSG_ID:
+            eLocMsgId = E_INTAPI_GET_XTRA_STATUS_REQ_MSG_ID;
+            break;
+        case PB_E_INTAPI_GET_XTRA_STATUS_RESP_MSG_ID:
+            eLocMsgId = E_INTAPI_GET_XTRA_STATUS_RESP_MSG_ID;
+            break;
+        case PB_E_INTAPI_REGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID:
+            eLocMsgId = E_INTAPI_REGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID;
+            break;
+        case PB_E_INTAPI_DEREGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID:
+            eLocMsgId = E_INTAPI_DEREGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID;
             break;
         default:
             break;
@@ -304,6 +362,24 @@ GnssSuplMode LocationApiPbMsgConv::getEnumForPBGnssSuplMode(
     LocApiPb_LOGv("LocApiPB: pbGnssSuplMode:%d, gnssSuplMode:%d", pbGnssSuplMode, gnssSuplMode);
     return gnssSuplMode;
 }
+
+FixQualityLevel LocationApiPbMsgConv::getEnumForPBFixQualityLevel(
+        const PBFixQualityLevel &pbFixQualityLevel) const {
+    FixQualityLevel qualityLevelAccepted = QUALITY_HIGH_ACCU_FIX_ONLY;
+    switch (pbFixQualityLevel) {
+        case PB_QUALITY_ANY_VALID_FIX:
+            qualityLevelAccepted = QUALITY_ANY_VALID_FIX;
+            break;
+        case PB_QUALITY_ANY_OR_FAILED_FIX:
+            qualityLevelAccepted = QUALITY_ANY_OR_FAILED_FIX;
+            break;
+    }
+    LocApiPb_LOGv("LocApiPB: pbFixQualityLevel:%d, qualityLevelAccepted:%d", pbFixQualityLevel,
+            qualityLevelAccepted);
+
+    return qualityLevelAccepted;
+}
+
 
 BatchingStatus LocationApiPbMsgConv::getEnumForPBBatchingStatus(
         const PBBatchingStatus &pbBatchStat) const {
@@ -609,6 +685,140 @@ GnssSvType LocationApiPbMsgConv::getGnssSvTypeFromPBGnssLocSvSystemEnumType(
     return gnssSvType;
 }
 
+// PBDebugLogLevel to DebugLogLevel
+DebugLogLevel LocationApiPbMsgConv::getDebugLogLevelFromPB (
+        const PBDebugLogLevel &pbLogLevel) const {
+    DebugLogLevel logLevel = DEBUG_LOG_LEVEL_NONE;
+    switch (pbLogLevel) {
+    case PB_DEBUG_LOG_LEVEL_ERROR:
+        logLevel = DEBUG_LOG_LEVEL_ERROR;
+        break;
+    case PB_DEBUG_LOG_LEVEL_WARNING:
+        logLevel = DEBUG_LOG_LEVEL_WARNING;
+        break;
+    case PB_DEBUG_LOG_LEVEL_INFO:
+        logLevel = DEBUG_LOG_LEVEL_INFO;
+        break;
+    case PB_DEBUG_LOG_LEVEL_DEBUG:
+        logLevel = DEBUG_LOG_LEVEL_DEBUG;
+        break;
+    case PB_DEBUG_LOG_LEVEL_VERBOSE:
+        logLevel = DEBUG_LOG_LEVEL_VERBOSE;
+        break;
+    default:
+        break;
+    }
+    return logLevel;
+}
+
+// DebugLogLevel to PBDebugLogLevel
+PBDebugLogLevel LocationApiPbMsgConv::getPBEnumForDebugLogLevel(
+        const DebugLogLevel &logLevel) const {
+
+    PBDebugLogLevel pbLogLevel = PB_DEBUG_LOG_LEVEL_NONE;
+    switch (logLevel) {
+    case DEBUG_LOG_LEVEL_ERROR:
+        pbLogLevel = PB_DEBUG_LOG_LEVEL_ERROR;
+        break;
+    case DEBUG_LOG_LEVEL_WARNING:
+        pbLogLevel = PB_DEBUG_LOG_LEVEL_WARNING;
+        break;
+    case DEBUG_LOG_LEVEL_INFO:
+        pbLogLevel = PB_DEBUG_LOG_LEVEL_INFO;
+        break;
+    case DEBUG_LOG_LEVEL_DEBUG:
+        pbLogLevel = PB_DEBUG_LOG_LEVEL_DEBUG;
+        break;
+    case DEBUG_LOG_LEVEL_VERBOSE:
+        pbLogLevel = PB_DEBUG_LOG_LEVEL_VERBOSE;
+        break;
+    default:
+        break;
+    }
+    return pbLogLevel;
+}
+
+XtraStatusUpdateType LocationApiPbMsgConv::getXtraStatusUpdateTypeFromPB(
+        const PBXtraStatusUpdateType &pbUpdateType) const {
+    XtraStatusUpdateType updateType = XTRA_STATUS_UPDATE_UNDEFINED;
+
+    switch (pbUpdateType) {
+    case PB_XTRA_STATUS_UPDATE_UPON_QUERY:
+        updateType = XTRA_STATUS_UPDATE_UPON_QUERY;
+        break;
+    case PB_XTRA_STATUS_UPDATE_UPON_REGISTRATION:
+        updateType = XTRA_STATUS_UPDATE_UPON_REGISTRATION;
+        break;
+    case PB_XTRA_STATUS_UPDATE_UPON_STATUS_CHANGE:
+        updateType = XTRA_STATUS_UPDATE_UPON_STATUS_CHANGE;
+        break;
+    default:
+        break;
+    }
+
+    return updateType;
+}
+
+XtraDataStatus LocationApiPbMsgConv::getXtraDataStatusFromPB(
+        const PBXtraDataStatus &pbXtraDataStatus) const {
+    XtraDataStatus status = XTRA_DATA_STATUS_UNKNOWN;
+    switch (pbXtraDataStatus) {
+    case PB_XTRA_DATA_STATUS_NOT_AVAIL:
+        status = XTRA_DATA_STATUS_NOT_AVAIL;
+        break;
+    case PB_XTRA_DATA_STATUS_NOT_VALID:
+        status = XTRA_DATA_STATUS_NOT_VALID;
+        break;
+    case PB_XTRA_DATA_STATUS_VALID:
+        status = XTRA_DATA_STATUS_VALID;
+        break;
+    default:
+        break;
+    }
+    return status;
+}
+
+PBXtraDataStatus LocationApiPbMsgConv::getPBEnumForXtraDataStatus(
+        const XtraDataStatus &xtraDataStatus) const{
+    PBXtraDataStatus pbStatus = PB_XTRA_DATA_STATUS_UNKNOWN;
+    switch (xtraDataStatus) {
+    case XTRA_DATA_STATUS_NOT_AVAIL:
+        pbStatus = PB_XTRA_DATA_STATUS_NOT_AVAIL;
+        break;
+    case XTRA_DATA_STATUS_NOT_VALID:
+        pbStatus = PB_XTRA_DATA_STATUS_NOT_VALID;
+        break;
+    case XTRA_DATA_STATUS_VALID:
+        pbStatus = PB_XTRA_DATA_STATUS_VALID;
+        break;
+    default:
+        break;
+    }
+    return pbStatus;
+}
+
+PBXtraStatusUpdateType LocationApiPbMsgConv::getPBEnumForXtraStatusUpdateType(
+        const XtraStatusUpdateType &updateType) const {
+
+    PBXtraStatusUpdateType pbUpdateType = PB_XTRA_STATUS_UPDATE_UNDEFINED;
+
+    switch (updateType) {
+    case XTRA_STATUS_UPDATE_UPON_QUERY:
+        pbUpdateType = PB_XTRA_STATUS_UPDATE_UPON_QUERY;
+        break;
+    case XTRA_STATUS_UPDATE_UPON_REGISTRATION:
+        pbUpdateType = PB_XTRA_STATUS_UPDATE_UPON_REGISTRATION;
+        break;
+    case XTRA_STATUS_UPDATE_UPON_STATUS_CHANGE:
+        pbUpdateType = PB_XTRA_STATUS_UPDATE_UPON_STATUS_CHANGE;
+        break;
+    default:
+        break;
+    }
+
+    return pbUpdateType;
+}
+
 // **** helper function for enum conversion to protobuf enums
 PBELocMsgID LocationApiPbMsgConv::getPBEnumForELocMsgID(const ELocMsgID &eLocMsgId) const {
     PBELocMsgID pbLocMsgId = PB_E_LOCAPI_UNDEFINED_MSG_ID;
@@ -709,6 +919,12 @@ PBELocMsgID LocationApiPbMsgConv::getPBEnumForELocMsgID(const ELocMsgID &eLocMsg
         case E_LOCAPI_GET_SINGLE_TERRESTRIAL_POS_RESP_MSG_ID:
             pbLocMsgId = PB_E_LOCAPI_GET_SINGLE_TERRESTRIAL_POS_RESP_MSG_ID;
             break;
+        case E_LOCAPI_GET_SINGLE_POS_REQ_MSG_ID:
+            pbLocMsgId = PB_E_LOCAPI_GET_SINGLE_POS_REQ_MSG_ID;
+            break;
+        case E_LOCAPI_GET_SINGLE_POS_RESP_MSG_ID:
+            pbLocMsgId = PB_E_LOCAPI_GET_SINGLE_POS_RESP_MSG_ID;
+            break;
         case E_LOCAPI_PINGTEST_MSG_ID:
             pbLocMsgId = PB_E_LOCAPI_PINGTEST_MSG_ID;
             break;
@@ -754,6 +970,9 @@ PBELocMsgID LocationApiPbMsgConv::getPBEnumForELocMsgID(const ELocMsgID &eLocMsg
         case E_INTAPI_CONFIG_ENGINE_INTEGRITY_RISK_MSG_ID:
             pbLocMsgId = PB_E_INTAPI_CONFIG_ENGINE_INTEGRITY_RISK_MSG_ID;
             break;
+        case E_INTAPI_CONFIG_XTRA_PARAMS_MSG_ID:
+            pbLocMsgId = PB_E_INTAPI_CONFIG_XTRA_PARAMS_MSG_ID;
+            break;
         case E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID:
             pbLocMsgId = PB_E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID;
             break;
@@ -777,6 +996,18 @@ PBELocMsgID LocationApiPbMsgConv::getPBEnumForELocMsgID(const ELocMsgID &eLocMsg
             break;
         case E_INTAPI_GET_CONSTELLATION_SECONDARY_BAND_CONFIG_RESP_MSG_ID:
             pbLocMsgId = PB_E_INTAPI_GET_CONSTELLATION_SECONDARY_BAND_CONFIG_RESP_MSG_ID;
+            break;
+        case E_INTAPI_GET_XTRA_STATUS_REQ_MSG_ID:
+            pbLocMsgId = PB_E_INTAPI_GET_XTRA_STATUS_REQ_MSG_ID;
+            break;
+        case E_INTAPI_GET_XTRA_STATUS_RESP_MSG_ID:
+            pbLocMsgId = PB_E_INTAPI_GET_XTRA_STATUS_RESP_MSG_ID;
+            break;
+        case E_INTAPI_REGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID:
+            pbLocMsgId = PB_E_INTAPI_REGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID;
+            break;
+        case E_INTAPI_DEREGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID:
+            pbLocMsgId = PB_E_INTAPI_DEREGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID;
             break;
         default:
             break;
@@ -856,6 +1087,21 @@ PBGnssSuplMode LocationApiPbMsgConv::getPBEnumForGnssSuplMode(
     }
     LocApiPb_LOGv("LocApiPB: gnssSuplMode:%d, pbGnssSuplMode:%d", gnssSuplMode, pbGnssSuplMode);
     return pbGnssSuplMode;
+}
+
+PBFixQualityLevel LocationApiPbMsgConv::getPBEnumForFixQualityLevel(
+        const FixQualityLevel &qualityLevel) const {
+    PBFixQualityLevel pbQualityLevel = PB_QUALITY_HIGH_ACCU_FIX_ONLY;
+    switch (qualityLevel) {
+        case QUALITY_ANY_VALID_FIX:
+            pbQualityLevel = PB_QUALITY_ANY_VALID_FIX;
+            break;
+        case QUALITY_ANY_OR_FAILED_FIX:
+            pbQualityLevel = PB_QUALITY_ANY_OR_FAILED_FIX;
+            break;
+    }
+    LocApiPb_LOGv("LocApiPB: qualityLevel:%d, pbQualityLevel:%d", qualityLevel, pbQualityLevel);
+    return pbQualityLevel;
 }
 
 PBBatchingStatus LocationApiPbMsgConv::getPBEnumForBatchingStatus(
@@ -3139,6 +3385,88 @@ int LocationApiPbMsgConv::convertDeadReckoningEngineConfigToPB(
     return 0;
 }
 
+int LocationApiPbMsgConv::convertXtraConfigParamsToPB(
+        const XtraConfigParams& xtraParams, PBXtraConfigParams* pbXtraParams) const {
+    pbXtraParams->set_xtradownloadintervalminute(xtraParams.xtraDownloadIntervalMinute);
+    pbXtraParams->set_xtradownloadtimeoutsec(xtraParams.xtraDownloadTimeoutSec);
+    pbXtraParams->set_xtradownloadretryintervalminute(xtraParams.xtraDownloadRetryIntervalMinute);
+    pbXtraParams->set_xtradownloadretryattempts(xtraParams.xtraDownloadRetryAttempts);
+    pbXtraParams->set_xtracapath(xtraParams.xtraCaPath);
+    for (int index = 0; index < xtraParams.xtraServerURLsCount; index++) {
+        pbXtraParams->add_xtraserverurls(xtraParams.xtraServerURLs[index]);
+        LOC_LOGv("add %s", xtraParams.xtraServerURLs[index]);
+    }
+    for (int index = 0; index < xtraParams.ntpServerURLsCount; index++) {
+        pbXtraParams->add_ntpserverurls(xtraParams.ntpServerURLs[index]);
+        LOC_LOGv("add %s", xtraParams.ntpServerURLs[index]);
+    }
+
+    // conversion routine for debug level
+    pbXtraParams->set_xtradaemondebugloglevel(
+            getPBEnumForDebugLogLevel(xtraParams.xtraDaemonDebugLogLevel));
+
+    pbXtraParams->set_xtraintegritydownloadenable(
+            xtraParams.xtraIntegrityDownloadEnable);
+    pbXtraParams->set_xtraintegritydownloadintervalminute(
+            xtraParams.xtraIntegrityDownloadIntervalMinute);
+    return 0;
+}
+
+int LocationApiPbMsgConv::pbConvertToXtraConfig(const PBXtraConfigParams &pbXtraParams,
+            XtraConfigParams& xtraParams) const {
+    xtraParams.xtraDownloadIntervalMinute = pbXtraParams.xtradownloadintervalminute();
+    xtraParams.xtraDownloadTimeoutSec = pbXtraParams.xtradownloadtimeoutsec();
+
+    xtraParams.xtraDownloadRetryIntervalMinute =
+            pbXtraParams.xtradownloadretryintervalminute();
+    xtraParams.xtraDownloadRetryAttempts = pbXtraParams.xtradownloadretryattempts();
+
+    strlcpy(xtraParams.xtraCaPath, pbXtraParams.xtracapath().c_str(),
+            sizeof(xtraParams.xtraCaPath));
+
+    for (int index = 0; index < pbXtraParams.xtraserverurls_size(); index++) {
+        strlcpy(xtraParams.xtraServerURLs[index], pbXtraParams.xtraserverurls(index).c_str(),
+                sizeof(xtraParams.xtraServerURLs[index]));
+        LOC_LOGv("xtra server url: %d %s", index, xtraParams.xtraServerURLs[index]);
+    }
+    xtraParams.xtraServerURLsCount = pbXtraParams.xtraserverurls_size();
+
+    for (int index = 0; index < pbXtraParams.ntpserverurls_size(); index++) {
+        strlcpy(xtraParams.ntpServerURLs[index], pbXtraParams.ntpserverurls(index).c_str(),
+                sizeof(xtraParams.ntpServerURLs[index]));
+        LOC_LOGv("ntp server url: %d %s", index, xtraParams.ntpServerURLs[index]);
+    }
+    xtraParams.ntpServerURLsCount = pbXtraParams.ntpserverurls_size();
+
+    xtraParams.xtraDaemonDebugLogLevel =
+            getDebugLogLevelFromPB(pbXtraParams.xtradaemondebugloglevel());
+
+    xtraParams.xtraIntegrityDownloadEnable = pbXtraParams.xtraintegritydownloadenable();
+    xtraParams.xtraIntegrityDownloadIntervalMinute =
+            pbXtraParams.xtraintegritydownloadintervalminute();
+    return 0;
+}
+
+int LocationApiPbMsgConv::convertXtraStatusToPB(
+        const XtraStatus& xtraStatus, PBXtraStatus* pbXtraStatus) const {
+    pbXtraStatus->set_featureenabled(xtraStatus.featureEnabled);
+    if (xtraStatus.featureEnabled == true) {
+        pbXtraStatus->set_xtradatastatus(getPBEnumForXtraDataStatus(xtraStatus.xtraDataStatus));
+        pbXtraStatus->set_xtravalidforhours(xtraStatus.xtraValidForHours);
+    }
+    LOC_LOGv("pb xtra status %d %d %d", pbXtraStatus->featureenabled(), pbXtraStatus->xtradatastatus(),
+             pbXtraStatus->xtravalidforhours());
+    return 0;
+}
+
+int LocationApiPbMsgConv::pbConvertToXtraStatus(
+        const PBXtraStatus &pbXtraStatus, XtraStatus& xtraStatus) const {
+    xtraStatus.featureEnabled = pbXtraStatus.featureenabled();
+    xtraStatus.xtraDataStatus = getXtraDataStatusFromPB(pbXtraStatus.xtradatastatus());
+    xtraStatus.xtraValidForHours = pbXtraStatus.xtravalidforhours();
+    return 0;
+}
+
 int LocationApiPbMsgConv::convertLocationOptionsToPB(const LocationOptions &locOpt,
         PBLocationOptions *pbLocOpt) const {
     if (nullptr == pbLocOpt) {
@@ -3157,9 +3485,13 @@ int LocationApiPbMsgConv::convertLocationOptionsToPB(const LocationOptions &locO
     // uint32 locReqEngTypeMask = 4; - bitwise OR of PBLocReqEngineTypeMask
     pbLocOpt->set_locreqengtypemask(getPBMaskForLocReqEngineTypeMask(locOpt.locReqEngTypeMask));
 
+    // PBFixQualityLevel = 5;
+    pbLocOpt->set_qualitylevelaccepted(getPBEnumForFixQualityLevel(locOpt.qualityLevelAccepted));
+
     LocApiPb_LOGd("LocApiPB: locOpt - MinInterval: %u, MinDistance:%u, GnssSuplMode:%d, "\
-            "LocReqEngineTypeMask:%x", locOpt.minInterval, locOpt.minDistance, locOpt.mode,
-            locOpt.locReqEngTypeMask);
+            "LocReqEngineTypeMask:%x qualityLevelAccepted:%d",
+            locOpt.minInterval, locOpt.minDistance, locOpt.mode,
+            locOpt.locReqEngTypeMask, locOpt.qualityLevelAccepted);
     return 0;
 }
 
@@ -4917,9 +5249,13 @@ int LocationApiPbMsgConv::pbConvertToLocationOptions(const PBLocationOptions &pb
     locOpt.locReqEngTypeMask = (LocReqEngineTypeMask)getLocReqEngineTypeMaskFromPB(
             pbLocOpt.locreqengtypemask());
 
+    // PBQuailtyLevelAccepted = 5;
+    locOpt.qualityLevelAccepted = getEnumForPBFixQualityLevel(pbLocOpt.qualitylevelaccepted());
+
     LocApiPb_LOGd("LocApiPB: pbLocOpt - MinInterval: %u, MinDistance:%u, GnssSuplMode:%d, "\
-            "LocReqEngineTypeMask:%x", locOpt.minInterval, locOpt.minDistance, locOpt.mode,
-            locOpt.locReqEngTypeMask);
+            "LocReqEngineTypeMask:%x qualityLevelAccepted: %d",
+            locOpt.minInterval, locOpt.minDistance, locOpt.mode,
+            locOpt.locReqEngTypeMask, locOpt.qualityLevelAccepted);
     return 0;
 }
 
