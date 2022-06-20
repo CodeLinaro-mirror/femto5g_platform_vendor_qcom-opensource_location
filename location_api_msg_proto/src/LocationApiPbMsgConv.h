@@ -25,6 +25,43 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
+/*
+Changes from Qualcomm Innovation Center are provided under the following license:
+
+Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted (subject to the limitations in the
+disclaimer below) provided that the following conditions are met:
+
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+
+    * Redistributions in binary form must reproduce the above
+      copyright notice, this list of conditions and the following
+      disclaimer in the documentation and/or other materials provided
+      with the distribution.
+
+    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
+      contributors may be used to endorse or promote products derived
+      from this software without specific prior written permission.
+
+NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
 #ifndef LOCATION_API_PBMSGCONV_H
 #define LOCATION_API_PBMSGCONV_H
 
@@ -62,6 +99,11 @@ public:
     // DeadReckoningEngineConfig to PBDeadReckoningEngineConfig
     int convertDeadReckoningEngineConfigToPB(const DeadReckoningEngineConfig &drEngConfig,
             PBDeadReckoningEngineConfig *pbDrEngConfig) const;
+    // XtraConfigParams to PBXtraConfigParams
+    int convertXtraConfigParamsToPB(const XtraConfigParams& xtraParams,
+            PBXtraConfigParams* pbXtraParams) const;
+    int convertXtraStatusToPB(const XtraStatus& xtraStatus, PBXtraStatus* pbXtraStatus) const;
+
     // LocationOptions to PBLocationOptions
     int convertLocationOptionsToPB(const LocationOptions &locOpt,
             PBLocationOptions *pbLocOpt) const;
@@ -403,6 +445,15 @@ public:
         pbLocCfgGetConstlSecBandRespMsg.clear_msecondarybandconfig();
     }
 
+    inline void freeUpPBLocConfigXtraReqMsg(PBLocConfigXtraReqMsg &pbLocConfMsg) const {
+        pbLocConfMsg.clear_xtraparams();
+    }
+
+    inline void freeUpPBLocConfigGetXtraStatusRespMsg(
+            PBLocConfigGetXtraStatusRespMsg &pbLocMsg) const {
+        pbLocMsg.clear_mxtrastatus();
+    }
+
     inline void freeUpPBLocAPIPingTestReqMsg(PBLocAPIPingTestReqMsg &pbLocApiPingTest) const {
         // repeated uint32 data = 2;
         pbLocApiPingTest.clear_data();
@@ -473,6 +524,10 @@ public:
     // PBGnssConfigRobustLocation to GnssConfigRobustLocation
     int pbConvertToGnssConfigRobustLocation(const PBGnssConfigRobustLocation &pbGnssCfgRobLoc,
             GnssConfigRobustLocation &gnssCfgRobLoc) const;
+    int pbConvertToXtraConfig(const PBXtraConfigParams &pbXtraParams,
+            XtraConfigParams& xtraParams) const;
+    int pbConvertToXtraStatus(const PBXtraStatus &pbXtraStatus,
+            XtraStatus& xtraStatus) const;
 
     // MASK CONVERSION
     // ***************
@@ -517,6 +572,15 @@ public:
     PBLocationError getPBEnumForLocationError(const LocationError &locErr) const;
     PBELocMsgID getPBEnumForELocMsgID(const ELocMsgID &eLocMsgId) const;
     PBClientType getPBEnumForClientType(const ClientType &clientTyp) const;
+
+    DebugLogLevel getDebugLogLevelFromPB(const PBDebugLogLevel &pbLogLevel) const;
+    PBDebugLogLevel getPBEnumForDebugLogLevel(const DebugLogLevel &logLevel) const;
+    XtraStatusUpdateType getXtraStatusUpdateTypeFromPB(
+            const PBXtraStatusUpdateType &pbXtraStatusUpdateType) const;
+    PBXtraStatusUpdateType getPBEnumForXtraStatusUpdateType(
+            const XtraStatusUpdateType &xtraStatusUpdateType) const;
+    XtraDataStatus getXtraDataStatusFromPB(const PBXtraDataStatus &pbXtraDataStatus) const;
+    PBXtraDataStatus getPBEnumForXtraDataStatus(const XtraDataStatus &xtraDataStatus) const;
 
 private:
     bool mPbDebugLogEnabled;
@@ -640,6 +704,7 @@ private:
 
     // **** helper function for enum conversion to protobuf enums
     PBGnssSuplMode getPBEnumForGnssSuplMode(const GnssSuplMode &gnssSuplMode) const;
+    PBFixQualityLevel getPBEnumForFixQualityLevel(const FixQualityLevel &qualityLevel) const;
     PBBatchingStatus getPBEnumForBatchingStatus(const BatchingStatus &batchStatus) const;
     PBLocationReliability getPBEnumForLocationReliability(
             const LocationReliability &locReliab) const;
@@ -717,6 +782,8 @@ private:
 
     // **** helper function for enum conversion from protobuf enums to normal format.
     GnssSuplMode getEnumForPBGnssSuplMode(const PBGnssSuplMode &pbGnssSuplMode) const;
+    FixQualityLevel getEnumForPBFixQualityLevel(
+                const PBFixQualityLevel &pbFixQualityLevel) const;
     BatchingStatus getEnumForPBBatchingStatus(const PBBatchingStatus &pbBatchStat) const;
     GnssMeasurementsMultipathIndicator getEnumForPBGnssMeasMultipathIndic(
             const PBGnssMeasurementsMultipathIndicator &pbGnssMeasMultipathIndic) const;

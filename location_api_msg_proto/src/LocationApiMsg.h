@@ -26,6 +26,42 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/*
+Changes from Qualcomm Innovation Center are provided under the following license:
+
+Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted (subject to the limitations in the
+disclaimer below) provided that the following conditions are met:
+
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+
+    * Redistributions in binary form must reproduce the above
+      copyright notice, this list of conditions and the following
+      disclaimer in the documentation and/or other materials provided
+      with the distribution.
+
+    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
+      contributors may be used to endorse or promote products derived
+      from this software without specific prior written permission.
+
+NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
 #ifndef LOCATIONAPIMSG_H
 #define LOCATIONAPIMSG_H
 
@@ -263,6 +299,10 @@ enum ELocMsgID {
     E_LOCAPI_GET_SINGLE_TERRESTRIAL_POS_REQ_MSG_ID = 31,
     E_LOCAPI_GET_SINGLE_TERRESTRIAL_POS_RESP_MSG_ID = 32,
 
+    // Single fix request/response msg
+    E_LOCAPI_GET_SINGLE_POS_REQ_MSG_ID = 33,
+    E_LOCAPI_GET_SINGLE_POS_RESP_MSG_ID = 34,
+
     // ping
     E_LOCAPI_PINGTEST_MSG_ID = 99,
 
@@ -281,6 +321,7 @@ enum ELocMsgID {
     E_INTAPI_CONFIG_USER_CONSENT_TERRESTRIAL_POSITIONING_MSG_ID = 211,
     E_INTAPI_CONFIG_OUTPUT_NMEA_TYPES_MSG_ID = 212,
     E_INTAPI_CONFIG_ENGINE_INTEGRITY_RISK_MSG_ID = 213,
+    E_INTAPI_CONFIG_XTRA_PARAMS_MSG_ID = 214,
 
     // integration API config retrieval request/response
     E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID  = 300,
@@ -294,6 +335,12 @@ enum ELocMsgID {
 
     E_INTAPI_GET_CONSTELLATION_SECONDARY_BAND_CONFIG_REQ_MSG_ID = 306,
     E_INTAPI_GET_CONSTELLATION_SECONDARY_BAND_CONFIG_RESP_MSG_ID = 307,
+
+    E_INTAPI_GET_XTRA_STATUS_REQ_MSG_ID = 308,
+    E_INTAPI_GET_XTRA_STATUS_RESP_MSG_ID = 309,
+
+    E_INTAPI_REGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID = 310,
+    E_INTAPI_DEREGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID = 311,
 };
 
 typedef uint32_t LocationCallbacksMask;
@@ -796,6 +843,42 @@ struct LocAPIGetSingleTerrestrialPosRespMsg: LocAPIMsgHeader
     int serializeToProtobuf(string& protoStr) override;
 };
 
+struct LocAPIGetSinglePosReqMsg: LocAPIMsgHeader
+{
+    uint32_t mTimeoutMsec;
+    float    mHorQoS;
+
+    inline LocAPIGetSinglePosReqMsg(
+            const char* name, uint32_t timeoutMsec,
+            float horQoS, const LocationApiPbMsgConv *pbMsgConv) :
+        LocAPIMsgHeader(name, E_LOCAPI_GET_SINGLE_POS_REQ_MSG_ID, pbMsgConv),
+        mTimeoutMsec(timeoutMsec), mHorQoS(horQoS) { }
+
+    LocAPIGetSinglePosReqMsg(const char* name,
+            const PBLocAPIGetSinglePosReqMsg &pbLocGetPosReq,
+            const LocationApiPbMsgConv *pbMsgConv);
+
+    int serializeToProtobuf(string& protoStr) override;
+};
+
+struct LocAPIGetSinglePosRespMsg: LocAPIMsgHeader
+{
+    LocationError mErrorCode;
+    Location      mLocation;
+
+    inline LocAPIGetSinglePosRespMsg(
+            const char* name, LocationError errorCode, Location location,
+            const LocationApiPbMsgConv *pbMsgConv) :
+        LocAPIMsgHeader(name, E_LOCAPI_GET_SINGLE_POS_RESP_MSG_ID, pbMsgConv),
+        mErrorCode(errorCode), mLocation(location) { }
+
+    LocAPIGetSinglePosRespMsg(const char* name,
+            const PBLocAPIGetSinglePosRespMsg &pbLocGetPosResp,
+            const LocationApiPbMsgConv *pbMsgConv);
+
+    int serializeToProtobuf(string& protoStr) override;
+};
+
 /******************************************************************************
 IPC message structure - indications
 ******************************************************************************/
@@ -1248,6 +1331,24 @@ struct LocConfigEngineIntegrityRiskReqMsg: LocAPIMsgHeader
     int serializeToProtobuf(string& protoStr) override;
 };
 
+struct LocConfigXtraReqMsg: LocAPIMsgHeader
+{
+    bool mEnable;
+    XtraConfigParams mXtraParams;
+
+    inline LocConfigXtraReqMsg(const char* name, bool enable, XtraConfigParams xtraParams,
+                               const LocationApiPbMsgConv *pbMsgConv) :
+        LocAPIMsgHeader(name, E_INTAPI_CONFIG_XTRA_PARAMS_MSG_ID, pbMsgConv),
+        mEnable(enable),
+        mXtraParams(xtraParams) { }
+
+    LocConfigXtraReqMsg(const char* name, const PBLocConfigXtraReqMsg &pbConfigXtraMsg,
+                        const LocationApiPbMsgConv *pbMsgConv);
+
+    int serializeToProtobuf(string& protoStr) override;
+};
+
+
 /******************************************************************************
 IPC message structure - Location Integration API Get request/response message
 ******************************************************************************/
@@ -1347,6 +1448,55 @@ struct LocConfigGetConstellationSecondaryBandConfigRespMsg: LocAPIMsgHeader
     LocConfigGetConstellationSecondaryBandConfigRespMsg(const char* name,
             const PBLocConfigGetConstltnSecondaryBandConfigRespMsg &pbCfgGetConstSecBandCfgResp,
             const LocationApiPbMsgConv *pbMsgConv);
+
+    int serializeToProtobuf(string& protoStr) override;
+};
+
+/**************** XTRA related section **********************/
+struct LocConfigGetXtraStatusReqMsg: LocAPIMsgHeader
+{
+    inline LocConfigGetXtraStatusReqMsg(const char* name,
+                                        const LocationApiPbMsgConv *pbMsgConv) :
+        LocAPIMsgHeader(name, E_INTAPI_GET_XTRA_STATUS_REQ_MSG_ID,
+                        pbMsgConv) { }
+
+    int serializeToProtobuf(string& protoStr) override;
+};
+
+struct LocConfigRegisterXtraStatusUpdateReqMsg: LocAPIMsgHeader
+{
+    inline LocConfigRegisterXtraStatusUpdateReqMsg(
+            const char* name, const LocationApiPbMsgConv *pbMsgConv) :
+        LocAPIMsgHeader(name, E_INTAPI_REGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID,
+                        pbMsgConv) { }
+
+    int serializeToProtobuf(string& protoStr) override;
+};
+
+struct LocConfigDeregisterXtraStatusUpdateReqMsg: LocAPIMsgHeader
+{
+    inline LocConfigDeregisterXtraStatusUpdateReqMsg(
+            const char* name, const LocationApiPbMsgConv *pbMsgConv) :
+        LocAPIMsgHeader(name, E_INTAPI_DEREGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID,
+                        pbMsgConv) { }
+
+    int serializeToProtobuf(string& protoStr) override;
+};
+
+struct LocConfigGetXtraStatusRespMsg: LocAPIMsgHeader
+{
+    XtraStatusUpdateType mUpdateType;
+    XtraStatus           mXtraStatus;
+
+    inline LocConfigGetXtraStatusRespMsg(const char* name,
+                                         XtraStatusUpdateType updateType,
+                                         XtraStatus           xtraStatus,
+                                         const LocationApiPbMsgConv *pbMsgConv) :
+        LocAPIMsgHeader(name, E_INTAPI_GET_XTRA_STATUS_RESP_MSG_ID, pbMsgConv),
+        mUpdateType(updateType), mXtraStatus(xtraStatus) { }
+    LocConfigGetXtraStatusRespMsg(const char* name,
+                                  const PBLocConfigGetXtraStatusRespMsg &pbGetXtraStatusMsg,
+                                  const LocationApiPbMsgConv *pbMsgConv);
 
     int serializeToProtobuf(string& protoStr) override;
 };
