@@ -204,13 +204,15 @@ public:
                                  ResponseCb responseCallback);
     void getSinglePos(uint32_t timeoutMsec, float horQoS, LocationCb positionCallback,
                       ResponseCb responseCallback);
-
+    // utilities
     void logLocation(const Location &location,
                      LocReportTriggerType reportTriggerType);
     void logLocation(const GnssLocation &gnssLocation,
                      LocReportTriggerType reportTriggerType);
 
     void pingTest(PingTestCb pingTestCallback);
+    bool isInTracking() { return mSessionId != LOCATION_CLIENT_SESSION_ID_INVALID; }
+    bool isInBatching() { return mBatchingId != LOCATION_CLIENT_SESSION_ID_INVALID; }
 
 private:
     ~LocationClientApiImpl();

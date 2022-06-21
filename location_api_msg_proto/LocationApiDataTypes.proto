@@ -82,7 +82,6 @@ enum LocationApiDataTypesVersion {
     // Bump the last byte of version i.e. x.2 to x.3
     // Minor version 22: Add AntennaInfo messages for LCA
     LOCAPI_DATA_TYPES_VER_MINOR = 22;
-
 }
 
 // ============================================================================
