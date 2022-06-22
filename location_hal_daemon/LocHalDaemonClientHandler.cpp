@@ -227,8 +227,6 @@ uint32_t LocHalDaemonClientHandler::startTracking(LocationOptions & locOptions) 
     if (mSessionId == 0 && mLocationApi) {
         // update option
         mOptions.setLocationOptions(locOptions);
-        // allow all the fix report in LE session, even failed fix
-        mOptions.qualityLevelAccepted = QUALITY_ANY_OR_FAILED_FIX;
         // set interval to engine supported interval
         mOptions.minInterval = getSupportedTbf(mOptions.minInterval);
         mSessionId = mLocationApi->startTracking(mOptions);
@@ -293,12 +291,9 @@ void LocHalDaemonClientHandler::updateTrackingOptions(LocationOptions & locOptio
              locOptions.minDistance, locOptions.minInterval,
              locOptions.locReqEngTypeMask);
 
-        TrackingOptions trackingOption;
-        trackingOption.setLocationOptions(locOptions);
+        TrackingOptions trackingOption(locOptions);
         // set tbf to device supported tbf
         trackingOption.minInterval = getSupportedTbf(trackingOption.minInterval);
-        // allow all the fix report in LE session, even failed fix
-        trackingOption.qualityLevelAccepted = QUALITY_ANY_OR_FAILED_FIX;
         mLocationApi->updateTrackingOptions(mSessionId, trackingOption);
 
         // save the trackingOption: eng req type that will be used in filtering
@@ -720,32 +715,6 @@ void LocHalDaemonClientHandler::onGnssConfigCb(ELocMsgID configMsgId,
         }
         break;
 
-    case E_INTAPI_GET_XTRA_STATUS_REQ_MSG_ID:
-        if (gnssConfig.flags & GNSS_CONFIG_FLAGS_XTRA_STATUS_BIT)
-        {
-            LOC_LOGd("--< onGnssConfigCb, xtra status received, %d %d %d",
-                     gnssConfig.xtraStatus.featureEnabled,
-                     gnssConfig.xtraStatus.xtraDataStatus,
-                     gnssConfig.xtraStatus.xtraValidForHours);
-            LocConfigGetXtraStatusRespMsg msg(SERVICE_NAME,
-                                              XTRA_STATUS_UPDATE_UPON_QUERY,
-                                              gnssConfig.xtraStatus,
-                                              &mService->mPbufMsgConv);
-            msg.serializeToProtobuf(pbStr);
-        }
-        break;
-
-    case E_INTAPI_REGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID:
-        if (gnssConfig.flags & GNSS_CONFIG_FLAGS_XTRA_STATUS_BIT)
-        {
-            LocConfigGetXtraStatusRespMsg msg(SERVICE_NAME,
-                                              XTRA_STATUS_UPDATE_UPON_REGISTRATION,
-                                              gnssConfig.xtraStatus,
-                                              &mService->mPbufMsgConv);
-            msg.serializeToProtobuf(pbStr);
-        }
-        break;
-
     default:
         break;
     }
@@ -759,24 +728,6 @@ void LocHalDaemonClientHandler::onGnssConfigCb(ELocMsgID configMsgId,
         }
     } else {
         LOC_LOGe("mIpcSender or msgStream is null!!");
-    }
-}
-
-void LocHalDaemonClientHandler::onXtraStatusUpdateCb(const XtraStatus &xtraStatus) {
-    string pbStr;
-
-    LocConfigGetXtraStatusRespMsg msg(SERVICE_NAME, XTRA_STATUS_UPDATE_UPON_STATUS_CHANGE,
-                                      xtraStatus, &mService->mPbufMsgConv);
-    msg.serializeToProtobuf(pbStr);
-    if ((nullptr != mIpcSender) && (pbStr.size() != 0)) {
-        bool rc = sendMessage(pbStr.c_str(), pbStr.size(), E_INTAPI_GET_XTRA_STATUS_RESP_MSG_ID );
-        // purge this client if failed
-        if (!rc) {
-            LOC_LOGe("failed rc=%d purging client=%s", rc, mName.c_str());
-            mService->deleteClientbyName(mName);
-        }
-    } else {
-        LOC_LOGe("mIpcSender or msgStream is null!! size %d", pbStr.size());
     }
 }
 
