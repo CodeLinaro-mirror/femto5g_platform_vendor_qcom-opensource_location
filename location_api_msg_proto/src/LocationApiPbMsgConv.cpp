@@ -348,24 +348,6 @@ GnssSuplMode LocationApiPbMsgConv::getEnumForPBGnssSuplMode(
     return gnssSuplMode;
 }
 
-FixQualityLevel LocationApiPbMsgConv::getEnumForPBFixQualityLevel(
-    const PBFixQualityLevel &pbFixQualityLevel) const {
-    FixQualityLevel qualityLevelAccepted = QUALITY_HIGH_ACCU_FIX_ONLY;
-    switch (pbFixQualityLevel) {
-        case PB_QUALITY_ANY_VALID_FIX:
-            qualityLevelAccepted = QUALITY_ANY_VALID_FIX;
-            break;
-        case PB_QUALITY_ANY_OR_FAILED_FIX:
-            qualityLevelAccepted = QUALITY_ANY_OR_FAILED_FIX;
-            break;
-    }
-    LocApiPb_LOGv("LocApiPB: pbFixQualityLevel:%d, qualityLevelAccepted:%d", pbFixQualityLevel,
-            qualityLevelAccepted);
-
-    return qualityLevelAccepted;
-}
-
-
 BatchingStatus LocationApiPbMsgConv::getEnumForPBBatchingStatus(
         const PBBatchingStatus &pbBatchStat) const {
     BatchingStatus batchStat = BATCHING_STATUS_POSITION_UNAVAILABLE;
@@ -923,21 +905,6 @@ PBGnssSuplMode LocationApiPbMsgConv::getPBEnumForGnssSuplMode(
     }
     LocApiPb_LOGv("LocApiPB: gnssSuplMode:%d, pbGnssSuplMode:%d", gnssSuplMode, pbGnssSuplMode);
     return pbGnssSuplMode;
-}
-
-PBFixQualityLevel LocationApiPbMsgConv::getPBEnumForFixQualityLevel(
-        const FixQualityLevel &qualityLevel) const {
-    PBFixQualityLevel pbQualityLevel = PB_QUALITY_HIGH_ACCU_FIX_ONLY;
-    switch (qualityLevel) {
-        case QUALITY_ANY_VALID_FIX:
-            pbQualityLevel = PB_QUALITY_ANY_VALID_FIX;
-            break;
-        case QUALITY_ANY_OR_FAILED_FIX:
-            pbQualityLevel = PB_QUALITY_ANY_OR_FAILED_FIX;
-            break;
-    }
-    LocApiPb_LOGv("LocApiPB: qualityLevel:%d, pbQualityLevel:%d", qualityLevel, pbQualityLevel);
-    return pbQualityLevel;
 }
 
 PBBatchingStatus LocationApiPbMsgConv::getPBEnumForBatchingStatus(
@@ -3239,13 +3206,9 @@ int LocationApiPbMsgConv::convertLocationOptionsToPB(const LocationOptions &locO
     // uint32 locReqEngTypeMask = 4; - bitwise OR of PBLocReqEngineTypeMask
     pbLocOpt->set_locreqengtypemask(getPBMaskForLocReqEngineTypeMask(locOpt.locReqEngTypeMask));
 
-    // PBFixQualityLevel = 5;
-    pbLocOpt->set_qualitylevelaccepted(getPBEnumForFixQualityLevel(locOpt.qualityLevelAccepted));
-
     LocApiPb_LOGd("LocApiPB: locOpt - MinInterval: %u, MinDistance:%u, GnssSuplMode:%d, "\
-            "LocReqEngineTypeMask:%x qualityLevelAccepted:%d",
-            locOpt.minInterval, locOpt.minDistance, locOpt.mode,
-            locOpt.locReqEngTypeMask, locOpt.qualityLevelAccepted);
+            "LocReqEngineTypeMask:%x", locOpt.minInterval, locOpt.minDistance, locOpt.mode,
+            locOpt.locReqEngTypeMask);
     return 0;
 }
 
@@ -5003,13 +4966,9 @@ int LocationApiPbMsgConv::pbConvertToLocationOptions(const PBLocationOptions &pb
     locOpt.locReqEngTypeMask = (LocReqEngineTypeMask)getLocReqEngineTypeMaskFromPB(
             pbLocOpt.locreqengtypemask());
 
-    // PBQuailtyLevelAccepted = 5;
-    locOpt.qualityLevelAccepted = getEnumForPBFixQualityLevel(pbLocOpt.qualitylevelaccepted());
-
     LocApiPb_LOGd("LocApiPB: pbLocOpt - MinInterval: %u, MinDistance:%u, GnssSuplMode:%d, "\
-            "LocReqEngineTypeMask:%x qualityLevelAccepted: %d",
-            locOpt.minInterval, locOpt.minDistance, locOpt.mode,
-            locOpt.locReqEngTypeMask, locOpt.qualityLevelAccepted);
+            "LocReqEngineTypeMask:%x", locOpt.minInterval, locOpt.minDistance, locOpt.mode,
+            locOpt.locReqEngTypeMask);
     return 0;
 }
 
