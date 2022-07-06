@@ -1,0 +1,5 @@
+libgpsmm = False
+libQgpsmm = False
+python = False
+target = 'aarch64-linux-gnu'
+
