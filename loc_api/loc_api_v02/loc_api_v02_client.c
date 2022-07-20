@@ -2325,7 +2325,8 @@ locClientStatusEnumType locClientSendReq(
       return(eLOC_CLIENT_FAILURE_INTERNAL);
     }
 
-    if (QMI_ERR_SESSION_OWNERSHIP_V01 != resp.resp.error) {
+    if (QMI_ERR_SESSION_OWNERSHIP_V01 != resp.resp.error &&
+        QMI_ERR_MALFORMED_MSG_V01 != resp.resp.error) {
       break;
     }
     usleep(LOC_CLIENT_TIME_BETWEEN_SYNC_RETRIES);
