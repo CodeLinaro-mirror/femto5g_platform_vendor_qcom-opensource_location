@@ -692,20 +692,21 @@ bool LocationIntegrationApi::configEngineIntegrityRisk(
     return halLogLevel;
 }
 
-bool urlHasPortNum(const char* xtraServerURL, int length) {
+bool ntpUrlHasPortNum(const char* ntpURL, int length) {
     int index = length-1;
 
     // check for port number at the end of URL
-    do {
-        char c = xtraServerURL[index];
+    // ntp url: a.b.c:port, at least five characters before :port
+    while (index > 5) {
+        char c = ntpURL[index];
         if (c >= '0' && c <= '9') {
             index--;
         } else {
             break;
         }
-    } while (index >= 0);
+    };
 
-    if ((index >= 5) && (index < (length-1)) && xtraServerURL[index] == ':') {
+    if ((index >= 5) && (index < (length-1)) && ntpURL[index] == ':') {
         return true;
     } else {
         return false;
@@ -713,25 +714,47 @@ bool urlHasPortNum(const char* xtraServerURL, int length) {
 }
 
 // sanity check whether XTRA server URL is valid or not
-// 1: start with "https://"
-// 2: end with a port number
-bool isValidXTRAServerURL(const char* xtraServerURL, int length) {
-    // minumum length: https://a.b.c:x
-    if (!xtraServerURL || length < 15) {
-        LOC_LOGe("null or length not valid: %d", length);
+// 1: starts with "https://"
+// 2: has a port number "https://path3.xtracloud.net:443/xtra3Mgrcej.bin"
+bool isValidXtraUrl(string url) {
+    int startPos = -1, endPos = url.length();
+    while (++startPos < endPos && isspace(url[startPos]));
+    while (--endPos >= 0 && isspace(url[endPos]));
+    string trimUrl = url.substr(startPos, endPos - startPos + 1);
+
+    if (trimUrl.length() == 0) {
+        LOC_LOGe("empty xtra url");
         return false;
     }
 
-    int retval = strncasecmp(xtraServerURL, "https://", sizeof("https://")-1);
+    int retval = strncasecmp(trimUrl.c_str(), "https://", sizeof("https://")-1);
     if (retval != 0) {
-        LOC_LOGe("url %s does not start with https://", xtraServerURL);
-        return false;
-    } else if (urlHasPortNum(xtraServerURL, length)) {
-        return true;
-    } else {
-        LOC_LOGe("url %s does not have port number", xtraServerURL);
+        LOC_LOGe("url %s does not start with https://", trimUrl.c_str());
         return false;
     }
+
+    size_t posHost = strlen("https://");
+    size_t posPath = trimUrl.find('/', posHost);
+    if (posPath == string::npos) {
+        LOC_LOGe("invalid url %s", trimUrl.c_str());
+        return false;
+    }
+
+    string hostname = trimUrl.substr(posHost, posPath - posHost);
+    size_t posPort = hostname.find(':');
+    if (posPort == string::npos) {
+        LOC_LOGe("invalid url %s contains no port", trimUrl.c_str());
+        return false;
+    }
+    for (size_t index = posPort+1; index < hostname.size(); index++) {
+        char digit = hostname[index];
+        if (digit < '0' || digit > '9') {
+            LOC_LOGe("url %s contains invalid port", trimUrl.c_str());
+            return false;
+        }
+    }
+
+    return true;
 }
 
 bool LocationIntegrationApi::configXtraParams(bool enable, XtraConfigParams* configParams) {
@@ -786,9 +809,7 @@ bool LocationIntegrationApi::configXtraParams(bool enable, XtraConfigParams* con
         uint32_t totalValidXtraServerURL = 0;
         for (int index = 0; index < 3; index++) {
             // check for valid server URL
-            const char * xtraServerURL = configParams->xtraServerURLs[index].c_str();
-            int length = configParams->xtraServerURLs[index].size();
-            if (isValidXTRAServerURL(xtraServerURL, length) == true) {
+            if (isValidXtraUrl(configParams->xtraServerURLs[index]) == true) {
                 strlcpy(halConfigParams.xtraServerURLs[totalValidXtraServerURL++],
                         configParams->xtraServerURLs[index].c_str(),
                         sizeof(halConfigParams.xtraServerURLs[index]));
@@ -801,7 +822,7 @@ bool LocationIntegrationApi::configXtraParams(bool enable, XtraConfigParams* con
             // check for valid server URL
             const char * ntpServerURL = configParams->ntpServerURLs[index].c_str();
             int length = configParams->ntpServerURLs[index].size();
-            if (urlHasPortNum(ntpServerURL, length) == true) {
+            if (ntpUrlHasPortNum(ntpServerURL, length) == true) {
                 strlcpy(halConfigParams.ntpServerURLs[totalValidNtpServerURL++],
                         configParams->ntpServerURLs[index].c_str(),
                         sizeof(halConfigParams.ntpServerURLs[index]));

@@ -165,6 +165,7 @@ enum TrackingSessionType {
 #define CONFIG_XTRA_PARAMS         "configXtraParams"
 #define GET_XTRA_STATUS             "getXtraStatus"
 #define REGISTER_XTRA_STATUS_UPDATE "registerXtraUpdateStatus"
+#define ENABLE_XTRA_ON_DEMAND_DOWNLOAD "enableXtraOnDemandDownload"
 
 // debug utility
 static uint64_t getTimestampMs() {
@@ -504,6 +505,7 @@ static void printHelp() {
     printf("%s: config xtra params \n", CONFIG_XTRA_PARAMS);
     printf("%s: get xtra status \n", GET_XTRA_STATUS);
     printf("%s: register xtra status update \n", REGISTER_XTRA_STATUS_UPDATE);
+    printf("%s: enable xtra on demand download \n", ENABLE_XTRA_ON_DEMAND_DOWNLOAD);
 }
 
 void setRequiredPermToRunAsLocClient() {
@@ -1236,6 +1238,7 @@ int main(int argc, char *argv[]) {
     intCbs.getMinSvElevationCb = LocConfigGetMinSvElevationCb(onGetMinSvElevationCb);
     intCbs.getConstellationSecondaryBandConfigCb =
             LocConfigGetConstellationSecondaryBandConfigCb(onGetSecondaryBandConfigCb);
+    intCbs.getXtraStatusCb = LocConfigGetXtraStatusCb(onGetXtraStatusCb);
 
     LocConfigPriorityMap priorityMap;
     pIntClient = new LocationIntegrationApi(priorityMap, intCbs);
@@ -1508,6 +1511,36 @@ int main(int argc, char *argv[]) {
                 pLcaClient->getSinglePosition(0, 0, nullptr, onSingleShotResponseCb);
             }
             singleShotFixCnt = 0;
+        } else if (strncmp(buf, ENABLE_XTRA_ON_DEMAND_DOWNLOAD,
+                           strlen(ENABLE_XTRA_ON_DEMAND_DOWNLOAD)) == 0) {
+            printf("usage: enableXtraOnDemandDownload 0/1 (enable/disable xtra download) "
+                   "0/1 (enable/disable) integrity\n");
+            bool enableXtra = false;;
+            XtraConfigParams xtraConfig = {};
+
+            static char *save = nullptr;
+            char* token = strtok_r(buf, " ", &save); // skip header
+
+            token = strtok_r(NULL, " ", &save);
+            if (token != NULL) {
+                enableXtra = atoi(token);
+            }
+
+            token = strtok_r(NULL, " ", &save);
+            if (token != NULL) {
+                if (enableXtra) {
+                    xtraConfig.xtraIntegrityDownloadEnable = atoi(token);
+                }
+            }
+            xtraConfig.xtraDaemonDebugLogLevel = DEBUG_LOG_LEVEL_VERBOSE;
+            printf("xtra enabled %d, integrity enabled %d, debug level set to 5",
+                   enableXtra, xtraConfig.xtraIntegrityDownloadEnable);
+            bool retval = pIntClient->configXtraParams(enableXtra, &xtraConfig);
+            if (retval == false) {
+                printf("config xtra params failed\n");
+            } else {
+                printf("config xtra successful\n");
+            }
         } else if (strncmp(buf, CONFIG_XTRA_PARAMS, strlen(CONFIG_XTRA_PARAMS)) == 0) {
             bool enableXtra = false;;
             XtraConfigParams xtraConfig = {};
