@@ -65,6 +65,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdint.h>
 #include <sys/stat.h>
 #include <dlfcn.h>
+#include <dirent.h>
 #include <memory>
 #include <SystemStatus.h>
 #include <LocationApiMsg.h>
@@ -891,6 +892,7 @@ void LocationApiService::resumeAllTrackingSessions() {
         options.size = sizeof(options);
         options.minInterval = 1000;
         options.minDistance = 0;
+        options.qualityLevelAccepted = QUALITY_ANY_OR_FAILED_FIX;
         mSingleFixTrackingSessionId = mSingleFixLocationApi->startTracking(options);
     }
 }
@@ -1973,6 +1975,7 @@ void LocationApiService::getSinglePos(LocAPIGetSinglePosReqMsg* pReqMsg) {
             options.size = sizeof(options);
             options.minInterval = 1000;
             options.minDistance = 0;
+            options.qualityLevelAccepted = QUALITY_ANY_OR_FAILED_FIX;
             mSingleFixTrackingSessionId = mSingleFixLocationApi->startTracking(options);
         }
     } else {
