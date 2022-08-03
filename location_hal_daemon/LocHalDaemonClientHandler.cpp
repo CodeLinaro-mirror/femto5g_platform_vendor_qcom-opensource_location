@@ -94,11 +94,11 @@ void LocHalDaemonClientHandler::updateSubscription(uint32_t mask) {
         onCollectiveResponseCallback(count, errs, ids);
     };
 
-    if (mSubscriptionMask & E_LOC_CB_TRACKING_BIT) {
-        mCallbacks.trackingCb = [this](Location location) {
-            onTrackingCb(location);
-        };
-    }
+    // update optional callback - following four callbacks can be controlable
+    // tracking
+    mCallbacks.trackingCb = [this](Location location) {
+        onTrackingCb(location);
+    };
 
     // batching
     if (mSubscriptionMask & E_LOC_CB_BATCHING_BIT) {
@@ -128,7 +128,7 @@ void LocHalDaemonClientHandler::updateSubscription(uint32_t mask) {
     }
 
     // location info
-    if (mSubscriptionMask & (E_LOC_CB_GNSS_LOCATION_INFO_BIT | E_LOC_CB_SIMPLE_LOCATION_INFO_BIT)) {
+    if (mSubscriptionMask & E_LOC_CB_GNSS_LOCATION_INFO_BIT) {
         mCallbacks.gnssLocationInfoCb = [this](GnssLocationInfoNotification notification) {
             onGnssLocationInfoCb(notification);
         };
@@ -915,14 +915,13 @@ void LocHalDaemonClientHandler::onGnssLocationInfoCb(GnssLocationInfoNotificatio
     std::lock_guard<std::mutex> lock(LocationApiService::mMutex);
     LOC_LOGd("--< onGnssLocationInfoCb");
 
-    if ((nullptr != mIpcSender) && (mSubscriptionMask &
-            (E_LOC_CB_GNSS_LOCATION_INFO_BIT | E_LOC_CB_SIMPLE_LOCATION_INFO_BIT))) {
-        bool rc = false;
+    if ((nullptr != mIpcSender) &&
+            (mSubscriptionMask & E_LOC_CB_GNSS_LOCATION_INFO_BIT )) {
         string pbStr;
         if (mSubscriptionMask & E_LOC_CB_GNSS_LOCATION_INFO_BIT) {
             LocAPILocationInfoIndMsg msg(SERVICE_NAME, notification, &mService->mPbufMsgConv);
             if (msg.serializeToProtobuf(pbStr)) {
-                rc = sendMessage(pbStr.c_str(), pbStr.size(), msg.msgId);
+                bool rc = sendMessage(pbStr.c_str(), pbStr.size(), msg.msgId);
                 // purge this client if failed
                 if (!rc) {
                     LOC_LOGe("failed rc=%d purging client=%s", rc, mName.c_str());
@@ -930,18 +929,6 @@ void LocHalDaemonClientHandler::onGnssLocationInfoCb(GnssLocationInfoNotificatio
                 }
             } else {
                 LOC_LOGe("LocAPILocationInfoIndMsg serializeToProtobuf failed");
-            }
-        } else {
-            LocAPILocationIndMsg msg(SERVICE_NAME, notification.location, &mService->mPbufMsgConv);
-            if (msg.serializeToProtobuf(pbStr)) {
-                rc = sendMessage(pbStr.c_str(), pbStr.size(), msg.msgId);
-                // purge this client if failed
-                if (!rc) {
-                    LOC_LOGe("failed rc=%d purging client=%s", rc, mName.c_str());
-                    mService->deleteClientbyName(mName);
-                }
-            } else {
-                LOC_LOGe("LocAPILocationIndMsg serializeToProtobuf failed");
             }
         }
     }
