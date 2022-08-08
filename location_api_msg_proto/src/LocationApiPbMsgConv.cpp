@@ -25,6 +25,43 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
+/*
+Changes from Qualcomm Innovation Center are provided under the following license:
+
+Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted (subject to the limitations in the
+disclaimer below) provided that the following conditions are met:
+
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+
+    * Redistributions in binary form must reproduce the above
+      copyright notice, this list of conditions and the following
+      disclaimer in the documentation and/or other materials provided
+      with the distribution.
+
+    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
+      contributors may be used to endorse or promote products derived
+      from this software without specific prior written permission.
+
+NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
 #define LOG_TAG "LocSvc_LocationApiPbMsgConv"
 
 #include <inttypes.h>
@@ -1469,6 +1506,10 @@ uint32_t LocationApiPbMsgConv::getPBMaskForGnssLocationInfoExtFlagMask(
         pbGnssLocInfoFlagMask |= PB_GNSS_LOCATION_INFO_PROTECT_VERTICAL_BIT;
     }
 
+    if (gnssLocInfoFlagMask & GNSS_LOCATION_INFO_DGNSS_STATION_ID_BIT) {
+        pbGnssLocInfoFlagMask |= PB_GNSS_LOCATION_INFO_DGNSS_STATION_ID_MASK_BIT;
+    }
+
     return pbGnssLocInfoFlagMask;
 }
 
@@ -2670,7 +2711,9 @@ uint64_t LocationApiPbMsgConv::getGnssLocationInfoFlagMaskFromPB(
     if (pbGnssLocInfoExtFlagMask & PB_GNSS_LOCATION_INFO_PROTECT_VERTICAL_BIT) {
         gnssLocInfoFlagMask |= GNSS_LOCATION_INFO_PROTECT_VERTICAL_BIT;
     }
-
+    if (pbGnssLocInfoExtFlagMask & PB_GNSS_LOCATION_INFO_DGNSS_STATION_ID_MASK_BIT) {
+        gnssLocInfoFlagMask |= GNSS_LOCATION_INFO_DGNSS_STATION_ID_BIT;
+    }
     LocApiPb_LOGv("LocApiPB: pbGnssLocInfoFlagMask:0x%x, pbGnssLocInfoExtFlagMask:0x%x, "
                   "gnssLocInfoFlagMask:0x%" PRIu64"", pbGnssLocInfoFlagMask,
                   pbGnssLocInfoExtFlagMask, gnssLocInfoFlagMask);
@@ -3611,6 +3654,10 @@ int LocationApiPbMsgConv::convertGnssLocInfoNotifToPB(
     pbGnssLocInfoNotif->set_protectcrosstrack(gnssLocInfoNotif.protectCrossTrack);
     // float    protectVertical = 46;
     pbGnssLocInfoNotif->set_protectvertical(gnssLocInfoNotif.protectVertical);
+    // repeated uint32 dgnssStationId = 47;
+    for (uint32_t iter = 0; iter < gnssLocInfoNotif.numOfDgnssStationId; iter++) {
+        pbGnssLocInfoNotif->add_dgnssstationid(gnssLocInfoNotif.dgnssStationId[iter]);
+    }
 
     LocApiPb_LOGd("LocApiPB: gnssLocInfoNotif - GLocInfoFlgMask:%u, pdop:%f, hdop:%f, vdop:%f",
             gnssLocInfoNotif.flags, gnssLocInfoNotif.pdop, gnssLocInfoNotif.hdop,
@@ -4529,7 +4576,7 @@ int LocationApiPbMsgConv::pbConvertToLocation(const PBLocation &pbLoc, Location 
     loc.bearingAccuracy = pbLoc.bearingaccuracy();
 
     // uint32 techMask = 12; - bitwise OR of PBLocationTechnologyMask
-    loc.techMask = getLocationFlagsMaskFromPB(pbLoc.techmask());
+    loc.techMask = getLocationTechnologyMaskFromPB(pbLoc.techmask());
 
     // uint64 elapsedRealTime = 13;
     loc.elapsedRealTime = pbLoc.elapsedrealtime();
@@ -4731,6 +4778,14 @@ int LocationApiPbMsgConv::pbConvertToGnssLocInfoNotif(
     gnssLocInfoNotif.protectCrossTrack = pbGnssLocInfoNotif.protectcrosstrack();
     // float    protectVertical = 46;
     gnssLocInfoNotif.protectVertical = pbGnssLocInfoNotif.protectvertical();
+
+    // repeated uint32 dgnssStationId
+    uint32_t cnt = (uint32_t) pbGnssLocInfoNotif.dgnssstationid_size();
+    uint32_t i = 0;
+    for (i = 0; i < cnt && i < DGNSS_STATION_ID_MAX ; i++) {
+        gnssLocInfoNotif.dgnssStationId[i] = (uint16_t)pbGnssLocInfoNotif.dgnssstationid(i);
+    }
+    gnssLocInfoNotif.numOfDgnssStationId = i;
 
     LOC_LOGd("LocApiPB: pbGnssLocInfoNotif -GLocInfoFlgMask:%u, pdop:%f, hdop:%f, vdop:%f",
             gnssLocInfoNotif.flags, gnssLocInfoNotif.pdop, gnssLocInfoNotif.hdop,

@@ -3338,6 +3338,18 @@ void LocApiV02 :: reportPosition (
                     location_report_ptr->dgnssDataAgeMsec;
         }
 
+        if (location_report_ptr->dgnssStationId_valid) {
+            locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_DGNSS_STATION_ID;
+            uint32_t cnt = location_report_ptr->dgnssStationId_len;
+            uint32_t i = 0;
+            for (i = 0; i < cnt && i < DGNSS_STATION_ID_MAX; i++) {
+                locationExtended.dgnssStationId[i] = location_report_ptr->dgnssStationId[i];
+            }
+            locationExtended.numOfDgnssStationId = i;
+        } else {
+            LOC_LOGv("no dgnss station id");
+        }
+
         LOC_LOGv("report position mask: 0x%" PRIx64 ", dgnss info: 0x%x %d %d %d %d,",
                  locationExtended.flags,
                  locationExtended.dgnssConstellationUsage,
