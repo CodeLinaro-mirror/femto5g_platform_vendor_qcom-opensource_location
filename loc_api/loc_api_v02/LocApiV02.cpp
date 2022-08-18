@@ -75,6 +75,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <math.h>
 #include <dlfcn.h>
 #include <algorithm>
+#include <cfloat>
 
 #include <LocApiV02.h>
 #include <loc_api_v02_log.h>
@@ -328,6 +329,13 @@ LocApiV02 :: LocApiV02(LOC_API_ADAPTER_EVENT_MASK_T exMask,
 LocApiV02 :: ~LocApiV02()
 {
     close();
+    // free the memory used to assemble SV measurement from
+    // different constellations and bands
+    if (mSvMeasurementSet) {
+        free(mSvMeasurementSet);
+        mSvMeasurementSet = nullptr;
+    }
+
 }
 
 LocApiBase* getLocApi(LOC_API_ADAPTER_EVENT_MASK_T exMask,
@@ -905,13 +913,6 @@ void LocApiV02 :: stopFix(LocApiResponse *adapterResponse)
 
   // deregister events when session is stopped
   registerEventMask(mMask);
-
-  // free the memory used to assemble SV measurement from
-  // different constellations and bands
-  if (!mSvMeasurementSet) {
-      free(mSvMeasurementSet);
-      mSvMeasurementSet = nullptr;
-  }
 
   if( eLOC_CLIENT_SUCCESS != status)
   {
