@@ -75,6 +75,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <math.h>
 #include <dlfcn.h>
 #include <algorithm>
+#include <cfloat>
 
 #include <LocApiV02.h>
 #include <loc_api_v02_log.h>
@@ -378,6 +379,10 @@ LocApiV02 :: LocApiV02(LOC_API_ADAPTER_EVENT_MASK_T exMask,
 LocApiV02 :: ~LocApiV02()
 {
     close();
+    if (mGnssMeasurements) {
+        free(mGnssMeasurements);
+        mGnssMeasurements = nullptr;
+    }
 }
 
 LocApiBase* getLocApi(LOC_API_ADAPTER_EVENT_MASK_T exMask,
@@ -2238,9 +2243,6 @@ LocApiV02::setLPPeProtocolCpSync(GnssConfigLppeControlPlaneMask lppeCP)
   if (GNSS_CONFIG_LPPE_CONTROL_PLANE_WLAN_AP_MEASUREMENTS_BIT & lppeCP) {
       lppe_req.lppeCpConfig |= QMI_LOC_LPPE_MASK_CP_AP_WIFI_MEASUREMENT_V02;
   }
-  if (GNSS_CONFIG_LPPE_CONTROL_PLANE_SRN_AP_MEASUREMENTS_BIT & lppeCP) {
-      lppe_req.lppeCpConfig |= QMI_LOC_LPPE_MASK_CP_AP_SRN_BTLE_MEASUREMENT_V02;
-  }
   if (GNSS_CONFIG_LPPE_CONTROL_PLANE_SENSOR_BARO_MEASUREMENTS_BIT & lppeCP) {
       lppe_req.lppeCpConfig |= QMI_LOC_LPPE_MASK_CP_UBP_V02;
   }
@@ -2294,9 +2296,6 @@ LocApiV02::setLPPeProtocolUpSync(GnssConfigLppeUserPlaneMask lppeUP)
   }
   if (GNSS_CONFIG_LPPE_USER_PLANE_WLAN_AP_MEASUREMENTS_BIT & lppeUP) {
       lppe_req.lppeUpConfig |= QMI_LOC_LPPE_MASK_UP_AP_WIFI_MEASUREMENT_V02;
-  }
-  if (GNSS_CONFIG_LPPE_USER_PLANE_SRN_AP_MEASUREMENTS_BIT & lppeUP) {
-      lppe_req.lppeUpConfig |= QMI_LOC_LPPE_MASK_UP_AP_SRN_BTLE_MEASUREMENT_V02;
   }
   if (GNSS_CONFIG_LPPE_USER_PLANE_SENSOR_BARO_MEASUREMENTS_BIT & lppeUP) {
       lppe_req.lppeUpConfig |= QMI_LOC_LPPE_MASK_UP_UBP_V02;
@@ -2453,9 +2452,6 @@ locClientEventMaskType LocApiV02 :: convertLocClientEventMask(
 
   if(mask & LOC_API_ADAPTER_BIT_REQUEST_TIMEZONE)
       eventMask |= QMI_LOC_EVENT_MASK_GET_TIME_ZONE_REQ_V02;
-
-  if(mask & LOC_API_ADAPTER_BIT_REQUEST_SRN_DATA)
-      eventMask |= QMI_LOC_EVENT_MASK_INJECT_SRN_AP_DATA_REQ_V02 ;
 
   if (mask & LOC_API_ADAPTER_BIT_FDCL_SERVICE_REQ)
       eventMask |= QMI_LOC_EVENT_MASK_FDCL_SERVICE_REQ_V02;
@@ -3286,9 +3282,21 @@ void LocApiV02 :: reportPosition (
                     location_report_ptr->dgnssDataAgeMsec;
         }
 
-        LOC_LOGd("Position elapsedRealtime: %" PRIi64 " uncertainty: %" PRIi64 "",
+        LOC_LOGv("Position elapsedRealtime: %" PRIi64 " uncertainty: %" PRIi64 "",
                location.gpsLocation.elapsedRealTime,
                location.gpsLocation.elapsedRealTimeUnc);
+
+        if (location_report_ptr->dgnssStationId_valid) {
+            locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_DGNSS_STATION_ID;
+            uint32_t cnt = location_report_ptr->dgnssStationId_len;
+            uint32_t i = 0;
+            for (i = 0; i < cnt && i < DGNSS_STATION_ID_MAX; i++) {
+                locationExtended.dgnssStationId[i] = location_report_ptr->dgnssStationId[i];
+            }
+            locationExtended.numOfDgnssStationId = i;
+        } else {
+            LOC_LOGv("no dgnss station id");
+        }
 
         LOC_LOGv("report position mask: 0x%" PRIx64 ", dgnss info: 0x%x %d %d %d %d,",
                  locationExtended.flags,
@@ -3925,6 +3933,11 @@ void  LocApiV02 :: reportSvPolynomial(const qmiLocEventGnssSvPolyIndMsgT_v02 *gn
         if (1 == gnss_sv_poly_ptr->bdsTgdB1c_valid) {
             svPolynomial.is_valid |= ULP_GNSS_SV_POLY_BIT_BDS_TGD_B1C;
             svPolynomial.bdsTgdB1c = gnss_sv_poly_ptr->bdsTgdB1c;
+        }
+
+        if (1 == gnss_sv_poly_ptr->bdsIscB1c_valid) {
+            svPolynomial.is_valid |= ULP_GNSS_SV_POLY_BIT_BDS_ISC_B1C;
+            svPolynomial.bdsIscB1c = gnss_sv_poly_ptr->bdsIscB1c;
         }
 
         if (1 == gnss_sv_poly_ptr->toc_valid) {
@@ -8899,9 +8912,6 @@ LocApiV02::convertLppeCp(const uint32_t lppeControlPlaneMask)
     if ((1<<1) & lppeControlPlaneMask) {
         mask |= GNSS_CONFIG_LPPE_CONTROL_PLANE_WLAN_AP_MEASUREMENTS_BIT;
     }
-    if ((1<<2) & lppeControlPlaneMask) {
-        mask |= GNSS_CONFIG_LPPE_CONTROL_PLANE_SRN_AP_MEASUREMENTS_BIT;
-    }
     if ((1<<3) & lppeControlPlaneMask) {
         mask |= GNSS_CONFIG_LPPE_CONTROL_PLANE_SENSOR_BARO_MEASUREMENTS_BIT;
     }
@@ -8923,9 +8933,6 @@ LocApiV02::convertLppeUp(const uint32_t lppeUserPlaneMask)
     }
     if ((1 << 1) & lppeUserPlaneMask) {
         mask |= GNSS_CONFIG_LPPE_USER_PLANE_WLAN_AP_MEASUREMENTS_BIT;
-    }
-    if ((1 << 2) & lppeUserPlaneMask) {
-        mask |= GNSS_CONFIG_LPPE_USER_PLANE_SRN_AP_MEASUREMENTS_BIT;
     }
     if ((1 << 3) & lppeUserPlaneMask) {
         mask |= GNSS_CONFIG_LPPE_USER_PLANE_SENSOR_BARO_MEASUREMENTS_BIT;
@@ -10528,9 +10535,13 @@ LocApiV02::startTimeBasedTracking(const TrackingOptions& options, LocApiResponse
     req_union.pStartReq = &start_msg;
     status = locClientSendReq(QMI_LOC_START_REQ_V02, req_union);
     if (eLOC_CLIENT_SUCCESS != status) {
-        LOC_LOGE ("%s]: failed! status %d",
-                  __func__, status);
-        err = LOCATION_ERROR_GENERAL_FAILURE;
+        if (ENGINE_LOCK_STATE_DISABLED == getEngineLockState()) {
+            LOC_LOGd("engine state disabled");
+            err = LOCATION_ERROR_TZ_LOCKED;
+        } else {
+            LOC_LOGe("failed! status %d", status);
+            err = LOCATION_ERROR_GENERAL_FAILURE;
+        }
     }
 
     if (adapterResponse != NULL) {
@@ -10834,19 +10845,13 @@ LocApiV02::stopTimeBasedTracking(LocApiResponse* adapterResponse)
     status = locClientSendReq(QMI_LOC_STOP_REQ_V02, req_union);
     if (status != eLOC_CLIENT_SUCCESS) {
         LOC_LOGE ("%s]: failed! status %d",
-                  __func__, status);
+            __func__, status);
         err = LOCATION_ERROR_GENERAL_FAILURE;
     } else {
         mIsFirstFinalFixReported = false;
         mInSession = false;
         mPowerMode = GNSS_POWER_MODE_INVALID;
         registerEventMask();
-        // free the memory used to assemble SV measurement from
-        // different constellations and bands
-        if (!mGnssMeasurements) {
-            free(mGnssMeasurements);
-            mGnssMeasurements = nullptr;
-        }
     }
 
     if (adapterResponse != NULL) {
@@ -10907,8 +10912,13 @@ LocApiV02::startDistanceBasedTracking(uint32_t sessionId,
 
     if (eLOC_CLIENT_SUCCESS != status ||
         eQMI_LOC_SUCCESS_V02 != start_dbt_ind.status) {
-        LOC_LOGE("%s] failed! status %d ind.status %d",
-              __func__, status, start_dbt_ind.status);
+        if (ENGINE_LOCK_STATE_DISABLED == getEngineLockState()) {
+            LOC_LOGd("engine state disabled");
+            err = LOCATION_ERROR_TZ_LOCKED;
+        } else {
+            LOC_LOGe("failed! status %d ind.status %d", status, start_dbt_ind.status);
+            err = LOCATION_ERROR_GENERAL_FAILURE;
+        }
     }
 
     if (adapterResponse != NULL) {
@@ -10943,9 +10953,9 @@ LocApiV02::stopDistanceBasedTracking(uint32_t sessionId, LocApiResponse* adapter
                             &stop_dbt_Ind);
 
     if (eLOC_CLIENT_SUCCESS != status ||
-        eQMI_LOC_SUCCESS_V02 != stop_dbt_Ind.status) {
-        LOC_LOGE("%s] failed! status %d ind.status %d",
-              __func__, status, stop_dbt_Ind.status);
+            eQMI_LOC_SUCCESS_V02 != stop_dbt_Ind.status) {
+            LOC_LOGE("%s] failed! status %d ind.status %d",
+                __func__, status, stop_dbt_Ind.status);
     }
 
     adapterResponse->returnToSender(err);
@@ -11029,8 +11039,13 @@ LocApiV02::startBatching(uint32_t sessionId,
     LOC_SEND_SYNC_REQ(StartBatching, START_BATCHING, startBatchReq);
 
     if (!rv) {
-        LOC_LOGE("%s] failed!", __func__);
-        err = LOCATION_ERROR_GENERAL_FAILURE;
+        if (ENGINE_LOCK_STATE_DISABLED == getEngineLockState()) {
+            LOC_LOGd("engine state disabled");
+            err = LOCATION_ERROR_TZ_LOCKED;
+        } else {
+            LOC_LOGe("failed!");
+            err = LOCATION_ERROR_GENERAL_FAILURE;
+        }
     }
 
     if (adapterResponse != NULL) {
@@ -11118,10 +11133,14 @@ LocApiV02::startOutdoorTripBatchingSync(uint32_t tripDistance, uint32_t tripTbf,
             startOutdoorTripBatchReq);
 
     if (!rv) {
-        LOC_LOGE("%s] failed!", __func__);
-        err = LOCATION_ERROR_GENERAL_FAILURE;
+        if (ENGINE_LOCK_STATE_DISABLED == getEngineLockState()) {
+            LOC_LOGd("engine state disabled");
+            err = LOCATION_ERROR_TZ_LOCKED;
+        } else {
+            LOC_LOGe("failed!");
+            err = LOCATION_ERROR_GENERAL_FAILURE;
+        }
     }
-
     return err;
 }
 
