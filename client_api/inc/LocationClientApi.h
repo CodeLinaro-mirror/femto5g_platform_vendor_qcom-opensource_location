@@ -26,6 +26,42 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/*
+Changes from Qualcomm Innovation Center are provided under the following license:
+
+Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted (subject to the limitations in the
+disclaimer below) provided that the following conditions are met:
+
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+
+    * Redistributions in binary form must reproduce the above
+      copyright notice, this list of conditions and the following
+      disclaimer in the documentation and/or other materials provided
+      with the distribution.
+
+    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
+      contributors may be used to endorse or promote products derived
+      from this software without specific prior written permission.
+
+NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
 #ifndef LOCATIONCLIENTAPI_H
 #define LOCATIONCLIENTAPI_H
 
@@ -155,7 +191,8 @@ enum GnssSvOptionsMask {
     GNSS_SV_OPTIONS_HAS_EPHEMER_BIT             = (1<<0),
     /** Almanac is available for this SV. <br/>   */
     GNSS_SV_OPTIONS_HAS_ALMANAC_BIT             = (1<<1),
-    /** This SV is used in the position fix. <br/>   */
+    /** This SV is used in the position fix that has output
+     *  engine type set to LOC_OUTPUT_ENGINE_SPE. <br/> */
     GNSS_SV_OPTIONS_USED_IN_FIX_BIT             = (1<<2),
     /** This SV has valid GnssSv::carrierFrequencyHz. <br/> */
     GNSS_SV_OPTIONS_HAS_CARRIER_FREQUENCY_BIT   = (1<<3),
@@ -401,6 +438,8 @@ enum LocationResponse {
     LOCATION_RESPONSE_REQUEST_ALREADY_IN_PROGRESS = 5,
     /** System is not ready, e.g.: hal daemon is not yet ready. */
     LOCATION_RESPONSE_SYSTEM_NOT_READY = 6,
+    /** LCA doesn't support simultaneous tracking and batching session. Other session is ongoing*/
+    LOCATION_RESPONSE_EXCLUSIVE_SESSION_IN_PROGRESS = 7,
 };
 
 /** Specify the SV constellation type in GnssSv
@@ -1772,10 +1811,10 @@ struct LeapSecondSystemInfo {
      *     use this field to retrieve the current leap second. <br/>
      */
     uint8_t               leapSecondCurrent;
-    /** GPS timestamp that corresponds to the last known leap second
-     *  change event. <br/>
-     *  The info can be available on two scenario: <br/> 1: this
-     *  leap second change event has been scheduled and yet
+    /** GPS timestamp that corrresponds to the last known leap
+     *  second change event. <br/>
+     *  The info can be available on two scenario: <br/>
+     *  1: this leap second change event has been scheduled and yet
      *     to happen and GPS receiver has decoded this info since
      *     device last bootup. <br/
      *  2: this leap second change event happened after device was
@@ -1784,7 +1823,7 @@ struct LeapSecondSystemInfo {
      *     second change has happened, this info will become
      *     unavailable. <br/>
      *
-     *   If leap second change info is available, to figure out the
+     *   If leap second change info is avaiable, to figure out the
      *   current leap second info, compare current gps time with
      *   LeapSecondChangeInfo::gpsTimestampLsChange to know whether
      *   to choose leapSecondBefore or leapSecondAfter as current
@@ -1831,16 +1870,25 @@ enum TerrestrialTechnologyMask {
     TERRESTRIAL_TECH_GTP_WWAN = 1 << 0,
 };
 
+/** Specify the batching status in BatchingCb. <br/> */
 enum BatchingStatus {
+    /** service is unable to compute positions for batching; */
     BATCHING_STATUS_INACTIVE    = 0,
+    /** service is able to compute positions for batching. */
     BATCHING_STATUS_ACTIVE      = 1,
+    /** trip distance has been traversed for TripBatching */
     BATCHING_STATUS_DONE        = 2
 };
 
+/** Specifies the Geofence breach/dwell event in GeofenceBreachCb. <br/> */
 enum GeofenceBreachTypeMask {
+    /** Indicates that a client entered the Geofence */
     GEOFENCE_BREACH_ENTER_BIT     = (1<<0),
+    /** Indicates that a client left the Geofence */
     GEOFENCE_BREACH_EXIT_BIT      = (1<<1),
+    /** Indicates that a client has dwelled inside the Geofence for a given period */
     GEOFENCE_BREACH_DWELL_IN_BIT  = (1<<2),
+    /** Indicates that a client has dwelled outside the Geofence for a given period */
     GEOFENCE_BREACH_DWELL_OUT_BIT = (1<<3),
 };
 
@@ -1986,7 +2034,7 @@ typedef std::function<void(
 
 /** @brief Used by geofence APIs
 
-    @param responses: include Geofence objects and correponding responses.
+    @param responses: include Geofence objects and their correponding responses.
 */
 class Geofence;
 typedef std::function<void(
@@ -2356,15 +2404,17 @@ public:
         specified terrestrial technologies. <br/>
 
         For this phase, only TERRESTRIAL_TECH_GTP_WWAN will be
-        supported and this will return cell-based position. <br/.
+        supported and this will return cell-based position. <br/>.
 
         This API can be invoked with on-going tracking session
-        initiated via startPositionSession(). <br/
+        initiated via startPositionSession() and/or single shot
+        terrestrial fix request initiated via getSinglePosition().
+        <br/>
 
         If this API is invoked with single-shot terrestrial position
         already in progress, the request will fail and the
         responseCallback will get invoked with
-        LOCATION_RESPONSE_REQUEST_ALREADY_IN_PROGRESS. <br/
+        LOCATION_RESPONSE_REQUEST_ALREADY_IN_PROGRESS. <br/>
 
         @param timeoutMsec
         The amount of time that user is willing to wait for
@@ -2397,18 +2447,18 @@ public:
         available. <br/>
 
         This callback will only be invoked when
-        responseCallback is invoked with ResponseCb with processing
-        status set to LOCATION_RESPONSE_SUCCESS. <br/>
+        responseCallback is invoked with processing status set to
+        LOCATION_RESPONSE_SUCCESS. <br/>
 
         Null terrestrialPositionCallback will cancel the current
-        request. If responseCallback is none-null,
+        request. If responseCallback is non-null,
         LOCATION_RESPONSE_SUCCESS will be delivered. <br/>
 
         @param responseCallback
         Callback to receive processing status, e.g.: success or
         failure code: e.g.: timeout. If null responseCallback is
-        passed, client will not be informed of processing status,
-        e.g.:LOCATION_RESPONSE_PARAM_INVALID. <br/>
+        passed, client will not be informed of processing status.
+        <br/>
 
         When the processing status is LOCATION_RESPONSE_SUCCESS, the
         terrestrialPositionCallback will be invoked to deliver the
@@ -2429,6 +2479,75 @@ public:
                                       float horQos,
                                       LocationCb terrestrialPositionCallback,
                                       ResponseCb responseCallback);
+
+    /** @brief
+        Retrieve single-shot position using the position
+        technologies supported and enabled on the device. <br/>
+
+        This API can be invoked with on-going tracking session
+        initiated via startPositionSession() and single shot
+        terrestrial fix request initiated via
+        getSingleTerrestrialPosition(). <br/>
+
+        @param timeoutMsec
+        The amount of time that user is willing to wait for
+        the the position to meet the QoS requirement. When
+        timeoutMsec has passed, the latest position received will be
+        delivered to the client and responseCallback is invoked with
+        processing status set to LOCATION_RESPONSE_TIMEOUT. If
+        timeoutMsec is set to 0, responseCallback will get invoked
+        with LOCATION_RESPONSE_PARAM_INVALID. <br/>
+
+        @param horQoS
+        horizontal accuracy requirement for the terrestrial fix. If
+        horQoS is set to 0, responseCallback will get invoked with
+        LOCATION_RESPONSE_PARAM_INVALID. <br/>
+
+        @param positionCallback
+        callback to receive the position fix. Some fields in
+        LocationClientApi::Location, e.g.: speed, bearing and their
+        uncertainty may not be available, e.g.: when the position is
+        produced with terrestria position technology. Please check
+        Location::flags for the fields that are available. <br/>
+
+        This callback will only be invoked when
+        responseCallback is invoked with processing status set to
+        LOCATION_RESPONSE_SUCCESS or LOCATION_RESPONSE_TIMEOUT.
+        <br/>
+
+        Null positionCallback will cancel the current request. If
+        responseCallback is non-null, LOCATION_RESPONSE_SUCCESS
+        will be delivered. <br/>
+
+        @param responseCallback
+        Callback to receive processing status, e.g.: success or
+        failure code: e.g.: timeout. If null responseCallback is
+        passed, client will not be informed of processing status.
+        <br/>
+
+        When the processing status is LOCATION_RESPONSE_SUCCESS, the
+        positionCallback will be invoked to deliver the
+        single-shot position report that meets the QoS requirement.
+        When timeoutMsec has passed, the latest position received
+        will be delivered to the client and responseCallback is
+        invoked with processing status set to
+        LOCATION_RESPONSE_TIMEOUT. Please note that the position
+        received for timeout scenarion may not be fresh and it will
+        not satisfy the QoS requirement. <br/>
+
+        If this API is invoked with invalid parameter, e.g.: 0
+        milli-seconds timeout, or horQoS set to zero value, the
+        responseCallback will get invoked with
+        LOCATION_RESPONSE_PARAM_INVALID. <br/>
+
+        If this API is invoked with single-shot position
+        already in progress, the request will fail and the
+        responseCallback will get invoked with
+        LOCATION_RESPONSE_REQUEST_ALREADY_IN_PROGRESS. <br/> */
+    void getSinglePosition(uint32_t timeoutMsec,
+                           float horQos,
+                           LocationCb positionCallback,
+                           ResponseCb responseCallback);
 
     /** @example example1:testDetailedGnssReportApi
     *
@@ -2615,7 +2734,8 @@ public:
     /* ================================== BATCHING ================================== */
 
     /** @brief starts an outdoor trip mode batching session with specified parameters.
-        Trip mode batching completes on its own when trip distance is covered.
+        Client gets callback of batched locations only after the trip distance is covered
+        or the batch buffer is full, whichever occurs first
 
         Calling this function when idle, or calling this function
         after another the previous position/batching/geofence
@@ -2636,7 +2756,11 @@ public:
         callback will be updated. parameters / callback will be
         updated, and the session continues but with the new set of
         parameters / callback. locations are reported on the
-        batchingCallback in batches when batch is full.
+        batchingCallback in batches when batch is full or trip distance has been reached.
+
+        By design, LCA doesn't support simultaneous tracking and batching session.
+        If there is tracking session ongoing, routine batching session request will
+        receive error code of LOCATION_RESPONSE_EXCLUSIVE_SESSION_IN_PROGRESS. vice versa.
         @param minInterval
         Time between fixes, or TBF, in milliseconds. The actual
         interval of reports recieved will be no larger than
@@ -2665,6 +2789,7 @@ public:
                                   BatchingCb batchingCallback, ResponseCb responseCallback);
 
     /** @brief starts a routine mode batching session with specified parameters.
+        Client gets callback of batched locations when batching buffer is full
 
         Calling this function when idle, or calling this function
         after another the previous position/batching/geofence
@@ -2679,6 +2804,10 @@ public:
         responseCallback, this API will receive an error code of
         LOCATION_RESPONSE_REQUEST_ALREADY_IN_PROGRESS via its
         responseCallback.
+
+        By design, LCA doesn't support simultaneous tracking and batching session.
+        If there is tracking session ongoing, routine batching session request will
+        receive error code of LOCATION_RESPONSE_EXCLUSIVE_SESSION_IN_PROGRESS. vice versa.
 
         If called during on-going session after the responseCb has
         been received for the on-going session, parameters /
@@ -2741,7 +2870,7 @@ public:
     */
 
     /* ================================== Geofence ================================== */
-    /** @brief Adds any number of geofences. The geofenceBreachCallback will
+    /** @brief Adds vector of geofences. The geofenceBreachCallback will
         deliver the status of each geofence according to the Geofence parameter for each.
 
         If this API is called when any previous
@@ -2754,41 +2883,56 @@ public:
         Geofence objects, Once addGeofences returns, each Geofence object in the vector would
         be the identifier throughout the remaining communication of that geofence.
         Such a Geofence object can be copied or cloned, but they would all reference
-        the same geofence.
+        the same geofence. Currently, at most 20 geofences are allowed to be added/removed within
+        a single request. But client can call add/removeGeofences multiple times to enable
+        more geofences. For other geofence APIs, the geofence must be copied/cloned from
+        the geofence object in the vector after addGeofences API calls.
+
         @param gfBreachCb
-        callback to receive geofences state change. addGeofences is no op if gfBreachCb is null
+        callback to receive geofences state change. mandatory, no op if gfBreachCb is null
         @param responseCallback
         callback to receive geofence ids and system responses; optional.
+        LCA will check if there is former geofence add request whose responseCallback
+        has not yet been invoked, then the latter add request will return
+        LOCATION_RESPONSE_REQUEST_ALREADY_IN_PROGRESS via responseCallback.
     */
     void addGeofences(std::vector<Geofence>& geofences, GeofenceBreachCb gfBreachCb,
                       CollectiveResponseCb responseCallback);
 
-    /** @brief Removes any number of geofences.
+    /** @brief Removes vector of geofences.
         @param geofences
         Geofence objects, must be originally added to the system. Otherwise it would be no op.
+        The geofences parameter must be copied/cloned from the geofences vector of addGeofences()
+        API which should get called beforehand.
     */
     void removeGeofences(std::vector<Geofence>& geofences);
 
-    /** @brief Modifies any number of geofences.
+    /** @brief Modifies vector of geofences.
         @param geofences
         Geofence objects, must be originally added to the system. Otherwise it would be no op.
         Modifiable fields include breachTypeMask, responsiveness and dwelltime.
         A geofence that has been added to the system may have these fields modified.
         But it is not going to take any effect until modifyGeofences is called with
         the changed geofence passed in.
+        The geofences parameter must be copied/cloned from the geofences vector of addGeofences()
+        API which should get called beforehand.
     */
     void modifyGeofences(std::vector<Geofence>& geofences);
 
-    /** @brief Pauses any number of geofences, which is similar to removeGeofences,
+    /** @brief Pauses vector of geofences, which is similar to removeGeofences,
         only that they can be resumed at any time.
         @param geofences
         Geofence objects, must be originally added to the system. Otherwise it would be no op.
+        The geofences parameter must be copied/cloned from the geofences vector of addGeofences()
+        API which should get called beforehand.
     */
     void pauseGeofences(std::vector<Geofence>& geofences);
 
-    /** @brief Resumes any number of geofences that are currently paused.
+    /** @brief Resumes vector of geofences that are currently paused.
         @param geofences
         Geofence objects, must be originally added to the system. Otherwise it would be no op.
+        The geofences parameter must be copied/cloned from the geofences vector of addGeofences()
+        API which should get called beforehand.
     */
     void resumeGeofences(std::vector<Geofence>& geofences);
 
@@ -2988,6 +3132,7 @@ class GeofenceImpl;
 class Geofence {
     friend class GeofenceImpl;
     friend class LocationClientApi;
+    friend class LocationClientApiImpl;
     std::shared_ptr<GeofenceImpl> mGeofenceImpl;
     double mLatitude;
     double mLongitude;

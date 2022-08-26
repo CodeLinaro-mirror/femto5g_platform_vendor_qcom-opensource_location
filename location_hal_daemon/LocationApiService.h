@@ -26,6 +26,41 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/*
+Changes from Qualcomm Innovation Center are provided under the following license:
+
+Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted (subject to the limitations in the
+disclaimer below) provided that the following conditions are met:
+
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+
+    * Redistributions in binary form must reproduce the above
+      copyright notice, this list of conditions and the following
+      disclaimer in the documentation and/or other materials provided
+      with the distribution.
+
+    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
+      contributors may be used to endorse or promote products derived
+      from this software without specific prior written permission.
+
+NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
 #ifndef LOCATIONAPISERVICE_H
 #define LOCATIONAPISERVICE_H
 
@@ -47,9 +82,11 @@
 #include <LocHalDaemonClientHandler.h>
 
 #ifdef NO_UNORDERED_SET_OR_MAP
+    #include <set>
     #include <map>
     #define unordered_map map
 #else
+    #include <unordered_set>
     #include <unordered_map>
 #endif
 
@@ -94,30 +131,61 @@ private:
     LocationApiService* mLocationApiService;
 };
 
-class SingleTerrestrialFixTimer : public LocTimer {
+enum SingleShotTimerType{
+    SINGLE_SHOT_FIX_TIMER_TERRESTRIAL = 1,
+    SINGLE_SHOT_FIX_TIMER_FUSED = 2,
+};
+
+class SingleFixTimer : public LocTimer {
 public:
 
-    SingleTerrestrialFixTimer(LocationApiService* locationApiService,
-                              std::string& clientName) :
+    SingleFixTimer(LocationApiService* locationApiService,
+                   std::string& clientName,
+                   SingleShotTimerType timerType) :
             mLocationApiService(locationApiService),
-            mClientName(clientName) {
+            mClientName(clientName), mTimerType(timerType) {
+        LOC_LOGv("timer constructor called");
     }
 
-    ~SingleTerrestrialFixTimer() {
-    }
+    ~SingleFixTimer() {LOC_LOGv("timer destructed called");}
 
 public:
     void timeOutCallback() override;
 
 private:
     LocationApiService* mLocationApiService;
-    const std::string mClientName;
+    const std::string   mClientName;
+    SingleShotTimerType mTimerType;
 };
 
-// This keeps track of the client that requests single fix terrestrial position
-// and the timer that will fire when the timeout value has reached
-typedef std::unordered_map<std::string, SingleTerrestrialFixTimer>
-        SingleTerrestrialFixClientMap;
+// This keeps track of the client that requests single shot gtp or fused
+// fix and the timer that will fire when the timeout value has reached
+typedef std::unordered_map<std::string, SingleFixTimer>
+        SingleFixClientTimeoutMap;
+
+class SingleFixReqInfo {
+public:
+    float horQoS;
+    SingleFixTimer* timeoutTimer;
+
+    inline SingleFixReqInfo(float inQoS, SingleFixTimer* inTimer) :
+            horQoS(inQoS), timeoutTimer(inTimer) {
+    }
+
+    inline SingleFixReqInfo(SingleFixReqInfo&& inReq) {
+        horQoS = inReq.horQoS;
+        timeoutTimer = inReq.timeoutTimer;
+        inReq.timeoutTimer = nullptr;
+    }
+    inline ~SingleFixReqInfo() {
+        if (timeoutTimer != nullptr) {
+            delete timeoutTimer;
+        }
+        timeoutTimer = nullptr;
+    }
+};
+
+typedef std::unordered_map<std::string, SingleFixReqInfo> SingleFixReqMap;
 
 class LocationApiService
 {
@@ -159,13 +227,16 @@ public:
     // protobuf conversion util class
     LocationApiPbMsgConv mPbufMsgConv;
 
-    static std::mutex mMutex;
+    static std::recursive_mutex mMutex;
 
     // Utility routine used by maintenance timer
     void performMaintenance();
 
     // Utility routine used by gtp fix timeout timer
     void gtpFixRequestTimeout(const std::string& clientName);
+
+    // Utility routine used by fused fix timeout timer
+    void singleFixRequestTimeout(const std::string& clientName);
 
     inline const MsgTask& getMsgTask() const {return mMsgTask;};
 
@@ -185,6 +256,8 @@ private:
     void updateNetworkAvailability(bool availability);
     void getGnssEnergyConsumed(const char* clientSocketName);
     void getSingleTerrestrialPos(LocAPIGetSingleTerrestrialPosReqMsg*);
+    void getSinglePos(LocAPIGetSinglePosReqMsg*);
+    void stopTrackingSessionForSingleFixes();
 
     void startBatching(LocAPIStartBatchingReqMsg*);
     void stopBatching(LocAPIStopBatchingReqMsg*);
@@ -221,6 +294,7 @@ private:
     void onResponseCb(LocationError err, uint32_t id);
     void onCollectiveResponseCallback(size_t count, LocationError *errs, uint32_t *ids);
     void onGtpWwanTrackingCallback(Location location);
+    void onGnssLocationInfoCb(GnssLocationInfoNotification notification);
 
     // Location configuration API requests
     void configConstrainedTunc(
@@ -243,12 +317,18 @@ private:
             LocConfigUserConsentTerrestrialPositioningReqMsg* pMsg);
     void configOutputNmeaTypes(const LocConfigOutputNmeaTypesReqMsg* pMsg);
     void configEngineIntegrityRisk(const LocConfigEngineIntegrityRiskReqMsg* pMsg);
+    void configXtraParams(const LocConfigXtraReqMsg* pMsg);
 
     // Location configuration API get/read requests
     void getGnssConfig(const LocAPIMsgHeader* pReqMsg,
                        GnssConfigFlagsBits configFlag);
     void getConstellationSecondaryBandConfig(
             const LocConfigGetConstellationSecondaryBandConfigReqMsg* pReqMsg);
+    void getXtraStatus(const LocConfigGetXtraStatusReqMsg* pReqMsg);
+    void registerXtraStatusUpdate(
+            const LocConfigRegisterXtraStatusUpdateReqMsg * pReqMsg);
+    void deregisterXtraStatusUpdate(
+            const LocConfigDeregisterXtraStatusUpdateReqMsg * pReqMsg);
 
     // Location configuration API util routines
     void addConfigRequestToMap(uint32_t sessionId,
@@ -317,7 +397,7 @@ private:
     // maintenance timer
     MaintTimer mMaintTimer;
 
-   // msg task used by timers
+    // msg task used by timers
     const MsgTask   mMsgTask;
 
     // Terrestrial service related APIs
@@ -327,7 +407,18 @@ private:
     trackingCallback mGtpWwanPosCallback;
     // -1: not set, 0: user not opt-in, 1: user opt in
     int mOptInTerrestrialService;
-    SingleTerrestrialFixClientMap mTerrestrialFixReqs;
+    // LIA clients that register for xtra status update
+    SingleFixClientTimeoutMap mTerrestrialFixTimeoutMap;
+
+    // Single fused fix related variables
+    ILocationAPI* mSingleFixLocationApi;
+    uint32_t     mSingleFixTrackingSessionId;
+    LocationCallbacks mSingleFixLocationApiCallbacks;
+    SingleFixReqMap   mSingleFixReqMap;
+    Location          mSingleFixLastLocation;
+
+    // LIA clients that register for xtra status update
+    std::unordered_set<std::string> mClientsRegForXtraStatus;
 };
 
 #endif //LOCATIONAPISERVICE_H
