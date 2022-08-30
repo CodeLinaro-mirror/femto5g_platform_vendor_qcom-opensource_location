@@ -477,14 +477,15 @@ uint32_t LocationIntegrationApiImpl::configConstellations(
             LocConfigSvConstellationReqMsg msg(mApiImpl->mSocketName,
                                                mConstellationEnablementConfig,
                                                mBlacklistSvConfig);
-            mApiImpl->sendConfigMsgToHalDaemon(CONFIG_CONSTELLATIONS,
-                                               reinterpret_cast<uint8_t*>(&msg),
-                                               sizeof(msg));
-           // cache the last config to be used when hal daemon restarts
-            mApiImpl->mSvConfigInfo.isValid = true;
-            mApiImpl->mSvConfigInfo.constellationEnablementConfig =
-                    mConstellationEnablementConfig;
-            mApiImpl->mSvConfigInfo.blacklistSvConfig = mBlacklistSvConfig;
+            if (mApiImpl->sendConfigMsgToHalDaemon(CONFIG_CONSTELLATIONS,
+                                                   reinterpret_cast<uint8_t*>(&msg),
+                                                   sizeof(msg))) {
+                // cache the last config to be used when hal daemon restarts
+                mApiImpl->mSvConfigInfo.isValid = true;
+                mApiImpl->mSvConfigInfo.constellationEnablementConfig =
+                        mConstellationEnablementConfig;
+                mApiImpl->mSvConfigInfo.blacklistSvConfig = mBlacklistSvConfig;
+            }
         }
 
         LocationIntegrationApiImpl* mApiImpl;
@@ -509,14 +510,14 @@ uint32_t LocationIntegrationApiImpl::configConstellationSecondaryBand(
             LocConfigConstellationSecondaryBandReqMsg msg(
                     mApiImpl->mSocketName,
                     mSecondaryBandConfig);
-            mApiImpl->sendConfigMsgToHalDaemon(CONFIG_CONSTELLATION_SECONDARY_BAND,
-                                               reinterpret_cast<uint8_t*>(&msg),
-                                               sizeof(msg));
-           // cache the last config to be used when hal daemon restarts
-            mApiImpl->mSvConfigInfo.isValid = true;
-            mApiImpl->mSvConfigInfo.secondaryBandConfig = mSecondaryBandConfig;
+            if (mApiImpl->sendConfigMsgToHalDaemon(CONFIG_CONSTELLATION_SECONDARY_BAND,
+                                                   reinterpret_cast<uint8_t*>(&msg),
+                                                   sizeof(msg))) {
+                // cache the last config to be used when hal daemon restarts
+                mApiImpl->mSvConfigInfo.isValid = true;
+                mApiImpl->mSvConfigInfo.secondaryBandConfig = mSecondaryBandConfig;
+            }
         }
-
         LocationIntegrationApiImpl* mApiImpl;
         GnssSvTypeConfig mSecondaryBandConfig;
     };
@@ -565,14 +566,15 @@ uint32_t LocationIntegrationApiImpl::configConstrainedTimeUncertainty(
         void proc() const {
             LocConfigConstrainedTuncReqMsg msg(mApiImpl->mSocketName,
                                                mEnable, mTuncThreshold, mEnergyBudget);
-            mApiImpl->sendConfigMsgToHalDaemon(CONFIG_CONSTRAINED_TIME_UNCERTAINTY,
-                                               reinterpret_cast<uint8_t*>(&msg),
-                                               sizeof(msg));
-           // cache the last config to be used when hal daemon restarts
-            mApiImpl->mTuncConfigInfo.isValid = true;
-            mApiImpl->mTuncConfigInfo.enable = mEnable;
-            mApiImpl->mTuncConfigInfo.tuncThresholdMs = mTuncThreshold;
-            mApiImpl->mTuncConfigInfo.energyBudget = mEnergyBudget;
+            if (mApiImpl->sendConfigMsgToHalDaemon(CONFIG_CONSTRAINED_TIME_UNCERTAINTY,
+                                                   reinterpret_cast<uint8_t*>(&msg),
+                                                   sizeof(msg))) {
+               // cache the last config to be used when hal daemon restarts
+               mApiImpl->mTuncConfigInfo.isValid = true;
+               mApiImpl->mTuncConfigInfo.enable = mEnable;
+               mApiImpl->mTuncConfigInfo.tuncThresholdMs = mTuncThreshold;
+               mApiImpl->mTuncConfigInfo.energyBudget = mEnergyBudget;
+            }
         }
         LocationIntegrationApiImpl* mApiImpl;
         bool mEnable;
@@ -596,12 +598,13 @@ uint32_t LocationIntegrationApiImpl::configPositionAssistedClockEstimator(bool e
         void proc() const {
             LocConfigPositionAssistedClockEstimatorReqMsg msg(mApiImpl->mSocketName,
                                                               mEnable);
-            mApiImpl->sendConfigMsgToHalDaemon(CONFIG_POSITION_ASSISTED_CLOCK_ESTIMATOR,
-                                         reinterpret_cast<uint8_t*>(&msg),
-                                         sizeof(msg));
-           // cache the last config to be used when hal daemon restarts
-            mApiImpl->mPaceConfigInfo.isValid = true;
-            mApiImpl->mPaceConfigInfo.enable = mEnable;
+            if (mApiImpl->sendConfigMsgToHalDaemon(CONFIG_POSITION_ASSISTED_CLOCK_ESTIMATOR,
+                                                   reinterpret_cast<uint8_t*>(&msg),
+                                                   sizeof(msg))) {
+                // cache the last config to be used when hal daemon restarts
+                mApiImpl->mPaceConfigInfo.isValid = true;
+                mApiImpl->mPaceConfigInfo.enable = mEnable;
+            }
         }
         LocationIntegrationApiImpl* mApiImpl;
         bool mEnable;
@@ -645,11 +648,12 @@ uint32_t LocationIntegrationApiImpl::configLeverArm(
         virtual ~ConfigLeverArmReq() {}
         void proc() const {
             LocConfigLeverArmReqMsg msg(mApiImpl->mSocketName, mConfigInfo);
-            mApiImpl->sendConfigMsgToHalDaemon(CONFIG_LEVER_ARM,
-                                               reinterpret_cast<uint8_t*>(&msg),
-                                               sizeof(msg));
-            // cache the last config to be used when hal daemon restarts
-            mApiImpl->mLeverArmConfigInfo = mConfigInfo;
+            if (mApiImpl->sendConfigMsgToHalDaemon(CONFIG_LEVER_ARM,
+                                                   reinterpret_cast<uint8_t*>(&msg),
+                                                   sizeof(msg))) {
+                // cache the last config to be used when hal daemon restarts
+                mApiImpl->mLeverArmConfigInfo = mConfigInfo;
+            }
         }
         LocationIntegrationApiImpl* mApiImpl;
         LeverArmConfigInfo mConfigInfo;
@@ -674,12 +678,13 @@ uint32_t LocationIntegrationApiImpl::configRobustLocation(
         virtual ~ConfigRobustLocationReq() {}
         void proc() const {
             LocConfigRobustLocationReqMsg msg(mApiImpl->mSocketName, mEnable, mEnableForE911);
-            mApiImpl->sendConfigMsgToHalDaemon(CONFIG_ROBUST_LOCATION,
-                                               reinterpret_cast<uint8_t*>(&msg),
-                                               sizeof(msg));
-            mApiImpl->mRobustLocationConfigInfo.isValid = true;
-            mApiImpl->mRobustLocationConfigInfo.enable = mEnable;
-            mApiImpl->mRobustLocationConfigInfo.enableForE911 = mEnableForE911;
+            if (mApiImpl->sendConfigMsgToHalDaemon(CONFIG_ROBUST_LOCATION,
+                                                   reinterpret_cast<uint8_t*>(&msg),
+                                                   sizeof(msg))) {
+                mApiImpl->mRobustLocationConfigInfo.isValid = true;
+                mApiImpl->mRobustLocationConfigInfo.enable = mEnable;
+                mApiImpl->mRobustLocationConfigInfo.enableForE911 = mEnableForE911;
+            }
         }
         LocationIntegrationApiImpl* mApiImpl;
         bool mEnable;
@@ -772,13 +777,14 @@ uint32_t LocationIntegrationApiImpl::configDeadReckoningEngineParams(
                 mDreConfig(dreConfig){}
         virtual ~ConfigDrEngineParamsReq() {}
         void proc() const {
-            mApiImpl->mDreConfigInfo.isValid = true;
-            mApiImpl->mDreConfigInfo.dreConfig = mDreConfig;
             LocConfigDrEngineParamsReqMsg msg(mApiImpl->mSocketName,
-                                              mApiImpl->mDreConfigInfo.dreConfig);
-            mApiImpl->sendConfigMsgToHalDaemon(CONFIG_DEAD_RECKONING_ENGINE,
-                                               reinterpret_cast<uint8_t*>(&msg),
-                                               sizeof(msg));
+                                              mDreConfig);
+            if (mApiImpl->sendConfigMsgToHalDaemon(CONFIG_DEAD_RECKONING_ENGINE,
+                                                   reinterpret_cast<uint8_t*>(&msg),
+                                                   sizeof(msg))) {
+                mApiImpl->mDreConfigInfo.isValid = true;
+                mApiImpl->mDreConfigInfo.dreConfig = mDreConfig;
+            }
         }
         LocationIntegrationApiImpl* mApiImpl;
         ::DeadReckoningEngineConfig mDreConfig;
@@ -846,15 +852,17 @@ uint32_t LocationIntegrationApiImpl::configOutputNmeaTypes(
                 mNmeaDatumType(nmeaDatumType) {}
         virtual ~ConfigOutputNmeaReq() {}
         void proc() const {
-            mApiImpl->mNmeaConfigInfo.isValid = true;
-            mApiImpl->mNmeaConfigInfo.enabledNmeaTypes = mEnabledNmeaTypes;
-            mApiImpl->mNmeaConfigInfo.nmeaDatumType = mNmeaDatumType;
+            LocConfigOutputNmeaTypesReqMsg msg(mApiImpl->mSocketName,
+                                               mEnabledNmeaTypes, mNmeaDatumType);
+            if (mApiImpl->sendConfigMsgToHalDaemon(CONFIG_OUTPUT_NMEA_TYPES,
+                                                   reinterpret_cast<uint8_t*>(&msg),
+                                                   sizeof(msg))) {
+                mApiImpl->mNmeaConfigInfo.isValid = true;
+                mApiImpl->mNmeaConfigInfo.enabledNmeaTypes = mEnabledNmeaTypes;
+                mApiImpl->mNmeaConfigInfo.nmeaDatumType = mNmeaDatumType;
+            }
+        }
 
-            LocConfigOutputNmeaTypesReqMsg msg(mApiImpl->mSocketName, mEnabledNmeaTypes,
-                                               mNmeaDatumType);
-            mApiImpl->sendConfigMsgToHalDaemon(CONFIG_OUTPUT_NMEA_TYPES,
-                                               reinterpret_cast<uint8_t*>(&msg),
-                                               sizeof(msg));
         LocationIntegrationApiImpl* mApiImpl;
         GnssNmeaTypesMask mEnabledNmeaTypes;
         GnssGeodeticDatumType mNmeaDatumType;
@@ -876,19 +884,20 @@ uint32_t LocationIntegrationApiImpl::configEngineIntegrityRisk(
         virtual ~ConfigEngineIntegrityRiskReq() {}
         void proc() const {
             LOC_LOGd("eng type %d, integrity risk %u", mEngType, mIntegrityRisk);
-            if (mApiImpl->mEngIntegrityRiskConfigMap.find(mEngType) ==
-                        std::end(mApiImpl->mEngIntegrityRiskConfigMap)) {
-                mApiImpl->mEngIntegrityRiskConfigMap.emplace(mEngType, mIntegrityRisk);
-            } else {
-                // change the state for the eng
-                mApiImpl->mEngIntegrityRiskConfigMap[mEngType] = mIntegrityRisk;
-            }
 
             LocConfigEngineIntegrityRiskReqMsg msg(mApiImpl->mSocketName,
-                    mEngType, mIntegrityRisk);
-            mApiImpl->sendConfigMsgToHalDaemon(CONFIG_ENGINE_INTEGRITY_RISK,
-                                               reinterpret_cast<uint8_t*>(&msg),
-                                               sizeof(msg));
+                                                   mEngType, mIntegrityRisk);
+            if (mApiImpl->sendConfigMsgToHalDaemon(CONFIG_ENGINE_INTEGRITY_RISK,
+                                                   reinterpret_cast<uint8_t*>(&msg),
+                                                   sizeof(msg))) {
+                if (mApiImpl->mEngIntegrityRiskConfigMap.find(mEngType) ==
+                            std::end(mApiImpl->mEngIntegrityRiskConfigMap)) {
+                    mApiImpl->mEngIntegrityRiskConfigMap.emplace(mEngType, mIntegrityRisk);
+                } else {
+                    // change the state for the eng
+                    mApiImpl->mEngIntegrityRiskConfigMap[mEngType] = mIntegrityRisk;
+                }
+            }
         }
 
         LocationIntegrationApiImpl* mApiImpl;
@@ -900,48 +909,77 @@ uint32_t LocationIntegrationApiImpl::configEngineIntegrityRisk(
     return 0;
 }
 
-void LocationIntegrationApiImpl::sendConfigMsgToHalDaemon(
+bool LocationIntegrationApiImpl::sendConfigMsgToHalDaemon(
         LocConfigTypeEnum configType, uint8_t* pMsg,
         size_t msgSize, bool invokeResponseCb) {
+    bool rc = false;
+    LOC_LOGd(">>> sendConfigMsgToHalDaemon, mHalRegistered %d, config type=%d, "
+             "msg size %d, config cb %d",
+             mHalRegistered, configType, msgSize, invokeResponseCb);
 
-    bool messageSentToHal = false;
-    if (mHalRegistered) {
-        bool rc = sendMessage(pMsg, msgSize);
+    if (!mHalRegistered) {
+        ConfigMsg msgInfo;
+        msgInfo.msgType = configType;
+        msgInfo.pMsg = (uint8_t*) malloc(msgSize);
+        if (NULL != msgInfo.pMsg) {
+            memcpy(msgInfo.pMsg, pMsg, msgSize);
+            msgInfo.msgSize = msgSize;
+            mQueuedMsg.emplace(std::move(msgInfo));
+        }
+        LOC_LOGi(">>> sendConfigMsgToHalDaemon mHal not yet ready, message queued");
+        // set rc to trigger saving the configuration
+        rc = true;
+    } else {
+        bool messageSentToHal = false;
+        rc = sendMessage(pMsg, msgSize);
         LOC_LOGd(">>> sendConfigMsgToHalDaemon, msg type=%d, rc=%d", configType, rc);
         if (true == rc) {
             messageSentToHal = true;
         } else {
             LOC_LOGe(">>> sendConfigMsgToHalDaemon failed for msg type=%d", configType);
         }
-    }
 
-    if (invokeResponseCb && mIntegrationCbs.configCb) {
-        if (true == messageSentToHal) {
-            addConfigReq(configType);
-        } else {
-            mIntegrationCbs.configCb(configType, LOC_INT_RESPONSE_FAILURE);
+        if (invokeResponseCb && mIntegrationCbs.configCb) {
+            if (true == messageSentToHal) {
+                addConfigReq(configType);
+            } else {
+                mIntegrationCbs.configCb(configType, LOC_INT_RESPONSE_FAILURE);
+            }
         }
     }
+    return rc;
 }
 
-void LocationIntegrationApiImpl::sendClientRegMsgToHalDaemon(){
-
+bool LocationIntegrationApiImpl::sendClientRegMsgToHalDaemon(){
+    bool retVal = false;
     LocAPIClientRegisterReqMsg msg(mSocketName, LOCATION_INTEGRATION_API);
     bool rc = sendMessage(reinterpret_cast<uint8_t *>(&msg), sizeof(msg));
     LOC_LOGd(">>> onListenerReady::ClientRegisterReqMsg rc=%d", rc);
     if (true == rc) {
         mHalRegistered = true;
+        retVal = true;
     }
+    return retVal;
 }
 
 void LocationIntegrationApiImpl::processHalReadyMsg() {
+
+    // first, send registration msg to hal daemon
+    if (sendClientRegMsgToHalDaemon() == false) {
+        LOC_LOGe("failed to register with HAL, return");
+        return;
+    }
+
+
+    // process the requests that are queued before hal daemon was first ready
+    if (processQueuedReqs()) {
+        // hal is first time ready, no more item to process
+        return;
+    }
+
     // when location hal daemon crashes and restarts,
     // we flush out all pending requests and notify each client
-    // that the request has failed.
     flushConfigReqs();
-
-    // register with hal daemon
-    sendClientRegMsgToHalDaemon();
 
     // send cached configuration to hal daemon
     if (mSvConfigInfo.isValid) {
@@ -1056,14 +1094,34 @@ void LocationIntegrationApiImpl::processConfigRespCb(const LocAPIGenericRespMsg*
     }
 }
 
+// process queued reqs that are not able to sent to location hal daemon
+bool LocationIntegrationApiImpl::processQueuedReqs() {
+    bool queueNotEmpty = (mQueuedMsg.size() > 0);
+    while (mQueuedMsg.size() > 0) {
+        ConfigMsg msgInfo = mQueuedMsg.front();
+        mQueuedMsg.pop();
+        sendConfigMsgToHalDaemon(msgInfo.msgType, msgInfo.pMsg, msgInfo.msgSize);
+        free(msgInfo.pMsg);
+    }
+    return queueNotEmpty;
+}
+
 // flush all the pending config request if location hal daemon has crashed
 // and restarted
 void LocationIntegrationApiImpl::flushConfigReqs() {
     for (auto itr=mConfigReqCntMap.begin(); itr!=mConfigReqCntMap.end(); ++itr) {
-         int reqCnt = itr->second;
-         while (reqCnt-- > 0) {
-             mIntegrationCbs.configCb(itr->first, LOC_INT_RESPONSE_FAILURE);
-         }
+        int reqCnt = itr->second;
+        while (reqCnt-- > 0) {
+            if (itr->first <= CONFIG_ENUM_MAX) {
+                // config command are cached, and will be re-issued when
+                // hal daemon crashed and then restarted
+                mIntegrationCbs.configCb(itr->first, LOC_INT_RESPONSE_SUCCESS);
+            } else {
+                // get command are not cached, and will not be re-issued when
+                // hal daemon crashed and then restarted
+                mIntegrationCbs.configCb(itr->first, LOC_INT_RESPONSE_FAILURE);
+            }
+        }
     }
     mConfigReqCntMap.clear();
 }
