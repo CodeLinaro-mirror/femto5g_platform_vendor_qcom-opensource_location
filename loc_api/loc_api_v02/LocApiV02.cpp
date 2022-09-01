@@ -25,6 +25,43 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
+/*
+Changes from Qualcomm Innovation Center are provided under the following license:
+
+Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted (subject to the limitations in the
+disclaimer below) provided that the following conditions are met:
+
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+
+    * Redistributions in binary form must reproduce the above
+      copyright notice, this list of conditions and the following
+      disclaimer in the documentation and/or other materials provided
+      with the distribution.
+
+    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
+      contributors may be used to endorse or promote products derived
+      from this software without specific prior written permission.
+
+NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
 #define LOG_NDEBUG 0
 #define LOG_TAG "LocSvc_ApiV02"
 
@@ -100,6 +137,10 @@ using namespace loc_core;
 
 /* the time, in seconds, to wait for user response for NI  */
 #define LOC_NI_NO_RESPONSE_TIME 20
+
+/* minimum number of measurements with
+  mask QMI_LOC_MASK_MEAS_STATUS_GNSS_FRESH_MEAS_VALID */
+#define MIN_REFRESH_MEASUREMENTS (3)
 
 const float CarrierFrequencies[] = {
     0.0,                                // UNKNOWN
@@ -292,6 +333,7 @@ LocApiV02 :: LocApiV02(LOC_API_ADAPTER_EVENT_MASK_T exMask,
   // initialize loc_sync_req interface
   loc_sync_req_init();
   mADRdata.clear();
+  memset(&m1HzMeasurementsNotify, 0, sizeof(m1HzMeasurementsNotify));
 
   UTIL_READ_CONF(LOC_PATH_GPS_CONF,gps_conf_param_table);
   UTIL_READ_CONF(LOC_PATH_PPE_CONF, ppe_conf_param_table);
@@ -2659,6 +2701,58 @@ enum loc_api_adapter_err LocApiV02 :: convertErr(
   }
 }
 
+bool LocApiV02::isMeasurementRefreshForSv(uint16_t gnssSvId,
+        GnssSignalTypeMask gnssSignalTypeMask)
+{
+    for (int i = 0; i < m1HzMeasurementsNotify.count; i++) {
+        if (m1HzMeasurementsNotify.measurements[i].svId == gnssSvId &&
+                m1HzMeasurementsNotify.measurements[i].gnssSignalType == gnssSignalTypeMask) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool LocApiV02::isTOAValid(const qmiLocEventPositionReportIndMsgT_v02 *location_report_ptr,
+        const GnssMeasurementsNotification *pOneHzMeasurements)
+{
+    if (nullptr == location_report_ptr ||
+        nullptr == pOneHzMeasurements) {
+        LOC_LOGe("nullptr");
+        return false;
+    }
+
+    if (!location_report_ptr->gpsTime_valid) {
+        LOC_LOGw("location_report_ptr->gpsTime_valid = false");
+        return false;
+    }
+
+    if (!(pOneHzMeasurements->clock.flags & GNSS_MEASUREMENTS_CLOCK_FLAGS_BIAS_BIT)) {
+        LOC_LOGw("GNSS_MEASUREMENTS_CLOCK_FLAGS_BIAS_BIT not set");
+        return false;
+    }
+
+    // PVT TOA in ms = (gpsWeek x WEEK_MSECS) + gpsTimeOfWeekMs
+    uint64_t gpsTimePosReport = location_report_ptr->gpsTime.gpsWeek * WEEK_MSECS +
+                                location_report_ptr->gpsTime.gpsTimeOfWeekMs;
+
+    // Meas TOA in ms = (systemWeek x WEEK_MSECS) + systemMsec - systemClkTimeBias
+    // clock.timeNs = (systemWeek x WEEK_MSECS) + systemMsec
+    // clock.fullBiasNs = systemClkTimeBias
+    int64_t gpsTimeNs = pOneHzMeasurements->clock.timeNs - pOneHzMeasurements->clock.fullBiasNs;
+    uint64_t gpsTimeMeasReport = gpsTimeNs/NSEC_IN_MSEC;
+    LOC_LOGv("gpsTimePosReport %" PRIu64 "gpsTimeMeasReport %" PRIu64 " ",
+            gpsTimePosReport, gpsTimeMeasReport);
+
+    // PVT TOA > Meas TOA && PVT TOA < Meas TOA+1.5sec
+    if ((gpsTimePosReport > gpsTimeMeasReport) &&
+        (gpsTimePosReport < gpsTimeMeasReport + 1500)) {
+        return true;
+    }
+
+    return false;
+}
+
 /* convert position report to loc eng format and send the converted
    position to loc eng */
 
@@ -2667,8 +2761,7 @@ void LocApiV02 :: reportPosition (
   bool unpropagatedPosition)
 {
     UlpLocation location;
-    LocPosTechMask tech_Mask = LOC_POS_TECH_MASK_DEFAULT;
-    LOC_LOGD("Reporting position from V2 Adapter\n");
+    LOC_LOGd("Reporting position from V2 Adapter\n");
 
     mHlosQtimer2 = getQTimerTickCount();
     LOC_LOGv("mHlosQtimer2=%" PRIi64 " ", mHlosQtimer2);
@@ -2678,6 +2771,7 @@ void LocApiV02 :: reportPosition (
     location.unpropagatedPosition = unpropagatedPosition;
     GnssDataNotification dataNotify = {};
     int msInWeek = -1;
+    uint16_t meaAvailForPVT[eQMI_LOC_SV_SYSTEM_NAVIC_V02] = {};
 
     GpsLocationExtended locationExtended;
     memset(&locationExtended, 0, sizeof (GpsLocationExtended));
@@ -2761,7 +2855,7 @@ void LocApiV02 :: reportPosition (
         )
     {
         // Latitude & Longitude
-        if( (1 == location_report_ptr->latitude_valid) &&
+        if ((1 == location_report_ptr->latitude_valid) &&
             (1 == location_report_ptr->longitude_valid))
         {
             location.gpsLocation.flags  |= LOC_GPS_LOCATION_HAS_LAT_LONG;
@@ -2778,7 +2872,7 @@ void LocApiV02 :: reportPosition (
         }
 
         // Altitude
-        if (location_report_ptr->altitudeWrtEllipsoid_valid == 1  )
+        if (location_report_ptr->altitudeWrtEllipsoid_valid == 1)
         {
             location.gpsLocation.flags  |= LOC_GPS_LOCATION_HAS_ALTITUDE;
             location.gpsLocation.altitude = location_report_ptr->altitudeWrtEllipsoid;
@@ -2830,9 +2924,9 @@ void LocApiV02 :: reportPosition (
         }
 
         // Technology Mask
-        tech_Mask |= location_report_ptr->technologyMask;
         locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_POS_TECH_MASK;
         locationExtended.tech_mask = convertPosTechMask(location_report_ptr->technologyMask);
+        location.tech_mask = locationExtended.tech_mask;
 
         //Mark the location source as from GNSS
         location.gpsLocation.flags |= LOCATION_HAS_SOURCE_INFO;
@@ -2977,6 +3071,10 @@ void LocApiV02 :: reportPosition (
             locationExtended.eastStdDeviation  = sqrt(eastSquare);
         }
 
+        bool updateMeaAvailForPVTArray = !unpropagatedPosition &&
+                mQmiMask & QMI_LOC_EVENT_MASK_GNSS_MEASUREMENT_REPORT_V02 &&
+                isTOAValid(location_report_ptr, &m1HzMeasurementsNotify);
+
         if (((location_report_ptr->expandedGnssSvUsedList_valid) &&
                 (location_report_ptr->expandedGnssSvUsedList_len != 0)) ||
                 ((location_report_ptr->gnssSvUsedList_valid) &&
@@ -3013,21 +3111,29 @@ void LocApiV02 :: reportPosition (
                                                    (eQMI_LOC_SESS_STATUS_IN_PROGRESS_V02 ==
                                                    location_report_ptr->sessionStatus ?
                                                    LOC_SESS_INTERMEDIATE : LOC_SESS_SUCCESS),
-                                                   tech_Mask);
-            if (unpropagatedPosition || reported) {
-                for (idx = 0; idx < gnssSvUsedList_len; idx++)
+                                                   locationExtended.tech_mask);
+
+            if (unpropagatedPosition || reported)
+            {
+                locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_GNSS_SV_USED_DATA;
+                if (multiBandTypesAvailable) {
+                     locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_MULTIBAND;
+                 }
+            }
+
+            for (idx = 0; idx < gnssSvUsedList_len; idx++)
+            {
+                gnssSvIdUsed = svUsedList[idx];
+                qmiLocGnssSignalTypeMaskT_v02 qmiGnssSignalType =
+                        location_report_ptr->gnssSvUsedSignalTypeList[idx];
+                GnssSignalTypeMask gnssSignalTypeMask =
+                        convertQmiGnssSignalType(qmiGnssSignalType);
+
+                if (unpropagatedPosition || reported)
                 {
-                    gnssSvIdUsed = svUsedList[idx];
                     locationExtended.measUsageInfo[idx].gnssSvId = gnssSvIdUsed;
                     locationExtended.measUsageInfo[idx].carrierPhaseAmbiguityType =
                             CARRIER_PHASE_AMBIGUITY_RESOLUTION_NONE;
-
-                    qmiLocGnssSignalTypeMaskT_v02 qmiGnssSignalType =
-                            location_report_ptr->gnssSvUsedSignalTypeList[idx];
-                    GnssSignalTypeMask gnssSignalTypeMask =
-                            convertQmiGnssSignalType(qmiGnssSignalType);
-                    LOC_LOGd("sv id %d, qmi signal type: 0x%" PRIx64 ", hal signal type: 0x%x",
-                             gnssSvIdUsed, qmiGnssSignalType, gnssSignalTypeMask);
 
                     if (gnssSvIdUsed <= GPS_SV_PRN_MAX)
                     {
@@ -3085,7 +3191,6 @@ void LocApiV02 :: reportPosition (
                             locationExtended.measUsageInfo[idx].gnssSignalType =
                                     GNSS_SIGNAL_GLONASS_G1;
                         }
-
                     }
                     else if ((gnssSvIdUsed >= BDS_SV_PRN_MIN) &&
                              (gnssSvIdUsed <= BDS_SV_PRN_MAX))
@@ -3200,10 +3305,72 @@ void LocApiV02 :: reportPosition (
                         }
                     }
                 }
-                locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_GNSS_SV_USED_DATA;
-                if (multiBandTypesAvailable) {
-                    locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_MULTIBAND;
+
+                // For each used SV in propagated final positions, check if it
+                // has measuremnt with QMI_LOC_MASK_MEAS_STATUS_GNSS_FRESH_MEAS_VALID
+                LOC_LOGv("gnssSvIdUsed %d gnssSignalTypeMask 0x%x",
+                        gnssSvIdUsed, gnssSignalTypeMask);
+
+                if (updateMeaAvailForPVTArray &&
+                        isMeasurementRefreshForSv(gnssSvIdUsed, gnssSignalTypeMask))
+                {
+                    if (gnssSvIdUsed <= GPS_SV_PRN_MAX)
+                    {
+                        meaAvailForPVT[eQMI_LOC_SV_SYSTEM_GPS_V02 - 1]++;
+                    }
+                    else if ((gnssSvIdUsed >= GLO_SV_PRN_MIN) &&
+                             (gnssSvIdUsed <= GLO_SV_PRN_MAX))
+                    {
+                        meaAvailForPVT[eQMI_LOC_SV_SYSTEM_GLONASS_V02 - 1]++;
+                    }
+                    else if ((gnssSvIdUsed >= BDS_SV_PRN_MIN) &&
+                             (gnssSvIdUsed <= BDS_SV_PRN_MAX))
+                    {
+                        meaAvailForPVT[eQMI_LOC_SV_SYSTEM_BDS_V02 - 1]++;
+                    }
+                    else if ((gnssSvIdUsed >= GAL_SV_PRN_MIN) &&
+                             (gnssSvIdUsed <= GAL_SV_PRN_MAX))
+                    {
+                        meaAvailForPVT[eQMI_LOC_SV_SYSTEM_GALILEO_V02 - 1]++;
+                    }
+                    else if ((gnssSvIdUsed >= QZSS_SV_PRN_MIN) &&
+                             (gnssSvIdUsed <= QZSS_SV_PRN_MAX))
+                    {
+                        meaAvailForPVT[eQMI_LOC_SV_SYSTEM_QZSS_V02 - 1]++;
+                    }
+                    else if ((gnssSvIdUsed >= NAVIC_SV_PRN_MIN) &&
+                             (gnssSvIdUsed <= NAVIC_SV_PRN_MAX))
+                    {
+                        meaAvailForPVT[eQMI_LOC_SV_SYSTEM_NAVIC_V02 - 1]++;
+                    }
                 }
+            }
+        }
+
+        if (updateMeaAvailForPVTArray) {
+            // Check Each satellite refreshed meaurement amount for propagated final positions,
+            // If not enough satellites are used for the position calculation,
+            // set PROPAGATED to indicate a tunnel entry situation
+            bool lowSatelliteVisibility =
+                (meaAvailForPVT[eQMI_LOC_SV_SYSTEM_GPS_V02 - 1] < MIN_REFRESH_MEASUREMENTS) &&
+                (meaAvailForPVT[eQMI_LOC_SV_SYSTEM_GALILEO_V02 - 1] < MIN_REFRESH_MEASUREMENTS) &&
+                (meaAvailForPVT[eQMI_LOC_SV_SYSTEM_GLONASS_V02 - 1] < MIN_REFRESH_MEASUREMENTS) &&
+                (meaAvailForPVT[eQMI_LOC_SV_SYSTEM_BDS_V02 - 1] < MIN_REFRESH_MEASUREMENTS) &&
+                (meaAvailForPVT[eQMI_LOC_SV_SYSTEM_QZSS_V02 - 1] < MIN_REFRESH_MEASUREMENTS) &&
+                (meaAvailForPVT[eQMI_LOC_SV_SYSTEM_NAVIC_V02 - 1] < MIN_REFRESH_MEASUREMENTS);
+
+            LOC_LOGv("GPS %d, Gal %d, Glonass %d, BDS %d, QZS %d, NAVIC %d, \
+                    lowSatelliteVisibility %d",
+                    meaAvailForPVT[eQMI_LOC_SV_SYSTEM_GPS_V02 - 1],
+                    meaAvailForPVT[eQMI_LOC_SV_SYSTEM_GALILEO_V02 - 1],
+                    meaAvailForPVT[eQMI_LOC_SV_SYSTEM_GLONASS_V02 - 1],
+                    meaAvailForPVT[eQMI_LOC_SV_SYSTEM_BDS_V02 - 1],
+                    meaAvailForPVT[eQMI_LOC_SV_SYSTEM_QZSS_V02 - 1],
+                    meaAvailForPVT[eQMI_LOC_SV_SYSTEM_NAVIC_V02 - 1],
+                    lowSatelliteVisibility);
+
+            if (lowSatelliteVisibility) {
+                locationExtended.tech_mask |= LOC_POS_TECH_MASK_PROPAGATED;
             }
         }
 
@@ -3371,7 +3538,7 @@ void LocApiV02 :: reportPosition (
                                    (location_report_ptr->sessionStatus ==
                                     eQMI_LOC_SESS_STATUS_IN_PROGRESS_V02 ?
                                     LOC_SESS_INTERMEDIATE : LOC_SESS_SUCCESS),
-                                   tech_Mask, &dataNotify, msInWeek);
+                                   locationExtended.tech_mask, &dataNotify, msInWeek);
     }
     else
     {
@@ -3943,7 +4110,6 @@ void  LocApiV02 :: reportSvMeasurement (
             mTimeBiases.gpsL1_navicUnc = interSystemBias->timeBiasUnc * 1000000;
             mTimeBiases.flags |= BIAS_GPSL1_NAVIC_UNC_VALID;
         }
-
     }
 
     if (1 == gnss_raw_measurement_ptr->galNavicInterSystemBias_valid) {
@@ -6036,6 +6202,7 @@ void LocApiV02 :: reportGnssMeasurementData(
                 measurementsNotify.count < GNSS_MEASUREMENTS_MAX;
                 index++) {
             LOC_LOGv("index=%u count=%zu", index, measurementsNotify.count);
+            // convert refreshed measurements and save to measurementsNotify's array
             if ((gnss_measurement_report_ptr.svMeasurement[index].validMeasStatusMask &
                  QMI_LOC_MASK_MEAS_STATUS_GNSS_FRESH_MEAS_STAT_BIT_VALID_V02) &&
                 (gnss_measurement_report_ptr.svMeasurement[index].measurementStatus &
@@ -6065,6 +6232,7 @@ void LocApiV02 :: reportGnssMeasurementData(
                     measurementsNotify.count < GNSS_MEASUREMENTS_MAX;
                     index++) {
                 LOC_LOGv("index=%u count=%zu", index, measurementsNotify.count);
+                // convert refreshed measurements and save to measurementsNotify's array
                 if ((gnss_measurement_report_ptr.extSvMeasurement[index].validMeasStatusMask &
                       QMI_LOC_MASK_MEAS_STATUS_GNSS_FRESH_MEAS_STAT_BIT_VALID_V02) &&
                      (gnss_measurement_report_ptr.extSvMeasurement[index].measurementStatus &
@@ -6096,6 +6264,12 @@ void LocApiV02 :: reportGnssMeasurementData(
     }
 
     if (gnss_measurement_report_ptr.maxMessageNum == gnss_measurement_report_ptr.seqNum &&
+            !measurementsNotify.isNhz) {
+        LOC_LOGv("saved m1HzMeasurementsNotify");
+        m1HzMeasurementsNotify = measurementsNotify;
+    }
+
+    if (gnss_measurement_report_ptr.maxMessageNum == gnss_measurement_report_ptr.seqNum &&
         maxSubSeqNum == subSeqNum && measurementsNotify.count != 0 && true == bGPSreceived) {
         // calling the base
         if (bAgcIsPresent) {
@@ -6121,8 +6295,6 @@ void LocApiV02 :: reportGnssMeasurementData(
         }
         setGnssBiases(measurementsNotify);
         memset(&mTimeBiases, 0, sizeof(mTimeBiases));
-
-        LOC_LOGd("report %d sv in sv meas to the upper layers", measurementsNotify.count);
         LocApiBase::reportGnssMeasurementData(measurementsNotify, msInWeek);
     }
 }
