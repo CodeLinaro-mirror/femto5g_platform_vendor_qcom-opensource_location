@@ -95,6 +95,7 @@ typedef struct {
 typedef struct {
     bool isValid;
     GnssNmeaTypesMask enabledNmeaTypes;
+    GnssGeodeticDatumType nmeaDatumType;
 } NmeaConfigInfo;
 
 class IpcListener;
@@ -142,7 +143,8 @@ public:
 
     uint32_t setUserConsentForTerrestrialPositioning(bool userConsent);
 
-    uint32_t configOutputNmeaTypes(GnssNmeaTypesMask enabledNmeaTypes) override;
+    uint32_t configOutputNmeaTypes(GnssNmeaTypesMask enabledNmeaTypes,
+                                   GnssGeodeticDatumType nmeaDatumType) override;
 
 private:
     ~LocationIntegrationApiImpl();
