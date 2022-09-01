@@ -219,6 +219,15 @@ static void parseLocation(const ::Location &halLocation, Location& location) {
     if (::LOCATION_TECHNOLOGY_PPE_BIT & halLocation.techMask) {
         flags |= LOCATION_TECHNOLOGY_PPE_BIT;
     }
+    if (::LOCATION_TECHNOLOGY_VEH_BIT & halLocation.techMask) {
+        flags |= LOCATION_TECHNOLOGY_VEH_BIT;
+    }
+    if (::LOCATION_TECHNOLOGY_VIS_BIT & halLocation.techMask) {
+        flags |= LOCATION_TECHNOLOGY_VIS_BIT;
+    }
+    if (::LOCATION_TECHNOLOGY_PROPAGATED_BIT & halLocation.techMask) {
+        flags |= LOCATION_TECHNOLOGY_PROPAGATED_BIT;
+    }
     location.techMask = (LocationTechnologyMask)flags;
 }
 
