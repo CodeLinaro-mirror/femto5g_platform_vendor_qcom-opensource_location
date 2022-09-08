@@ -801,16 +801,22 @@ uint32_t LocationIntegrationApiImpl::getMinSvElevation() {
 }
 
 uint32_t LocationIntegrationApiImpl::configOutputNmeaTypes(
-        GnssNmeaTypesMask enabledNmeaTypes) {
+        GnssNmeaTypesMask enabledNmeaTypes,
+        GnssGeodeticDatumType nmeaDatumType) {
     struct ConfigOutputNmeaReq : public LocMsg {
         ConfigOutputNmeaReq(LocationIntegrationApiImpl* apiImpl,
-                            GnssNmeaTypesMask enabledNmeaTypes) :
-                mApiImpl(apiImpl), mEnabledNmeaTypes(enabledNmeaTypes) {}
+                            GnssNmeaTypesMask enabledNmeaTypes,
+                            GnssGeodeticDatumType nmeaDatumType) :
+                mApiImpl(apiImpl), mEnabledNmeaTypes(enabledNmeaTypes),
+                mNmeaDatumType(nmeaDatumType) {}
         virtual ~ConfigOutputNmeaReq() {}
         void proc() const {
             mApiImpl->mNmeaConfigInfo.isValid = true;
             mApiImpl->mNmeaConfigInfo.enabledNmeaTypes = mEnabledNmeaTypes;
-            LocConfigOutputNmeaTypesReqMsg msg(mApiImpl->mSocketName, mEnabledNmeaTypes);
+            mApiImpl->mNmeaConfigInfo.nmeaDatumType = mNmeaDatumType;
+
+            LocConfigOutputNmeaTypesReqMsg msg(mApiImpl->mSocketName, mEnabledNmeaTypes,
+                                               mNmeaDatumType);
             mApiImpl->sendConfigMsgToHalDaemon(CONFIG_OUTPUT_NMEA_TYPES,
                                                reinterpret_cast<uint8_t*>(&msg),
                                                sizeof(msg));
@@ -818,9 +824,11 @@ uint32_t LocationIntegrationApiImpl::configOutputNmeaTypes(
 
         LocationIntegrationApiImpl* mApiImpl;
         GnssNmeaTypesMask mEnabledNmeaTypes;
+        GnssGeodeticDatumType mNmeaDatumType;
     };
 
-    mMsgTask->sendMsg(new (nothrow) ConfigOutputNmeaReq(this, enabledNmeaTypes));
+    mMsgTask->sendMsg(new (nothrow) ConfigOutputNmeaReq(this, enabledNmeaTypes,
+                                                        nmeaDatumType));
     return 0;
 }
 
@@ -961,7 +969,8 @@ void LocationIntegrationApiImpl::processHalReadyMsg() {
     }
 
     if (mNmeaConfigInfo.isValid) {
-         LocConfigOutputNmeaTypesReqMsg msg(mSocketName, mNmeaConfigInfo.enabledNmeaTypes);
+         LocConfigOutputNmeaTypesReqMsg msg(mSocketName, mNmeaConfigInfo.enabledNmeaTypes,
+                                            mNmeaConfigInfo.nmeaDatumType);
          sendConfigMsgToHalDaemon(CONFIG_OUTPUT_NMEA_TYPES,
                                   reinterpret_cast<uint8_t*>(&msg),
                                   sizeof(msg));

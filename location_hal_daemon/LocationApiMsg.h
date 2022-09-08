@@ -884,11 +884,14 @@ struct LocConfigMinSvElevationReqMsg: LocAPIMsgHeader
 struct LocConfigOutputNmeaTypesReqMsg: LocAPIMsgHeader
 {
     GnssNmeaTypesMask mEnabledNmeaTypes;
+    GnssGeodeticDatumType mNmeaDatumType;
 
     inline LocConfigOutputNmeaTypesReqMsg(
-            const char* name, GnssNmeaTypesMask enabledNmeaTypes) :
+            const char* name, GnssNmeaTypesMask enabledNmeaTypes,
+            GnssGeodeticDatumType nmeaDatumType) :
         LocAPIMsgHeader(name, E_INTAPI_CONFIG_OUTPUT_NMEA_TYPES_MSG_ID),
-        mEnabledNmeaTypes(enabledNmeaTypes) { }
+        mEnabledNmeaTypes(enabledNmeaTypes),
+        mNmeaDatumType(nmeaDatumType) { }
 };
 
 struct LocConfigEngineIntegrityRiskReqMsg: LocAPIMsgHeader

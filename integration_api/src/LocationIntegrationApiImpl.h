@@ -86,6 +86,7 @@ typedef struct {
 typedef struct {
     bool isValid;
     GnssNmeaTypesMask enabledNmeaTypes;
+    GnssGeodeticDatumType nmeaDatumType;
 } NmeaConfigInfo;
 
 class IpcListener;
@@ -126,7 +127,8 @@ public:
     uint32_t configMinSvElevation(uint8_t minSvElevation);
     uint32_t getMinSvElevation();
 
-    uint32_t configOutputNmeaTypes(GnssNmeaTypesMask enabledNmeaTypes) override;
+    uint32_t configOutputNmeaTypes(GnssNmeaTypesMask enabledNmeaTypes,
+                                   GnssGeodeticDatumType nmeaDatumType) override;
     uint32_t configEngineIntegrityRisk(PositioningEngineMask engType, uint32_t integrityRisk);
 
     uint32_t getConstellationSecondaryBandConfig();
