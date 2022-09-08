@@ -25,6 +25,7 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
@@ -78,6 +79,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #else
     #include <unordered_map>
 #endif
+#include <queue>
 
 using namespace std;
 using namespace loc_util;
@@ -87,41 +89,47 @@ namespace location_integration
 {
 typedef std::unordered_map<LocConfigTypeEnum, int32_t> LocConfigReqCntMap;
 
-typedef struct {
+struct TuncConfigInfo {
     bool     isValid;
     bool     enable;
     float    tuncThresholdMs; // need to be specified if enable is true
     uint32_t energyBudget;    // need to be specified if enable is true
-} TuncConfigInfo;
+};
 
-typedef struct {
+struct PaceConfigInfo {
     bool isValid;
     bool enable;
-} PaceConfigInfo;
+};
 
-typedef struct {
+struct SVConfigInfo {
     bool             isValid;
     bool             resetToDeFault;
     GnssSvTypeConfig svTypeConfig;
     GnssSvIdConfig   svIdConfig;
-} SVConfigInfo;
+};
 
-typedef struct {
+struct RobustLocationConfigInfo {
     bool isValid;
     bool enable;
     bool enableForE911;
-} RobustLocationConfigInfo;
+};
 
-typedef struct {
+struct DeadReckoningEngineConfigInfo {
     bool isValid;
     ::DeadReckoningEngineConfig dreConfig;
-} DeadReckoningEngineConfigInfo;
+};
 
-typedef struct {
+struct NmeaConfigInfo {
     bool isValid;
     GnssNmeaTypesMask enabledNmeaTypes;
     GnssGeodeticDatumType nmeaDatumType;
-} NmeaConfigInfo;
+};
+
+struct ConfigMsg {
+    LocConfigTypeEnum  msgType;
+    uint8_t*           pMsg;
+    size_t             msgSize;
+};
 
 typedef struct {
     bool isValid;
@@ -177,14 +185,15 @@ public:
 private:
     ~LocationIntegrationApiImpl();
     bool integrationClientAllowed();
-    void sendConfigMsgToHalDaemon(LocConfigTypeEnum configType,
+    bool sendConfigMsgToHalDaemon(LocConfigTypeEnum configType,
                                   uint8_t* pMsg,
                                   size_t msgSize,
                                   bool invokeResponseCb = true);
-    void sendClientRegMsgToHalDaemon();
+    bool sendClientRegMsgToHalDaemon();
     void processHalReadyMsg();
 
     void addConfigReq(LocConfigTypeEnum configType);
+    bool processQueuedReqs(); // return value indicates whether queue is empty or not
     void flushConfigReqs();
     void processConfigRespCb(const LocAPIGenericRespMsg* pRespMsg);
     void processGetRobustLocationConfigRespCb(
@@ -217,6 +226,9 @@ private:
 
     LocConfigReqCntMap       mConfigReqCntMap;
     LocIntegrationCbs        mIntegrationCbs;
+    std::queue<ConfigMsg> mQueuedMsg; // queue of the requests before
+                                      // communication with hal daemom
+                                      // is established
 
     LocIpc                   mIpc;
     shared_ptr<LocIpcSender> mIpcSender;
