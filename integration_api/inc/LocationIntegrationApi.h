@@ -91,6 +91,8 @@ enum LocConfigTypeEnum{
     /** Config the integrity risk level of the position engine.
      *  <br/> */
     CONFIG_ENGINE_INTEGRITY_RISK = 14,
+    /** Max config enum supported. <br/> */
+    CONFIG_ENUM_MAX = 99,
 
     /** Get configuration regarding robust location setting used by
      *  the GNSS standard position engine (SPE).  <br/> */
