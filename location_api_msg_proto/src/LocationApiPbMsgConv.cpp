@@ -1222,7 +1222,7 @@ PBLocApiGnss_LocSvSystemEnumType LocationApiPbMsgConv::getPBGnssLocSvSysEnumFrom
 uint32_t LocationApiPbMsgConv::getPBMaskForLocationCallbacksMask(const uint32_t &locCbMask) const {
     uint32_t pbLocCbMask = 0;
     if (locCbMask & E_LOC_CB_DISTANCE_BASED_TRACKING_BIT) {
-        pbLocCbMask |= PB_E_LOC_CB_DISTANCE_BASED_TRACKING_BIT;
+        pbLocCbMask |= PB_E_LOC_CB_TRACKING_BIT;
     }
     if (locCbMask & E_LOC_CB_GNSS_LOCATION_INFO_BIT) {
         pbLocCbMask |= PB_E_LOC_CB_GNSS_LOCATION_INFO_BIT;
@@ -2253,7 +2253,7 @@ uint64_t LocationApiPbMsgConv::getLocationCapabilitiesMaskFromPB(
 
 uint32_t LocationApiPbMsgConv::getLocationCallbacksMaskFromPB(const uint32_t &pbLocCbMask) const {
     uint32_t locCbMask = 0;
-    if (pbLocCbMask & PB_E_LOC_CB_DISTANCE_BASED_TRACKING_BIT) {
+    if (pbLocCbMask & PB_E_LOC_CB_TRACKING_BIT) {
         locCbMask |= E_LOC_CB_DISTANCE_BASED_TRACKING_BIT;
     }
     if (pbLocCbMask & PB_E_LOC_CB_GNSS_LOCATION_INFO_BIT) {

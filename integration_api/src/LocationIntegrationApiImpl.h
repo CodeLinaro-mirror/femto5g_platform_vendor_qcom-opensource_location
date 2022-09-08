@@ -132,6 +132,7 @@ typedef struct {
 typedef struct {
     bool isValid;
     GnssNmeaTypesMask enabledNmeaTypes;
+    GnssGeodeticDatumType nmeaDatumType;
 } NmeaConfigInfo;
 
 typedef struct {
@@ -184,7 +185,8 @@ public:
 
     uint32_t setUserConsentForTerrestrialPositioning(bool userConsent);
 
-    uint32_t configOutputNmeaTypes(GnssNmeaTypesMask enabledNmeaTypes) override;
+    uint32_t configOutputNmeaTypes(GnssNmeaTypesMask enabledNmeaTypes,
+                                   GnssGeodeticDatumType nmeaDatumType) override;
 
     uint32_t configXtraParams(bool enable, const ::XtraConfigParams& configParams);
     uint32_t getXtraStatus();

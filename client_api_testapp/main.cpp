@@ -28,6 +28,8 @@
  */
 
 /*
+Changes from Qualcomm Innovation Center are provided under the following license:
+
 Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -1296,10 +1298,20 @@ int main(int argc, char *argv[]) {
             char* token = strtok_r(buf, " ", &save);
             token = strtok_r(NULL, " ", &save);
             if (token != NULL) {
-                nmeaTypes = (NmeaTypesMask) strtoul(token, &save, 10);
+                nmeaTypes = (NmeaTypesMask) strtoul(token, NULL, 10);
+                if (nmeaTypes == 0) {
+                    nmeaTypes = (NmeaTypesMask) strtoul(token, NULL, 16);
+                }
             }
-            printf("nmeaTypes 0x%x\n", nmeaTypes);
-            pIntClient->configOutputNmeaTypes(nmeaTypes);
+            GeodeticDatumType nmeaDatumType = GEODETIC_TYPE_WGS_84;
+            token = strtok_r(NULL, " ", &save);
+            if (token != NULL) {
+                if (strtoul(token, NULL, 10) == 1) {
+                    nmeaDatumType = GEODETIC_TYPE_PZ_90;
+                }
+            }
+            printf("nmeaTypes 0x%x, geodetic type %d\n", nmeaTypes, nmeaDatumType);
+            pIntClient->configOutputNmeaTypes(nmeaTypes, nmeaDatumType);
 
         } else if (strncmp(buf, CONFIG_XTRA_PARAMS, strlen(CONFIG_XTRA_PARAMS)) == 0) {
             bool enableXtra = false;;
