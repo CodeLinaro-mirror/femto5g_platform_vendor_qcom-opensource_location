@@ -981,7 +981,7 @@ uint32_t LocationIntegrationApiImpl::configDeadReckoningEngineParams(
         void proc() const {
             string pbStr;
             LocConfigDrEngineParamsReqMsg msg(mApiImpl->mSocketName,
-                                              mApiImpl->mDreConfigInfo.dreConfig,
+                                              mDreConfig,
                                               &mApiImpl->mPbufMsgConv);
             if (msg.serializeToProtobuf(pbStr)) {
                 if (mApiImpl->sendConfigMsgToHalDaemon(CONFIG_DEAD_RECKONING_ENGINE, pbStr)) {
@@ -1300,12 +1300,10 @@ uint32_t LocationIntegrationApiImpl::registerXtraStatusUpdate(bool registerUpdat
             LOC_LOGe("registerXtraStatusUpdate: %d", mRegisterUpdate);
             string pbStr;
             if (mRegisterUpdate == true) {
-                mApiImpl->mXtraUpdateUponRegisterPending = true;
                 LocConfigRegisterXtraStatusUpdateReqMsg msg(
                     mApiImpl->mSocketName, &mApiImpl->mPbufMsgConv);
                 msg.serializeToProtobuf(pbStr);
             } else {
-                mApiImpl->mXtraUpdateUponRegisterPending = false;
                 LocConfigDeregisterXtraStatusUpdateReqMsg msg(
                     mApiImpl->mSocketName, &mApiImpl->mPbufMsgConv);
                 msg.serializeToProtobuf(pbStr);
@@ -1314,6 +1312,7 @@ uint32_t LocationIntegrationApiImpl::registerXtraStatusUpdate(bool registerUpdat
             if (pbStr.size() != 0) {
                 if (mApiImpl->sendConfigMsgToHalDaemon(REGISTER_XTRA_STATUS_UPDATE, pbStr)) {
                     mApiImpl->mXtraUpdateUponRegisterPending = mRegisterUpdate;
+                    mApiImpl->mRegisterXtraUpdate = mRegisterUpdate;
                 }
             } else {
                 LOC_LOGe("serializeToProtobuf failed");
@@ -1345,6 +1344,7 @@ bool LocationIntegrationApiImpl::sendConfigMsgToHalDaemon(
         msgInfo.configType = configType;
         msgInfo.protoStr = pbStr;
         mQueuedMsg.emplace(std::move(msgInfo));
+        rc = true;
         LOC_LOGi(">>> sendConfigMsgToHalDaemon mHal not yet ready, message queued");
     } else {
         bool messageSentToHal = false;
@@ -1393,7 +1393,10 @@ void LocationIntegrationApiImpl::processHalReadyMsg() {
     }
 
     // process the requests that are queued before hal daemon was first ready
-    processQueuedReqs();
+    if (processQueuedReqs()) {
+        // hal is first time ready, no more item to process
+        return;
+    }
 
     // when location hal daemon crashes and restarts,
     // we flush out all pending requests and notify each client
@@ -1573,12 +1576,15 @@ void LocationIntegrationApiImpl::processConfigRespCb(const LocAPIGenericRespMsg*
 }
 
 // process queued reqs that are not able to sent to location hal daemon
-void LocationIntegrationApiImpl::processQueuedReqs() {
+bool LocationIntegrationApiImpl::processQueuedReqs() {
+    bool queueNotEmpty = (mQueuedMsg.size() > 0);
+
     while (mQueuedMsg.size() > 0) {
         ProtoMsgInfo msg = mQueuedMsg.front();
         mQueuedMsg.pop();
         sendConfigMsgToHalDaemon(msg.configType, msg.protoStr, true);
     }
+    return queueNotEmpty;
 }
 
 // flush all the pending config request if location hal daemon has crashed
