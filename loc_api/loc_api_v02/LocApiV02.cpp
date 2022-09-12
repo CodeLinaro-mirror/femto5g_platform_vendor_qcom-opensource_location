@@ -7463,7 +7463,9 @@ void LocApiV02 :: getEngineLockStateSync() {
             ret = QMILOCENGINELOCKSTATEENUMT_MIN_ENUM_VAL_V02;
         }
     }
-    setEngineLockState(convertEngineLockState(ret));
+    EngineLockState lockState = convertEngineLockState(ret);
+    setEngineLockState(lockState);
+    LocApiBase::reportEngineLockStatus(lockState);
 }
 
 LocationError
@@ -10775,7 +10777,6 @@ void LocApiV02::configPrecisePositioning(uint32_t featureId, bool enable,
             req.featureStatusReport |= QMI_LOC_FEATURE_STATUS_SV_POLYNOMIALS_V02;
             req.featureStatusReport |= QMI_LOC_FEATURE_STATUS_DGNSS_V02;
             req.featureStatusReport |= QMI_LOC_FEATURE_STATUS_QPPE_V02;
-            req.featureStatusReport |= QMI_LOC_FEATURE_STATUS_SV_EPHEMERIS_V02;
         } else if (featureId == 2641) {
             req.featureStatusReport_valid = true;
             req.featureStatusReport |= QMI_LOC_FEATURE_STATUS_DGNSS_V02;
