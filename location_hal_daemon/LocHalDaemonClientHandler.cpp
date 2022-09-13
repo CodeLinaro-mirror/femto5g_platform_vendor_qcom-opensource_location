@@ -100,9 +100,13 @@ void LocHalDaemonClientHandler::updateSubscription(uint32_t mask) {
 
     // update optional callback - following four callbacks can be controlable
     // tracking
-    mCallbacks.trackingCb = [this](Location location) {
-        onTrackingCb(location);
-    };
+    if (mSubscriptionMask & E_LOC_CB_TRACKING_BIT) {
+        mCallbacks.trackingCb = [this](Location location) {
+            onTrackingCb(location);
+        };
+    } else {
+        mCallbacks.trackingCb = nullptr;
+    }
 
     // batching
     if (mSubscriptionMask & E_LOC_CB_BATCHING_BIT) {
@@ -226,7 +230,7 @@ uint32_t LocHalDaemonClientHandler::startTracking(LocationOptions & locOptions) 
              locOptions.locReqEngTypeMask);
     if (mSessionId == 0 && mLocationApi) {
         // update option
-        mOptions = locOptions;
+        mOptions.setLocationOptions(locOptions);
         // allow all the fix report in LE session, even failed fix
         mOptions.qualityLevelAccepted = QUALITY_ANY_OR_FAILED_FIX;
         // set interval to engine supported interval
@@ -539,7 +543,7 @@ void LocHalDaemonClientHandler::onResponseCb(LocationError err, uint32_t id) {
 void LocHalDaemonClientHandler::onCollectiveResponseCallback(
         size_t count, LocationError *errs, uint32_t *ids) {
     std::lock_guard<std::recursive_mutex> lock(LocationApiService::mMutex);
-    LOC_LOGd("--< onCollectiveResponseCallback, client name %s", mName.c_str());
+    LOC_LOGd("--< onCollectiveResponseCallback, client name %s, count: %zu", mName.c_str(), count);
 
     if (nullptr == mIpcSender) {
         LOC_LOGe("mIpcSender is null");
@@ -602,7 +606,7 @@ void LocHalDaemonClientHandler::onCollectiveResponseCallback(
     LocAPICollectiveRespMsg msg(SERVICE_NAME, eLocMsgId, &mService->mPbufMsgConv);
     string pbStr;
     uint32_t collctResCount = count;
-    LOC_LOGd("Gf Resp count: %ul", collctResCount);
+    LOC_LOGd("Gf Resp count: %u", collctResCount);
     for (uint32_t i=0; i < collctResCount; i++) {
         GeofenceResponse gfResp;
         gfResp.clientId = clientIds[i];
@@ -666,6 +670,21 @@ void LocHalDaemonClientHandler::sendTerrestrialFix(LocationError error,
     }
 }
 
+void LocHalDaemonClientHandler::sendSingleFusedFix(LocationError error,
+                                                   const Location& location) {
+    LocAPIGetSinglePosRespMsg msg(SERVICE_NAME, error,
+                                  location, &mService->mPbufMsgConv);
+
+    const char* msgStream = nullptr;
+    size_t msgLen = 0;
+    string pbStr;
+    if (msg.serializeToProtobuf(pbStr)) {
+        msgStream = pbStr.c_str();
+        msgLen = pbStr.size();
+        sendMessage(msgStream, msgLen, E_LOCAPI_GET_SINGLE_POS_RESP_MSG_ID);
+    }
+}
+
 void LocHalDaemonClientHandler::onGnssConfigCb(ELocMsgID configMsgId,
                                                const GnssConfig & gnssConfig) {
     string pbStr;
@@ -705,6 +724,32 @@ void LocHalDaemonClientHandler::onGnssConfigCb(ELocMsgID configMsgId,
         }
         break;
 
+    case E_INTAPI_GET_XTRA_STATUS_REQ_MSG_ID:
+        if (gnssConfig.flags & GNSS_CONFIG_FLAGS_XTRA_STATUS_BIT)
+        {
+            LOC_LOGd("--< onGnssConfigCb, xtra status received, %d %d %d",
+                     gnssConfig.xtraStatus.featureEnabled,
+                     gnssConfig.xtraStatus.xtraDataStatus,
+                     gnssConfig.xtraStatus.xtraValidForHours);
+            LocConfigGetXtraStatusRespMsg msg(SERVICE_NAME,
+                                              XTRA_STATUS_UPDATE_UPON_QUERY,
+                                              gnssConfig.xtraStatus,
+                                              &mService->mPbufMsgConv);
+            msg.serializeToProtobuf(pbStr);
+        }
+        break;
+
+    case E_INTAPI_REGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID:
+        if (gnssConfig.flags & GNSS_CONFIG_FLAGS_XTRA_STATUS_BIT)
+        {
+            LocConfigGetXtraStatusRespMsg msg(SERVICE_NAME,
+                                              XTRA_STATUS_UPDATE_UPON_REGISTRATION,
+                                              gnssConfig.xtraStatus,
+                                              &mService->mPbufMsgConv);
+            msg.serializeToProtobuf(pbStr);
+        }
+        break;
+
     default:
         break;
     }
@@ -718,6 +763,24 @@ void LocHalDaemonClientHandler::onGnssConfigCb(ELocMsgID configMsgId,
         }
     } else {
         LOC_LOGe("mIpcSender or msgStream is null!!");
+    }
+}
+
+void LocHalDaemonClientHandler::onXtraStatusUpdateCb(const XtraStatus &xtraStatus) {
+    string pbStr;
+
+    LocConfigGetXtraStatusRespMsg msg(SERVICE_NAME, XTRA_STATUS_UPDATE_UPON_STATUS_CHANGE,
+                                      xtraStatus, &mService->mPbufMsgConv);
+    msg.serializeToProtobuf(pbStr);
+    if ((nullptr != mIpcSender) && (pbStr.size() != 0)) {
+        bool rc = sendMessage(pbStr.c_str(), pbStr.size(), E_INTAPI_GET_XTRA_STATUS_RESP_MSG_ID );
+        // purge this client if failed
+        if (!rc) {
+            LOC_LOGe("failed rc=%d purging client=%s", rc, mName.c_str());
+            mService->deleteClientbyName(mName);
+        }
+    } else {
+        LOC_LOGe("mIpcSender or msgStream is null!! size %d", pbStr.size());
     }
 }
 
@@ -789,6 +852,7 @@ void LocHalDaemonClientHandler::onBatchingCb(size_t count, Location* location,
         LocAPIBatchingIndMsg msg(SERVICE_NAME, &mService->mPbufMsgConv);
         LOC_LOGd("Batch count: %ul", (uint32_t)count);
         msg.batchNotification.status = BATCHING_STATUS_POSITION_AVAILABE;
+        msg.batchingMode = batchOptions.batchingMode;
         for (int i = 0; i < count; i++) {
             msg.batchNotification.location.push_back(location[i]);
         }
@@ -818,7 +882,7 @@ void LocHalDaemonClientHandler::onBatchingStatusCb(BatchingStatusInfo batchingSt
         LocAPIBatchNotification batchNotif = {};
         batchNotif.status = BATCHING_STATUS_TRIP_COMPLETED;
         string pbStr;
-        LocAPIBatchingIndMsg msg(SERVICE_NAME, batchNotif, &mService->mPbufMsgConv);
+        LocAPIBatchingIndMsg msg(SERVICE_NAME, batchNotif, mBatchingMode, &mService->mPbufMsgConv);
         if (msg.serializeToProtobuf(pbStr)) {
             bool rc = sendMessage(pbStr.c_str(), pbStr.size(), msg.msgId);
             // purge this client if failed

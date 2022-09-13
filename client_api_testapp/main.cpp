@@ -78,6 +78,8 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <loc_pla.h>
 #include <loc_cfg.h>
 #include <loc_misc_utils.h>
+#include <thread>
+
 #ifdef NO_UNORDERED_SET_OR_MAP
     #include <map>
     #define unordered_map map
@@ -90,6 +92,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 using namespace location_client;
 using namespace location_integration;
+using std::vector;
 
 static bool     outputEnabled = true;
 static bool     detailedOutputEnabled = false;
@@ -108,6 +111,9 @@ static sem_t semCompleted;
 static int fixCnt = 0x7fffffff;
 static uint64_t autoTestStartTimeMs = 0;
 static int autoTestTimeoutSec = 0x7FFFFFFF;
+static uint32_t gtpFixCnt = 0;
+static uint32_t singleShotFixCnt = 0;
+vector<Geofence> sGeofences;
 
 enum ReportType {
     POSITION_REPORT = 1 << 0,
@@ -155,6 +161,12 @@ enum TrackingSessionType {
 #define CANCEL_SINGLE_GTP_WWAN_FIX "cancelSingleGtpWwanFix"
 #define CONFIG_NMEA_TYPES          "configOutputNmeaTypes"
 #define GET_ENERGY_CONSUMED        "getEnergyConsumed"
+#define GET_SINGLE_FUSED_FIX       "getSingleFusedFix"
+#define CANCEL_SINGLE_FUSED_FIX    "cancelSingleFusedFix"
+#define CONFIG_XTRA_PARAMS         "configXtraParams"
+#define GET_XTRA_STATUS             "getXtraStatus"
+#define REGISTER_XTRA_STATUS_UPDATE "registerXtraUpdateStatus"
+#define ENABLE_XTRA_ON_DEMAND_DOWNLOAD "enableXtraOnDemandDownload"
 
 // debug utility
 static uint64_t getTimestampMs() {
@@ -237,7 +249,33 @@ static void onGtpLocationCb(const location_client::Location& location) {
                location.longitude,
                location.altitude);
     }
+}
 
+static void onSingleShotResponseCb(location_client::LocationResponse response) {
+    printf("<<< onSingleShotResponseCb err=%u\n", response);
+    if (response != LOCATION_RESPONSE_SUCCESS && response != LOCATION_RESPONSE_TIMEOUT) {
+        sem_post(&semCompleted);
+    }
+}
+
+static void onSingleShotLocationCb(const location_client::Location& location) {
+    sem_post(&semCompleted);
+
+    if (!outputEnabled) {
+        return;
+    }
+    if (detailedOutputEnabled) {
+        printf("<<< onSingleShotLocationCb: %s\n", location.toString().c_str());
+    } else {
+        printf("<<< onSingleShotLocationCb time=%" PRIu64" mask=0x%x lat=%f lon=%f "
+               "alt=%f accuracy=%f\n",
+               location.timestamp,
+               location.flags,
+               location.latitude,
+               location.longitude,
+               location.altitude,
+               location.horizontalAccuracy);
+    }
 }
 
 static void onGnssLocationCb(const location_client::GnssLocation& location) {
@@ -307,6 +345,23 @@ static void onBatchingCb(const std::vector<Location>& locations,
     }
 }
 
+static void onGeofenceBreachCb( const vector<Geofence>& geofences, Location location,
+        GeofenceBreachTypeMask type, uint64_t timestamp) {
+    printf("<<< onGeofenceBreachCb, breach type: %d, timestamp: %" PRIu64, type, timestamp);
+    for (Geofence gf : geofences) {
+        printf("<<< onGeofenceBreachCb, lat=%f lon=%f rad=%f, responsiveness: %u, dwellTime: %u\n",
+               gf.getLatitude(), gf.getLongitude(), gf.getRadius(), gf.getResponsiveness(),
+               gf.getDwellTime());
+    }
+}
+static void onCollectiveResponseCb(vector<std::pair<Geofence, LocationResponse>>& responses) {
+    for (std::pair<Geofence, LocationResponse> pair : responses) {
+        printf("<<< onCollectiveResponseCb, lat=%f lon=%f rad=%f, responsiveness: %u, "
+                "dwellTime: %u, response: %d\n",
+               pair.first.getLatitude(), pair.first.getLongitude(), pair.first.getRadius(),
+               pair.first.getResponsiveness(), pair.first.getDwellTime(), pair.second);
+    }
+}
 static void onGnssSvCb(const std::vector<location_client::GnssSv>& gnssSvs) {
     numGnssSvCb++;
 
@@ -408,10 +463,17 @@ static void onGetGnssEnergyConsumedCb(const GnssEnergyConsumedInfo& gnssEneryCon
             gnssEneryConsumed.totalEnergyConsumedSinceFirstBoot);
 }
 
+static void onGetXtraStatusCb(XtraStatusUpdateTrigger updateTrigger, const XtraStatus& xtraStatus) {
+    printf("<<< onXtraStatusCb, update trigger %d, enable %d, status %d, valid hours %d\n",
+           updateTrigger, xtraStatus.featureEnabled, xtraStatus.xtraDataStatus,
+           xtraStatus.xtraValidForHours);
+}
+
 static void printHelp() {
     printf("\n************* options *************\n");
     printf("e reprottype tbf: Concurrent engine report session with 100 ms interval\n");
     printf("g reporttype tbf engmask: Gnss report session with 100 ms interval\n");
+    printf("b interval distance: routine batching\n");
     printf("u: Update a session with 2000 ms interval\n");
     printf("m: Interleaving fix session with 1000 and 2000 ms interval, change every 3 seconds\n");
     printf("s: Stop a session \n");
@@ -447,6 +509,12 @@ static void printHelp() {
     printf("%s: config nmea types \n", CONFIG_NMEA_TYPES);
     printf("%s: config engine integrity risk \n", CONFIG_ENGINE_INTEGRITY_RISK);
     printf("%s: get gnss energy consumed \n", GET_ENERGY_CONSUMED);
+    printf("%s: get single shot fix with qos and timeout \n", GET_SINGLE_FUSED_FIX );
+    printf("%s: cancle single shot fix \n", CANCEL_SINGLE_FUSED_FIX );
+    printf("%s: config xtra params \n", CONFIG_XTRA_PARAMS);
+    printf("%s: get xtra status \n", GET_XTRA_STATUS);
+    printf("%s: register xtra status update \n", REGISTER_XTRA_STATUS_UPDATE);
+    printf("%s: enable xtra on demand download \n", ENABLE_XTRA_ON_DEMAND_DOWNLOAD);
 }
 
 void setRequiredPermToRunAsLocClient() {
@@ -704,9 +772,100 @@ void parseDreConfig (char* buf, DeadReckoningEngineConfig& dreConfig) {
     dreConfig.validMask = (DeadReckoningEngineConfigValidMask)validMask;
 }
 
+void parseXtraConfig(char* buf, bool &xtraEnabled, XtraConfigParams& oemConfig) {
+    static char *save = nullptr;
+    char* token = strtok_r(buf, " ", &save); // skip header
+
+    token = strtok_r(NULL, " ", &save);
+    if (token != NULL) {
+        xtraEnabled = atoi(token);
+    }
+
+    if (xtraEnabled) {
+        token = strtok_r(NULL, " ", &save);
+        if (token != NULL) {
+            oemConfig.xtraDownloadIntervalMinute = atoi(token);
+        }
+
+        token = strtok_r(NULL, " ", &save);
+        if (token != NULL) {
+            oemConfig.xtraDownloadTimeoutSec = atoi(token);
+        }
+
+        token = strtok_r(NULL, " ", &save);
+        if (token != NULL) {
+            oemConfig.xtraDownloadRetryIntervalMinute = atoi(token);
+        }
+
+        token = strtok_r(NULL, " ", &save);
+        if (token != NULL) {
+            oemConfig.xtraDownloadRetryAttempts = atoi(token);
+        }
+
+        token = strtok_r(NULL, " ", &save);
+        if (token != NULL) {
+            oemConfig.xtraCaPath = std::string(token);
+        }
+
+        uint32_t serverCnt = 0;
+        token = strtok_r(NULL, " ", &save);
+        if (token != NULL) {
+            serverCnt = atoi(token);
+        }
+
+        for (int i = 0; i < serverCnt; i++) {
+            token = strtok_r(NULL, " ", &save);
+            if (token != NULL) {
+                oemConfig.xtraServerURLs[i] = std::string(token);
+            }
+        }
+
+        serverCnt = 0;
+        token = strtok_r(NULL, " ", &save);
+        if (token != NULL) {
+            serverCnt = atoi(token);
+        }
+
+        for (int i = 0; i < serverCnt; i++) {
+            token = strtok_r(NULL, " ", &save);
+            if (token != NULL) {
+                oemConfig.ntpServerURLs[i] = std::string(token);
+            }
+        }
+
+        token = strtok_r(NULL, " ", &save);
+        if (token != NULL) {
+            oemConfig.xtraIntegrityDownloadEnable = ((atoi(token) == 0) ? false : true);
+        }
+
+        token = strtok_r(NULL, " ", &save);
+        if (token != NULL) {
+            oemConfig.xtraIntegrityDownloadIntervalMinute = atoi(token);
+        }
+
+        token = strtok_r(NULL, " ", &save);
+        if (token != NULL) {
+            oemConfig.xtraDaemonDebugLogLevel = (DebugLogLevel) atoi(token);
+        }
+
+        printf ("xtra config: enabled %d, %d %d %d %d ca path: %s, "
+                "xtra url: %s %s %s, ntp url: %s %s %s\n",
+                xtraEnabled, oemConfig.xtraDownloadIntervalMinute,
+                oemConfig.xtraDownloadTimeoutSec,
+                oemConfig.xtraDownloadRetryIntervalMinute,
+                oemConfig.xtraDownloadRetryAttempts,
+                oemConfig.xtraCaPath.c_str(),
+                oemConfig.xtraServerURLs[0].c_str(), oemConfig.xtraServerURLs[1].c_str(),
+                oemConfig.xtraServerURLs[2].c_str(), oemConfig.ntpServerURLs[0].c_str(),
+                oemConfig.ntpServerURLs[1].c_str(), oemConfig.ntpServerURLs[2].c_str());
+        printf("integerity download %d %d\n", oemConfig.xtraIntegrityDownloadEnable,
+               oemConfig.xtraIntegrityDownloadIntervalMinute);
+    } else {
+        printf("xtra disabled \n");
+    }
+}
+
 void getGtpWwanFixes (bool multipleFixes, char* buf) {
-    // global variables for multiple gtp fixes
-    uint32_t gtpFixCnt      = 0;
     uint32_t gtpFixTbfMsec  = 0;
     uint32_t gtpTimeoutMsec = 0;
     float    gtpHorQoS      = 0.0;
@@ -806,6 +965,78 @@ static void setupEngineReportCbs(uint32_t reportType, EngineReportCbs& reportcbs
     }
     if (reportType & NHZ_MEAS_REPORT) {
         reportcbs.gnssNHzMeasurementsCallback = GnssMeasurementsCb(onGnssMeasurementsCb);
+    }
+}
+
+void getMultipleFusedFixes(uint32_t timeoutMsec, float horQoS,
+                           uint32_t fixTbfMsec) {
+    while (singleShotFixCnt > 0) {
+        printf("fix cnt needed: %d, sleep %d seconds",
+               singleShotFixCnt, fixTbfMsec/1000);
+        pLcaClient->getSinglePosition(timeoutMsec, horQoS,
+                                      onSingleShotLocationCb,
+                                      onSingleShotResponseCb);
+        sem_wait(&semCompleted);
+        singleShotFixCnt--;
+        sleep(fixTbfMsec/1000);
+    }
+}
+
+void getFusedFixes(char* buf) {
+    uint32_t fixTbfMsec  = 5000;
+    uint32_t timeoutMsec = 60000;
+    float    horQoS      = 1000;
+
+    static char *save = nullptr;
+    char* token = strtok_r(buf, " ", &save); // skip first token
+
+    // get timeout
+    token = strtok_r(NULL, " ", &save);
+    if (token != NULL) {
+        timeoutMsec = atoi(token);
+    }
+
+    // get qos
+    token = strtok_r(NULL, " ", &save);
+    if (token != NULL) {
+        horQoS = atof(token);
+    }
+
+    // get fix cnt
+    singleShotFixCnt = 1;
+    token = strtok_r(NULL, " ", &save);
+    if (token != NULL) {
+        singleShotFixCnt = atoi(token);
+    } else {
+        singleShotFixCnt = 1;
+    }
+
+    // get tbf
+    token = strtok_r(NULL, " ", &save);
+    if (token != NULL) {
+        fixTbfMsec = atoi(token);
+    } else {
+        fixTbfMsec = 1000;
+    }
+
+    printf("timeout msec %d, horQoS %f, number of fixes %d, tbf %d msec\n",
+           timeoutMsec, horQoS, singleShotFixCnt, fixTbfMsec);
+
+    if (!pLcaClient) {
+        pLcaClient = new LocationClientApi(onCapabilitiesCb);
+    }
+
+    if (pLcaClient) {
+        if (singleShotFixCnt == 1) {
+            pLcaClient->getSinglePosition(timeoutMsec, horQoS,
+                                          onSingleShotLocationCb,
+                                          onSingleShotResponseCb);
+        } else {
+            std::thread t([timeoutMsec, horQoS, fixTbfMsec] {
+                getMultipleFusedFixes(timeoutMsec, horQoS, fixTbfMsec);
+            });
+            t.detach();
+        }
     }
 }
 
@@ -975,6 +1206,276 @@ void getTrackingParams(char *buf, uint32_t *reportTypePtr, uint32_t *tbfMsecPtr,
     if (token != nullptr) {
         if (reqEngMaskPtr) {
             *reqEngMaskPtr = (LocReqEngineTypeMask) atoi(token);
+        }
+    }
+}
+
+int getGeofenceCount() {
+    int count = 1;
+    char buf[16], *p;
+    printf ("\nEnter number of geofences (default %d):", 1);
+    fflush (stdout);
+    p = fgets (buf, 16, stdin);
+    if (p == nullptr) {
+        printf("Error: fgets returned nullptr !!");
+        return count;
+    }
+    if (atoi(p) != 0) {
+        count = atoi(p);
+    }
+    return count;
+}
+
+void menuAddGeofence() {
+    uint32_t count = getGeofenceCount();
+    double latitude = 32.896535;
+    double longitude = -117.201025;
+    double radiusM = 50;
+    GeofenceBreachTypeMask breachType = (GeofenceBreachTypeMask) (
+            GEOFENCE_BREACH_ENTER_BIT | GEOFENCE_BREACH_EXIT_BIT);
+    uint32_t responsivenessMs = 4000;
+    uint32_t dwellTimeMs = 4000;
+    char buf[16], *p;
+    vector<Geofence> addGfVec;
+    for (int i=0; i<count; ++i) {
+        printf ("\nEntering geofence of serial number %d ):", sGeofences.size());
+
+        printf ("\nEnter latitude (default %f):", 32.896535);
+        fflush (stdout);
+        p = fgets (buf, 16, stdin);
+        if (p == nullptr) {
+            printf("Error: fgets returned nullptr !!");
+            return;
+        }
+        if (atof(p) != 0) {
+            latitude = atof(p);
+        }
+        printf ("\nEnter longitude (default %f):", -117.201025);
+        fflush (stdout);
+        p = fgets (buf, 16, stdin);
+        if (p == nullptr) {
+            printf("Error: fgets returned nullptr !!");
+            return;
+        }
+        if (atof(p) != 0) {
+            longitude = atof(p);
+        }
+        printf ("\nEnter radius (default %f):", 50.0);
+        fflush (stdout);
+        p = fgets (buf, 16, stdin);
+        if (p == nullptr) {
+            printf("Error: fgets returned nullptr !!");
+            return;
+        }
+        if (atof(p) != 0) {
+            radiusM = atof(p);
+        }
+        printf ("\nEnter breachType: (default %x):", 0x11);
+        fflush (stdout);
+        p = fgets (buf, 16, stdin);
+        if (p == nullptr) {
+            printf("Error: fgets returned nullptr !!");
+            return;
+        }
+        if (atoi(p) != 0) {
+            breachType = (GeofenceBreachTypeMask)atoi(p);
+        }
+        printf ("\nEnter responsiveness in seconds: (default %d):", 4);
+        fflush (stdout);
+        p = fgets (buf, 16, stdin);
+        if (p == nullptr) {
+            printf("Error: fgets returned nullptr !!");
+            return;
+        }
+        if (atoi(p) != 0) {
+            responsivenessMs = atoi(p) * 1000;
+        }
+        printf ("\nEnter dwelltime in seconds: (default %d):", 4);
+        fflush (stdout);
+        p = fgets (buf, 16, stdin);
+        if (p == nullptr) {
+            printf("Error: fgets returned nullptr !!");
+            return;
+        }
+        if (atoi(p) != 0) {
+            dwellTimeMs = atoi(p) * 1000;
+        }
+        Geofence gf(latitude, longitude, radiusM, breachType, responsivenessMs,
+                dwellTimeMs);
+        addGfVec.push_back(gf);
+    }
+    pLcaClient->addGeofences(addGfVec, onGeofenceBreachCb, onCollectiveResponseCb);
+    sGeofences.assign(addGfVec.begin(), addGfVec.end());
+}
+
+void menuModifyGeofence() {
+    uint32_t count = getGeofenceCount();
+    int32_t seqNum = 0;
+    GeofenceBreachTypeMask breachType = (GeofenceBreachTypeMask) (
+            GEOFENCE_BREACH_ENTER_BIT | GEOFENCE_BREACH_EXIT_BIT);
+    uint32_t responsivenessMs = 4000;
+    uint32_t dwellTimeMs = 4000;
+    char buf[16], *p;
+    vector<Geofence> modifyGfVec;
+
+    for (int i=0; i<count; ++i) {
+        printf ("\nEnter geofence serial number, (default %d):", 0);
+        fflush (stdout);
+        p = fgets (buf, 16, stdin);
+        if (p == nullptr) {
+            printf("Error: fgets returned nullptr !!");
+            return;
+        }
+        if (atoi(p) != 0) {
+            seqNum = atoi(p);
+        }
+        printf ("\nEnter breachType: (default 0x%x):", 0x11);
+        fflush (stdout);
+        p = fgets (buf, 16, stdin);
+        if (p == nullptr) {
+            printf("Error: fgets returned nullptr !!");
+            return;
+        }
+        if (atoi(p) != 0) {
+            breachType = (GeofenceBreachTypeMask)atoi(p);
+        }
+        printf ("\nEnter responsiveness in seconds: (default %d):",
+                responsivenessMs / 1000);
+        fflush (stdout);
+        p = fgets (buf, 16, stdin);
+        if (p == nullptr) {
+            printf("Error: fgets returned nullptr !!");
+            return;
+        }
+        if (atoi(p) != 0) {
+            responsivenessMs = atoi(p) * 1000;
+        }
+        printf ("\nEnter dwelltime in seconds: (default %d):",
+                dwellTimeMs / 1000);
+        fflush (stdout);
+        p = fgets (buf, 16, stdin);
+        if (p == nullptr) {
+            printf("Error: fgets returned nullptr !!");
+            return;
+        }
+        if (atoi(p) != 0) {
+            dwellTimeMs = atoi(p) * 1000;
+        }
+        sGeofences[seqNum].setBreachType(breachType);
+        sGeofences[seqNum].setResponsiveness(responsivenessMs);
+        sGeofences[seqNum].setDwellTime(dwellTimeMs);
+        modifyGfVec.push_back(sGeofences[seqNum]);
+    }
+    pLcaClient->modifyGeofences(modifyGfVec);
+}
+
+void menuPauseGeofence() {
+    int32_t seqNum = 0;
+    uint32_t count = getGeofenceCount();
+    char buf[16], *p;
+    vector<Geofence> pauseGfVec;
+
+    for (int i=0; i<count; ++i) {
+        printf ("\nEnter geofence serial number, (default %d):", 0);
+        fflush (stdout);
+        p = fgets (buf, 16, stdin);
+        if (p == nullptr) {
+            printf("Error: fgets returned nullptr !!");
+            return;
+        }
+        if (atoi(p) != 0) {
+            seqNum = atoi(p);
+        }
+        pauseGfVec.push_back(sGeofences[seqNum]);
+    }
+    pLcaClient->pauseGeofences(pauseGfVec);
+}
+
+void menuResumeGeofence() {
+    int32_t seqNum = 0;
+    uint32_t count = getGeofenceCount();
+    char buf[16], *p;
+    vector<Geofence> resumeGfVec;
+    for (int i=0; i<count; ++i) {
+        printf ("\nEnter geofence serial number, (default %d):", 0);
+        fflush (stdout);
+        p = fgets (buf, 16, stdin);
+        if (p == nullptr) {
+            printf("Error: fgets returned nullptr !!");
+            return;
+        }
+        if (atoi(p) != 0) {
+            seqNum = atoi(p);
+        }
+        resumeGfVec.push_back(sGeofences[seqNum]);
+    }
+    pLcaClient->resumeGeofences(resumeGfVec);
+}
+
+void menuRemoveGeofence() {
+    int32_t seqNum = 0;
+    uint32_t count = getGeofenceCount();
+    char buf[16], *p;
+    vector<Geofence> removeGfVec;
+    for (int i=0; i<count; ++i) {
+        printf ("\nEnter geofence serial number, (default %d):", 0);
+        fflush (stdout);
+        p = fgets (buf, 16, stdin);
+        if (p == nullptr) {
+            printf("Error: fgets returned nullptr !!");
+            return;
+        }
+        if (atoi(p) != 0) {
+            seqNum = atoi(p);
+        }
+        removeGfVec.push_back(sGeofences[seqNum]);
+    }
+    pLcaClient->removeGeofences(removeGfVec);
+}
+void geofenceTestMenu() {
+    char buf[16], *p;
+    bool exit_loop = false;
+
+    while (!exit_loop)
+    {
+        printf ("\n\n"
+            "1: add_geofence\n"
+            "2: pause_geofence\n"
+            "3: resume geofence\n"
+            "4: modify geofence\n"
+            "5: remove geofence\n"
+            "b: back\n"
+            "q: quit\n\n"
+            "Enter Command:");
+        fflush (stdout);
+        p = fgets (buf, 16, stdin);
+        if (p == nullptr) {
+            printf("Error: fgets returned nullptr !!");
+        }
+
+        switch (p[0]) {
+        case '1':
+            menuAddGeofence();
+            break;
+        case '2':
+            menuPauseGeofence();
+            break;
+        case '3':
+            menuResumeGeofence();
+            break;
+        case '4':
+            menuModifyGeofence();
+            break;
+        case '5':
+            menuRemoveGeofence();
+            break;
+        case 'b':
+            exit_loop = true;
+            break;
+        case 'q':
+            return;
+        default:
+            printf("\ninvalid command\n");
         }
     }
 }
@@ -1238,10 +1739,10 @@ int main(int argc, char *argv[]) {
             getGtpWwanFixes(true, buf);
         } else if (strncmp(buf, CANCEL_SINGLE_GTP_WWAN_FIX,
                            strlen(CANCEL_SINGLE_GTP_WWAN_FIX)) == 0) {
-            // cancel the request
             if (!pLcaClient) {
                 pLcaClient = new LocationClientApi(onCapabilitiesCb);
             }
+            // cancel the request
             if (pLcaClient) {
                 pLcaClient->getSingleTerrestrialPosition(
                         0, TERRESTRIAL_TECH_GTP_WWAN, 0.0, nullptr, onGtpResponseCb);
@@ -1264,6 +1765,74 @@ int main(int argc, char *argv[]) {
             }
             printf("nmeaTypes 0x%x\n", nmeaTypes);
             retVal = pIntClient->configOutputNmeaTypes(nmeaTypes);
+        } else if (strncmp(buf, GET_SINGLE_FUSED_FIX,
+                           strlen(GET_SINGLE_FUSED_FIX)) == 0) {
+            printf("usage: getSingleFusedFix timeout qos fixcnt tbf\n");
+            if (!pLcaClient) {
+                pLcaClient = new LocationClientApi(onCapabilitiesCb);
+            }
+            if (pLcaClient) {
+                getFusedFixes(buf);
+            }
+        } else if (strncmp(buf, CANCEL_SINGLE_FUSED_FIX,
+                           strlen(CANCEL_SINGLE_FUSED_FIX)) == 0) {
+            printf("usage: cancelSingleFusedFix\n");
+            if (!pLcaClient) {
+                pLcaClient = new LocationClientApi(onCapabilitiesCb);
+            }
+            if (pLcaClient) {
+                pLcaClient->getSinglePosition(0, 0, nullptr, onSingleShotResponseCb);
+            }
+            singleShotFixCnt = 0;
+        } else if (strncmp(buf, CONFIG_XTRA_PARAMS, strlen(CONFIG_XTRA_PARAMS)) == 0) {
+            bool enableXtra = false;;
+            XtraConfigParams xtraConfig = {};
+            parseXtraConfig(buf, enableXtra, xtraConfig);
+            bool retval = pIntClient->configXtraParams(enableXtra, &xtraConfig);
+            if (retval == false) {
+                printf("config xtra params failed\n");
+            }
+        } else if (strncmp(buf, ENABLE_XTRA_ON_DEMAND_DOWNLOAD, strlen(ENABLE_XTRA_ON_DEMAND_DOWNLOAD)) == 0) {
+            printf("usage: enableXtraOnDemandDownload 0/1 (enable/disable xtra download) 0/1 (enable/disable) integrity\n");
+            bool enableXtra = false;;
+            XtraConfigParams xtraConfig = {};
+
+            static char *save = nullptr;
+            char* token = strtok_r(buf, " ", &save); // skip header
+
+            token = strtok_r(NULL, " ", &save);
+            if (token != NULL) {
+                enableXtra = atoi(token);
+            }
+
+            token = strtok_r(NULL, " ", &save);
+            if (token != NULL) {
+                if (enableXtra) {
+                    xtraConfig.xtraIntegrityDownloadEnable = atoi(token);
+                }
+            }
+            xtraConfig.xtraDaemonDebugLogLevel = DEBUG_LOG_LEVEL_VERBOSE;
+            printf("xtra enabled %d, integrity enabled %d, debug level set to 5\n",
+                   enableXtra, xtraConfig.xtraIntegrityDownloadEnable);
+            bool retval = pIntClient->configXtraParams(enableXtra, &xtraConfig);
+            if (retval == false) {
+                printf("config xtra params failed\n");
+            } else {
+                printf("config xtra successful\n");
+            }
+        } else if (strncmp(buf, GET_XTRA_STATUS, strlen(GET_XTRA_STATUS)) == 0) {
+            pIntClient->getXtraStatus();
+        } else if (strncmp(buf, REGISTER_XTRA_STATUS_UPDATE,
+                           strlen(REGISTER_XTRA_STATUS_UPDATE)) == 0) {
+            bool registerUpdate = false;;
+            static char *save = nullptr;
+            char* token = strtok_r(buf, " ", &save);
+            token = strtok_r(NULL, " ", &save);
+            if (token != NULL) {
+                registerUpdate = (atoi(token) != 0);
+            }
+            printf("register update %d\n", registerUpdate);
+            pIntClient->registerXtraStatusUpdate(registerUpdate);
         } else {
             int command = buf[0];
             switch(command) {
@@ -1320,6 +1889,14 @@ int main(int argc, char *argv[]) {
                            intervalmsec, distance);
                     retVal = pLcaClient->startRoutineBatchingSession(intervalmsec, distance,
                                                                      onBatchingCb, onResponseCb);
+                }
+                break;
+            case 'G':
+                if (!pLcaClient) {
+                    pLcaClient = new LocationClientApi(onCapabilitiesCb);
+                }
+                if (pLcaClient) {
+                    geofenceTestMenu();
                 }
                 break;
             case 'u':
