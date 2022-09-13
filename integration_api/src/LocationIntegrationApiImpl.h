@@ -101,7 +101,7 @@ struct PaceConfigInfo {
     bool enable;
 };
 
-struct SVConfigInfo {
+struct SvConfigInfo {
     bool             isValid;
     GnssSvTypeConfig constellationEnablementConfig;
     GnssSvIdConfig   blacklistSvConfig;
