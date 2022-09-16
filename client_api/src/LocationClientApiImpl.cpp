@@ -1351,7 +1351,7 @@ LocationClientApiImpl::LocationClientApiImpl(CapabilitiesCb capabitiescb) :
     mMsgTask = new MsgTask(name.c_str(), false);
 
     SockNodeLocal sock(LOCATION_CLIENT_API, pid, mClientId);
-    size_t pathNameLength = strlcpy(mSocketName, sock.getNodePathname().c_str(),
+    size_t pathNameLength = (size_t) strlcpy(mSocketName, sock.getNodePathname().c_str(),
                                     sizeof(mSocketName));
     if (pathNameLength >= sizeof(mSocketName)) {
         LOC_LOGe("socket name length exceeds limit of %d bytes", sizeof(mSocketName));
