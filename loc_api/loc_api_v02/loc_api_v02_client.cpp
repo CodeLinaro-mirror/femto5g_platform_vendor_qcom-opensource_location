@@ -354,6 +354,10 @@ static const locClientEventIndTableStructT locClientEventIndTable[]= {
   // supported bands and the preferred one ind
   { QMI_LOC_GNSS_BANDS_SUPPORTED_IND_V02,
     sizeof(qmiLocGnssBandsSupportedIndMsgT_v02)},
+
+  // Engine Debug Data ind
+  { QMI_LOC_ENGINE_DEBUG_DATA_IND_V02,
+    sizeof(qmiLocEngineDebugDataIndMsgT_v02)},
 };
 
 /* table to relate the respInd Id with its size */
