@@ -223,7 +223,7 @@ private:
                                  ReportCbEnumType reportCbType = REPORT_CB_TYPE_NONE);
     void updateTrackingOptionsSync(TrackingOptions& option);
     bool checkGeofenceMap(size_t count, uint32_t* ids);
-    void addGeofenceMap(uint32_t id, Geofence& geofence);
+    void addGeofenceMap(Geofence& geofence);
     void eraseGeofenceMap(size_t count, uint32_t* ids);
 
     // convenient methods
