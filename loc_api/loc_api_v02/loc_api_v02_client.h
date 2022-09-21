@@ -1153,6 +1153,10 @@ typedef union
    const qmiLocGnssBandsSupportedIndMsgT_v02* pGnssBandsSupportedIndMsg;
    /** Sent by the engine to inform the supported bands and the preferred one
     QMI_LOC_GNSS_BANDS_SUPPORTED_IND_V02 */
+
+   const qmiLocEngineDebugDataIndMsgT_v02 *pLocEngDbgDataInfoIndMsg;
+   /** Indication Message; Used by the service to
+     report engine debug information */
 }locClientEventIndUnionType;
 
 

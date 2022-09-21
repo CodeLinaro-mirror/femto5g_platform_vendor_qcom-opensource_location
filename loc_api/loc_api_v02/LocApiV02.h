@@ -381,6 +381,7 @@ private:
   /* Inform ODCPI availability to Modem */
   void wifiStatusInformSync();
 
+  void reportEngDebugDataInfo(const qmiLocEngineDebugDataIndMsgT_v02* pLocEngDbgDataInfoIndMsg);
   bool isMeasurementRefreshForSv(uint16_t gnssSvId,
                                  GnssSignalTypeMask gnssSignalTypeMask);
 
