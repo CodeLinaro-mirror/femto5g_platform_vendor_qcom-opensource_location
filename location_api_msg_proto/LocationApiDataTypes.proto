@@ -80,8 +80,8 @@ enum LocationApiDataTypesVersion {
     LOCAPI_DATA_TYPES_VER_MAJOR = 1;
     // Minor - New features / API addition, new message/elemtent addition.
     // Bump the last byte of version i.e. x.2 to x.3
-    // Minor version 18: Add integrity download control to xtra configure in LIA API
-    LOCAPI_DATA_TYPES_VER_MINOR = 18;
+    // Minor version 25: Add LOCATION_TECHNOLOGY_PROPAGATED_BIT
+    LOCAPI_DATA_TYPES_VER_MINOR = 25;
 }
 
 // ============================================================================
@@ -92,6 +92,12 @@ enum PBGnssSuplMode {
     PB_GNSS_SUPL_MODE_STANDALONE = 0;
     PB_GNSS_SUPL_MODE_MSB = 1;
     PB_GNSS_SUPL_MODE_MSA = 2;
+}
+
+enum PBFixQualityLevel {
+    PB_QUALITY_HIGH_ACCU_FIX_ONLY = 0;
+    PB_QUALITY_ANY_VALID_FIX = 1;
+    PB_QUALITY_ANY_OR_FAILED_FIX = 2;
 }
 
 /** GNSS Signal Type and RF Band */
@@ -233,6 +239,7 @@ enum PBGnssLocationInfoExtFlagMask {
     PB_GNSS_LOCATION_INFO_PROTECT_ALONG_TRACK_BIT = 0x8;  // valid protection level along track
     PB_GNSS_LOCATION_INFO_PROTECT_CROSS_TRACK_BIT = 0x10; // valid protection level cross track
     PB_GNSS_LOCATION_INFO_PROTECT_VERTICAL_BIT    = 0x20; // valid protection level vertical
+    PB_GNSS_LOCATION_INFO_DGNSS_STATION_ID_MASK_BIT = 0x40; // valid dgnss station id info
 };
 
 enum PBGnssLocationNavSolutionMask {
@@ -533,10 +540,12 @@ enum PBLocationFlagsMask {
     PB_LOCATION_HAS_SPEED_ACCURACY_BIT       = 0x0040;
     // location has valid bearing accuracy
     PB_LOCATION_HAS_BEARING_ACCURACY_BIT     = 0x0080;
-    // location has valid valid Location::timestamp
+    // location has valid Location::timestamp
     PB_LOCATION_HAS_TIMESTAMP_BIT            = 0x0100;
-    // location has valid valid elapsedRealTime
+    // location has valid elapsedRealTime
     PB_LOCATION_HAS_ELAPSED_REAL_TIME_BIT    = 0x0200;
+    // location has valid time uncertainty
+    PB_LOCATION_HAS_TIME_UNC_BIT             = 0x0400;
 }
 
 enum PBLocationTechnologyMask {
@@ -563,6 +572,8 @@ enum PBLocationTechnologyMask {
     PB_LOCATION_TECHNOLOGY_VEH_BIT      = 0x000000200;
     // Visual data
     PB_LOCATION_TECHNOLOGY_VIS_BIT      = 0x000000400;
+    // location was calculated using propagation
+    PB_LOCATION_TECHNOLOGY_PROPAGATED_BIT = 0x000000800;
 }
 
 enum PBLocationCapabilitiesMask {
@@ -645,6 +656,10 @@ enum PBLocationCapabilitiesMask {
     /** This mask indicates QDR3_C license bundle is enabled.
      *  This bundle includes features for SV Polynomial. <br/> */
     PB_LOCATION_CAPS_QWES_QDR3                         = 131072;
+    /** This mask indicates DGNSS license bundle is enabled. <br/> */
+    PB_LOCATION_CAPS_QWES_DGNSS                        = 262144;
+    /** This mask indicates Antenna info is enabled. <br/> */
+    PB_LOCATION_CAPS_ANTENNA_INFO                      = 524288;
 }
 
 enum PBGnssDataMask {
@@ -731,6 +746,13 @@ enum PBNmeaTypesMask {
     PB_NMEA_TYPE_GIGSV    = 0x800;
 }
 
+enum PBGnssGeodeticDatumType {
+    // Geodetic datum defined in World Geodetic System 1984 (WGS84) format.
+    PB_GEODETIC_TYPE_WGS_84 = 0;
+    // Geodetic datum defined for use in the GLONASS system.
+    PB_GEODETIC_TYPE_PZ_90 = 1;
+}
+
 // ============================================================================
 // Messages
 // ============================================================================
@@ -769,6 +791,8 @@ message PBLocation {
     uint64 elapsedRealTime = 13;
     /** boot timestamp uncertainty corresponding to GPS timestamp, in ns */
     uint64 elapsedRealTimeUnc = 14;
+    /** time uncertainty in msec */
+    float  timeUncMs = 15;
 }
 
 message PBLocationOptions {
@@ -784,6 +808,8 @@ message PBLocationOptions {
     //  if engine hub is running, this will be fused fix,
     //  if engine hub is not running, this will be SPE fix
     uint32 locReqEngTypeMask = 4;
+    // Fix Quality Level
+    PBFixQualityLevel qualityLevelAccepted = 5;
 }
 
 message PBAidingData {
@@ -1086,7 +1112,9 @@ message PBGnssLocationInfoNotification {
     // Cross-track protection level, validity is set via extFlags
     float    protectCrossTrack = 45;
     // Vertical component protection level, validity is set via extFlags
-    float    protectVertical = 46;;
+    float    protectVertical = 46;
+    // dgnss station id, validity is set via extFlags
+    repeated uint32 dgnssStationId = 47;
 }
 
 message PBGnssDataNotification {
@@ -1235,6 +1263,25 @@ message PBLocationSystemInfo {
     // Current leap second and leap second info
     PBLeapSecondSystemInfo   leapSecondSysInfo = 2;
 }
+
+// Disaster crisis report type from GNSS engine
+enum PBGnssDcReportType {
+    PB_GNSS_DC_REPORT_TYPE_UNDEFINED = 0;
+    // Disaster Prevention information provided by Japan Meteolorogical Agency
+    PB_QZSS_JMA_DISASTER_PREVENTION_INFO = 43;
+    //  Disaster Prevention information provided by other organizations
+    PB_QZSS_NON_JMA_DISASTER_PREVENTION_INFO = 44;
+};
+
+// Disaster crisis report from GNSS engine
+message PBGnssDcReportInfo {
+    // dc report type, as defined in standard
+    PBGnssDcReportType  dcReportType = 1;
+    // number of valid bits that client should make use in dcReportData
+    uint32              numValidBits = 2;
+    // dc report data, packed into uint8_t
+    repeated uint32     dcReportData = 3;
+};
 
 message PBGnssConfigRobustLocationVersion {
     // Major version number
@@ -1500,3 +1547,97 @@ message PBXtraStatus {
     // For all other XtraDataStatus, this field will be set to 0.
     uint32 xtraValidForHours = 3;
 };
+
+message PBTimespec {
+    //second
+    uint64 tv_sec = 1;
+    //nanosecond
+    uint64 tv_nsec = 2;
+}
+
+message PBGnssDebugLocation {
+    // If not valid, fields 2 to 6 will be set to 0
+    bool valid = 1;
+    PBLocation location = 2;
+    double verticalAccuracyMeters = 3;
+    double speedAccuracyMetersPerSecond = 4;
+    double bearingAccuracyDegrees = 5;
+    PBTimespec utcReported = 6;
+}
+
+message PBGnssDebugTime {
+    // If not valid, fields 2 to 4 will be set to 0
+    bool valid = 1;
+    int64 timeEstimate = 2;
+    float timeUncertaintyNs = 3;
+    float frequencyUncertaintyNsPerSec = 4;
+}
+
+enum PBGnssEphemerisType {
+    PB_GNSS_EPH_TYPE_UNKNOWN = 0;
+    PB_GNSS_EPH_TYPE_EPHEMERIS = 1;
+    PB_GNSS_EPH_TYPE_ALMANAC = 2;
+}
+
+enum PBGnssEphemerisSource {
+    PB_GNSS_EPH_SOURCE_UNKNOWN = 0;
+    PB_GNSS_EPH_SOURCE_DEMODULATED = 1;
+    PB_GNSS_EPH_SOURCE_SUPL_PROVIDED = 2;
+    PB_GNSS_EPH_SOURCE_OTHER_SERVER_PROVIDED = 3;
+    PB_GNSS_EPH_SOURCE_LOCAL = 4;
+}
+
+enum PBGnssEphemerisHealth {
+    PB_GNSS_EPH_HEALTH_UNKNOWN = 0;
+    PB_GNSS_EPH_HEALTH_GOOD = 1;
+    PB_GNSS_EPH_HEALTH_BAD = 2;
+}
+
+message PBGnssDebugSatelliteInfo {
+    // Unique SV Identifier
+    // For SV Range of supported constellation,
+    // please refer to the comment section of svId in GnssSv
+    uint32 svid = 1;
+    PBLocApiGnss_LocSvSystemEnumType constellation = 2;
+    PBGnssEphemerisType ephemerisType = 3;
+    PBGnssEphemerisSource ephemerisSource = 4;
+    PBGnssEphemerisHealth ephemerisHealth = 5;
+    float ephemerisAgeSeconds = 6;
+    bool serverPredictionIsAvailable = 7;
+    float serverPredictionAgeSeconds = 8;
+}
+
+message PBGnssDebugReport {
+    PBGnssDebugLocation location = 1;
+    PBGnssDebugTime time = 2;
+    repeated PBGnssDebugSatelliteInfo satelliteInfo = 3;
+}
+
+// Antenna Info messages
+message PBGnssCoordinate {
+    double x = 1;
+    double xUncertainty = 2;
+    double y = 3;
+    double yUncertainty = 4;
+    double z = 5;
+    double zUncertainty = 6;
+}
+
+message PB2DimensionDoubleVector {
+    uint32 row = 1;
+    uint32 column = 2;
+    repeated double value = 3;
+}
+
+message PBGnssAntennaInformation {
+    double carrierFrequencyMHz = 1;
+    PBGnssCoordinate phaseCenterOffsetCoordinateMillimeters = 2;
+    PB2DimensionDoubleVector phaseCenterVariationCorrectionMillimeters = 3;
+    PB2DimensionDoubleVector phaseCenterVariationCorrectionUncertaintyMillimeters = 4;
+    PB2DimensionDoubleVector signalGainCorrectionDbi = 5;
+    PB2DimensionDoubleVector signalGainCorrectionUncertaintyDbi = 6;
+}
+
+message PBAntennaInformation {
+    repeated PBGnssAntennaInformation antennaInfos = 1;
+}
