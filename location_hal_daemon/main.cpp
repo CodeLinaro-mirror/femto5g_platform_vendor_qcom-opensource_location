@@ -130,8 +130,9 @@ int main(int argc, char *argv[])
 
     LOC_LOGd("starting loc_hal_daemon");
 
-#ifdef INIT_SYSTEM_SYSV
+#if defined(INIT_SYSTEM_SYSV) || defined(OPENWRT_BUILD)
     // set supplementary groups for sysvinit
+    // For openwrt, procd does not have support for supplementary groups. So set here.
     // For systemd, common supplementary groups are set via service files
     char groupNames[LOC_MAX_PARAM_NAME] = "gps radio diag powermgr locclient inet vnw";
 
@@ -182,7 +183,7 @@ int main(int argc, char *argv[])
 
         // Set access to netmgr (QCMAP)
         struct __user_cap_data_struct cap_data = {};
-        cap_data.permitted = (1 << CAP_NET_BIND_SERVICE) | (1 << CAP_NET_ADMIN);
+        cap_data.permitted = (1<<CAP_SETGID) | (1 << CAP_NET_BIND_SERVICE) | (1 << CAP_NET_ADMIN);
         cap_data.effective = cap_data.permitted;
         LOC_LOGv("cap_data.permitted: %d", (int)cap_data.permitted);
         if(capset(&cap_hdr, &cap_data)) {
