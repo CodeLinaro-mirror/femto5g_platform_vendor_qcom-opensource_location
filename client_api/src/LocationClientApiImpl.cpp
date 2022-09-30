@@ -1845,8 +1845,10 @@ bool LocationClientApiImpl::checkGeofenceMap(size_t count, uint32_t* ids) {
     return true;
 }
 
-void LocationClientApiImpl::addGeofenceMap(uint32_t id, Geofence& geofence) {
-    mGeofenceMap.insert(make_pair(id, geofence));
+void LocationClientApiImpl::addGeofenceMap(Geofence& geofence) {
+    if (geofence.mGeofenceImpl != nullptr) {
+        mGeofenceMap.insert(make_pair(geofence.mGeofenceImpl->getClientId(), geofence));
+    }
 }
 
 void LocationClientApiImpl::eraseGeofenceMap(size_t count, uint32_t* ids) {
@@ -1928,11 +1930,10 @@ void LocationClientApiImpl::addGeofences(const ClientCallbacks& cbs,
                     gfInfos[i].radius = mGeofences[i].getRadius();
                     gfInfos[i].size = sizeof(gfInfos[i]);
 
-                    std::shared_ptr<GeofenceImpl> gfImpl(new GeofenceImpl(&mGeofences[i]));
-                    gfImpl->bindGeofence(&mGeofences[i]);
-                    mApiImpl->mLastAddedClientIds.push_back(gfImpl->getClientId());
-                    mApiImpl->addGeofenceMap(gfImpl->getClientId(), mGeofences[i]);
-                    LOC_LOGd("Geofence LastAddedClientId: %d", gfImpl->getClientId());
+                    uint32_t clientId = mGeofences[i].mGeofenceImpl->getClientId();
+                    mApiImpl->mLastAddedClientIds.push_back(clientId);
+                    mApiImpl->addGeofenceMap(mGeofences[i]);
+                    LOC_LOGd("Geofence LastAddedClientId: %u", clientId);
                 }
                 mApiImpl->addGeofences(count, reinterpret_cast<GeofenceOption*>(gfOptions),
                                        reinterpret_cast<GeofenceInfo*>(gfInfos));
@@ -2486,6 +2487,34 @@ void LocationClientApiImpl::capabilitesCallback(ELocMsgID msgId, const void* msg
         startBatching(batchOption);
     }
 
+    if (mGeofenceMap.size() > 0) {
+        size_t count = mGeofenceMap.size();
+        GeofenceOption* gfOptions = (GeofenceOption*)malloc(sizeof(GeofenceOption) * count);
+        GeofenceInfo* gfInfos = (GeofenceInfo*)malloc(sizeof(GeofenceInfo) * count);
+        if ((gfOptions != nullptr) && (gfInfos != nullptr)) {
+            int i = 0;
+            for (auto it = mGeofenceMap.begin(); it != mGeofenceMap.end(); ++it) {
+                gfOptions[i].breachTypeMask = it->second.getBreachType();
+                gfOptions[i].responsiveness = it->second.getResponsiveness();
+                gfOptions[i].dwellTime = it->second.getDwellTime();
+                gfOptions[i].size = sizeof(gfOptions[i]);
+
+                gfInfos[i].latitude = it->second.getLatitude();
+                gfInfos[i].longitude = it->second.getLongitude();
+                gfInfos[i].radius = it->second.getRadius();
+                gfInfos[i].size = sizeof(gfInfos[i]);
+                ++i;
+            }
+            addGeofences(count, gfOptions, gfInfos);
+        }
+        if (gfOptions) {
+            free(gfOptions);
+        }
+        if (gfInfos) {
+            free(gfInfos);
+        }
+    }
+
     // hal daemon restarts
     // inform client that gtp fix request fails and reset the variables
     if (mSingleTerrestrialPosRespCb) {
@@ -2677,6 +2706,9 @@ void IpcListener::onReceive(const char* data, uint32_t length,
                 if (mApiImpl.mCollectiveResCb) {
                     mApiImpl.mCollectiveResCb(responses);
                 }
+                if (mApiImpl.mPositionSessionResponseCbPending) {
+                    mApiImpl.mPositionSessionResponseCbPending = false;
+                }
                 break;
             }
 
@@ -2767,13 +2799,13 @@ void IpcListener::onReceive(const char* data, uint32_t length,
                         geofences.push_back(mApiImpl.mGeofenceMap.at(
                                                 pGfBreachIndMsg->gfBreachNotification.id[i]));
                     }
+                    Location location = parseLocation(
+                            pGfBreachIndMsg->gfBreachNotification.location);
+                    mApiImpl.logLocation(location, LOC_REPORT_TRIGGER_GEOFENCE_SESSION);
                     if (mApiImpl.mGfBreachCb) {
-                        mApiImpl.mGfBreachCb(geofences,
-                                             parseLocation(
-                                                 pGfBreachIndMsg->gfBreachNotification.location),
-                                             GeofenceBreachTypeMask(
-                                                 pGfBreachIndMsg->gfBreachNotification.type),
-                                             pGfBreachIndMsg->gfBreachNotification.timestamp);
+                        mApiImpl.mGfBreachCb(geofences, location,
+                                GeofenceBreachTypeMask(pGfBreachIndMsg->gfBreachNotification.type),
+                                pGfBreachIndMsg->gfBreachNotification.timestamp);
                     }
                 }
                 break;
