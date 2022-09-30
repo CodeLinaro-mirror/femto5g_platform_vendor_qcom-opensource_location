@@ -79,13 +79,8 @@ enum LocationApiDataTypesVersion {
     LOCAPI_DATA_TYPES_VER_MAJOR = 1;
     // Minor - New features / API addition, new message/elemtent addition.
     // Bump the last byte of version i.e. x.2 to x.3
-<<<<<<< HEAD
-    // Minor version 24: Add Geodetic datum type
-    LOCAPI_DATA_TYPES_VER_MINOR = 24;
-=======
     // Minor version 25: Add LOCATION_TECHNOLOGY_PROPAGATED_BIT
     LOCAPI_DATA_TYPES_VER_MINOR = 25;
->>>>>>> 8a4f783b (Add LOCATION_TECHNOLOGY_PROPAGATED_BIT)
 }
 
 // ============================================================================
