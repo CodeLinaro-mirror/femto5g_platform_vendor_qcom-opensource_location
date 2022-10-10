@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -3972,6 +3972,34 @@ void  LocApiV02 :: reportSvPolynomial(const qmiLocEventGnssSvPolyIndMsgT_v02 *gn
         if (1 == gnss_sv_poly_ptr->bdsIscB2bi_valid) {
             svPolynomial.is_valid |= ULP_GNSS_SV_POLY_BIT_BDS_ISC_B2BI;
             svPolynomial.bdsIscB2bi = gnss_sv_poly_ptr->bdsIscB2bi;
+        }
+
+        if (1 == gnss_sv_poly_ptr->polyOrder_valid) {
+            svPolynomial.is_valid |= ULP_GNSS_SV_POLY_BIT_POLY_ORDER;
+            svPolynomial.polyOrder = gnss_sv_poly_ptr->polyOrder;
+        }
+        if (GNSS_SV_POLY_ORDER_SIZE_DEFAULT < svPolynomial.polyOrder &&
+                GNSS_SV_POLY_ORDER_SIZE_MAX >= svPolynomial.polyOrder) {
+            if (1 == gnss_sv_poly_ptr->polyCoeffXYZ_valid) {
+                svPolynomial.is_valid |= ULP_GNSS_SV_POLY_BIT_POLYCOEFF_XYZ;
+                for (int i = 0; i < gnss_sv_poly_ptr->polyCoeffXYZ_len &&
+                        i < GNSS_SV_POLY_XYZ_COEFF_SIZE_MAX; i++) {
+                    svPolynomial.polyCoeffXYZ[i] = gnss_sv_poly_ptr->polyCoeffXYZ[i];
+                }
+            }
+
+            if (1 == gnss_sv_poly_ptr->polyClockBias_valid) {
+                svPolynomial.is_valid |= ULP_GNSS_SV_POLY_BIT_POLYCOEFF_CLKBIAS;
+                for (int i =0; i < gnss_sv_poly_ptr->polyClockBias_len &&
+                        i < GNSS_SV_POLY_CLKBIAS_COEFF_SIZE_MAX; i++) {
+                    svPolynomial.polyClockBias[i] = gnss_sv_poly_ptr->polyClockBias[i];
+                }
+            }
+
+            if (1 == gnss_sv_poly_ptr->validDuration_valid) {
+                svPolynomial.is_valid |= ULP_GNSS_SV_POLY_BIT_POLY_DURATION;
+                svPolynomial.validDuration = gnss_sv_poly_ptr->validDuration;
+            }
         }
 
         //Report SV Poly
