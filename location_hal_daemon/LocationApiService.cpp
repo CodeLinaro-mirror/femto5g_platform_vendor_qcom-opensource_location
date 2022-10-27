@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -871,7 +871,7 @@ void LocationApiService::stopTracking(LocAPIStopTrackingReqMsg *pMsg) {
     if (pMsg->clearSubscriptions) {
         pClient->unsubscribeLocationSessionCb();
     }
-    pClient->stopTracking();
+    pClient->stopTracking(!(pMsg->clearSubscriptions));
     LOC_LOGi(">-- stopping session");
 }
 
