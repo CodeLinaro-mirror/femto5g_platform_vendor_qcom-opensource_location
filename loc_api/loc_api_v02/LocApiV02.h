@@ -25,11 +25,10 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -61,7 +60,6 @@ IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-
 #ifndef LOC_API_V_0_2_H
 #define LOC_API_V_0_2_H
 
@@ -215,6 +213,7 @@ private:
 
   // Below two member variables are for elapsedRealTime calculation
   ElapsedRealtimeEstimator mMeasElapsedRealTimeCal;
+  GnssMeasurementsNotification m1HzMeasurementsNotify;
 
   /* Convert event mask from loc eng to loc_api_v02 format */
   static locClientEventMaskType convertLocClientEventMask(LOC_API_ADAPTER_EVENT_MASK_T mask);
@@ -408,6 +407,12 @@ private:
 
   /* report disaster and crisis message */
   void reportDcMessage(const qmiLocEventDcReportIndMsgT_v02* pDcReportIndMsg);
+
+  bool isMeasurementRefreshForSv(uint16_t gnssSvId,
+                                 GnssSignalTypeMask gnssSignalTypeMask);
+
+  bool isTOAValid(const qmiLocEventPositionReportIndMsgT_v02 *location_report_ptr,
+          const GnssMeasurementsNotification *pOneHzMeasurements);
 
 protected:
   virtual enum loc_api_adapter_err
