@@ -1537,6 +1537,10 @@ uint32_t LocationApiPbMsgConv::getPBMaskForLocationTechnologyMask(
     if (locTechMask & LOCATION_TECHNOLOGY_VIS_BIT) {
         pbLocTechMask |= PB_LOCATION_TECHNOLOGY_VIS_BIT;
     }
+    if (locTechMask & LOCATION_TECHNOLOGY_PROPAGATED_BIT) {
+        pbLocTechMask |= PB_LOCATION_TECHNOLOGY_PROPAGATED_BIT;
+    }
+
     LocApiPb_LOGv("LocApiPB: locTechMask:%x, pbLocTechMask:%x", locTechMask, pbLocTechMask);
     return pbLocTechMask;
 }
@@ -2638,6 +2642,9 @@ uint32_t LocationApiPbMsgConv::getLocationTechnologyMaskFromPB(
     }
     if (pbLocTechMask & PB_LOCATION_TECHNOLOGY_VIS_BIT) {
         locTechMask |= LOCATION_TECHNOLOGY_VIS_BIT;
+    }
+    if (pbLocTechMask & PB_LOCATION_TECHNOLOGY_PROPAGATED_BIT) {
+        locTechMask |= LOCATION_TECHNOLOGY_PROPAGATED_BIT;
     }
     LocApiPb_LOGv("LocApiPB: pbLocTechMask:%x, locTechMask:%x", pbLocTechMask, locTechMask);
     return locTechMask;
