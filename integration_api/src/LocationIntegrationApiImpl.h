@@ -75,13 +75,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <LocationApiMsg.h>
 #include <LocationApiPbMsgConv.h>
 #include <queue>
-
-#ifdef NO_UNORDERED_SET_OR_MAP
-    #include <map>
-    #define unordered_map map
-#else
-    #include <unordered_map>
-#endif
+#include <unordered_map>
 
 using namespace std;
 using namespace loc_util;
@@ -131,6 +125,7 @@ struct GtpUserConsentConfigInfo{
 struct NmeaConfigInfo{
     bool isValid;
     GnssNmeaTypesMask enabledNmeaTypes;
+    GnssGeodeticDatumType nmeaDatumType;
 };
 
 struct ProtoMsgInfo{
@@ -188,7 +183,8 @@ public:
 
     uint32_t setUserConsentForTerrestrialPositioning(bool userConsent);
 
-    uint32_t configOutputNmeaTypes(GnssNmeaTypesMask enabledNmeaTypes) override;
+    uint32_t configOutputNmeaTypes(GnssNmeaTypesMask enabledNmeaTypes,
+                                   GnssGeodeticDatumType nmeaDatumType) override;
 
     uint32_t configXtraParams(bool enable, const ::XtraConfigParams& configParams);
     uint32_t getXtraStatus();
@@ -203,7 +199,7 @@ private:
     void processHalReadyMsg();
 
     void addConfigReq(LocConfigTypeEnum configType);
-    void processQueuedReqs();
+    bool processQueuedReqs(); // return value indicates whether queue is empty or not
     void flushConfigReqs();
     void processConfigRespCb(const LocAPIGenericRespMsg* pRespMsg);
     void processGetRobustLocationConfigRespCb(

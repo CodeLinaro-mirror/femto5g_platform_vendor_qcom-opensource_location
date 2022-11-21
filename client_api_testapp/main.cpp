@@ -79,13 +79,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <loc_cfg.h>
 #include <loc_misc_utils.h>
 #include <thread>
-
-#ifdef NO_UNORDERED_SET_OR_MAP
-    #include <map>
-    #define unordered_map map
-#else
-    #include <unordered_map>
-#endif
+#include <unordered_map>
 
 #include <LocationClientApi.h>
 #include <LocationIntegrationApi.h>
@@ -1488,10 +1482,21 @@ int main(int argc, char *argv[]) {
             char* token = strtok_r(buf, " ", &save);
             token = strtok_r(NULL, " ", &save);
             if (token != NULL) {
-                nmeaTypes = (NmeaTypesMask) strtoul(token, &save, 10);
+                nmeaTypes = (NmeaTypesMask) strtoul(token, NULL, 10);
+                if (nmeaTypes == 0) {
+                    nmeaTypes = (NmeaTypesMask) strtoul(token, NULL, 16);
+                }
             }
-            printf("nmeaTypes 0x%x\n", nmeaTypes);
-            retVal = pIntClient->configOutputNmeaTypes(nmeaTypes);
+            GeodeticDatumType nmeaDatumType = GEODETIC_TYPE_WGS_84;
+            token = strtok_r(NULL, " ", &save);
+            if (token != NULL) {
+                if (strtoul(token, NULL, 10) == 1) {
+                    nmeaDatumType = GEODETIC_TYPE_PZ_90;
+                }
+            }
+
+            printf("nmeaTypes 0x%x, geodetic type %d\n", nmeaTypes, nmeaDatumType);
+            pIntClient->configOutputNmeaTypes(nmeaTypes, nmeaDatumType);
         } else if (strncmp(buf, GET_SINGLE_FUSED_FIX,
                            strlen(GET_SINGLE_FUSED_FIX)) == 0) {
             printf("usage: getSingleFusedFix timeout qos fixcnt tbf\n");

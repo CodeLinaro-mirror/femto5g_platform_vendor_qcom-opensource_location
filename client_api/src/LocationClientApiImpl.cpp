@@ -1633,10 +1633,10 @@ uint32_t LocationClientApiImpl::startTrackingSync(TrackingOptions& option) {
                 bool rc = sendMessage(
                    reinterpret_cast<uint8_t *>((uint8_t *)pbStr.c_str()), pbStr.size());
                 LOC_LOGd(">>> StartTrackingReq Interval=%d Distance=%d,"
-                         " locReqEngTypeMask=0x%x",
+                         " locReqEngTypeMask=0x%x rc=%d",
                          mLocationOptions.minInterval,
                          mLocationOptions.minDistance,
-                         mLocationOptions.locReqEngTypeMask);
+                         mLocationOptions.locReqEngTypeMask, rc);
             } else {
                 LOC_LOGe("LocAPIStartTrackingReqMsg serializeToProtobuf failed");
             }
@@ -1862,8 +1862,9 @@ void LocationClientApiImpl::updateTrackingOptionsSync(TrackingOptions& option,
         if (msg.serializeToProtobuf(pbStr)) {
             bool rc = sendMessage(reinterpret_cast<uint8_t *>((uint8_t *)pbStr.c_str()),
                     pbStr.size());
-            LOC_LOGd(">>> updateTrackingOptionsSync Interval=%d Distance=%d, reqTypeMask=0x%x",
-                    option.minInterval, option.minDistance, option.locReqEngTypeMask);
+            LOC_LOGd(">>> updateTrackingOptionsSync Interval=%d Distance=%d, reqTypeMask=0x%x "
+                    "rc=%d",
+                    option.minInterval, option.minDistance, option.locReqEngTypeMask, rc);
         } else {
             LOC_LOGe("LocAPIUpdateTrackingOptionsReqMsg serializeToProtobuf failed");
         }
@@ -1906,9 +1907,9 @@ uint32_t LocationClientApiImpl::startBatchingSync(BatchingOptions& batchOptions)
         if (msg.serializeToProtobuf(pbStr)) {
             bool rc = sendMessage(
             reinterpret_cast<uint8_t *>((uint8_t *)pbStr.c_str()), pbStr.size());
-            LOC_LOGd(">>> StartBatchingReq Interval=%d Distance=%d BatchingMode=%d",
+            LOC_LOGd(">>> StartBatchingReq Interval=%d Distance=%d BatchingMode=%d rc=%d",
                      mBatchingOptions.minInterval, mBatchingOptions.minDistance,
-                     mBatchingOptions.batchingMode);
+                     mBatchingOptions.batchingMode, rc);
         } else {
             LOC_LOGe("LocAPIStartBatchingReqMsg serializeToProtobuf failed");
         }
@@ -1991,9 +1992,9 @@ void LocationClientApiImpl::updateBatchingOptions(uint32_t id, BatchingOptions& 
         if (msg.serializeToProtobuf(pbStr)) {
             bool rc = sendMessage(
                     reinterpret_cast<uint8_t *>((uint8_t *)pbStr.c_str()), pbStr.size());
-            LOC_LOGd(">>> StartBatchingReq Interval=%d Distance=%d BatchingMode=%d",
+            LOC_LOGd(">>> StartBatchingReq Interval=%d Distance=%d BatchingMode=%d rc=%d",
                      mBatchingOptions.minInterval, mBatchingOptions.minDistance,
-                     mBatchingOptions.batchingMode);
+                     mBatchingOptions.batchingMode, rc);
         } else {
             LOC_LOGe("LocAPIUpdateBatchingOptionsReqMsg serializeToProtobuf failed");
         }
@@ -2053,7 +2054,7 @@ uint32_t* LocationClientApiImpl::addGeofences(size_t count, GeofenceOption* opti
     if (msg.serializeToProtobuf(pbStr)) {
         bool rc = sendMessage(reinterpret_cast<uint8_t *>((uint8_t *)pbStr.c_str()),
                               pbStr.size());
-        LOC_LOGd(">>> AddGeofencesReq count=%" PRIu32"", gfCountUsed);
+        LOC_LOGd(">>> AddGeofencesReq count=%" PRIu32" rc=%d", gfCountUsed, rc);
     } else {
         LOC_LOGe("LocAPIAddGeofencesReqMsg serializeToProtobuf failed");
     }
@@ -2146,7 +2147,7 @@ void LocationClientApiImpl::removeGeofences(size_t count, uint32_t* ids) {
                 if (msg.serializeToProtobuf(pbStr)) {
                     bool rc = mApiImpl->sendMessage(
                             reinterpret_cast<uint8_t *>((uint8_t *)pbStr.c_str()), pbStr.size());
-                    LOC_LOGd(">>> RemoveGeofencesReq count=%" PRIu32"", gfCountUsed);
+                    LOC_LOGd(">>> RemoveGeofencesReq count=%" PRIu32" rc=%d", gfCountUsed, rc);
                 } else {
                     LOC_LOGe("LocAPIRemoveGeofencesReqMsg serializeToProtobuf failed");
                 }
@@ -2190,7 +2191,7 @@ void LocationClientApiImpl::modifyGeofences(
                 if (msg.serializeToProtobuf(pbStr)) {
                     bool rc = mApiImpl->sendMessage(
                             reinterpret_cast<uint8_t *>((uint8_t *)pbStr.c_str()), pbStr.size());
-                    LOC_LOGd(">>> ModifyGeofencesReq count=%" PRIu32 "", gfCountUsed);
+                    LOC_LOGd(">>> ModifyGeofencesReq count=%" PRIu32 " rc=%d", gfCountUsed, rc);
                 } else {
                     LOC_LOGe("LocAPIModifyGeofencesReqMsg serializeToProtobuf failed");
                 }
@@ -2231,7 +2232,7 @@ void LocationClientApiImpl::pauseGeofences(size_t count, uint32_t* ids) {
                 if (msg.serializeToProtobuf(pbStr)) {
                     bool rc = mApiImpl->sendMessage(
                             reinterpret_cast<uint8_t *>((uint8_t *)pbStr.c_str()), pbStr.size());
-                    LOC_LOGd(">>> PauseGeofencesReq count=%" PRIu32"", gfCountUsed);
+                    LOC_LOGd(">>> PauseGeofencesReq count=%" PRIu32" rc=%d", gfCountUsed, rc);
                 } else {
                     LOC_LOGe("LocAPIPauseGeofencesReqMsg serializeToProtobuf failed");
                 }
@@ -2270,7 +2271,7 @@ void LocationClientApiImpl::resumeGeofences(size_t count, uint32_t* ids) {
                 if (msg.serializeToProtobuf(pbStr)) {
                     bool rc = mApiImpl->sendMessage(
                             reinterpret_cast<uint8_t *>((uint8_t *)pbStr.c_str()), pbStr.size());
-                    LOC_LOGd(">>> ResumeGeofencesReq count=%" PRIu32"", gfCountUsed);
+                    LOC_LOGd(">>> ResumeGeofencesReq count=%" PRIu32"rc=%d", gfCountUsed, rc);
                 } else {
                     LOC_LOGe("LocAPIResumeGeofencesReqMsg serializeToProtobuf failed");
                 }
@@ -2300,7 +2301,7 @@ void LocationClientApiImpl::updateNetworkAvailability(bool available) {
             if (msg.serializeToProtobuf(pbStr)) {
                 bool rc = mApiImpl->sendMessage(
                         reinterpret_cast<uint8_t *>((uint8_t *)pbStr.c_str()), pbStr.size());
-                LOC_LOGd(">>> UpdateNetworkAvailabilityReq available=%d ", mAvailable);
+                LOC_LOGd(">>> UpdateNetworkAvailabilityReq available=%d rc=%d", mAvailable, rc);
             } else {
                 LOC_LOGe("LocAPIUpdateNetworkAvailabilityReqMsg serializeToProtobuf failed");
             }
@@ -2824,7 +2825,6 @@ void IpcListener::onReceive(const char* data, uint32_t length,
 
             ELocMsgID eLocMsgid = mApiImpl.mPbufMsgConv.getEnumForPBELocMsgID(pbLocApiMsg.msgid());
             string sockName = pbLocApiMsg.msocketname();
-            uint32_t msgVer = pbLocApiMsg.msgversion();
             uint32_t payloadSize = pbLocApiMsg.payloadsize();
             // pbLocApiMsg.payload() contains the payload data.
 
@@ -2938,8 +2938,6 @@ void IpcListener::onReceive(const char* data, uint32_t length,
                         (mApiImpl.mPositionSessionResponseCbPending == false) &&
                         (mApiImpl.mCallbacksMask & E_LOC_CB_TRACKING_BIT)) {
                     const LocAPILocationIndMsg* pLocationIndMsg = (LocAPILocationIndMsg*)(&msg);
-                    Location location = LocationClientApiImpl::parseLocation(
-                            pLocationIndMsg->locationNotification);
                     if (mApiImpl.mLocationCbs.trackingCb) {
                         mApiImpl.mLocationCbs.trackingCb(pLocationIndMsg->locationNotification);
                     }
@@ -3136,7 +3134,6 @@ void IpcListener::onReceive(const char* data, uint32_t length,
                     }
                     LocAPIDataIndMsg msg(sockName.c_str(), pbLocApiDataIndMsg,
                             &mApiImpl.mPbufMsgConv);
-                    const LocAPIDataIndMsg* pDataIndMsg = (LocAPIDataIndMsg*)(&msg);
                     mApiImpl.mLocationCbs.gnssDataCb(msg.gnssDataNotification);
                 }
                 break;
