@@ -1429,10 +1429,14 @@ void LocationClientApiImpl::updateCallbacks(LocationCallbacks& callbacks) {
     //convert callbacks to callBacksMask
     LocationCallbacksMask callBacksMask = 0;
     if (callbacks.trackingCb) {
-        callBacksMask |= E_LOC_CB_TRACKING_BIT;
+        callBacksMask |= E_LOC_CB_DISTANCE_BASED_TRACKING_BIT;
     }
     if (callbacks.gnssLocationInfoCb) {
-        callBacksMask |= E_LOC_CB_GNSS_LOCATION_INFO_BIT;
+        if (mLocationCb) {
+            callBacksMask |= E_LOC_CB_SIMPLE_LOCATION_INFO_BIT;
+        } else {
+            callBacksMask |= E_LOC_CB_GNSS_LOCATION_INFO_BIT;
+        }
     }
     if (callbacks.engineLocationsInfoCb) {
         callBacksMask |= E_LOC_CB_ENGINE_LOCATIONS_INFO_BIT;
@@ -2547,8 +2551,10 @@ void IpcListener::onReceive(const char* data, uint32_t length,
                 }
                 LocAPILocationIndMsg msg(sockName.c_str(), pbLocApiLocIndMsg,
                         &mApiImpl.mPbufMsgConv);
+                LocationCallbacksMask tempMask =
+                        (E_LOC_CB_DISTANCE_BASED_TRACKING_BIT | E_LOC_CB_SIMPLE_LOCATION_INFO_BIT);
                 if ((mApiImpl.mSessionId != LOCATION_CLIENT_SESSION_ID_INVALID) &&
-                        (mApiImpl.mCallbacksMask & E_LOC_CB_TRACKING_BIT)) {
+                        (mApiImpl.mCallbacksMask & tempMask)) {
                     const LocAPILocationIndMsg* pLocationIndMsg = (LocAPILocationIndMsg*)(&msg);
                     Location location = parseLocation(pLocationIndMsg->locationNotification);
                     if (mApiImpl.mLocationCb) {
