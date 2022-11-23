@@ -1062,7 +1062,7 @@ struct Location {
 /** Specify latitude, longitude and altitude info of location.
  *  <br/>
  */
-typedef struct {
+struct LLAInfo {
     /**  Latitude, in unit of degrees, range [-90.0, 90.0]. <br/> */
     double latitude;
 
@@ -1077,7 +1077,7 @@ typedef struct {
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
     string toString() const;
-} LLAInfo;
+};
 
 /** Specify various status that contributes to the DR poisition
  *  engine. <br/> */

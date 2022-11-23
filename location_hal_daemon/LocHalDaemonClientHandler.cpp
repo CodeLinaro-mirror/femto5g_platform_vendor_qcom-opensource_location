@@ -94,7 +94,7 @@ void LocHalDaemonClientHandler::updateSubscription(uint32_t mask) {
         onCollectiveResponseCallback(count, errs, ids);
     };
 
-    if (mSubscriptionMask & E_LOC_CB_DISTANCE_BASED_TRACKING_BIT) {
+    if (mSubscriptionMask & E_LOC_CB_TRACKING_BIT) {
         mCallbacks.trackingCb = [this](Location location) {
             onTrackingCb(location);
         };
@@ -796,7 +796,7 @@ void LocHalDaemonClientHandler::onTrackingCb(Location location) {
     LOC_LOGd("--< onTrackingCb");
 
     if ((nullptr != mIpcSender) &&
-            (mSubscriptionMask & E_LOC_CB_DISTANCE_BASED_TRACKING_BIT)) {
+            (mSubscriptionMask & E_LOC_CB_TRACKING_BIT)) {
         // broadcast
         string pbStr;
         LocAPILocationIndMsg msg(SERVICE_NAME, location, &mService->mPbufMsgConv);
