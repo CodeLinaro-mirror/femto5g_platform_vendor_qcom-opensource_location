@@ -71,6 +71,12 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <log_util.h>
 #include <gps_extended_c.h>
 
+static uint32_t sSleepTime = 800000;
+
+static const loc_param_s_type gConfigTable[] = {
+    {"QRTRWATCHER_DELAY_MICROSECOND", &sSleepTime, NULL, 'n'}
+};
+
 namespace location_integration {
 
 /******************************************************************************
@@ -213,7 +219,7 @@ public:
                     LOC_LOGi("LocIpcQrtrWatcher:: HAL Daemon ServiceStatus::UP");
                     auto sender = mWatcher.mIpcSender.lock();
                     if (nullptr != sender && sender->copyDestAddrFrom(mRefSender)) {
-                        sleep(2);
+                        usleep(sSleepTime);
                         auto listener = mWatcher.mIpcListener.lock();
                         if (nullptr != listener) {
                             LocAPIHalReadyIndMsg msg(SERVICE_NAME, &mWatcher.mPbufMsgConv);
@@ -265,6 +271,8 @@ LocationIntegrationApiImpl::LocationIntegrationApiImpl(LocIntegrationCbs& integr
     if (integrationClientAllowed() == false) {
         return;
     }
+    // read configuration file
+    UTIL_READ_CONF(LOC_PATH_GPS_CONF, gConfigTable);
 
     mMsgTask = new MsgTask("IntApiMsgTask", false);
     // get pid to generate sokect name
