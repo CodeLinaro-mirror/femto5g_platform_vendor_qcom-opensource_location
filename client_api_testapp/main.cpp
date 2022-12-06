@@ -187,6 +187,7 @@ enum TrackingSessionType {
 #define CONFIG_XTRA_PARAMS         "configXtraParams"
 #define GET_XTRA_STATUS             "getXtraStatus"
 #define REGISTER_XTRA_STATUS_UPDATE "registerXtraUpdateStatus"
+#define GET_ENERGY_CONSUMED        "getEnergyConsumed"
 
 // debug utility
 static uint64_t getTimestampMs() {
@@ -419,6 +420,12 @@ static void onGetXtraStatusCb(XtraStatusUpdateTrigger updateTrigger, const XtraS
            xtraStatus.xtraValidForHours);
 }
 
+static void onGetGnssEnergyConsumedCb(const GnssEnergyConsumedInfo& gnssEneryConsumed) {
+    printf("<<< onGetGnssEnergyConsumedCb energy: (valid=%d, value=%" PRIu64")",
+            (gnssEneryConsumed.flags & ENERGY_CONSUMED_SINCE_FIRST_BOOT_BIT) != 0,
+            gnssEneryConsumed.totalEnergyConsumedSinceFirstBoot);
+}
+
 static void printHelp() {
     printf("\n************* options *************\n");
     printf("e: Concurrent engine report session with 100 ms interval\n");
@@ -457,6 +464,7 @@ static void printHelp() {
     printf("%s: config xtra params \n", CONFIG_XTRA_PARAMS);
     printf("%s: get xtra status \n", GET_XTRA_STATUS);
     printf("%s: register xtra status update \n", REGISTER_XTRA_STATUS_UPDATE);
+    printf("%s: get gnss energy consumed \n", GET_ENERGY_CONSUMED);
 }
 
 void setRequiredPermToRunAsLocClient()
@@ -1050,6 +1058,7 @@ int main(int argc, char *argv[]) {
 
     // main loop
     while (1) {
+        bool retVal = true;
         char buf[1000];
         memset (buf, 0, sizeof(buf));
         fgets(buf, sizeof(buf), stdin);
@@ -1090,14 +1099,14 @@ int main(int argc, char *argv[]) {
                 }
             }
             printf("tuncThreshold %f, energyBudget %d\n", tuncThreshold, energyBudget);
-            pIntClient->configConstrainedTimeUncertainty(
+            retVal = pIntClient->configConstrainedTimeUncertainty(
                     true, tuncThreshold, energyBudget);
         } else if (strncmp(buf, DISABLE_PACE, strlen(DISABLE_TUNC)) == 0) {
-            pIntClient->configPositionAssistedClockEstimator(false);
+            retVal = pIntClient->configPositionAssistedClockEstimator(false);
         } else if (strncmp(buf, ENABLE_PACE, strlen(ENABLE_TUNC)) == 0) {
-            pIntClient->configPositionAssistedClockEstimator(true);
+            retVal = pIntClient->configPositionAssistedClockEstimator(true);
         } else if (strncmp(buf, DELETE_ALL, strlen(DELETE_ALL)) == 0) {
-            pIntClient->deleteAllAidingData();
+            retVal = pIntClient->deleteAllAidingData();
         } else if (strncmp(buf, DELETE_AIDING_DATA, strlen(DELETE_AIDING_DATA)) == 0) {
             uint32_t aidingDataMask = 0;
             printf("deleteAidingData 1 (eph) 2 (qdr calibration data) 3 (eph+calibraiton dat)\n");
@@ -1107,9 +1116,9 @@ int main(int argc, char *argv[]) {
             if (token != NULL) {
                 aidingDataMask = atoi(token);
             }
-            pIntClient->deleteAidingData((AidingDataDeletionMask) aidingDataMask);
+            retVal = pIntClient->deleteAidingData((AidingDataDeletionMask) aidingDataMask);
         } else if (strncmp(buf, RESET_SV_CONFIG, strlen(RESET_SV_CONFIG)) == 0) {
-            pIntClient->configConstellations(nullptr);
+            retVal = pIntClient->configConstellations(nullptr);
         } else if (strncmp(buf, CONFIG_SV, strlen(CONFIG_SV)) == 0) {
             bool resetConstellation = false;
             LocConfigBlacklistedSvIdList svList;
@@ -1118,11 +1127,11 @@ int main(int argc, char *argv[]) {
             if (resetConstellation) {
                 svListPtr = nullptr;
             }
-            pIntClient->configConstellations(svListPtr);
+            retVal = pIntClient->configConstellations(svListPtr);
         } else if (strncmp(buf, CONFIG_LEVER_ARM, strlen(CONFIG_LEVER_ARM)) == 0) {
             LeverArmParamsMap configInfo;
             parseLeverArm(buf, configInfo);
-            pIntClient->configLeverArm(configInfo);
+            retVal = pIntClient->configLeverArm(configInfo);
         } else if (strncmp(buf, CONFIG_ROBUST_LOCATION, strlen(CONFIG_ROBUST_LOCATION)) == 0) {
             // get enable and enableForE911
             static char *save = nullptr;
@@ -1139,10 +1148,10 @@ int main(int argc, char *argv[]) {
                 }
             }
             printf("enable %d, enableForE911 %d\n", enable, enableForE911);
-            pIntClient->configRobustLocation(enable, enableForE911);
+            retVal = pIntClient->configRobustLocation(enable, enableForE911);
         } else if (strncmp(buf, GET_ROBUST_LOCATION_CONFIG,
                            strlen(GET_ROBUST_LOCATION_CONFIG)) == 0) {
-            pIntClient->getRobustLocationConfig();
+            retVal = pIntClient->getRobustLocationConfig();
         } else if (strncmp(buf, CONFIG_MIN_GPS_WEEK, strlen(CONFIG_MIN_GPS_WEEK)) == 0) {
             static char *save = nullptr;
             uint16_t gpsWeekNum = 0;
@@ -1153,16 +1162,16 @@ int main(int argc, char *argv[]) {
                 gpsWeekNum = (uint16_t) atoi(token);
             }
             printf("gps week num %d\n", gpsWeekNum);
-            pIntClient->configMinGpsWeek(gpsWeekNum);
+            retVal = pIntClient->configMinGpsWeek(gpsWeekNum);
         } else if (strncmp(buf, GET_MIN_GPS_WEEK, strlen(GET_MIN_GPS_WEEK)) == 0) {
-            pIntClient->getMinGpsWeek();
+            retVal = pIntClient->getMinGpsWeek();
         } else if (strncmp(buf, CONFIG_DR_ENGINE, strlen(CONFIG_DR_ENGINE)) == 0) {
             DeadReckoningEngineConfig dreConfig = {};
             parseDreConfig(buf, dreConfig);
             printf("mask 0x%x, roll %f, speed %f, yaw %f\n", dreConfig.validMask,
                    dreConfig.bodyToSensorMountParams.rollOffset, dreConfig.vehicleSpeedScaleFactor,
                    dreConfig.gyroScaleFactor);
-            pIntClient->configDeadReckoningEngineParams(dreConfig);
+            retVal = pIntClient->configDeadReckoningEngineParams(dreConfig);
         } else if (strncmp(buf, CONFIG_MIN_SV_ELEVATION, strlen(CONFIG_MIN_SV_ELEVATION)) == 0) {
             static char *save = nullptr;
             uint8_t minSvElevation = 0;
@@ -1173,12 +1182,12 @@ int main(int argc, char *argv[]) {
                 minSvElevation = (uint16_t) atoi(token);
             }
             printf("min Sv elevation %d\n", minSvElevation);
-            pIntClient->configMinSvElevation(minSvElevation);
+            retVal = pIntClient->configMinSvElevation(minSvElevation);
         } else if (strncmp(buf, GET_MIN_SV_ELEVATION, strlen(GET_MIN_SV_ELEVATION)) == 0) {
-            pIntClient->getMinSvElevation();
+            retVal = pIntClient->getMinSvElevation();
         } else if (strncmp(buf, CONFIG_ENGINE_INTEGRITY_RISK,
                            strlen(CONFIG_ENGINE_INTEGRITY_RISK)) == 0) {
-            printf("%s 1(SPE)/2(PPE)/3(DRE)/4(VPE) integrity_risk_level",
+            printf("%s 1(SPE)/2(PPE)/3(DRE)/4(VPE) integrity_risk_level\n",
                    CONFIG_ENGINE_INTEGRITY_RISK);
             static char *save = nullptr;
             LocIntegrationEngineType engType = (LocIntegrationEngineType)0;
@@ -1194,8 +1203,7 @@ int main(int argc, char *argv[]) {
                 }
             }
             printf("eng type %d, integrity risk %u\n", engType, integrityRisk);
-            bool retVal = pIntClient->configEngineIntegrityRisk(engType, integrityRisk);
-            printf("configEngineIntegrityRisk returned %d\n", retVal);
+            retVal = pIntClient->configEngineIntegrityRisk(engType, integrityRisk);
         } else if (strncmp(buf, CONFIG_NMEA_TYPES, strlen(CONFIG_NMEA_TYPES)) == 0) {
             static char *save = nullptr;
             NmeaTypesMask nmeaTypes = (NmeaTypesMask) NMEA_TYPE_ALL;
@@ -1215,7 +1223,7 @@ int main(int argc, char *argv[]) {
                 }
             }
             printf("nmeaTypes 0x%x, geodetic type %d\n", nmeaTypes, nmeaDatumType);
-            pIntClient->configOutputNmeaTypes(nmeaTypes, nmeaDatumType);
+            retVal = pIntClient->configOutputNmeaTypes(nmeaTypes, nmeaDatumType);
         } else if (strncmp(buf, SET_USER_CONSENT, strlen(SET_USER_CONSENT)) == 0) {
             static char *save = nullptr;
             bool userConsent = false;
@@ -1225,7 +1233,7 @@ int main(int argc, char *argv[]) {
                 userConsent = (atoi(token) != 0);
             }
             printf("userConsent %d\n", userConsent);
-            pIntClient->setUserConsentForTerrestrialPositioning(userConsent);
+            retVal = pIntClient->setUserConsentForTerrestrialPositioning(userConsent);
         } else if (strncmp(buf, GET_SINGLE_GTP_WWAN_FIX, strlen(GET_SINGLE_GTP_WWAN_FIX)) == 0) {
             // get single-shot gtp fixes
             getGtpWwanFixes(false, buf);
@@ -1235,7 +1243,6 @@ int main(int argc, char *argv[]) {
             getGtpWwanFixes(true, buf);
         } else if (strncmp(buf, CANCEL_SINGLE_GTP_WWAN_FIX,
                            strlen(CANCEL_SINGLE_GTP_WWAN_FIX)) == 0) {
-            // cancel the request
             if (!pLcaClient) {
                 pLcaClient = new LocationClientApi(onCapabilitiesCb);
             }
@@ -1264,7 +1271,15 @@ int main(int argc, char *argv[]) {
             }
             printf("register update %d\n", registerUpdate);
             pIntClient->registerXtraStatusUpdate(registerUpdate);
-        } else {
+        } else if (strncmp(buf, GET_ENERGY_CONSUMED,
+                           strlen(GET_ENERGY_CONSUMED)) == 0) {
+            if (!pLcaClient) {
+                pLcaClient = new LocationClientApi(onCapabilitiesCb);
+            }
+            if (pLcaClient) {
+                pLcaClient->getGnssEnergyConsumed(onGetGnssEnergyConsumedCb, onResponseCb);
+            }
+        }  else {
             int command = buf[0];
             switch(command) {
             case 'e':
@@ -1275,7 +1290,8 @@ int main(int argc, char *argv[]) {
                     LocReqEngineTypeMask reqEngMask = (LocReqEngineTypeMask)
                         (LOC_REQ_ENGINE_FUSED_BIT|LOC_REQ_ENGINE_SPE_BIT|
                          LOC_REQ_ENGINE_PPE_BIT);
-                    pLcaClient->startPositionSession(100, reqEngMask, enginecbs, onResponseCb);
+                    retVal = pLcaClient->startPositionSession(100, reqEngMask,
+                                                              enginecbs, onResponseCb);
                 }
                 break;
             case 'g':
@@ -1283,7 +1299,7 @@ int main(int argc, char *argv[]) {
                     pLcaClient = new LocationClientApi(onCapabilitiesCb);
                 }
                 if (pLcaClient) {
-                    pLcaClient->startPositionSession(100, reportcbs, onResponseCb);
+                    retVal = pLcaClient->startPositionSession(100, reportcbs, onResponseCb);
                 }
                 break;
             case 'u':
@@ -1291,7 +1307,7 @@ int main(int argc, char *argv[]) {
                     pLcaClient = new LocationClientApi(onCapabilitiesCb);
                 }
                 if (pLcaClient) {
-                    pLcaClient->startPositionSession(2000, reportcbs, onResponseCb);
+                    retVal = pLcaClient->startPositionSession(2000, reportcbs, onResponseCb);
                 }
                 break;
             case 's':
@@ -1335,6 +1351,9 @@ int main(int argc, char *argv[]) {
                 printf("unknown command %s\n", buf);
                 break;
             }
+        }
+        if (retVal == false) {
+            printf("command failed: %s", buf);
         }
     }//while(1)
 
