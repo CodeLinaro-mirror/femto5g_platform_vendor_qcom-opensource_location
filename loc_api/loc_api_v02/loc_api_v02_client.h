@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -1219,6 +1219,10 @@ typedef union
    const qmiLocEventDcReportIndMsgT_v02* pDcReportIndMsg;
    /** Sent by the engine to inform disaster and crisis report
     QMI_LOC_EVENT_DC_REPORT_IND_V02 */
+
+   const qmiLocGnssBandsSupportedIndMsgT_v02* pGnssBandsSupportedIndMsg;
+   /** Sent by the engine to inform the supported bands and the preferred one
+    QMI_LOC_GNSS_BANDS_SUPPORTED_IND_V02 */
 }locClientEventIndUnionType;
 
 

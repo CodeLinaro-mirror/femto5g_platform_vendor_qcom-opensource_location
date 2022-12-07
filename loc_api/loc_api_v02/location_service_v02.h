@@ -97,8 +97,8 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *THIS IS AN AUTO GENERATED FILE. DO NOT ALTER IN ANY WAY
  *====*====*====*====*====*====*====*====*====*====*====*====*====*====*====*/
 
-/* This file was generated with Tool version 6.14.7
-   It was generated on: Wed Jan 25 2023 (Spin 0)
+/* This file was generated with Tool version 6.14.9
+   It was generated on: Thu Mar 23 2023 (Spin 0)
    From IDL File: location_service_v02.idl */
 
 /** @defgroup loc_qmi_consts Constant values defined in the IDL */
@@ -124,11 +124,11 @@ extern "C" {
 /** Major Version Number of the IDL used to generate this file */
 #define LOC_V02_IDL_MAJOR_VERS 0x02
 /** Revision Number of the IDL used to generate this file */
-#define LOC_V02_IDL_MINOR_VERS 0x9E
+#define LOC_V02_IDL_MINOR_VERS 0x9F
 /** Major Version Number of the qmi_idl_compiler used to generate this file */
 #define LOC_V02_IDL_TOOL_VERS 0x06
 /** Maximum Defined Message ID */
-#define LOC_V02_MAX_MESSAGE_ID 0x00E9
+#define LOC_V02_MAX_MESSAGE_ID 0x00EC
 /**
     @}
   */
@@ -575,6 +575,15 @@ extern "C" {
 #define QMI_LOC_FIX_STATUS_HEPE_CHECK_FAILED_V02 0x04
 #define QMI_LOC_FIX_STATUS_LOW_RELIABILITY_V02 0x08
 #define QMI_LOC_MAX_APP_HASH_LEN_V02 64
+
+/**  Maximum length of the Merkle tree Hash array.  */
+#define QMI_LOC_MERKLE_TREE_HASH_ARRAY_LENGTH_V02 32
+
+/**  Maximum key length of the Merkle tree.  */
+#define QMI_LOC_MERKLE_TREE_KEY_LENGTH_V02 67
+
+/**  Maximum length of the nodes array of the Merkle tree.  */
+#define QMI_LOC_MERKLE_TREE_NODE_ARRAY_LENGTH_V02 4
 /**
     @}
   */
@@ -769,6 +778,7 @@ typedef uint64_t qmiLocEventRegMaskT_v02;
 #define QMI_LOC_EVENT_MASK_PLATFORM_POWER_STATE_CHANGED_V02 ((qmiLocEventRegMaskT_v02)0x0001000000000000ull) /**<  QMI_LOC_EVENT_PLATFORM_ POWER_STATE_CHANGED indication. \n  */
 #define QMI_LOC_EVENT_MASK_ENGINE_DEBUG_DATA_REPORT_V02 ((qmiLocEventRegMaskT_v02)0x0002000000000000ull) /**<  QMI_LOC_ENGINE_DEBUG_DATA indication. \n */
 #define QMI_LOC_EVENT_MASK_FEATURE_STATUS_V02 ((qmiLocEventRegMaskT_v02)0x0004000000000000ull) /**<  QMI_LOC_EVENT_REPORT indication when featureStatusReport is valid  */
+#define QMI_LOC_EVENT_MASK_GNSS_BANDS_SUPPORTED_V02 ((qmiLocEventRegMaskT_v02)0x0008000000000000ull) /**<  QMI_LOC_GNSS_BANDS_SUPPORTED indication. \n  */
 /** @addtogroup loc_qmi_enums
     @{
   */
@@ -882,6 +892,7 @@ typedef struct {
       - QMI_LOC_EVENT_MASK_PLATFORM_POWER_STATE_CHANGED (0x0001000000000000) --  QMI_LOC_EVENT_PLATFORM_ POWER_STATE_CHANGED indication. \n
       - QMI_LOC_EVENT_MASK_ENGINE_DEBUG_DATA_REPORT (0x0002000000000000) --  QMI_LOC_ENGINE_DEBUG_DATA indication. \n
       - QMI_LOC_EVENT_MASK_FEATURE_STATUS (0x0004000000000000) --  QMI_LOC_EVENT_REPORT indication when featureStatusReport is valid
+      - QMI_LOC_EVENT_MASK_GNSS_BANDS_SUPPORTED (0x0008000000000000) --  QMI_LOC_GNSS_BANDS_SUPPORTED indication. \n
 
  Multiple events can be registered by ORing the individual masks and
  sending them in this TLV. Set all unused bits in this mask to 0.
@@ -3652,11 +3663,11 @@ typedef struct {
        - 0x00 (FALSE) -- Civic address is not needed \n
        - 0x01 (TRUE) -- Civic address is needed
 
-	Note: If the civic address is available with the AP, the AP shall inject
-	the same using the new QMI_LOC_INJECT_LOCATION_ CIVIC_ADDRESS command.
+    Note: If the civic address is available with the AP, the AP shall inject
+    the same using the new QMI_LOC_INJECT_LOCATION_ CIVIC_ADDRESS command.
 
         If the civic address is not available, the AP shall NOT use the new
-	QMI_LOC_INJECT_LOCATION_ CIVIC_ADDRESS command. The existing DBH injection API should
+    QMI_LOC_INJECT_LOCATION_ CIVIC_ADDRESS command. The existing DBH injection API should
         be used to inject hybrid location if available.
   */
 }qmiLocEventWifiReqIndMsgT_v02;  /* Message */
@@ -5984,7 +5995,7 @@ typedef struct {
   /**<   Each entry in the list contains the SV ID of a satellite
        used for calculating this position report. The following
        information is associated with each SV ID. \n
-	   Range: \n
+       Range: \n
       - GPS --     1 to 32 \n
       - GLONASS -- 65 to 96 \n
       - QZSS --    193 to 197 \n
@@ -7743,6 +7754,7 @@ typedef struct {
       - QMI_LOC_EVENT_MASK_PLATFORM_POWER_STATE_CHANGED (0x0001000000000000) --  QMI_LOC_EVENT_PLATFORM_ POWER_STATE_CHANGED indication. \n
       - QMI_LOC_EVENT_MASK_ENGINE_DEBUG_DATA_REPORT (0x0002000000000000) --  QMI_LOC_ENGINE_DEBUG_DATA indication. \n
       - QMI_LOC_EVENT_MASK_FEATURE_STATUS (0x0004000000000000) --  QMI_LOC_EVENT_REPORT indication when featureStatusReport is valid
+      - QMI_LOC_EVENT_MASK_GNSS_BANDS_SUPPORTED (0x0008000000000000) --  QMI_LOC_GNSS_BANDS_SUPPORTED indication. \n
  */
 }qmiLocGetRegisteredEventsIndMsgT_v02;  /* Message */
 /**
@@ -13265,7 +13277,7 @@ typedef struct {
        - 0x01 (TRUE) -- GPS engine is in E911 mode \n
        - 0x00 (FALSE) -- GPS engine is not in E911 mode
 
-	   Note: e911Mode shall be set as TRUE for non-E911 Wi-Fi AP injections.
+       Note: e911Mode shall be set as TRUE for non-E911 Wi-Fi AP injections.
     */
 }qmiLocEventInjectWifiApDataReqIndMsgT_v02;  /* Message */
 /**
@@ -15841,7 +15853,7 @@ typedef struct {
   uint32_t toc;
   /**<   Clock data reference time of week.  \n
        - Units -- Seconds \n
-	   If source is ephemeris: \n
+       If source is ephemeris: \n
          - Value for GPS, QZSS, BDS, Galileo, and NavIC is decoded OTA in full GPS seconds. \n
          - Value for GLONASS is the same as GLONASS TOE in full GPS seconds. \n
        If source is XTRA: \n
@@ -15860,7 +15872,7 @@ typedef struct {
   uint32_t toe;
   /**<   Reference time of ephemeris. \n
        - Units -- Seconds \n
-	   If source is ephemeris: \n
+       If source is ephemeris: \n
          - Value for GPS, QZSS, Galileo, and BDS is decoded OTA. \n
          - Value for GLONASS corresponds to ephemeris Tb. \n
        If source is XTRA: \n
@@ -18550,6 +18562,7 @@ typedef enum {
   eQMI_LOC_SUPPORTED_FEATURE_FLP_NLP_SOURCE_V02 = 17, /**<  Support the FLP, NLP Z-Source provider feature \n  */
   eQMI_LOC_SUPPORTED_FEATURE_ENGINE_DEBUG_DATA_V02 = 18, /**<  Support the feature to report engine debug data \n  */
   eQMI_LOC_SUPPORTED_FEATURE_DYNAMIC_FEATURE_STATUS_V02 = 19, /**<  Support the feature to dynamically report feature status on update */
+  eQMI_LOC_SUPPORTED_FEATURE_GNSS_BANDS_SUPPORTED_V02 = 20, /**<  Support the feature to report Supported GNSS Bands \n */
   QMILOCSUPPORTEDFEATUREENUMT_MAX_ENUM_VAL_V02 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
 }qmiLocSupportedFeatureEnumT_v02;
 /**
@@ -18565,8 +18578,8 @@ typedef uint64_t qmiLocFeaturesStatusMaskT_v02;
 #define QMI_LOC_FEATURE_STATUS_TIME_FREQUENCY_V02 ((qmiLocFeaturesStatusMaskT_v02)0x00000020ull) /**<  Time and frequency.\n  */
 #define QMI_LOC_FEATURE_STATUS_TIME_UNCERTAINTY_V02 ((qmiLocFeaturesStatusMaskT_v02)0x00000040ull) /**<  Time uncertainty. \n */
 #define QMI_LOC_FEATURE_STATUS_CLOCK_ESTIMATE_V02 ((qmiLocFeaturesStatusMaskT_v02)0x00000080ull) /**<  Clock estimate. \n */
-#define QMI_LOC_FEATURE_STATUS_DGNSS_V02 ((qmiLocFeaturesStatusMaskT_v02)0x00000100ull) /**<  DGNSS. \n  */
-#define QMI_LOC_FEATURE_STATUS_QPPE_V02 ((qmiLocFeaturesStatusMaskT_v02)0x00000200ull) /**<  QPPE. \n  */
+#define QMI_LOC_FEATURE_STATUS_DGNSS_V02 ((qmiLocFeaturesStatusMaskT_v02)0x00000100ull) /**<  DGNSS. \n */
+#define QMI_LOC_FEATURE_STATUS_QPPE_V02 ((qmiLocFeaturesStatusMaskT_v02)0x00000200ull) /**<  QPPE. \n */
 #define QMI_LOC_FEATURE_STATUS_ROBUST_LOCATION_V02 ((qmiLocFeaturesStatusMaskT_v02)0x00000400ull) /**<  Robust Location.  */
 /** @addtogroup loc_qmi_messages
     @{
@@ -20381,7 +20394,13 @@ typedef struct {
   /**<   Disaster and crisis report. \n
          - Type -- Array of bytes \n
          - Maximum length of the array -- 64
-    */
+   */
+
+  /* Optional */
+  /*  Pseudo Random Number */
+  uint8_t prn_valid;  /**< Must be set to true if prn is being passed */
+  uint8_t prn;
+  /**<   SV's Pseudo-Random Number. */
 }qmiLocEventDcReportIndMsgT_v02;  /* Message */
 /**
     @}
@@ -23820,7 +23839,7 @@ typedef struct {
         - Units -- Degrees \n
         - Range -- -90.0 to 90.0 \n
         Positive values indicate northern latitude.
-		Negative values indicate southern latitude.
+        Negative values indicate southern latitude.
    */
 
   /* Optional */
@@ -23830,8 +23849,8 @@ typedef struct {
   /**<   Latitude (specified in WGS84 datum).\n
         - Units -- Degrees \n
         - Range -- -180.0 to 180.0 \n
-		Positive values indicate eastern longitude.
-		Negative values indicate western longitude.
+        Positive values indicate eastern longitude.
+        Negative values indicate western longitude.
    */
 
   /* Optional */
@@ -23850,7 +23869,7 @@ typedef struct {
         - Units -- Percent (1 to 99)\n
         - 0, 101 to 255 -- Invalid value\n
         - If 100 is received, reinterpret to 99 \n
-		Note: This field must be specified with horizontal uncertainty.
+        Note: This field must be specified with horizontal uncertainty.
         If not specified when horUncCircular is set, the default value is 50.
    */
 
@@ -23860,8 +23879,8 @@ typedef struct {
   float altitudeWrtEllipsoid;
   /**<   Altitude with respect to the WGS84 ellipsoid.\n
         - Units -- Meters \n
-		- Positive -- Height \n
-		- Negative -- Depth
+        - Positive -- Height \n
+        - Negative -- Depth
    */
 
   /* Optional */
@@ -23887,12 +23906,12 @@ typedef struct {
   uint8_t vertConfidence;
   /**<   Vertical confidence, as defined by ETSI TS 101 109 (3GPP \hyperref[TS 03.32]{TS 03.32}). \n
         - Units -- Percent (0 to 99)\n
-		- 0 -- Invalid value \n
-		- 100 to 256 -- Not used \n
-		- If 100 is received, reinterpret to 99 \n
-		Note: This field must be specified with the vertical uncertainty.
+        - 0 -- Invalid value \n
+        - 100 to 256 -- Not used \n
+        - If 100 is received, reinterpret to 99 \n
+        Note: This field must be specified with the vertical uncertainty.
         If not specified, the default value is 50.
-	*/
+    */
 
   /* Optional */
   /*  Altitude Source */
@@ -25178,6 +25197,198 @@ typedef struct {
     @}
   */
 
+/** @addtogroup loc_qmi_messages
+    @{
+  */
+/** Indication Message; Sends the supported GNSS bands information to the control
+                      point */
+typedef struct {
+
+  /* Optional */
+  /*  Primary GNSS Signal Type */
+  uint8_t primaryGnssSignalType_valid;  /**< Must be set to true if primaryGnssSignalType is being passed */
+  qmiLocGnssSignalTypeMaskT_v02 primaryGnssSignalType;
+  /**<   Primary GNSS signal type.
+ Values: \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L1CA (0x00000001) --  GPS L1 C/A RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L1C (0x00000002) --  GPS L1C RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L2C_L (0x00000004) --  GPS L2 C L RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L5_Q (0x00000008) --  GPS L5 Q RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GLONASS_G1 (0x00000010) --  GLONASS G1 (L1 OF) RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GLONASS_G2 (0x00000020) --  GLONASS G2 (L2 OF) RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GALILEO_E1_C (0x00000040) --  Galileo E1 C RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GALILEO_E5A_Q (0x00000080) --  Galileo E5a Q RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GALILEO_E5B_Q (0x00000100) --  Galileo E5b Q RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B1_I (0x00000200) --  BeiDou B1 I RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B1C (0x00000400) --  BeiDou B1C RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2_I (0x00000800) --  BeiDou B2 I RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2A_I (0x00001000) --  BeiDou B2a I RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1CA (0x00002000) --  QZSS L1 C/A RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1S (0x00004000) --  QZSS L1S RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L2C_L (0x00008000) --  QZSS L2C L RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L5_Q (0x00010000) --  QZSS L5 Q RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_SBAS_L1_CA (0x00020000) --  SBAS L1 CA RF band
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_NAVIC_L5 (0x00040000) --  NavIC L5 RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2A_Q (0x00080000) --  BeiDou B2a Q RF band.
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_I (0x00100000) --  BeiDou B2b I RF band (data) \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q (0x00200000) --  BeiDou B2b Q RF band (pilot)  */
+
+  /* Optional */
+  /*  GNSS Supported Signals */
+  uint8_t gnssSupportedSignals_valid;  /**< Must be set to true if gnssSupportedSignals is being passed */
+  qmiLocGnssSignalTypeMaskT_v02 gnssSupportedSignals;
+  /**<   List of all supported GNSS signals.
+ Values: \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L1CA (0x00000001) --  GPS L1 C/A RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L1C (0x00000002) --  GPS L1C RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L2C_L (0x00000004) --  GPS L2 C L RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L5_Q (0x00000008) --  GPS L5 Q RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GLONASS_G1 (0x00000010) --  GLONASS G1 (L1 OF) RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GLONASS_G2 (0x00000020) --  GLONASS G2 (L2 OF) RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GALILEO_E1_C (0x00000040) --  Galileo E1 C RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GALILEO_E5A_Q (0x00000080) --  Galileo E5a Q RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GALILEO_E5B_Q (0x00000100) --  Galileo E5b Q RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B1_I (0x00000200) --  BeiDou B1 I RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B1C (0x00000400) --  BeiDou B1C RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2_I (0x00000800) --  BeiDou B2 I RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2A_I (0x00001000) --  BeiDou B2a I RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1CA (0x00002000) --  QZSS L1 C/A RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1S (0x00004000) --  QZSS L1S RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L2C_L (0x00008000) --  QZSS L2C L RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L5_Q (0x00010000) --  QZSS L5 Q RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_SBAS_L1_CA (0x00020000) --  SBAS L1 CA RF band
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_NAVIC_L5 (0x00040000) --  NavIC L5 RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2A_Q (0x00080000) --  BeiDou B2a Q RF band.
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_I (0x00100000) --  BeiDou B2b I RF band (data) \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q (0x00200000) --  BeiDou B2b Q RF band (pilot)  */
+}qmiLocGnssBandsSupportedIndMsgT_v02;  /* Message */
+/**
+    @}
+  */
+
+/** @addtogroup loc_qmi_enums
+    @{
+  */
+typedef enum {
+  QMILOCPUBLICKEYTYPEENUMT_MIN_ENUM_VAL_V02 = -2147483647, /**< To force a 32 bit signed enum.  Do not change or use*/
+  eQMI_LOC_OSNMA_NPKT_RESERVED0_V02 = 0, /**<  Reserved 0 \n */
+  eQMI_LOC_OSNMA_NPKT_ECDSA_P_256_V02 = 1, /**<  ECDSA P-256, key length shall be 264 bits \n */
+  eQMI_LOC_OSNMA_NPKT_RESERVED2_V02 = 2, /**<  Reserved 2 \n */
+  eQMI_LOC_OSNMA_NPKT_ECDSA_P_521_V02 = 3, /**<  ECDSA P-521, key length shall be 536 bits \n */
+  eQMI_LOC_OSNMA_NPKT_ALERT_V02 = 4, /**<  OSNMA Alert Message (OAM)  */
+  QMILOCPUBLICKEYTYPEENUMT_MAX_ENUM_VAL_V02 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
+}qmiLocPublicKeyTypeEnumT_v02;
+/**
+    @}
+  */
+
+/** @addtogroup loc_qmi_enums
+    @{
+  */
+typedef enum {
+  QMILOCHASHFUNCTIONTYPEENUMT_MIN_ENUM_VAL_V02 = -2147483647, /**< To force a 32 bit signed enum.  Do not change or use*/
+  eQMI_LOC_OSNMA_HF_SHA_256_V02 = 0, /**<  SHA-256 \n */
+  eQMI_LOC_OSNMA_HF_RESERVED1_V02 = 1, /**<  RESERVED \n */
+  eQMI_LOC_OSNMA_HF_SHA3_256_V02 = 2, /**<  SHA3-256 \n */
+  eQMI_LOC_OSNMA_HF_RESERVED3_V02 = 3, /**<  RESERVED  */
+  QMILOCHASHFUNCTIONTYPEENUMT_MAX_ENUM_VAL_V02 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
+}qmiLocHashFunctionTypeEnumT_v02;
+/**
+    @}
+  */
+
+/** @addtogroup loc_qmi_aggregates
+    @{
+  */
+typedef struct {
+
+  uint8_t height;
+  /**<   The height of the node in the Merkle Tree. */
+
+  uint8_t position;
+  /**<   The position of the node in the Merkle Tree level. */
+
+  uint32_t hash_len;  /**< Must be set to # of elements in hash */
+  uint8_t hash[QMI_LOC_MERKLE_TREE_HASH_ARRAY_LENGTH_V02];
+  /**<   Hash of Merkle Tree node. */
+}qmiLocOsnmaTreeNodeT_v02;  /* Type */
+/**
+    @}
+  */
+
+/** @addtogroup loc_qmi_messages
+    @{
+  */
+/** Request Message; Used by the control point to inject the OSNMA public key
+                     and Merkle Tree to GNSS Engine. */
+typedef struct {
+
+  /* Optional */
+  /*  Public Key Type */
+  uint8_t publicKeyType_valid;  /**< Must be set to true if publicKeyType is being passed */
+  qmiLocPublicKeyTypeEnumT_v02 publicKeyType;
+  /**<   Public key type. */
+
+  /* Optional */
+  /*  Public Key ID */
+  uint8_t publicKeyId_valid;  /**< Must be set to true if publicKeyId is being passed */
+  uint8_t publicKeyId;
+  /**<   Public key ID. */
+
+  /* Optional */
+  /*  Public Key */
+  uint8_t publicKey_valid;  /**< Must be set to true if publicKey is being passed */
+  uint32_t publicKey_len;  /**< Must be set to # of elements in publicKey */
+  uint8_t publicKey[QMI_LOC_MERKLE_TREE_KEY_LENGTH_V02];
+  /**<   Compressed ECDSA key, max key length is 8 x 67 = 536 bits. */
+
+  /* Optional */
+  /*  Hash Function Type */
+  uint8_t hashFunctionType_valid;  /**< Must be set to true if hashFunctionType is being passed */
+  qmiLocHashFunctionTypeEnumT_v02 hashFunctionType;
+  /**<   Hash function type */
+
+  /* Optional */
+  /*  Intermediate Merkle Tree Nodes */
+  uint8_t intermediateNodes_valid;  /**< Must be set to true if intermediateNodes is being passed */
+  qmiLocOsnmaTreeNodeT_v02 intermediateNodes[QMI_LOC_MERKLE_TREE_NODE_ARRAY_LENGTH_V02];
+  /**<   Required Merkle Tree nodes at levels 0, 1, 2, 3. \n
+       - Zeroth term -- Node at level 0 \n
+       - First term  -- Node at level 1 \n
+       - Second term -- Node at level 2 \n
+       - Third term  -- Node at level 3
+  */
+
+  /* Optional */
+  /*  Merkle Tree Root Node */
+  uint8_t rootNode_valid;  /**< Must be set to true if rootNode is being passed */
+  qmiLocOsnmaTreeNodeT_v02 rootNode;
+  /**<   Merkle Tree Root Node */
+}qmiLocOsnmaPublicKeyMerkleTreeReqMsgT_v02;  /* Message */
+/**
+    @}
+  */
+
+/** @addtogroup loc_qmi_messages
+    @{
+  */
+/** Request Message; Used by the control point to set OSNMA operation mode */
+typedef struct {
+
+  /* Mandatory */
+  /*  Enable / Disable OSNMA Operation State */
+  uint8_t enable;
+  /**<   Specifies the OSNMA operation state. \n
+       - 0x00 (FALSE) -- Disable \n
+       - 0x01 (TRUE)  -- Enable
+
+       Note: OSNMA is enabled by Default
+  */
+}qmiLocSetOsnmaStateReqMsgT_v02;  /* Message */
+/**
+    @}
+  */
+
 /* Conditional compilation tags for message removal */
 //#define REMOVE_QMI_LOC_ADD_CIRCULAR_GEOFENCE_V02
 //#define REMOVE_QMI_LOC_ADD_GEOFENCE_CONTEXT_V02
@@ -25291,6 +25502,7 @@ typedef struct {
 //#define REMOVE_QMI_LOC_GET_SUPPORTED_MSGS_V02
 //#define REMOVE_QMI_LOC_GET_TRIBAND_STATE_V02
 //#define REMOVE_QMI_LOC_GET_XTRA_T_SESSION_CONTROL_V02
+//#define REMOVE_QMI_LOC_GNSS_BANDS_SUPPORTED_V02
 //#define REMOVE_QMI_LOC_GNSS_STATISTICS_REPORT_V02
 //#define REMOVE_QMI_LOC_GTP_AP_STATUS_V02
 //#define REMOVE_QMI_LOC_INFORM_CLIENT_REVISION_V02
@@ -25329,6 +25541,7 @@ typedef struct {
 //#define REMOVE_QMI_LOC_NOTIFY_WIFI_ATTACHMENT_STATUS_V02
 //#define REMOVE_QMI_LOC_NOTIFY_WIFI_ENABLED_STATUS_V02
 //#define REMOVE_QMI_LOC_NOTIFY_WIFI_STATUS_V02
+//#define REMOVE_QMI_LOC_OSNMA_PUBLIC_KEY_MERKLE_TREE_V02
 //#define REMOVE_QMI_LOC_PEDOMETER_REPORT_V02
 //#define REMOVE_QMI_LOC_QUERY_AON_CONFIG_V02
 //#define REMOVE_QMI_LOC_QUERY_GEOFENCE_V02
@@ -25356,6 +25569,7 @@ typedef struct {
 //#define REMOVE_QMI_LOC_SET_MULTIBAND_CONFIG_V02
 //#define REMOVE_QMI_LOC_SET_NMEA_TYPES_V02
 //#define REMOVE_QMI_LOC_SET_OPERATION_MODE_V02
+//#define REMOVE_QMI_LOC_SET_OSNMA_STATE_V02
 //#define REMOVE_QMI_LOC_SET_PARAMETER_V02
 //#define REMOVE_QMI_LOC_SET_POSITION_ENGINE_CONFIG_PARAMETERS_V02
 //#define REMOVE_QMI_LOC_SET_PREMIUM_SERVICES_CONFIG_V02
@@ -25875,6 +26089,13 @@ typedef struct {
 #define QMI_LOC_SET_SDK_FEATURE_CONFIG_REQ_V02 0x00E9
 #define QMI_LOC_SET_SDK_FEATURE_CONFIG_RESP_V02 0x00E9
 #define QMI_LOC_SET_SDK_FEATURE_CONFIG_IND_V02 0x00E9
+#define QMI_LOC_GNSS_BANDS_SUPPORTED_IND_V02 0x00EA
+#define QMI_LOC_OSNMA_PUBLIC_KEY_MERKLE_TREE_REQ_V02 0x00EB
+#define QMI_LOC_OSNMA_PUBLIC_KEY_MERKLE_TREE_RESP_V02 0x00EB
+#define QMI_LOC_OSNMA_PUBLIC_KEY_MERKLE_TREE_IND_V02 0x00EB
+#define QMI_LOC_SET_OSNMA_STATE_REQ_V02 0x00EC
+#define QMI_LOC_SET_OSNMA_STATE_RESP_V02 0x00EC
+#define QMI_LOC_SET_OSNMA_STATE_IND_V02 0x00EC
 /**
     @}
   */
@@ -25902,4 +26123,3 @@ qmi_idl_service_object_type loc_get_service_object_internal_v02
 }
 #endif
 #endif
-
