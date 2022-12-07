@@ -208,6 +208,7 @@ private:
   std::vector<adrData>  mADRdata;
   timeBiases mTimeBiases;
   qmiLocPlatformPowerStateEnumT_v02 mPlatformPowerState;
+  bool mIsFullTracking;
   GnssMeasurementsNotification m1HzMeasurementsNotify;
 
   /* Convert event mask from loc eng to loc_api_v02 format */
@@ -395,6 +396,13 @@ private:
 
   bool isTOAValid(const qmiLocEventPositionReportIndMsgT_v02 *location_report_ptr,
           const GnssMeasurementsNotification *pOneHzMeasurements);
+
+  void processGnssBandsSupportedInd(
+            const qmiLocGnssBandsSupportedIndMsgT_v02* pGnssBandsSupportedIndMsg);
+
+  GnssMeasurementsCodeType getCodeType(qmiLocGnssSignalTypeMaskT_v02 gnssSignalType);
+  void updateGnssCapabNotification(GnssCapabNotification& gnssCapabNotification,
+                                   qmiLocGnssSignalTypeMaskT_v02 gnssSignalType);
 
 protected:
   virtual enum loc_api_adapter_err

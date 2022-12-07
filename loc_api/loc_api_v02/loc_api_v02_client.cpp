@@ -347,6 +347,10 @@ static const locClientEventIndTableStructT locClientEventIndTable[]= {
   { QMI_LOC_EVENT_PLATFORM_POWER_STATE_CHANGED_IND_V02,
     sizeof(qmiLocPlatformPowerStateChangedIndMsgT_v02),
     QMI_LOC_EVENT_PLATFORM_POWER_STATE_CHANGED_IND_V02},
+
+  // supported bands and the preferred one ind
+  { QMI_LOC_GNSS_BANDS_SUPPORTED_IND_V02,
+    sizeof(qmiLocGnssBandsSupportedIndMsgT_v02)},
 };
 
 /* table to relate the respInd Id with its size */
