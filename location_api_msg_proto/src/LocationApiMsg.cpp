@@ -188,6 +188,10 @@ const char* LocApiMsgString(ELocMsgID msgId) {
         return "E_INTAPI_CONFIG_ENGINE_INTEGRITY_RISK_MSG_ID";
     case E_INTAPI_CONFIG_XTRA_PARAMS_MSG_ID:
         return "E_INTAPI_CONFIG_XTRA_PARAMS_MSG_ID";
+    case E_INTAPI_CONFIG_MERKLE_TREE_MSG_ID:
+        return "E_INTAPI_CONFIG_MERKLE_TREE_MSG_ID";
+    case E_INTAPI_CONFIG_OSNMA_ENABLEMENT_MSG_ID:
+        return "E_INTAPI_CONFIG_OSNMA_ENABLEMENT_MSG_ID";
     case E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID:
         return "E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID";
     case E_INTAPI_GET_ROBUST_LOCATION_CONFIG_RESP_MSG_ID:
@@ -2582,6 +2586,82 @@ LocConfigEngineIntegrityRiskReqMsg::LocConfigEngineIntegrityRiskReqMsg(
     LOC_LOGd("LocApiPB: eng type %d, integrity risk %d", mEngType, mIntegrityRisk);
 }
 
+// Convert LocConfigMerkleTreeReqMsg ->
+// PBLocConfigMerkleTreeReqMsg
+int LocConfigMerkleTreeReqMsg::serializeToProtobuf(string& protoStr) {
+    PBLocAPIMsgHeader pLocApiMsgHdr;
+    PBLocConfigMerkleTreeReqMsg pbLocConfMsg;
+
+    if (nullptr == pLocApiPbMsgConv) {
+        LOC_LOGe("pLocApiPbMsgConv is null!");
+        return 0;
+    }
+    // string      mSocketName = 1;
+    pLocApiMsgHdr.set_msocketname(mSocketName);
+    // PBELocMsgID  msgId = 2;
+    pLocApiMsgHdr.set_msgid(pLocApiPbMsgConv->getPBEnumForELocMsgID(msgId));
+    // uint32   msgVersion = 3;
+    pLocApiMsgHdr.set_msgversion(msgVersion);
+    // string mMerkleTreeConfig = 1;
+    pbLocConfMsg.set_mmerkletreeconfig(mMerkleTreeConfig);
+
+    string pbStr;
+    if (!pbLocConfMsg.SerializeToString(&pbStr)) {
+        LOC_LOGe("SerializeToString on PBLocConfigMerkleTreeReqMsg failed!");
+        return 0;
+    }
+    // bytes       payload = 4;
+    pLocApiMsgHdr.set_payload(pbStr);
+
+    // uint32   payloadSize = 5;
+    pLocApiMsgHdr.set_payloadsize(sizeof(LocConfigMerkleTreeReqMsg));
+
+    if (!pLocApiMsgHdr.SerializeToString(&protoStr)) {
+        LOC_LOGe("SerializeToString on pLocApiMsgHdr failed!");
+        return 0;
+    }
+
+    return protoStr.size();
+}
+
+// Convert LocConfigOsnmaEnablementReqMsg ->
+// PBLocConfigOsnmaEnablementReqMsg
+int LocConfigOsnmaEnablementReqMsg::serializeToProtobuf(string& protoStr) {
+    PBLocAPIMsgHeader pLocApiMsgHdr;
+    PBLocConfigOsnmaEnablementReqMsg pbLocConfMsg;
+
+    if (nullptr == pLocApiPbMsgConv) {
+        LOC_LOGe("pLocApiPbMsgConv is null!");
+        return 0;
+    }
+    // string      mSocketName = 1;
+    pLocApiMsgHdr.set_msocketname(mSocketName);
+    // PBELocMsgID  msgId = 2;
+    pLocApiMsgHdr.set_msgid(pLocApiPbMsgConv->getPBEnumForELocMsgID(msgId));
+    // uint32   msgVersion = 3;
+    pLocApiMsgHdr.set_msgversion(msgVersion);
+    // bool mEnable = 1;
+    pbLocConfMsg.set_menable(mEnable);
+
+    string pbStr;
+    if (!pbLocConfMsg.SerializeToString(&pbStr)) {
+        LOC_LOGe("SerializeToString on PBLocConfigOsnmaEnablementReqMsg failed!");
+        return 0;
+    }
+    // bytes       payload = 4;
+    pLocApiMsgHdr.set_payload(pbStr);
+
+    // uint32   payloadSize = 5;
+    pLocApiMsgHdr.set_payloadsize(sizeof(LocConfigOsnmaEnablementReqMsg));
+
+    if (!pLocApiMsgHdr.SerializeToString(&protoStr)) {
+        LOC_LOGe("SerializeToString on pLocApiMsgHdr failed!");
+        return 0;
+    }
+
+    return protoStr.size();
+}
+
 /************************** XTRA *****************************************/
 // Convert LocConfigXtraReqMsg ->
 // PBLocConfigEngineIntegrityRiskReqMsg
@@ -3961,6 +4041,24 @@ LocConfigEngineRunStateReqMsg::LocConfigEngineRunStateReqMsg(const char* name,
     mEngState = (LocEngineRunState) pLocApiPbMsgConv->getEnumForPBLocEngineRunState(
             pbConfigEngineRunStateReqMsg.mengstate());
     LOC_LOGd("LocApiPB: eng type %d, eng state %d", mEngType, mEngState);
+}
+
+// Decode PBLocConfigMerkleTreeReqMsg -> LocConfigMerkleTreeReqMsg
+LocConfigMerkleTreeReqMsg::LocConfigMerkleTreeReqMsg(
+        const char* name, const PBLocConfigMerkleTreeReqMsg &pbLocConfMsg,
+        const LocationApiPbMsgConv *pbMsgConv):
+    LocAPIMsgHeader(name, E_INTAPI_CONFIG_MERKLE_TREE_MSG_ID, pbMsgConv) {
+    mMerkleTreeConfig = pbLocConfMsg.mmerkletreeconfig();
+    LOC_LOGd("LocApiPB: merkle tree path: %s, ", mMerkleTreeConfig.c_str());
+}
+
+// Decode PBLocConfigOsnmaEnablementReqMsg -> LocConfigOsnmaEnablementReqMsg
+LocConfigOsnmaEnablementReqMsg::LocConfigOsnmaEnablementReqMsg(
+        const char* name, const PBLocConfigOsnmaEnablementReqMsg &pbLocConfMsg,
+        const LocationApiPbMsgConv *pbMsgConv):
+    LocAPIMsgHeader(name, E_INTAPI_CONFIG_OSNMA_ENABLEMENT_MSG_ID, pbMsgConv) {
+    mEnable = pbLocConfMsg.menable();
+    LOC_LOGd("LocApiPB: osnma enablement: %d, ", mEnable);
 }
 
 // Decode PBLocConfigGetRobustLocationConfigRespMsg -> LocConfigGetRobustLocationConfigRespMsg

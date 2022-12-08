@@ -65,7 +65,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *====*====*====*====*====*====*====*====*====*====*====*====*====*====*====*/
 
 /* This file was generated with Tool version 6.14.7
-   It was generated on: Thu Oct 13 2022 (Spin 0)
+   It was generated on: Thu Mar 23 2023 (Spin 0)
    From IDL File: location_service_v02.idl */
 
 #include "stdint.h"
@@ -1975,6 +1975,21 @@ static const uint8_t qmiLocTimeStructT_data_v02[] = {
 
   QMI_IDL_GENERIC_4_BYTE,
   QMI_IDL_OFFSET8(qmiLocTimeStructT_v02, secs),
+
+  QMI_IDL_FLAG_END_VALUE
+};
+
+static const uint8_t qmiLocOsnmaTreeNodeT_data_v02[] = {
+  QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(qmiLocOsnmaTreeNodeT_v02, height),
+
+  QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(qmiLocOsnmaTreeNodeT_v02, position),
+
+  QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(qmiLocOsnmaTreeNodeT_v02, hash),
+  QMI_LOC_MERKLE_TREE_HASH_ARRAY_LENGTH_V02,
+  QMI_IDL_OFFSET8(qmiLocOsnmaTreeNodeT_v02, hash) - QMI_IDL_OFFSET8(qmiLocOsnmaTreeNodeT_v02, hash_len),
 
   QMI_IDL_FLAG_END_VALUE
 };
@@ -7638,12 +7653,17 @@ static const uint8_t qmiLocEventDcReportIndMsgT_data_v02[] = {
    QMI_IDL_GENERIC_2_BYTE,
   QMI_IDL_OFFSET8(qmiLocEventDcReportIndMsgT_v02, numValidBits),
 
-  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(qmiLocEventDcReportIndMsgT_v02, dcReportData) - QMI_IDL_OFFSET8(qmiLocEventDcReportIndMsgT_v02, dcReportData_valid)),
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(qmiLocEventDcReportIndMsgT_v02, dcReportData) - QMI_IDL_OFFSET8(qmiLocEventDcReportIndMsgT_v02, dcReportData_valid)),
   0x12,
   QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |  QMI_IDL_GENERIC_1_BYTE,
   QMI_IDL_OFFSET8(qmiLocEventDcReportIndMsgT_v02, dcReportData),
   QMI_LOC_MAX_DCREPORT_LEN_V02,
-  QMI_IDL_OFFSET8(qmiLocEventDcReportIndMsgT_v02, dcReportData) - QMI_IDL_OFFSET8(qmiLocEventDcReportIndMsgT_v02, dcReportData_len)
+  QMI_IDL_OFFSET8(qmiLocEventDcReportIndMsgT_v02, dcReportData) - QMI_IDL_OFFSET8(qmiLocEventDcReportIndMsgT_v02, dcReportData_len),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(qmiLocEventDcReportIndMsgT_v02, prn) - QMI_IDL_OFFSET8(qmiLocEventDcReportIndMsgT_v02, prn_valid)),
+  0x13,
+   QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(qmiLocEventDcReportIndMsgT_v02, prn)
 };
 
 static const uint8_t qmiLocRegisterMasterClientReqMsgT_data_v02[] = {
@@ -9544,6 +9564,61 @@ static const uint8_t qmiLocSetSdkFeatureConfigIndMsgT_data_v02[] = {
   QMI_IDL_OFFSET8(qmiLocSetSdkFeatureConfigIndMsgT_v02, featureStatusReport)
 };
 
+static const uint8_t qmiLocGnssBandsSupportedIndMsgT_data_v02[] = {
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(qmiLocGnssBandsSupportedIndMsgT_v02, primaryGnssSignalType) - QMI_IDL_OFFSET8(qmiLocGnssBandsSupportedIndMsgT_v02, primaryGnssSignalType_valid)),
+  0x10,
+   QMI_IDL_GENERIC_8_BYTE,
+  QMI_IDL_OFFSET8(qmiLocGnssBandsSupportedIndMsgT_v02, primaryGnssSignalType),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(qmiLocGnssBandsSupportedIndMsgT_v02, gnssSupportedSignals) - QMI_IDL_OFFSET8(qmiLocGnssBandsSupportedIndMsgT_v02, gnssSupportedSignals_valid)),
+  0x11,
+   QMI_IDL_GENERIC_8_BYTE,
+  QMI_IDL_OFFSET8(qmiLocGnssBandsSupportedIndMsgT_v02, gnssSupportedSignals)
+};
+
+static const uint8_t qmiLocOsnmaPublicKeyMerkleTreeReqMsgT_data_v02[] = {
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(qmiLocOsnmaPublicKeyMerkleTreeReqMsgT_v02, publicKeyType) - QMI_IDL_OFFSET8(qmiLocOsnmaPublicKeyMerkleTreeReqMsgT_v02, publicKeyType_valid)),
+  0x10,
+   QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(qmiLocOsnmaPublicKeyMerkleTreeReqMsgT_v02, publicKeyType),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(qmiLocOsnmaPublicKeyMerkleTreeReqMsgT_v02, publicKeyId) - QMI_IDL_OFFSET8(qmiLocOsnmaPublicKeyMerkleTreeReqMsgT_v02, publicKeyId_valid)),
+  0x11,
+   QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(qmiLocOsnmaPublicKeyMerkleTreeReqMsgT_v02, publicKeyId),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(qmiLocOsnmaPublicKeyMerkleTreeReqMsgT_v02, publicKey) - QMI_IDL_OFFSET8(qmiLocOsnmaPublicKeyMerkleTreeReqMsgT_v02, publicKey_valid)),
+  0x12,
+  QMI_IDL_FLAGS_IS_ARRAY | QMI_IDL_FLAGS_IS_VARIABLE_LEN |  QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(qmiLocOsnmaPublicKeyMerkleTreeReqMsgT_v02, publicKey),
+  QMI_LOC_MERKLE_TREE_KEY_LENGTH_V02,
+  QMI_IDL_OFFSET8(qmiLocOsnmaPublicKeyMerkleTreeReqMsgT_v02, publicKey) - QMI_IDL_OFFSET8(qmiLocOsnmaPublicKeyMerkleTreeReqMsgT_v02, publicKey_len),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(qmiLocOsnmaPublicKeyMerkleTreeReqMsgT_v02, hashFunctionType) - QMI_IDL_OFFSET8(qmiLocOsnmaPublicKeyMerkleTreeReqMsgT_v02, hashFunctionType_valid)),
+  0x13,
+   QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(qmiLocOsnmaPublicKeyMerkleTreeReqMsgT_v02, hashFunctionType),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(qmiLocOsnmaPublicKeyMerkleTreeReqMsgT_v02, intermediateNodes) - QMI_IDL_OFFSET8(qmiLocOsnmaPublicKeyMerkleTreeReqMsgT_v02, intermediateNodes_valid)),
+  0x14,
+  QMI_IDL_FLAGS_IS_ARRAY |  QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET8(qmiLocOsnmaPublicKeyMerkleTreeReqMsgT_v02, intermediateNodes),
+  QMI_LOC_MERKLE_TREE_NODE_ARRAY_LENGTH_V02,
+  QMI_IDL_TYPE88(0, 102),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(qmiLocOsnmaPublicKeyMerkleTreeReqMsgT_v02, rootNode) - QMI_IDL_OFFSET16RELATIVE(qmiLocOsnmaPublicKeyMerkleTreeReqMsgT_v02, rootNode_valid)),
+  0x15,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_AGGREGATE,
+  QMI_IDL_OFFSET16ARRAY(qmiLocOsnmaPublicKeyMerkleTreeReqMsgT_v02, rootNode),
+  QMI_IDL_TYPE88(0, 102)
+};
+
+static const uint8_t qmiLocSetOsnmaStateReqMsgT_data_v02[] = {
+  QMI_IDL_TLV_FLAGS_LAST_TLV | 0x01,
+   QMI_IDL_GENERIC_1_BYTE,
+  QMI_IDL_OFFSET8(qmiLocSetOsnmaStateReqMsgT_v02, enable)
+};
+
 /* Type Table */
 static const qmi_idl_type_table_entry  loc_type_table_v02[] = {
   {sizeof(qmiLocApplicationIdStructT_v02), qmiLocApplicationIdStructT_data_v02},
@@ -9647,7 +9722,8 @@ static const qmi_idl_type_table_entry  loc_type_table_v02[] = {
   {sizeof(qmiLocEnvAidingReflectingPlaneStructT_v02), qmiLocEnvAidingReflectingPlaneStructT_data_v02},
   {sizeof(qmiLocEnvAidingSVCorrectionStructT_v02), qmiLocEnvAidingSVCorrectionStructT_data_v02},
   {sizeof(qmiLocNavDataStructT_v02), qmiLocNavDataStructT_data_v02},
-  {sizeof(qmiLocTimeStructT_v02), qmiLocTimeStructT_data_v02}
+  {sizeof(qmiLocTimeStructT_v02), qmiLocTimeStructT_data_v02},
+  {sizeof(qmiLocOsnmaTreeNodeT_v02), qmiLocOsnmaTreeNodeT_data_v02}
 };
 
 /* Message Table */
@@ -9972,7 +10048,10 @@ static const qmi_idl_message_table_entry loc_message_table_v02[] = {
   {sizeof(qmiLocSetTribandStateReqMsgT_v02), qmiLocSetTribandStateReqMsgT_data_v02},
   {sizeof(qmiLocGetTribandStateIndMsgT_v02), qmiLocGetTribandStateIndMsgT_data_v02},
   {sizeof(qmiLocSetSdkFeatureConfigReqMsgT_v02), qmiLocSetSdkFeatureConfigReqMsgT_data_v02},
-  {sizeof(qmiLocSetSdkFeatureConfigIndMsgT_v02), qmiLocSetSdkFeatureConfigIndMsgT_data_v02}
+  {sizeof(qmiLocSetSdkFeatureConfigIndMsgT_v02), qmiLocSetSdkFeatureConfigIndMsgT_data_v02},
+  {sizeof(qmiLocGnssBandsSupportedIndMsgT_v02), qmiLocGnssBandsSupportedIndMsgT_data_v02},
+  {sizeof(qmiLocOsnmaPublicKeyMerkleTreeReqMsgT_v02), qmiLocOsnmaPublicKeyMerkleTreeReqMsgT_data_v02},
+  {sizeof(qmiLocSetOsnmaStateReqMsgT_v02), qmiLocSetOsnmaStateReqMsgT_data_v02}
 };
 
 /* Range Table */
@@ -10143,7 +10222,9 @@ static const qmi_idl_service_message_table_entry loc_service_command_messages_v0
   {QMI_LOC_INJECT_RAW_DATA_REQ_V02, QMI_IDL_TYPE16(0, 314), 4029},
   {QMI_LOC_SET_TRIBAND_STATE_REQ_V02, QMI_IDL_TYPE16(0, 317), 4},
   {QMI_LOC_GET_TRIBAND_STATE_REQ_V02, QMI_IDL_TYPE16(0, 0), 0},
-  {QMI_LOC_SET_SDK_FEATURE_CONFIG_REQ_V02, QMI_IDL_TYPE16(0, 319), 86}
+  {QMI_LOC_SET_SDK_FEATURE_CONFIG_REQ_V02, QMI_IDL_TYPE16(0, 319), 86},
+  {QMI_LOC_OSNMA_PUBLIC_KEY_MERKLE_TREE_REQ_V02, QMI_IDL_TYPE16(0, 322), 270},
+  {QMI_LOC_SET_OSNMA_STATE_REQ_V02, QMI_IDL_TYPE16(0, 323), 4}
 };
 
 static const qmi_idl_service_message_table_entry loc_service_response_messages_v02[] = {
@@ -10292,7 +10373,9 @@ static const qmi_idl_service_message_table_entry loc_service_response_messages_v
   {QMI_LOC_INJECT_RAW_DATA_RESP_V02, QMI_IDL_TYPE16(0, 1), 7},
   {QMI_LOC_SET_TRIBAND_STATE_RESP_V02, QMI_IDL_TYPE16(0, 1), 7},
   {QMI_LOC_GET_TRIBAND_STATE_RESP_V02, QMI_IDL_TYPE16(0, 1), 7},
-  {QMI_LOC_SET_SDK_FEATURE_CONFIG_RESP_V02, QMI_IDL_TYPE16(0, 1), 7}
+  {QMI_LOC_SET_SDK_FEATURE_CONFIG_RESP_V02, QMI_IDL_TYPE16(0, 1), 7},
+  {QMI_LOC_OSNMA_PUBLIC_KEY_MERKLE_TREE_RESP_V02, QMI_IDL_TYPE16(0, 1), 7},
+  {QMI_LOC_SET_OSNMA_STATE_RESP_V02, QMI_IDL_TYPE16(0, 1), 7}
 };
 
 static const qmi_idl_service_message_table_entry loc_service_indication_messages_v02[] = {
@@ -10444,7 +10527,7 @@ static const qmi_idl_service_message_table_entry loc_service_indication_messages
   {QMI_LOC_SET_BLACKLIST_SV_IND_V02, QMI_IDL_TYPE16(0, 2), 7},
   {QMI_LOC_GET_BLACKLIST_SV_IND_V02, QMI_IDL_TYPE16(0, 259), 73},
   {QMI_LOC_SET_CONSTELLATION_CONTROL_IND_V02, QMI_IDL_TYPE16(0, 2), 7},
-  {QMI_LOC_DC_REPORT_IND_V02, QMI_IDL_TYPE16(0, 261), 80},
+  {QMI_LOC_DC_REPORT_IND_V02, QMI_IDL_TYPE16(0, 261), 84},
   {QMI_LOC_REGISTER_MASTER_CLIENT_IND_V02, QMI_IDL_TYPE16(0, 263), 7},
   {QMI_LOC_EVENT_ENGINE_LOCK_STATE_IND_V02, QMI_IDL_TYPE16(0, 264), 25},
   {QMI_LOC_SYSTEM_INFO_IND_V02, QMI_IDL_TYPE16(0, 268), 28},
@@ -10490,7 +10573,10 @@ static const qmi_idl_service_message_table_entry loc_service_indication_messages
   {QMI_LOC_ENGINE_DEBUG_DATA_IND_V02, QMI_IDL_TYPE16(0, 316), 3002},
   {QMI_LOC_SET_TRIBAND_STATE_IND_V02, QMI_IDL_TYPE16(0, 2), 7},
   {QMI_LOC_GET_TRIBAND_STATE_IND_V02, QMI_IDL_TYPE16(0, 318), 11},
-  {QMI_LOC_SET_SDK_FEATURE_CONFIG_IND_V02, QMI_IDL_TYPE16(0, 320), 18}
+  {QMI_LOC_SET_SDK_FEATURE_CONFIG_IND_V02, QMI_IDL_TYPE16(0, 320), 18},
+  {QMI_LOC_GNSS_BANDS_SUPPORTED_IND_V02, QMI_IDL_TYPE16(0, 321), 22},
+  {QMI_LOC_OSNMA_PUBLIC_KEY_MERKLE_TREE_IND_V02, QMI_IDL_TYPE16(0, 2), 7},
+  {QMI_LOC_SET_OSNMA_STATE_IND_V02, QMI_IDL_TYPE16(0, 2), 7}
 };
 
 /*Service Object*/
@@ -10504,7 +10590,7 @@ struct qmi_idl_service_object loc_qmi_idl_service_object_v02 = {
     sizeof(loc_service_indication_messages_v02)/sizeof(qmi_idl_service_message_table_entry) },
   { loc_service_command_messages_v02, loc_service_response_messages_v02, loc_service_indication_messages_v02},
   &loc_qmi_idl_type_table_object_v02,
-  0x9C,
+  0x9F,
   NULL
 };
 

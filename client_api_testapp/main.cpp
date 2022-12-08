@@ -161,6 +161,8 @@ enum TrackingSessionType {
 #define CANCEL_SINGLE_FUSED_FIX    "cancelSingleFusedFix"
 #define CONFIG_XTRA_PARAMS         "configXtraParams"
 #define GET_XTRA_STATUS             "getXtraStatus"
+#define CONFIG_MERKLE_TREE          "configMerkleTree"
+#define CONFIG_OSNMA_ENABLEMENT     "configOsnmaEnablement"
 #define REGISTER_XTRA_STATUS_UPDATE "registerXtraUpdateStatus"
 #define ENABLE_XTRA_ON_DEMAND_DOWNLOAD "enableXtraOnDemandDownload"
 
@@ -519,6 +521,8 @@ static void printHelp() {
     printf("%s: cancle single shot fix \n", CANCEL_SINGLE_FUSED_FIX );
     printf("%s: config xtra params \n", CONFIG_XTRA_PARAMS);
     printf("%s: get xtra status \n", GET_XTRA_STATUS);
+    printf("%s: config merkle tree \n", CONFIG_MERKLE_TREE);
+    printf("%s: config osnam enablement \n", CONFIG_OSNMA_ENABLEMENT);
     printf("%s: register xtra status update \n", REGISTER_XTRA_STATUS_UPDATE);
     printf("%s: enable xtra on demand download \n", ENABLE_XTRA_ON_DEMAND_DOWNLOAD);
 }
@@ -1927,6 +1931,35 @@ int main(int argc, char *argv[]) {
             }
             printf("register update %d\n", registerUpdate);
             pIntClient->registerXtraStatusUpdate(registerUpdate);
+        } else if (strncmp(buf, CONFIG_MERKLE_TREE, strlen(CONFIG_MERKLE_TREE)) == 0) {
+            FILE *xmlFile = fopen("/etc/merkletree.xml", "rb");
+            if (nullptr == xmlFile) {
+                printf("failed to open merkletree config file\n");
+                break;
+            }
+            // File opened. Read it
+            fseek(xmlFile, 0, SEEK_END);
+            int xmlSize = (int)ftell(xmlFile);
+            fseek(xmlFile, 0, SEEK_SET);
+            char* buffer = new char[xmlSize+1];
+            if (buffer != nullptr) {
+                fread(buffer, 1, xmlSize, xmlFile);
+                buffer[xmlSize] = 0;
+
+                printf("config merkle tree, file size %d, buffer: %p\n", xmlSize, buffer);
+                pIntClient->configMerkleTree(buffer, xmlSize);
+                delete[] buffer;
+            }
+        } else if (strncmp(buf, CONFIG_OSNMA_ENABLEMENT, strlen(CONFIG_OSNMA_ENABLEMENT)) == 0) {
+            bool enable = false;;
+            static char *save = nullptr;
+            char* token = strtok_r(buf, " ", &save);
+            token = strtok_r(NULL, " ", &save);
+            if (token != NULL) {
+                enable = (atoi(token) != 0);
+            }
+            printf("config osnma enablement %d\n", enable);
+            pIntClient->configOsnmaEnablement(enable);
         } else {
             int command = buf[0];
             switch(command) {
