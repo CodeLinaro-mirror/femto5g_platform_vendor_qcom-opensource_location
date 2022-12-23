@@ -138,6 +138,10 @@ typedef uint64_t GpsSvMeasHeaderFlags;
 #define BIAS_GALE1_GALE5B_VALID         0x01000000
 #define BIAS_GALE1_GALE5B_UNC_VALID     0x02000000
 
+#define BIAS_GLOG1_VALID                0x10000000
+#define BIAS_GLOG1_UNC_VALID            0x20000000
+
+
 typedef struct {
     uint64_t flags;
 
@@ -171,7 +175,15 @@ typedef struct {
     float bdsB1_bdsB1cUnc;
     float bdsB1_bdsB2a;
     float bdsB1_bdsB2aUnc;
+    float gloG1;
+    float gloG1Unc;
 } timeBiases;
+
+typedef struct {
+    GnssSvType svType;
+    double carrierFrequencyHz;
+    GnssMeasurementsCodeType codeType;
+} referenceSignalTypeForIsb;
 
 /* This class derives from the LocApiBase class.
    The members of this class are responsible for converting
@@ -195,7 +207,7 @@ private:
   uint32_t mMinInterval;
   std::vector<adrData>  mADRdata;
   GnssMeasurements*  mGnssMeasurements;
-  bool mGPSreceived;
+  bool mPreferredSignalTypeReceived;
   int  mMsInWeek;
   bool mAgcIsPresent;
   timeBiases mTimeBiases;
@@ -211,6 +223,9 @@ private:
   uint32_t mRefFCount;
   std::string mPackageName[eQMI_LOC_R3_V02+1];
   bool mIsFullTracking;
+
+  qmiLocGnssSignalTypeMaskT_v02 mPreferredSignalType;
+  referenceSignalTypeForIsb mReferenceSignalTypeForIsb;
 
   // Below two member variables are for elapsedRealTime calculation
   ElapsedRealtimeEstimator mMeasElapsedRealTimeCal;
@@ -355,12 +370,13 @@ private:
       mGnssMeasurements->gnssSvMeasurementSet.svMeasSetHeader.size =
           sizeof(GnssSvMeasurementHeader);
       memset(&mTimeBiases, 0, sizeof(mTimeBiases));
-      mGPSreceived = false;
+      mPreferredSignalTypeReceived = false;
       mMsInWeek = -1;
       mAgcIsPresent = false;
   }
 
-  void setGnssBiases();
+  void setGnssBiasesForL1CA();
+  void setGnssBiasesForB1I();
 
   /* convert and report ODCPI request */
   void requestOdcpi(
