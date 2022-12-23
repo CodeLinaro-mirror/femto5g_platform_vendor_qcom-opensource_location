@@ -111,6 +111,10 @@ typedef uint64_t GpsSvMeasHeaderFlags;
 #define BIAS_GALE1_GALE5B_VALID         0x01000000
 #define BIAS_GALE1_GALE5B_UNC_VALID     0x02000000
 
+#define BIAS_GLOG1_VALID                0x10000000
+#define BIAS_GLOG1_UNC_VALID            0x20000000
+
+
 typedef struct {
     uint64_t flags;
 
@@ -144,7 +148,15 @@ typedef struct {
     float bdsB1_bdsB1cUnc;
     float bdsB1_bdsB2a;
     float bdsB1_bdsB2aUnc;
+    float gloG1;
+    float gloG1Unc;
 } timeBiases;
+
+typedef struct {
+    GnssSvType svType;
+    double carrierFrequencyHz;
+    GnssMeasurementsCodeType codeType;
+} referenceSignalTypeForIsb;
 
 /* This class derives from the LocApiBase class.
    The members of this class are responsible for converting
@@ -165,7 +177,7 @@ private:
   std::vector<Resender> mResenders;
   bool mMasterRegisterNotSupported;
   GnssMeasurements*  mGnssMeasurements;
-  bool mGPSreceived;
+  bool mPreferredSignalTypeReceived;
   int  mMsInWeek;
   bool mAgcIsPresent;
   bool mIsFirstFinalFixReported;
@@ -178,6 +190,8 @@ private:
   timeBiases mTimeBiases;
   qmiLocPlatformPowerStateEnumT_v02 mPlatformPowerState;
   bool mIsFullTracking;
+  qmiLocGnssSignalTypeMaskT_v02 mPreferredSignalType;
+  referenceSignalTypeForIsb mReferenceSignalTypeForIsb;
   GnssMeasurementsNotification m1HzMeasurementsNotify;
 
   /* Convert event mask from loc eng to loc_api_v02 format */
@@ -330,6 +344,8 @@ private:
       mAgcIsPresent = false;
   }
 
+  void setGnssBiasesForL1CA();
+  void setGnssBiasesForB1I();
   void setGnssBiases();
   /* convert and report ODCPI request */
   void requestOdcpi(
