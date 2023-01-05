@@ -100,15 +100,8 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <loc_pla.h>
 #include <array>
-#ifdef NO_UNORDERED_SET_OR_MAP
-    #include <set>
-    #include <map>
-    #define unordered_set set
-    #define unordered_map map
-#else
-    #include <unordered_set>
-    #include <unordered_map>
-#endif
+#include <unordered_set>
+#include <unordered_map>
 
 namespace location_integration
 {
