@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -3797,6 +3797,7 @@ void  LocApiV02 :: reportSvPolynomial(const qmiLocEventGnssSvPolyIndMsgT_v02 *gn
     if (0 != gnss_sv_poly_ptr->gnssSvId) {
         svPolynomial.gnssSvId       = gnss_sv_poly_ptr->gnssSvId;
         svPolynomial.T0             = gnss_sv_poly_ptr->T0;
+        svPolynomial.is_valid |= ULP_GNSS_SV_POLY_BIT_T0;
 
         if (1 == gnss_sv_poly_ptr->gloFrequency_valid) {
             svPolynomial.is_valid  |= ULP_GNSS_SV_POLY_BIT_GLO_FREQ;
@@ -3816,6 +3817,11 @@ void  LocApiV02 :: reportSvPolynomial(const qmiLocEventGnssSvPolyIndMsgT_v02 *gn
             svPolynomial.is_valid |= ULP_GNSS_SV_POLY_BIT_FLAG;
             svPolynomial.svPolyStatusMaskValidity = gnss_sv_poly_ptr->svPolyFlagValid;
             svPolynomial.svPolyStatusMask = gnss_sv_poly_ptr->svPolyFlags;
+        }
+
+        if ((svPolynomial.svPolyStatusMaskValidity & GNSS_SV_POLY_DELETE_VALID_V02) &&
+            (svPolynomial.svPolyStatusMask & GNSS_SV_POLY_DELETE_V02)) {
+            svPolynomial.is_valid &= ~ULP_GNSS_SV_POLY_BIT_T0;
         }
 
         if (1 == gnss_sv_poly_ptr->polyCoeffXYZ0_valid) {
