@@ -245,13 +245,18 @@ void TrackingSessCbHandler::initializeCommonCbs(LocationClientApiImpl *pClientAp
 LocationClientApi
 ******************************************************************************/
 LocationClientApi::LocationClientApi(CapabilitiesCb capaCb) {
-    capabilitiesCallback capabilitiesCb = [capaCb] (LocationCapabilitiesMask capabilitiesMask) {
-        LocationCapabilitiesMask capsMask =
+    capabilitiesCallback capabilitiesCb = nullptr;
+    if (capaCb) {
+        capabilitiesCb = [capaCb] (LocationCapabilitiesMask capabilitiesMask) {
+           LocationCapabilitiesMask capsMask =
                 LocationClientApiImpl::parseCapabilitiesMask(capabilitiesMask);
-        capaCb(capsMask);
-    };
-
+           capaCb(capsMask);
+        };
+    }
     mApiImpl = new LocationClientApiImpl(capabilitiesCb);
+    if (!mApiImpl) {
+        LOC_LOGe ("mApiImpl creation failed.");
+    }
 }
 
 LocationClientApi::~LocationClientApi() {
