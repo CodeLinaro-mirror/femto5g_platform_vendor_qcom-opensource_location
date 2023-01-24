@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -1667,6 +1667,10 @@ uint32_t LocationApiPbMsgConv::getPBMaskForLocationTechnologyMask(
     if (locTechMask & LOCATION_TECHNOLOGY_VIS_BIT) {
         pbLocTechMask |= PB_LOCATION_TECHNOLOGY_VIS_BIT;
     }
+    if (locTechMask & LOCATION_TECHNOLOGY_PROPAGATED_BIT) {
+        pbLocTechMask |= PB_LOCATION_TECHNOLOGY_PROPAGATED_BIT;
+    }
+
     LocApiPb_LOGv("LocApiPB: locTechMask:%x, pbLocTechMask:%x", locTechMask, pbLocTechMask);
     return pbLocTechMask;
 }
@@ -2783,6 +2787,9 @@ uint32_t LocationApiPbMsgConv::getLocationTechnologyMaskFromPB(
     }
     if (pbLocTechMask & PB_LOCATION_TECHNOLOGY_VIS_BIT) {
         locTechMask |= LOCATION_TECHNOLOGY_VIS_BIT;
+    }
+    if (pbLocTechMask & PB_LOCATION_TECHNOLOGY_PROPAGATED_BIT) {
+        locTechMask |= LOCATION_TECHNOLOGY_PROPAGATED_BIT;
     }
     LocApiPb_LOGv("LocApiPB: pbLocTechMask:%x, locTechMask:%x", pbLocTechMask, locTechMask);
     return locTechMask;
