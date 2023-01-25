@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -400,7 +400,11 @@ void IpcListener::onListenerReady() {
     struct ClientRegisterReq : public LocMsg {
         ClientRegisterReq(LocationIntegrationApiImpl& apiImpl) : mApiImpl(apiImpl) {}
         void proc() const {
-            mApiImpl.sendClientRegMsgToHalDaemon();
+            if (mApiImpl.sendClientRegMsgToHalDaemon()) {
+                // lia is able to send msg to hal daemon,
+                // send queued command to hal daemon if there is any
+                mApiImpl.processQueuedReqs();
+            }
         }
         LocationIntegrationApiImpl& mApiImpl;
     };
