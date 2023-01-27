@@ -1678,9 +1678,8 @@ void LocationApiService::onGtpWwanTrackingCallback(Location location) {
             LocHalDaemonClientHandler* pClient = getClient(it->first);
             if (pClient) {
                 pClient->sendTerrestrialFix(LOCATION_ERROR_SUCCESS, location);
-            } else {
-                ++it;
             }
+            ++it;
         }
         mTerrestrialFixTimeoutMap.clear();
         mGtpWwanSsLocationApi->stopNetworkLocation(&mGtpWwanPosCallback);
@@ -1876,7 +1875,7 @@ void LocationApiService::getSingleTerrestrialPos(
 
         mTerrestrialFixTimeoutMap.emplace(
                 std::piecewise_construct, std::forward_as_tuple(clientName),
-                std::forward_as_tuple(this, clientName, SINGLE_SHOT_FIX_TIMER_FUSED));
+                std::forward_as_tuple(this, clientName, SINGLE_SHOT_FIX_TIMER_TERRESTRIAL));
         auto it = mTerrestrialFixTimeoutMap.find(clientName);
         if (it != mTerrestrialFixTimeoutMap.end()) {
             it->second.start(pReqMsg->mTimeoutMsec, false);
