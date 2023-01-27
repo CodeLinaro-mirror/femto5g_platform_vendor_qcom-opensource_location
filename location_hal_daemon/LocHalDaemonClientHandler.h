@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -132,9 +132,7 @@ public:
     // related to location session need to be unsubscribed
     void unsubscribeLocationSessionCb();
     uint32_t startTracking(LocationOptions & locOptions);
-    void stopTracking();
-    uint32_t resumeTracking(); // resume tracking due to power resume
-    void pauseTracking();      // stop tracking due to power suspend
+    void stopTracking(bool clientExpectingResp);
     void updateTrackingOptions(LocationOptions & locOptions);
     void onGnssEnergyConsumedInfoAvailable(LocAPIGnssEnergyConsumedIndMsg &msg);
     void onControlResponseCb(LocationError err, ELocMsgID msgId);
