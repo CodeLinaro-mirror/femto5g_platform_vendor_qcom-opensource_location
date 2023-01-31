@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022, 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -357,6 +357,9 @@ void LocationClientApiImpl::parseLocation(const ::Location &halLocation, Locatio
     }
     if (::LOCATION_TECHNOLOGY_VIS_BIT & halLocation.techMask) {
         flags |= LOCATION_TECHNOLOGY_VIS_BIT;
+    }
+    if (::LOCATION_TECHNOLOGY_PROPAGATED_BIT & halLocation.techMask) {
+        flags |= LOCATION_TECHNOLOGY_PROPAGATED_BIT;
     }
     location.techMask = (LocationTechnologyMask)flags;
 }
