@@ -100,7 +100,8 @@ void LocHalDaemonClientHandler::updateSubscription(uint32_t mask) {
 
     // update optional callback - following four callbacks can be controlable
     // tracking
-    if (mSubscriptionMask & E_LOC_CB_TRACKING_BIT) {
+    if (mSubscriptionMask &
+            (E_LOC_CB_TRACKING_BIT | E_LOC_CB_SIMPLE_LOCATION_INFO_BIT)) {
         mCallbacks.trackingCb = [this](Location location) {
             onTrackingCb(location);
         };
