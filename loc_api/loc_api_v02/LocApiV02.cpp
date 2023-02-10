@@ -2659,7 +2659,6 @@ void LocApiV02 :: reportPosition (
   bool unpropagatedPosition)
 {
     UlpLocation location;
-    LocPosTechMask tech_Mask = LOC_POS_TECH_MASK_DEFAULT;
     LOC_LOGD("Reporting position from V2 Adapter\n");
     memset(&location, 0, sizeof (UlpLocation));
     location.size = sizeof(location);
@@ -2817,9 +2816,9 @@ void LocApiV02 :: reportPosition (
         }
 
         // Technology Mask
-        tech_Mask |= location_report_ptr->technologyMask;
         locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_POS_TECH_MASK;
         locationExtended.tech_mask = convertPosTechMask(location_report_ptr->technologyMask);
+        location.tech_mask = locationExtended.tech_mask;
 
         //Mark the location source as from GNSS
         location.gpsLocation.flags |= LOC_GPS_LOCATION_HAS_SOURCE_INFO;
@@ -2999,7 +2998,7 @@ void LocApiV02 :: reportPosition (
                                                    (eQMI_LOC_SESS_STATUS_IN_PROGRESS_V02 ==
                                                    location_report_ptr->sessionStatus ?
                                                    LOC_SESS_INTERMEDIATE : LOC_SESS_SUCCESS),
-                                                   tech_Mask);
+                                                   locationExtended.tech_mask);
             if (unpropagatedPosition || reported) {
                 for (idx = 0; idx < gnssSvUsedList_len; idx++)
                 {
@@ -3354,7 +3353,7 @@ void LocApiV02 :: reportPosition (
                                    (location_report_ptr->sessionStatus ==
                                     eQMI_LOC_SESS_STATUS_IN_PROGRESS_V02 ?
                                     LOC_SESS_INTERMEDIATE : LOC_SESS_SUCCESS),
-                                   tech_Mask, &dataNotify, msInWeek);
+                                   locationExtended.tech_mask, &dataNotify, msInWeek);
     }
     else
     {
@@ -3602,10 +3601,12 @@ void  LocApiV02 :: reportSv (
 
                 if (sv_info_ptr->validMask & QMI_LOC_SV_INFO_MASK_VALID_ELEVATION_V02) {
                     gnssSv_ref.elevation = sv_info_ptr->elevation;
+                    mask |= GNSS_SV_OPTIONS_HAS_ELEVATION_BIT;
                 }
 
                 if (sv_info_ptr->validMask & QMI_LOC_SV_INFO_MASK_VALID_AZIMUTH_V02) {
                     gnssSv_ref.azimuth = sv_info_ptr->azimuth;
+                    mask |= GNSS_SV_OPTIONS_HAS_AZIMUTH_BIT;
                 }
 
                 if (sv_info_ptr->validMask &
@@ -7674,6 +7675,9 @@ LocPosTechMask LocApiV02 :: convertPosTechMask(
 
    if (mask & QMI_LOC_POS_TECH_MASK_HYBRID_V02)
       locTechMask |= LOC_POS_TECH_MASK_HYBRID;
+
+   if (mask & QMI_LOC_POS_TECH_MASK_PROPAGATED_V02)
+      locTechMask |= LOC_POS_TECH_MASK_PROPAGATED;
 
    return locTechMask;
 }
