@@ -28,7 +28,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -1469,8 +1469,9 @@ public:
         Set client consent to use terrestrial positioning. <br/>
 
         Client must call this API with userConsent set to true in order
-        to retrieve terrestrial position via
-        LocationClientApi::getSingleTerrestrialPosition(). <br/>
+        to retrieve positions via
+        LocationClientApi::getSingleTerrestrialPosition(),
+        LocationClientApi::getSinglePosition(). <br/>
 
         The consent will remain effective across power cycles, until
         this API is called with a different value.  <br/>
