@@ -569,7 +569,8 @@ public:
 
   virtual void requestForAidingData(GnssAidingDataSvMask svDataMask);
   virtual void configRobustLocation(bool enable, bool enableForE911,
-                                    LocApiResponse *adapterResponse=nullptr);
+                                    LocApiResponse *adapterResponse=nullptr,
+                                    bool enableForE911Valid = false);
   virtual void configMinGpsWeek(uint16_t minGpsWeek,
                                 LocApiResponse *adapterResponse=nullptr);
   virtual LocationError setParameterSync(const GnssConfig & gnssConfig);

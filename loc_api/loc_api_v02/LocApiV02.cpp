@@ -8367,9 +8367,10 @@ void LocApiV02::reportEngDebugDataInfo(const qmiLocEngineDebugDataIndMsgT_v02*
 }
 
 void LocApiV02::configRobustLocation
-        (bool enable, bool enableForE911, LocApiResponse *adapterResponse) {
+        (bool enable, bool enableForE911, LocApiResponse *adapterResponse,
+            bool enableForE911Valid) {
 
-    sendMsg(new LocApiMsg([this, enable, enableForE911, adapterResponse] () {
+    sendMsg(new LocApiMsg([this, enable, enableForE911, adapterResponse, enableForE911Valid] () {
 
     LocationError err = LOCATION_ERROR_SUCCESS;
     qmiLocSetRobustLocationReqMsgT_v02 req;
@@ -8381,7 +8382,7 @@ void LocApiV02::configRobustLocation
     memset(&req, 0, sizeof(req));
     memset(&ind, 0, sizeof(ind));
     req.enable = enable;
-    req.enableForE911_valid = true;
+    req.enableForE911_valid = enableForE911Valid;
     req.enableForE911 = enableForE911;
     if (enable == false && enableForE911 == true) {
         LOC_LOGw("enableForE911 is not allowed when enable is set to false");
@@ -10967,15 +10968,29 @@ void LocApiV02::configPrecisePositioning(uint32_t featureId, bool enable,
             req.appHash[j] = (uint8_t) strtol(byteString.c_str(), nullptr, 16);
         }
         req.featureStatusReport_valid = false;
-        if (featureId == 2642) {
+
+        switch (featureId) {
+        case QESDK_FEATURE_ID_RTK:
             req.featureStatusReport_valid = true;
             req.featureStatusReport |= QMI_LOC_FEATURE_STATUS_CARRIER_PHASE_V02;
             req.featureStatusReport |= QMI_LOC_FEATURE_STATUS_SV_POLYNOMIALS_V02;
             req.featureStatusReport |= QMI_LOC_FEATURE_STATUS_DGNSS_V02;
             req.featureStatusReport |= QMI_LOC_FEATURE_STATUS_QPPE_V02;
-        } else if (featureId == 2641) {
+            break;
+
+        case QESDK_FEATURE_ID_EDGNSS:
             req.featureStatusReport_valid = true;
             req.featureStatusReport |= QMI_LOC_FEATURE_STATUS_DGNSS_V02;
+            break;
+
+        case QESDK_FEATURE_ID_RL:
+            req.featureStatusReport_valid = true;
+            req.featureStatusReport |= QMI_LOC_FEATURE_STATUS_ROBUST_LOCATION_V02;
+            break;
+
+        default:
+            LOC_LOGe("Invalid feature id %d", featureId);
+            break;
         }
 
         req_union.pLocSetSdkFeatureConfigReq = &req;
