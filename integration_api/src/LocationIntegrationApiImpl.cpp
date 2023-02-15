@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -73,8 +73,10 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <inttypes.h>
 
 static uint32_t sXtraTestEnabled = 0;
+static uint32_t sSleepTime = 800000;
 static const loc_param_s_type gConfigTable[] = {
-    {"XTRA_TEST_ENABLED", &sXtraTestEnabled, NULL, 'n'}
+    {"XTRA_TEST_ENABLED", &sXtraTestEnabled, NULL, 'n'},
+    {"QRTRWATCHER_DELAY_MICROSECOND", &sSleepTime, NULL, 'n'}
 };
 
 namespace location_integration {
@@ -230,7 +232,7 @@ public:
                     LOC_LOGi("LocIpcQrtrWatcher:: HAL Daemon ServiceStatus::UP");
                     auto sender = mWatcher.mIpcSender.lock();
                     if (nullptr != sender && sender->copyDestAddrFrom(mRefSender)) {
-                        sleep(2);
+                        usleep(sSleepTime);
                         auto listener = mWatcher.mIpcListener.lock();
                         if (nullptr != listener) {
                             LocAPIHalReadyIndMsg msg(SERVICE_NAME, &mWatcher.mPbufMsgConv);
@@ -398,7 +400,11 @@ void IpcListener::onListenerReady() {
     struct ClientRegisterReq : public LocMsg {
         ClientRegisterReq(LocationIntegrationApiImpl& apiImpl) : mApiImpl(apiImpl) {}
         void proc() const {
-            mApiImpl.sendClientRegMsgToHalDaemon();
+            if (mApiImpl.sendClientRegMsgToHalDaemon()) {
+                // lia is able to send msg to hal daemon,
+                // send queued command to hal daemon if there is any
+                mApiImpl.processQueuedReqs();
+            }
         }
         LocationIntegrationApiImpl& mApiImpl;
     };

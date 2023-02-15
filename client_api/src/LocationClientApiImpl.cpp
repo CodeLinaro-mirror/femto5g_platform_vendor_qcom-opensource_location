@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -77,10 +77,12 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <loc_misc_utils.h>
 
 static uint32_t gDebug = 0;
+static uint32_t gSleepTime = 800000;
 
 static const loc_param_s_type gConfigTable[] =
 {
-    {"DEBUG_LEVEL", &gDebug, NULL, 'n'}
+    {"DEBUG_LEVEL", &gDebug, NULL, 'n'},
+    {"QRTRWATCHER_DELAY_MICROSECOND", &gSleepTime, NULL, 'n'}
 };
 
 namespace location_client {
@@ -355,6 +357,9 @@ void LocationClientApiImpl::parseLocation(const ::Location &halLocation, Locatio
     }
     if (::LOCATION_TECHNOLOGY_VIS_BIT & halLocation.techMask) {
         flags |= LOCATION_TECHNOLOGY_VIS_BIT;
+    }
+    if (::LOCATION_TECHNOLOGY_PROPAGATED_BIT & halLocation.techMask) {
+        flags |= LOCATION_TECHNOLOGY_PROPAGATED_BIT;
     }
     location.techMask = (LocationTechnologyMask)flags;
 }
@@ -1277,7 +1282,7 @@ public:
                 if (LocIpcQrtrWatcher::ServiceStatus::UP == mStatus) {
                     auto sender = mWatcher.mIpcSender.lock();
                     if (nullptr != sender && sender->copyDestAddrFrom(mRefSender)) {
-                        sleep(2);
+                        usleep(gSleepTime);
                         auto listener = mWatcher.mIpcListener.lock();
                         if (nullptr != listener) {
                             LocAPIHalReadyIndMsg msg(SERVICE_NAME, &mWatcher.mPbufMsgConv);
