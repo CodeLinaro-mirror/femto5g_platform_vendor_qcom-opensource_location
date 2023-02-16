@@ -25,6 +25,13 @@
   WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
   OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
   IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+  =============================================================================
+
+  Changes from Qualcomm Innovation Center are provided under the following license:
+  Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+  SPDX-License-Identifier: BSD-3-Clause-Clear
+
   =============================================================================*/
 
 #ifndef __IZATREMOTEAPIS_H__
@@ -48,6 +55,7 @@ protected:
     IzatNotifierProxy* const mNotifierProxy;
     IzatNotifier(const char* const tag, const OutCard* subCard);
     virtual ~IzatNotifier();
+    void registerSelf();
 public:
     virtual void handleMsg(qc_loc_fw::InPostcard * const in_card) = 0;
 };
@@ -59,8 +67,8 @@ class SstpUpdater : public IzatNotifier {
     static const char* const sUncConfTag;
 
 protected:
-    SstpUpdater();
-    virtual inline ~SstpUpdater() {}
+    inline SstpUpdater() : IzatNotifier(sName, nullptr) {}
+    virtual inline ~SstpUpdater() = default;
 public:
     static const char sName[];
     virtual void handleMsg(qc_loc_fw::InPostcard * const in_card) final;
