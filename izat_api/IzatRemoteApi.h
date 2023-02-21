@@ -60,25 +60,6 @@ public:
     virtual void handleMsg(qc_loc_fw::InPostcard * const in_card) = 0;
 };
 
-class SstpUpdater : public IzatNotifier {
-    static const char* const sLatTag;
-    static const char* const sLonTag;
-    static const char* const sUncTag;
-    static const char* const sUncConfTag;
-
-protected:
-    inline SstpUpdater() : IzatNotifier(sName, nullptr) {}
-    virtual inline ~SstpUpdater() = default;
-public:
-    static const char sName[];
-    virtual void handleMsg(qc_loc_fw::InPostcard * const in_card) final;
-    void stop();
-    virtual void errReport(const char* errStr) = 0;
-    virtual void siteUpdate(const char* name, double lat, double lon,
-                            float unc, int32_t uncConfidence) = 0;
-    virtual void mccUpdate(uint32_t mcc, const char* confidence) = 0;
-};
-
 } // izat_remote_api
 
 #endif //__IZATREMOTEAPIS_H__

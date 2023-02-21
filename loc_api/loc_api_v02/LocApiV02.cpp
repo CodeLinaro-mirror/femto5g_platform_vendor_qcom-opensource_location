@@ -5417,6 +5417,7 @@ void LocApiV02::reportGnssMeasurementData(
         if (gnss_measurement_report_ptr.nHzMeasurement_valid &&
             gnss_measurement_report_ptr.nHzMeasurement) {
             mGnssMeasurements->gnssSvMeasurementSet.isNhz = true;
+            mGnssMeasurements->gnssMeasNotification.isNhz = true;
         }
         mCounter++;
     }
