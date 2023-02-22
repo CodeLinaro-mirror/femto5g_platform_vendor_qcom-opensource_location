@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -92,6 +92,12 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
          LOCATION_TECHNOLOGY_HYBRID_BIT
 #define LOCATION_POS_TECH_PPE_BIT \
          LOCATION_TECHNOLOGY_PPE_BIT
+#define LOCATION_POS_TECH_VEH_BIT \
+         LOCATION_TECHNOLOGY_VEH_BIT
+#define LOCATION_POS_TECH_VIS_BIT \
+         LOCATION_TECHNOLOGY_VIS_BIT
+#define LOCATION_POS_TECH_PROPAGATED_BIT \
+         LOCATION_TECHNOLOGY_PROPAGATED_BIT
 // DEPRECATION - BACKWARD COMPATIBILITY SECTION
 
 using std::string;
@@ -411,7 +417,10 @@ enum LocationTechnologyMask {
     LOCATION_TECHNOLOGY_VEH_BIT                      = (1<<9),
     /** Visual data was used to calculate
      *  Location. <br/>   */
-    LOCATION_TECHNOLOGY_VIS_BIT                      = (1<<10)
+    LOCATION_TECHNOLOGY_VIS_BIT                      = (1<<10),
+    /** Propagation logic was used to calculate
+     *  Location. <br/>   */
+    LOCATION_TECHNOLOGY_PROPAGATED_BIT               = (1<<11)
 };
 
 /** Specify the set of navigation solutions that contribute
@@ -2592,6 +2601,10 @@ public:
         Retrieve single-shot terrestrial position using the set of
         specified terrestrial technologies. <br/>
 
+        In order to retrieve terrestrial positions,
+        the client must give consent first through
+        LocationIntegrationApi::setUserConsentForTerrestrialPositioning() <br/>
+
         For this phase, only TERRESTRIAL_TECH_GTP_WWAN will be
         supported and this will return cell-based position. <br/>.
 
@@ -2673,6 +2686,10 @@ public:
         Retrieve single-shot position using the position
         technologies supported and enabled on the device. <br/>
 
+        For single shot position to utilize terrestrial position technology,
+        the client must give consent first through
+        LocationIntegrationApi::setUserConsentForTerrestrialPositioning() <br/>
+
         This API can be invoked with on-going tracking session
         initiated via startPositionSession() and single shot
         terrestrial fix request initiated via
@@ -2696,7 +2713,7 @@ public:
         callback to receive the position fix. Some fields in
         LocationClientApi::Location, e.g.: speed, bearing and their
         uncertainty may not be available, e.g.: when the position is
-        produced with terrestria position technology. Please check
+        produced with terrestrial position technology. Please check
         Location::flags for the fields that are available. <br/>
 
         This callback will only be invoked when
