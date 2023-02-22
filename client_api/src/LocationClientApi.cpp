@@ -363,7 +363,22 @@ void LocationClientApi::addGeofences(std::vector<Geofence>& geofences,
     // callback masks
     LocationCallbacks callbacksOption = {0};
     callbacksOption.responseCb = [](LocationError err, uint32_t id) {};
-    callbacksOption.collectiveResponseCb = [](size_t, LocationError*, uint32_t*) {};
+    if (responseCallback) {
+        callbacksOption.collectiveResponseCb = [this, responseCallback](size_t count,
+                LocationError* errs, uint32_t* ids) {
+                std::vector<pair<Geofence, LocationResponse>> responses;
+                LOC_LOGd("CollectiveRes Pload count: %zu", count);
+                if (errs != nullptr && ids != nullptr) {
+                    for (int i=0; i < count; i++) {
+                        responses.push_back(make_pair(
+                                    mApiImpl->getMappedGeofence(ids[i]),
+                                    LocationClientApiImpl::parseLocationError(errs[i])));
+                    }
+                    responseCallback(responses);
+                }
+        };
+    }
+
     callbacksOption.geofenceBreachCb =
             [this, gfBreachCb](const GeofenceBreachNotification& geofenceBreachNotification) {
         std::vector<Geofence> geofences;
