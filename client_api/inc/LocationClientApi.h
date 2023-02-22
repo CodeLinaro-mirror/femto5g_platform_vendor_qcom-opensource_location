@@ -546,7 +546,8 @@ enum GnssLocationInfoFlagMask {
      *  GnssLocation::leapSeconds. <br/>   */
     GNSS_LOCATION_INFO_LEAP_SECONDS_BIT                 = (1ULL<<22),
     /** GnssLocation has valid
-     *  GnssLocation::timeUncMs. <br/>   */
+     *  GnssLocation::timeUncMs.
+     *  this enum has been deprecated. <br/>  */
     GNSS_LOCATION_INFO_TIME_UNC_BIT                     = (1ULL<<23),
     /** GnssLocation has valid
      *  GnssLocation::numSvUsedInPosition. <br/>   */
@@ -3138,8 +3139,8 @@ class Geofence {
     double mLongitude;
     double mRadius;
     GeofenceBreachTypeMask mBreachType;
-    uint32_t mResponsiveness;
-    uint32_t mDwellTime;
+    uint32_t mResponsiveness; // in milliseconds
+    uint32_t mDwellTime; // in seconds
 public:
     virtual ~Geofence() {}
     inline Geofence(double lat, double lon, double r, GeofenceBreachTypeMask type,
