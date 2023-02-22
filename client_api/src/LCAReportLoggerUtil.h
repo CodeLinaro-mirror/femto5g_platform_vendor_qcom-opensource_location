@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -82,6 +82,8 @@ public:
     typedef void (*LogGnssNmea)(uint64_t timestamp, uint32_t length, const char* nmea);
     typedef void (*LogGnssMeas)(const GnssMeasurements& gnssMeasurements);
     typedef void (*LogGnssDcReport)(const GnssDcReport& gnssDcReport);
+    typedef void (*LogGeofenceBreach)(const GeofenceBreachNotification& breachNotif,
+            const std::vector<Geofence>& geofences);
 
     LCAReportLoggerUtil();
     void log(const GnssLocation& gnssLocation,
@@ -90,6 +92,8 @@ public:
     void log(uint64_t timestamp, uint32_t length, const char* nmea);
     void log(const GnssMeasurements& gnssMeasurements);
     void log(const GnssDcReport& gnssDcReport);
+    void log(const GeofenceBreachNotification& breachNotif,
+            const std::vector<Geofence>& geofences);
 
 private:
     LogGnssLocation mLogLocation;
@@ -97,6 +101,7 @@ private:
     LogGnssNmea mLogNmea;
     LogGnssMeas mLogMeas;
     LogGnssDcReport mLogDcReport;
+    LogGeofenceBreach mLogGeofenceBreach;
 };
 
 
