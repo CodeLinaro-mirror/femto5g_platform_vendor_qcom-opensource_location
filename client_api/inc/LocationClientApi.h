@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -92,6 +92,12 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
          LOCATION_TECHNOLOGY_HYBRID_BIT
 #define LOCATION_POS_TECH_PPE_BIT \
          LOCATION_TECHNOLOGY_PPE_BIT
+#define LOCATION_POS_TECH_VEH_BIT \
+         LOCATION_TECHNOLOGY_VEH_BIT
+#define LOCATION_POS_TECH_VIS_BIT \
+         LOCATION_TECHNOLOGY_VIS_BIT
+#define LOCATION_POS_TECH_PROPAGATED_BIT \
+         LOCATION_TECHNOLOGY_PROPAGATED_BIT
 // DEPRECATION - BACKWARD COMPATIBILITY SECTION
 
 using std::string;
@@ -279,7 +285,10 @@ enum LocationTechnologyMask {
     LOCATION_TECHNOLOGY_VEH_BIT                      = (1<<9),
     /** Visual data was used to calculate
      *  Location. <br/>   */
-    LOCATION_TECHNOLOGY_VIS_BIT                      = (1<<10)
+    LOCATION_TECHNOLOGY_VIS_BIT                      = (1<<10),
+    /** Propagation logic was used to calculate
+     *  Location. <br/>   */
+    LOCATION_TECHNOLOGY_PROPAGATED_BIT               = (1<<11)
 };
 
 /** Specify the set of navigation solutions that contribute
