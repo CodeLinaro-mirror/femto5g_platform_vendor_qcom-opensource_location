@@ -97,6 +97,7 @@ static uint32_t numGnssLocationCb = 0;
 static uint32_t numEngLocationCb = 0;
 static uint32_t numGnssSvCb = 0;
 static uint32_t numGnssNmeaCb = 0;
+static uint32_t numEngineNmeaCb = 0;
 static uint32_t numDataCb         = 0;
 static uint32_t numGnssMeasurementsCb = 0;
 
@@ -121,6 +122,7 @@ enum ReportType {
     MEAS_REPORT     = 1 << 4,
     NHZ_MEAS_REPORT = 1 << 5,
     DC_REPORT       = 1 << 6,
+    ENGINE_NMEA_REPORT = 1 << 7,
 };
 
 enum TrackingSessionType {
@@ -459,6 +461,20 @@ static void onGnssNmeaCb(uint64_t timestamp, const std::string& nmea) {
     }
     printf("<<< onGnssNmeaCb cnt=%u time=%" PRIu64" nmea=%s",
             numGnssNmeaCb, timestamp, nmea.c_str());
+    if (routeToNMEAPort && openPort()) {
+                sendNMEAToTty(nmea);
+    }
+}
+
+static void onEngineNmeaCb(LocOutputEngineType engType,
+                           uint64_t timestamp,
+                           const std::string& nmea) {
+    numEngineNmeaCb++;
+    if (!outputEnabled) {
+        return;
+    }
+    printf("<<< onEngineNmeaCb cnt=%u engine type=%u time=%" PRIu64" nmea=%s",
+            numEngineNmeaCb, engType, timestamp, nmea.c_str());
     if (routeToNMEAPort && openPort()) {
                 sendNMEAToTty(nmea);
     }
@@ -1102,6 +1118,9 @@ static void setupEngineReportCbs(uint32_t reportType, EngineReportCbs& reportcbs
     if (reportType & DC_REPORT) {
         reportcbs.gnssDcReportCallback = GnssDcReportCb(onGnssDcReportCb);
     }
+    if (reportType & ENGINE_NMEA_REPORT) {
+        reportcbs.engineNmeaCallback = EngineNmeaCb(onEngineNmeaCb);
+    }
 }
 
 void getMultipleFusedFixes(uint32_t timeoutMsec, float horQoS,
@@ -1415,7 +1434,7 @@ static bool checkForAutoStart(int argc, char *argv[]) {
     uint32_t aidingDataMask = 0;
     int interval = 100;
     LocReqEngineTypeMask reqEngMask = (LocReqEngineTypeMask) 0x7;
-    uint32_t reportType = 0xff;
+    uint32_t reportType = 0xfd;
     TrackingSessionType trackingType = NO_TRACKING;
 
     //Specifying the expected options
@@ -1566,7 +1585,10 @@ void getTrackingParams(char *buf, uint32_t *reportTypePtr, uint32_t *tbfMsecPtr,
     token = strtok_r(NULL, " ", &save);
     if (token != nullptr) {
         if (reportTypePtr) {
-            *reportTypePtr = atoi(token);
+            *reportTypePtr = strtoul(token, NULL, 10);
+            if (0 == *reportTypePtr) {
+                *reportTypePtr = strtoul(token, NULL, 16);
+            }
         }
     }
     token = strtok_r(NULL, " ", &save);
@@ -2167,8 +2189,21 @@ int main(int argc, char *argv[]) {
                     nmeaDatumType = GEODETIC_TYPE_PZ_90;
                 }
             }
-            printf("nmeaTypes 0x%x, geodetic type %d\n", nmeaTypes, nmeaDatumType);
-            pIntClient->configOutputNmeaTypes(nmeaTypes, nmeaDatumType);
+            LocReqEngineTypeMask engTypeMask = LOC_REQ_ENGINE_FUSED_BIT;
+            token = strtok_r(NULL, " ", &save);
+            if (token != NULL) {
+                engTypeMask = (LocReqEngineTypeMask) strtoul(token, NULL, 10);
+                if (0 == engTypeMask) {
+                    engTypeMask = (LocReqEngineTypeMask) strtoul(token, NULL, 16);
+                }
+            }
+            printf("nmeaTypes 0x%x, geodetic type %d engineTypeMask 0x%x\n", nmeaTypes,
+                    nmeaDatumType, engTypeMask);
+            if (0 == engTypeMask) {
+                pIntClient->configOutputNmeaTypes(nmeaTypes, nmeaDatumType);
+            } else {
+                pIntClient->configOutputNmeaTypes(nmeaTypes, nmeaDatumType, engTypeMask);
+            }
         } else if (strncmp(buf, INJECT_LOCATION,
                            strlen(INJECT_LOCATION)) == 0) {
             location_client::Location injectLocation = {};
@@ -2329,7 +2364,7 @@ int main(int argc, char *argv[]) {
                     pLcaClient = new LocationClientApi(onCapabilitiesCb);
                 }
                 if (pLcaClient) {
-                    uint32_t reportType = 0xff;
+                    uint32_t reportType = 0xfd;
                     uint32_t tbfMsec = 100;
                     LocReqEngineTypeMask reqEngMask = (LocReqEngineTypeMask)
                         (LOC_REQ_ENGINE_FUSED_BIT|LOC_REQ_ENGINE_SPE_BIT|
