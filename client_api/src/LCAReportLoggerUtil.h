@@ -79,7 +79,8 @@ public:
     typedef void (*LogGnssLocation)(const GnssLocation& gnssLocation,
                                     const DiagLocationInfoExt& diagLocationInfoExt);
     typedef void (*LogGnssSv)(const std::vector<GnssSv>& gnssSvsVector);
-    typedef void (*LogGnssNmea)(uint64_t timestamp, uint32_t length, const char* nmea);
+    typedef void (*LogGnssNmea)(uint64_t timestamp, uint32_t length, const char* nmea,
+                         LocOutputEngineType engType);
     typedef void (*LogGnssMeas)(const GnssMeasurements& gnssMeasurements);
     typedef void (*LogGnssDcReport)(const GnssDcReport& gnssDcReport);
     typedef void (*LogGeofenceBreach)(const GeofenceBreachNotification& breachNotif,
@@ -89,7 +90,7 @@ public:
     void log(const GnssLocation& gnssLocation,
              const DiagLocationInfoExt & diagLocationInfoExt);
     void log(const std::vector<GnssSv>& gnssSvsVector);
-    void log(uint64_t timestamp, uint32_t length, const char* nmea);
+    void log(uint64_t timestamp, uint32_t length, const char* nmea, LocOutputEngineType engType);
     void log(const GnssMeasurements& gnssMeasurements);
     void log(const GnssDcReport& gnssDcReport);
     void log(const GeofenceBreachNotification& breachNotif,
