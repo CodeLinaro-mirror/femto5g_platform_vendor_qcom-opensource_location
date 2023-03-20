@@ -2324,6 +2324,12 @@ uint32_t LocationApiPbMsgConv::getPBMaskForGnssSignalTypeMask(
     if (gnssSignalTypeMask & GNSS_SIGNAL_BEIDOU_B2AQ) {
         pbGnssSignalTypeMask |= PB_GNSS_SIGNAL_BEIDOU_B2AQ_BIT;
     }
+    if (gnssSignalTypeMask & GNSS_SIGNAL_BEIDOU_B2BI) {
+        pbGnssSignalTypeMask |= PB_GNSS_SIGNAL_BEIDOU_B2BI_BIT;
+    }
+    if (gnssSignalTypeMask & GNSS_SIGNAL_BEIDOU_B2BQ) {
+        pbGnssSignalTypeMask |= PB_GNSS_SIGNAL_BEIDOU_B2BQ_BIT;
+    }
     LocApiPb_LOGv("LocApiPB: gnssSignalTypeMask:%x, pbGnssSignalTypeMask:%x",
             gnssSignalTypeMask, pbGnssSignalTypeMask);
     return pbGnssSignalTypeMask;
@@ -2794,6 +2800,12 @@ uint32_t LocationApiPbMsgConv::getGnssSignalTypeMaskFromPB(
     }
     if (pbGnssSignalTypeMask & PB_GNSS_SIGNAL_BEIDOU_B2AQ_BIT) {
         gnssSignalTypeMask |= GNSS_SIGNAL_BEIDOU_B2AQ;
+    }
+    if (pbGnssSignalTypeMask & PB_GNSS_SIGNAL_BEIDOU_B2BI_BIT) {
+        gnssSignalTypeMask |= GNSS_SIGNAL_BEIDOU_B2BI;
+    }
+    if (pbGnssSignalTypeMask & PB_GNSS_SIGNAL_BEIDOU_B2BQ_BIT) {
+        gnssSignalTypeMask |= GNSS_SIGNAL_BEIDOU_B2BQ;
     }
     LocApiPb_LOGv("LocApiPB: pbGnssSignalTypeMask:%x, gnssSignalTypeMask:%x",
             pbGnssSignalTypeMask, gnssSignalTypeMask);
