@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -100,7 +100,8 @@ void LocHalDaemonClientHandler::updateSubscription(uint32_t mask) {
 
     // update optional callback - following four callbacks can be controlable
     // tracking
-    if (mSubscriptionMask & E_LOC_CB_TRACKING_BIT) {
+    if (mSubscriptionMask &
+            (E_LOC_CB_TRACKING_BIT | E_LOC_CB_SIMPLE_LOCATION_INFO_BIT)) {
         mCallbacks.trackingCb = [this](Location location) {
             onTrackingCb(location);
         };
@@ -250,44 +251,16 @@ uint32_t LocHalDaemonClientHandler::startTracking(LocationOptions & locOptions) 
     return mSessionId;
 }
 
-void LocHalDaemonClientHandler::stopTracking() {
+void LocHalDaemonClientHandler::stopTracking(bool clientExpectingResp) {
     if (mSessionId != 0 && mLocationApi) {
         mLocationApi->stopTracking(mSessionId);
         mSessionId = 0;
-        mPendingMessages.push(E_LOCAPI_STOP_TRACKING_MSG_ID);
-    }
-
-    mTracking = false;
-}
-
-uint32_t LocHalDaemonClientHandler::resumeTracking() {
-    LOC_LOGd("resume session for client %s, mtracking %d, msession id %d"
-             "distance %d, internal %d, req mask %x",
-             mName.c_str(), mTracking, mSessionId, mOptions.minDistance,
-             mOptions.minInterval,
-             mOptions.locReqEngTypeMask);
-
-    if (mTracking == true) {
-        if (mSessionId == 0 && mLocationApi) {
-            mSessionId = mLocationApi->startTracking(mOptions);
-            mPendingMessages.push(E_LOCAPI_START_TRACKING_MSG_ID);
-        } else {
-            LOC_LOGe("mSession id is %d, or mLocation api is null", mSessionId);
-        }
-    }
-    return mSessionId;
-}
-
-void LocHalDaemonClientHandler::pauseTracking() {
-    LOC_LOGd("pause session for client %s, mtracking %d, msession id %d",
-            mName.c_str(), mTracking, mSessionId);
-    if (mTracking == true) {
-        if (mSessionId != 0 && mLocationApi) {
-            mLocationApi->stopTracking(mSessionId);
-            mSessionId = 0;
+        if (clientExpectingResp) {
             mPendingMessages.push(E_LOCAPI_STOP_TRACKING_MSG_ID);
         }
     }
+
+    mTracking = false;
 }
 
 void LocHalDaemonClientHandler::unsubscribeLocationSessionCb() {
