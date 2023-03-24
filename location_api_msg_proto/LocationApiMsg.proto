@@ -82,8 +82,8 @@ enum LocationApiMsgVersion {
     LOCAPI_MSG_VER_MAJOR = 1;
     // Minor - New features / API addition, new message/elemtent addition.
     // Bump the last byte of version i.e. x.2 to x.3
-    // Minor version 17: Add geodetic datum type in ConfigOutputNmea msg
-    LOCAPI_MSG_VER_MINOR = 17;
+    // Minor version 18: Add MerkleTree and OsnmaEnablement config msg
+    LOCAPI_MSG_VER_MINOR = 18;
 }
 
 // ============================================================================
@@ -187,6 +187,8 @@ enum PBELocMsgID {
     PB_E_INTAPI_CONFIG_ENGINE_INTEGRITY_RISK_MSG_ID = 213;
     PB_E_INTAPI_CONFIG_XTRA_PARAMS_MSG_ID = 214;
     PB_E_INTAPI_INJECT_LOCATION_MSG_ID = 215;
+    PB_E_INTAPI_CONFIG_MERKLE_TREE_MSG_ID = 216;
+    PB_E_INTAPI_CONFIG_OSNMA_ENABLEMENT_MSG_ID = 217;
 
     // integration API config retrieval request/response
     PB_E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID  = 300;
@@ -629,6 +631,15 @@ message PBLocConfigXtraReqMsg {
     PBXtraConfigParams xtraParams = 2;
 }
 
+// defintion for message with msg id of PB_E_INTAPI_CONFIG_MERKLE_TREE_MSG_ID
+message PBLocConfigMerkleTreeReqMsg {
+    string mMerkleTreeConfig = 1;
+}
+
+// defintion for message with msg id of PB_E_INTAPI_CONFIG_OSNMA_ENABLEMENT_MSG_ID
+message PBLocConfigOsnmaEnablementReqMsg {
+    bool mEnable = 1;
+}
 //******************************************************************************
 // IPC message structure - Location Integration API Get request/response message
 //******************************************************************************
