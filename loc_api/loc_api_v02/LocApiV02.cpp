@@ -2956,8 +2956,8 @@ void LocApiV02 :: reportPosition (
             location_report_ptr->horUncEllipseSemiMinor_valid &&
             location_report_ptr->horUncEllipseOrientAzimuth_valid)
         {
-            double cosVal = cos((double)locationExtended.horUncEllipseOrientAzimuth);
-            double sinVal = sin((double)locationExtended.horUncEllipseOrientAzimuth);
+            double cosVal = cos((double)locationExtended.horUncEllipseOrientAzimuth * M_PI / 180.0);
+            double sinVal = sin((double)locationExtended.horUncEllipseOrientAzimuth * M_PI / 180.0);
             double major = locationExtended.horUncEllipseSemiMajor;
             double minor = locationExtended.horUncEllipseSemiMinor;
 
