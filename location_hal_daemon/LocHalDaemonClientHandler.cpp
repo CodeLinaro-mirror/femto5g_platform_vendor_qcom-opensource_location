@@ -850,7 +850,7 @@ void LocHalDaemonClientHandler::onBatchingCb(size_t count, Location* location,
 
         // serialize locations in batch into ipc message payload
         LocAPIBatchingIndMsg msg(SERVICE_NAME, &mService->mPbufMsgConv);
-        LOC_LOGd("Batch count: %ul", (uint32_t)count);
+        LOC_LOGd("Batch count: %u", (uint32_t)count);
         msg.batchNotification.status = BATCHING_STATUS_POSITION_AVAILABE;
         msg.batchingMode = batchOptions.batchingMode;
         for (int i = 0; i < count; i++) {
@@ -912,10 +912,11 @@ void LocHalDaemonClientHandler::onGeofenceBreachCb(GeofenceBreachNotification gf
         }
         // serialize GeofenceBreachNotification into ipc message payload
         LocAPIGeofenceBreachIndMsg msg(SERVICE_NAME, &mService->mPbufMsgConv);
-        LOC_LOGd("Gf Breach Notif count: %ul", gfBreachNotif.count);
+        LOC_LOGd("Gf Breach Notif count: %u, breachType: %d", gfBreachNotif.count,
+                gfBreachNotif.type);
         msg.gfBreachNotification.timestamp = gfBreachNotif.timestamp;
         msg.gfBreachNotification.location = gfBreachNotif.location;
-        msg.gfBreachNotification.type = gfBreachNotif.type;
+        msg.gfBreachNotification.type = parseClientGeofenceBreachType(gfBreachNotif.type);
         for (uint32_t i = 0; i < gfBreachNotif.count; i++) {
             msg.gfBreachNotification.id.push_back(clientIds[i]);
         }

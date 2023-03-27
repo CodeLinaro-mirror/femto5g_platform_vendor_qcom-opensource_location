@@ -198,13 +198,19 @@ public:
                       const std::vector<Geofence>& geofences);
 
     inline uint16_t getYearOfHw() {return mYearOfHw;}
+    inline Geofence getMappedGeofence(uint32_t id) { return mGeofenceMap.at(id); }
+    inline bool isGeofenceMapEmpty() { return mGeofenceMap.empty(); }
 
     void getSingleTerrestrialPos(uint32_t timeoutMsec, TerrestrialTechMask techMask,
                                  float horQoS, LocationCb terrestrialPositionCallback,
                                  ResponseCb responseCallback);
     void getSinglePos(uint32_t timeoutMsec, float horQoS, LocationCb positionCallback,
                       ResponseCb responseCallback);
-    // utilities
+    static void parseLocation(const ::Location &halLocation, Location& location);
+    static Location parseLocation(const ::Location &halLocation);
+    static GeofenceBreachTypeMask parseGeofenceBreachType(GeofenceBreachType breachType);
+    static GeofenceBreachType parseGeofenceBreachTypeMask(::GeofenceBreachTypeMask breachTypeMask);
+
     void logLocation(const Location &location,
                      LocReportTriggerType reportTriggerType);
     void logLocation(const GnssLocation &gnssLocation,

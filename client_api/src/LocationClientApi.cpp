@@ -365,7 +365,19 @@ void LocationClientApi::addGeofences(std::vector<Geofence>& geofences,
     callbacksOption.responseCb = [](LocationError err, uint32_t id) {};
     callbacksOption.collectiveResponseCb = [](size_t, LocationError*, uint32_t*) {};
     callbacksOption.geofenceBreachCb =
-            [](GeofenceBreachNotification geofenceBreachNotification) {};
+            [this, gfBreachCb](const GeofenceBreachNotification& geofenceBreachNotification) {
+        std::vector<Geofence> geofences;
+        int gfBreachCnt = geofenceBreachNotification.count;
+        for (int i=0; i < gfBreachCnt; i++) {
+            geofences.push_back(mApiImpl->getMappedGeofence(
+                                    geofenceBreachNotification.ids[i]));
+        }
+
+        gfBreachCb(geofences,
+                LocationClientApiImpl::parseLocation(geofenceBreachNotification.location),
+                LocationClientApiImpl::parseGeofenceBreachType(geofenceBreachNotification.type),
+                geofenceBreachNotification.timestamp);
+    };
 
     std::vector<Geofence> geofencesToAdd;
     for (int i = 0; i < geofences.size(); ++i) {
