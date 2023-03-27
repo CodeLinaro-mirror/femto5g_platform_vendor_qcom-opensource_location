@@ -1437,6 +1437,33 @@ uint64_t LocationApiPbMsgConv::getPBMaskForLocationCapabilitiesMask(
         pbLocCapabMask |= PB_LOCATION_CAPS_ANTENNA_INFO;
         LOC_LOGi("PB_LOCATION_CAPS_ANTENNA_INFO");
     }
+    if (locCapabMask & LOCATION_CAPABILITIES_GNSS_MSB_BIT) {
+        pbLocCapabMask |= PB_LOCATION_CAPABILITIES_GNSS_MSB_BIT;
+    }
+    if (locCapabMask & LOCATION_CAPABILITIES_GNSS_MSA_BIT) {
+        pbLocCapabMask |= PB_LOCATION_CAPABILITIES_GNSS_MSA_BIT;
+    }
+    if (locCapabMask & LOCATION_CAPABILITIES_DEBUG_NMEA_BIT) {
+        pbLocCapabMask |= PB_LOCATION_CAPABILITIES_DEBUG_DATA_BIT;
+    }
+    if (locCapabMask & LOCATION_CAPABILITIES_AGPM_BIT) {
+        pbLocCapabMask |= PB_LOCATION_CAPABILITIES_AGPM_BIT;
+    }
+    if (locCapabMask & LOCATION_CAPABILITIES_PRIVACY_BIT) {
+        pbLocCapabMask |= PB_LOCATION_CAPABILITIES_PRIVACY_BIT;
+    }
+    if (locCapabMask & LOCATION_CAPABILITIES_MEASUREMENTS_CORRECTION_BIT) {
+        pbLocCapabMask |= PB_LOCATION_CAPABILITIES_MEASUREMENTS_CORRECTION_BIT;
+    }
+    if (locCapabMask & LOCATION_CAPABILITIES_CONFORMITY_INDEX_BIT) {
+        pbLocCapabMask |= PB_LOCATION_CAPABILITIES_CONFORMITY_INDEX_BIT;
+    }
+    if (locCapabMask & LOCATION_CAPABILITIES_EDGNSS_BIT) {
+        pbLocCapabMask |= PB_LOCATION_CAPABILITIES_EDGNSS_BIT;
+    }
+    if (locCapabMask & LOCATION_CAPABILITIES_QWES_SV_EPHEMERIS_BIT) {
+        pbLocCapabMask |= PB_LOCATION_CAPABILITIES_QWES_SV_EPHEMERIS_BIT;
+    }
     LOC_LOGi("LocApiPB: locCapabMask:0x%" PRIx64", pbLocCapabMask:0x%" PRIx64,
             locCapabMask, pbLocCapabMask);
     return pbLocCapabMask;
@@ -2375,6 +2402,33 @@ uint64_t LocationApiPbMsgConv::getLocationCapabilitiesMaskFromPB(
     if (pbLocCapabMask & PB_LOCATION_CAPS_ANTENNA_INFO) {
         locCapabMask |= LOCATION_CAPABILITIES_ANTENNA_INFO;
         LOC_LOGi("LOCATION_CAPABILITIES_ANTENNA_INFO");
+    }
+    if (pbLocCapabMask & PB_LOCATION_CAPABILITIES_GNSS_MSB_BIT) {
+        locCapabMask |= LOCATION_CAPABILITIES_GNSS_MSB_BIT;
+    }
+    if (pbLocCapabMask & PB_LOCATION_CAPABILITIES_GNSS_MSA_BIT) {
+        locCapabMask |= LOCATION_CAPABILITIES_GNSS_MSA_BIT;
+    }
+    if (pbLocCapabMask & PB_LOCATION_CAPABILITIES_DEBUG_DATA_BIT) {
+        locCapabMask |= LOCATION_CAPABILITIES_DEBUG_NMEA_BIT;
+    }
+    if (pbLocCapabMask & PB_LOCATION_CAPABILITIES_AGPM_BIT) {
+        locCapabMask |= LOCATION_CAPABILITIES_AGPM_BIT;
+    }
+    if (pbLocCapabMask & PB_LOCATION_CAPABILITIES_PRIVACY_BIT) {
+        locCapabMask |= LOCATION_CAPABILITIES_PRIVACY_BIT;
+    }
+    if (pbLocCapabMask & PB_LOCATION_CAPABILITIES_MEASUREMENTS_CORRECTION_BIT) {
+        locCapabMask |= LOCATION_CAPABILITIES_MEASUREMENTS_CORRECTION_BIT;
+    }
+    if (pbLocCapabMask & PB_LOCATION_CAPABILITIES_CONFORMITY_INDEX_BIT) {
+        locCapabMask |= LOCATION_CAPABILITIES_CONFORMITY_INDEX_BIT;
+    }
+    if (pbLocCapabMask & PB_LOCATION_CAPABILITIES_EDGNSS_BIT) {
+        locCapabMask |= LOCATION_CAPABILITIES_EDGNSS_BIT;
+    }
+    if (pbLocCapabMask & PB_LOCATION_CAPABILITIES_QWES_SV_EPHEMERIS_BIT) {
+        locCapabMask |= LOCATION_CAPABILITIES_QWES_SV_EPHEMERIS_BIT;
     }
     LOC_LOGi("LocApiPB: pbLocCapabMask:0x%" PRIx64", locCapabMask:0x%" PRIx64,
             pbLocCapabMask, locCapabMask);
