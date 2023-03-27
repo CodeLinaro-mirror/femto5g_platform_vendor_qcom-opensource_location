@@ -542,10 +542,8 @@ void LocationClientApi::addGeofences(std::vector<Geofence>& geofences,
         }
 
         gfBreachCb(geofences,
-                LocationClientApiImpl::parseLocation(
-                    geofenceBreachNotification.location),
-                GeofenceBreachTypeMask(
-                    geofenceBreachNotification.type),
+                LocationClientApiImpl::parseLocation(geofenceBreachNotification.location),
+                LocationClientApiImpl::parseGeofenceBreachType(geofenceBreachNotification.type),
                 geofenceBreachNotification.timestamp);
     };
 

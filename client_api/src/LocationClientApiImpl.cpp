@@ -1209,6 +1209,46 @@ GnssDcReport LocationClientApiImpl::parseDcReport(const::GnssDcReportInfo &halDc
     return dcReport;
 }
 
+GeofenceBreachTypeMask LocationClientApiImpl::parseGeofenceBreachType(
+        GeofenceBreachType breachType) {
+    int mask = 0;
+    switch (breachType) {
+        case GEOFENCE_BREACH_ENTER:
+            mask |= GEOFENCE_BREACH_ENTER_BIT;
+            break;
+        case GEOFENCE_BREACH_EXIT:
+            mask |= GEOFENCE_BREACH_EXIT_BIT;
+            break;
+        case GEOFENCE_BREACH_DWELL_IN:
+            mask |= GEOFENCE_BREACH_DWELL_IN_BIT;
+            break;
+        case GEOFENCE_BREACH_DWELL_OUT:
+            mask |= GEOFENCE_BREACH_DWELL_OUT_BIT;
+            break;
+    }
+    return (GeofenceBreachTypeMask)mask;
+}
+
+GeofenceBreachType LocationClientApiImpl::parseGeofenceBreachTypeMask(
+        ::GeofenceBreachTypeMask breachTypeMask) {
+    GeofenceBreachType breachType = (GeofenceBreachType)0;
+    switch (breachTypeMask) {
+        case ::GEOFENCE_BREACH_ENTER_BIT:
+            breachType = GEOFENCE_BREACH_ENTER;
+            break;
+        case ::GEOFENCE_BREACH_EXIT_BIT:
+            breachType = GEOFENCE_BREACH_EXIT;
+            break;
+        case ::GEOFENCE_BREACH_DWELL_IN_BIT:
+            breachType = GEOFENCE_BREACH_DWELL_IN;
+            break;
+        case ::GEOFENCE_BREACH_DWELL_OUT_BIT:
+            breachType = GEOFENCE_BREACH_DWELL_OUT;
+            break;
+    }
+    return breachType;
+}
+
 void LocationClientApiImpl::logLocation(const Location &location,
                                         LocReportTriggerType reportTriggerType) {
     GnssLocation gnssLocation = {};
@@ -3104,7 +3144,8 @@ void IpcListener::onReceive(const char* data, uint32_t length,
                     gfBrNotif.count = pGfBreachIndMsg->gfBreachNotification.id.size();
                     gfBrNotif.timestamp = pGfBreachIndMsg->gfBreachNotification.timestamp;
                     gfBrNotif.location = pGfBreachIndMsg->gfBreachNotification.location;
-                    gfBrNotif.type = (GeofenceBreachType)pGfBreachIndMsg->gfBreachNotification.type;
+                    gfBrNotif.type = LocationClientApiImpl::parseGeofenceBreachTypeMask(
+                            pGfBreachIndMsg->gfBreachNotification.type);
                     gfBrNotif.ids = (uint32_t *)malloc(sizeof(uint32_t) * gfBrNotif.count);
                     std::vector<Geofence> geofences;
                     for (int i=0; i < gfBrNotif.count; i++) {

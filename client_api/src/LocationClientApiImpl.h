@@ -241,6 +241,8 @@ public:
             ::GnssMeasurementsDataFlagsMask in);
     static GnssEnergyConsumedInfo parseGnssConsumedInfo(::GnssEnergyConsumedInfo);
     static GnssDcReport parseDcReport(const::GnssDcReportInfo &halDcReport);
+    static GeofenceBreachTypeMask parseGeofenceBreachType(GeofenceBreachType breachType);
+    static GeofenceBreachType parseGeofenceBreachTypeMask(::GeofenceBreachTypeMask breachTypeMask);
 
     void logLocation(const Location &location,
                      LocReportTriggerType reportTriggerType);
