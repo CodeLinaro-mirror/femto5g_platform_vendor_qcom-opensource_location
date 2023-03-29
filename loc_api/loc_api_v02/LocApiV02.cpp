@@ -351,7 +351,7 @@ LocApiV02 :: LocApiV02(LOC_API_ADAPTER_EVENT_MASK_T exMask,
                        ContextBase* context):
     LocApiBase(exMask, context),
     clientHandle(LOC_CLIENT_INVALID_HANDLE_VALUE),
-    mQmiMask(0), mInSession(false), mPowerMode(GNSS_POWER_MODE_INVALID),
+    mQmiMask(0), mInSession(false), mPowerMode(GNSS_POWER_MODE_DEFAULT),
     mEngineOn(false), mMeasurementsStarted(false),
     mMasterRegisterNotSupported(false),
     mCounter(0), mMinInterval(1000),
@@ -10722,11 +10722,9 @@ LocApiV02::startTimeBasedTracking(const TrackingOptions& options, LocApiResponse
     }
 
     // power mode
-    if (GNSS_POWER_MODE_INVALID != options.powerMode) {
+    if (!(GNSS_POWER_MODE_DEFAULT == options.powerMode && options.tbm == 0)) {
         start_msg.powerMode_valid = 1;
-        start_msg.powerMode.powerMode =
-                convertPowerMode(options.powerMode);
-        start_msg.powerMode.timeBetweenMeasurement = options.tbm;
+        start_msg.powerMode.powerMode = convertPowerMode(options.powerMode);
         // Force low accuracy for background power modes
         if (GNSS_POWER_MODE_M3 == options.powerMode ||
                 GNSS_POWER_MODE_M4 == options.powerMode ||
@@ -10736,6 +10734,8 @@ LocApiV02::startTimeBasedTracking(const TrackingOptions& options, LocApiResponse
         // Force TBM = TBF for power mode M4
         if (GNSS_POWER_MODE_M4 == options.powerMode) {
             start_msg.powerMode.timeBetweenMeasurement = start_msg.minInterval;
+        } else {
+            start_msg.powerMode.timeBetweenMeasurement = options.tbm;
         }
     }
 
@@ -11160,7 +11160,7 @@ LocApiV02::stopTimeBasedTracking(LocApiResponse* adapterResponse)
     } else {
         mIsFirstFinalFixReported = false;
         mInSession = false;
-        mPowerMode = GNSS_POWER_MODE_INVALID;
+        mPowerMode = GNSS_POWER_MODE_DEFAULT;
         registerEventMask();
     }
 
