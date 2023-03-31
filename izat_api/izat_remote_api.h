@@ -34,10 +34,16 @@
 
   =============================================================================*/
 
+/*
+Changes from Qualcomm Innovation Center are provided under the following license:
+Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
+
 #ifndef __IZAT_REMOTE_APIS_H__
 #define __IZAT_REMOTE_APIS_H__
 
-#include <gps_extended_c.h>
+#include <gps_extended.h>
 
 #ifdef __cplusplus
 extern "C" {
