@@ -6668,9 +6668,10 @@ void LocApiV02::processGnssBandsSupportedInd(
                 }
             }
         }
-        char* svTypeString[] = { "UNKNOWN", "GPS", "SBAS",
+        const char* svTypeString[] = { "UNKNOWN", "GPS", "SBAS",
                                 "GLONASS", "QZSS", "BEIDOU", "GALILEO", "NAVIC" };
-        char* codeTypeString[] = {"A", "B", "C", "I", "L", "M", "P", "Q", "S", "W", "X", "Y", "Z"};
+        const char* codeTypeString[] =
+                {"A", "B", "C", "I", "L", "M", "P", "Q", "S", "W", "X", "Y", "Z"};
 
         for (int i = 0; i < gnssCapabNotification.count; i++) {
             if (gnssCapabNotification.gnssSignalType[i].svType > GNSS_SV_TYPE_NAVIC) {
