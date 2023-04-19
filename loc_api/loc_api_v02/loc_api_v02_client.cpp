@@ -29,7 +29,7 @@
  /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -351,6 +351,10 @@ static const locClientEventIndTableStructT locClientEventIndTable[]= {
   // disater and crisis report ind
   { QMI_LOC_DC_REPORT_IND_V02,
     sizeof(qmiLocEventDcReportIndMsgT_v02)},
+
+  // supported bands and the preferred one ind
+  { QMI_LOC_GNSS_BANDS_SUPPORTED_IND_V02,
+    sizeof(qmiLocGnssBandsSupportedIndMsgT_v02)},
 };
 
 /* table to relate the respInd Id with its size */
