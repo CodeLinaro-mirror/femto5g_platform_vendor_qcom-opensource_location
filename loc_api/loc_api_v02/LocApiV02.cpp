@@ -8338,7 +8338,9 @@ void LocApiV02::reportEngineLockStatus(const qmiLocEngineLockStateEnumT_v02 engi
 {
     LOC_LOGd("Engine Lock State %d", engineLockState);
     EngineLockState lockState = convertEngineLockState(engineLockState);
-    if (lockState != getEngineLockState() && ENGINE_LOCK_STATE_INVALID != lockState ) {
+    // allowing to set engine lock state to INVALID to
+    // handle backward compatibility in cases of older modem
+    if (lockState != getEngineLockState()) {
         setEngineLockState(lockState);
         LocApiBase::reportEngineLockStatus(lockState);
     }
