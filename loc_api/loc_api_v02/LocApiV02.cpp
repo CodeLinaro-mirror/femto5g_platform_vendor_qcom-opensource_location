@@ -366,7 +366,8 @@ LocApiV02 :: LocApiV02(LOC_API_ADAPTER_EVENT_MASK_T exMask,
     mRefFCount(0),
     mMeasElapsedRealTimeCal(600000000),
     mTimeBiases{},
-    mPlatformPowerState(eQMI_LOC_POWER_STATE_UNKNOWN_V02)
+    mPlatformPowerState(eQMI_LOC_POWER_STATE_UNKNOWN_V02),
+    mQesdkFeatureMask(0)
 {
   // initialize loc_sync_req interface
   loc_sync_req_init();
@@ -11087,13 +11088,13 @@ void LocApiV02::configPrecisePositioning(uint32_t featureId, bool enable,
             req.appHash[j] = (uint8_t) strtol(byteString.c_str(), nullptr, 16);
         }
         req.featureStatusReport_valid = false;
-        if (featureId == 2642) {
+        if (featureId == QESDK_FEATURE_ID_RTK) {
             req.featureStatusReport_valid = true;
             req.featureStatusReport |= QMI_LOC_FEATURE_STATUS_CARRIER_PHASE_V02;
             req.featureStatusReport |= QMI_LOC_FEATURE_STATUS_SV_POLYNOMIALS_V02;
             req.featureStatusReport |= QMI_LOC_FEATURE_STATUS_DGNSS_V02;
             req.featureStatusReport |= QMI_LOC_FEATURE_STATUS_QPPE_V02;
-        } else if (featureId == 2641) {
+        } else if (featureId == QESDK_FEATURE_ID_EDGNSS) {
             req.featureStatusReport_valid = true;
             req.featureStatusReport |= QMI_LOC_FEATURE_STATUS_DGNSS_V02;
         }
@@ -11116,6 +11117,23 @@ void LocApiV02::configPrecisePositioning(uint32_t featureId, bool enable,
             } else {
                 err = LOCATION_ERROR_GENERAL_FAILURE;
             }
+        } else if (ind.featureStatusReport_valid) {
+            //Report Modem side QESDK feature status to Adapters
+            if (featureId == QESDK_FEATURE_ID_EDGNSS || featureId == QESDK_FEATURE_ID_RTK) {
+                if (ind.featureStatusReport & QMI_LOC_FEATURE_STATUS_DGNSS_V02) {
+                    mQesdkFeatureMask |= MODEM_QESDK_FEATURE_DGNSS;
+                } else {
+                    mQesdkFeatureMask &= (~MODEM_QESDK_FEATURE_DGNSS);
+                }
+            }
+            if (featureId == QESDK_FEATURE_ID_RL) {
+                if (ind.featureStatusReport & QMI_LOC_FEATURE_STATUS_ROBUST_LOCATION_V02) {
+                    mQesdkFeatureMask |= MODEM_QESDK_FEATURE_ROBUST_LOCATION;
+                } else {
+                    mQesdkFeatureMask &= (~MODEM_QESDK_FEATURE_ROBUST_LOCATION);
+                }
+            }
+            LocApiBase::reportModemGnssQesdkFeatureStatus(mQesdkFeatureMask);
         }
         if (adapterResponse) {
             adapterResponse->returnToSender(err);
