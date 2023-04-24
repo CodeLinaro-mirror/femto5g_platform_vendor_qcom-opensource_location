@@ -229,6 +229,7 @@ private:
   bool mIsFullTracking;
   qmiLocGnssSignalTypeMaskT_v02 mPreferredSignalType;
   referenceSignalTypeForIsb mReferenceSignalTypeForIsb;
+  ModemGnssQesdkFeatureMask mQesdkFeatureMask;
 
   // Below two member variables are for elapsedRealTime calculation
   ElapsedRealtimeEstimator mMeasElapsedRealTimeCal;
