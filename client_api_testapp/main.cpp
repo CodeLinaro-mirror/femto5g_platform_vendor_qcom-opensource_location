@@ -108,6 +108,9 @@ static int fixCnt = 0x7fffffff;
 static uint64_t autoTestStartTimeMs = 0;
 static int autoTestTimeoutSec = 0x7FFFFFFF;
 
+static char NMEA_PORT[] = "/dev/at_usb1";
+static int ttyFd = -1;
+static int routeToNMEAPort = 0;
 enum ReportType {
     POSITION_REPORT = 1 << 0,
     NMEA_REPORT     = 1 << 1,
@@ -151,6 +154,55 @@ enum TrackingSessionType {
 #define CONFIG_NMEA_TYPES          "configOutputNmeaTypes"
 #define CONFIG_ENGINE_INTEGRITY_RISK "configEngineIntegrityRisk"
 #define REGISTER_SIGNAL_TYPES_UPDATE "registerGnssSignalTypesUpdate"
+
+static bool openPort(void)
+{
+    bool retVal = true;
+
+    if (ttyFd == -1) {
+        printf("opening NMEA port %s ", NMEA_PORT);
+        ttyFd = open(NMEA_PORT, O_RDWR | O_NOCTTY | O_NDELAY);
+        if (ttyFd == -1) {
+            /* Could not open the port. */
+            printf("Unable to open %s \n", NMEA_PORT);
+            retVal = false;
+        } else {
+            printf("openPort success ttyFd: %d\n", ttyFd);
+        }
+    }
+    return retVal;
+}
+
+static bool sendNMEAToTty(const std::string& nmea)
+{
+    int n;
+    char buffer[201] = { 0 };
+    bool retVal = true;
+    strlcpy(buffer, nmea.c_str(), sizeof(buffer));
+    if (1 < nmea.length() && sizeof(buffer) > nmea.length()) {
+        n = write(ttyFd, buffer, nmea.length());
+        if (n < 0) {
+            printf("write() of %d bytes failed!\n", n);
+            retVal = false;
+        } else if (0 == n) {
+            printf("write() of %d bytes returned 0, errno:%d [%s]\n",
+                nmea.length(), errno, strerror(errno));
+            /* Sleep of 0.1 msec and reattempt to write*/
+            usleep(100);
+            n = write(ttyFd, buffer, nmea.length() - 1);
+            if (n < 0) {
+                printf("reattempt write() failed! errno:%d [%s] \n", errno, strerror(errno));
+                retVal = false;
+            } else if (0 == n) {
+                printf("reattempt write() of %d bytes returned 0, errno:%d [%s]\n",
+                    nmea.length(), errno, strerror(errno));
+            }
+        }
+    } else {
+        printf("Failed to write Len: %d %s \n", nmea.length(), nmea.c_str());
+    }
+    return true;
+}
 
 // debug utility
 static uint64_t getTimestampMs() {
@@ -302,6 +354,9 @@ static void onGnssNmeaCb(uint64_t timestamp, const std::string& nmea) {
     }
     printf("<<< onGnssNmeaCb cnt=%u time=%" PRIu64" nmea=%s",
             numGnssNmeaCb, timestamp, nmea.c_str());
+    if (routeToNMEAPort && openPort()) {
+                sendNMEAToTty(nmea);
+    }
 }
 
 static void onGnssDataCb(const location_client::GnssData& gnssData) {
@@ -675,7 +730,7 @@ static bool checkForAutoStart(int argc, char *argv[]) {
 
     int long_index =0;
     int opt = -1;
-    while ((opt = getopt_long(argc, argv, "aVNDd:s:e:i:t:l:r:",
+    while ((opt = getopt_long(argc, argv, "aVNDd:s:e:i:t:l:r:U:z",
                    long_options, &long_index)) != -1) {
         switch (opt) {
              case 'a' :
@@ -728,6 +783,10 @@ static bool checkForAutoStart(int argc, char *argv[]) {
                  printf("report type: %s\n", optarg);
                  reportType = atoi(optarg);
                  break;
+             case 'U' :
+                 printf("route to NMEA port: %s\n", optarg);
+                 routeToNMEAPort = atoi(optarg);
+                 break;
              default:
                  printf("unsupported args provided\n");
                  break;
@@ -735,9 +794,9 @@ static bool checkForAutoStart(int argc, char *argv[]) {
     }
 
     printf("auto run %d, deleteAll %d, delete mask 0x%x, session type %d,"
-           "outputEnabled %d, detailedOutputEnabled %d",
+           "outputEnabled %d, detailedOutputEnabled %d routeToNMEAPort %d",
            autoRun, deleteAll, aidingDataMask, trackingType,
-           outputEnabled, detailedOutputEnabled);
+           outputEnabled, detailedOutputEnabled, routeToNMEAPort);
 
     // check for auto-start option
     if (autoRun) {
