@@ -736,6 +736,8 @@ locClientEventMaskType LocApiV02 :: adjustLocClientEventMask(locClientEventMaskT
         // device in suspended/shutdown state, clear the engine state mask
         // to avoid wake up
         qmiMask &= ~QMI_LOC_EVENT_MASK_ENGINE_STATE_V02;
+        qmiMask &= ~QMI_LOC_EVENT_MASK_FEATURE_STATUS_V02;
+        qmiMask &= ~QMI_LOC_EVENT_MASK_GNSS_EVENT_REPORT_V02;
         syslog(LOG_INFO, "adjustLocClientEventMask, oldQmiMask=%" PRIu64 " "
                "qmiMask=%" PRIu64 " mInSession: %d, power state %d, retry queue empty %d",
                oldQmiMask, qmiMask, mInSession, mPlatformPowerState, mResenders.empty());
@@ -7855,6 +7857,7 @@ void LocApiV02 :: updateSystemPowerState(PowerStateType powerState){
     default:
         break;
     }
+    mPlatformPowerState = qmiPowerState;
 
     // unknown power state will not be injected to modem
     if (eQMI_LOC_POWER_STATE_UNKNOWN_V02 != qmiPowerState) {
