@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -186,6 +186,8 @@ const char* LocApiMsgString(ELocMsgID msgId) {
         return "E_INTAPI_CONFIG_OUTPUT_NMEA_TYPES_MSG_ID";
     case E_INTAPI_CONFIG_ENGINE_INTEGRITY_RISK_MSG_ID:
         return "E_INTAPI_CONFIG_ENGINE_INTEGRITY_RISK_MSG_ID";
+    case E_INTAPI_CONFIG_XTRA_PARAMS_MSG_ID:
+        return "E_INTAPI_CONFIG_XTRA_PARAMS_MSG_ID";
     case E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID:
         return "E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID";
     case E_INTAPI_GET_ROBUST_LOCATION_CONFIG_RESP_MSG_ID:
@@ -204,6 +206,14 @@ const char* LocApiMsgString(ELocMsgID msgId) {
         return "E_INTAPI_GET_CONSTELLATION_SECONDARY_BAND_CONFIG_RESP_MSG_ID";
     case E_INTAPI_INJECT_LOCATION_MSG_ID:
         return "E_INTAPI_INJECT_LOCATION_MSG_ID";
+    case E_INTAPI_GET_XTRA_STATUS_REQ_MSG_ID:
+        return "E_INTAPI_GET_XTRA_STATUS_REQ_MSG_ID";
+    case E_INTAPI_GET_XTRA_STATUS_RESP_MSG_ID:
+        return "E_INTAPI_GET_XTRA_STATUS_REQ_MSG_ID";
+    case E_INTAPI_REGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID:
+        return "E_INTAPI_REGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID";
+    case E_INTAPI_DEREGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID:
+        return "E_INTAPI_DEREGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID";
     default:
         return "unknown ELocMsgID";
     }
