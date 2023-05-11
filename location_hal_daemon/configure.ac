@@ -49,17 +49,6 @@ PKG_CHECK_MODULES([LOCAPIMSGPROTO], [location-api-msg-proto])
 AC_SUBST([LOCAPIMSGPROTO_CFLAGS])
 AC_SUBST([LOCAPIMSGPROTO_LIBS])
 
-AC_ARG_WITH([pwrmgrlib],
-    AC_HELP_STRING([--with-pwrmgrlib], [with power manager library]))
-
-AM_CONDITIONAL(POWERMANAGER_ENABLED, test "x$with_pwrmgrlib" = "xyes")
-
-AM_COND_IF(POWERMANAGER_ENABLED, [
-    PKG_CHECK_MODULES([PM], [powermanager])
-    AC_SUBST([PM_CFLAGS])
-    AC_SUBST([PM_LIBS])
-])
-
 AC_ARG_WITH([systemd],
       AC_HELP_STRING([--with-systemd],
          [systemd enable, building LE systems which has systemd]))

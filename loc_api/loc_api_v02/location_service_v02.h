@@ -124,7 +124,7 @@ extern "C" {
 /** Major Version Number of the IDL used to generate this file */
 #define LOC_V02_IDL_MAJOR_VERS 0x02
 /** Revision Number of the IDL used to generate this file */
-#define LOC_V02_IDL_MINOR_VERS 0x9F
+#define LOC_V02_IDL_MINOR_VERS 0xA1
 /** Major Version Number of the qmi_idl_compiler used to generate this file */
 #define LOC_V02_IDL_TOOL_VERS 0x06
 /** Maximum Defined Message ID */
@@ -1608,6 +1608,70 @@ typedef enum {
     @}
   */
 
+/** @addtogroup loc_qmi_enums
+    @{
+  */
+typedef enum {
+  QMILOCSVSYSTEMENUMT_MIN_ENUM_VAL_V02 = -2147483647, /**< To force a 32 bit signed enum.  Do not change or use*/
+  eQMI_LOC_SV_SYSTEM_GPS_V02 = 1, /**<  GPS satellite \n */
+  eQMI_LOC_SV_SYSTEM_GALILEO_V02 = 2, /**<  Galileo satellite \n */
+  eQMI_LOC_SV_SYSTEM_SBAS_V02 = 3, /**<  SBAS satellite \n */
+  eQMI_LOC_SV_SYSTEM_COMPASS_V02 = 4, /**<  COMPASS satellite (Deprecated) \n */
+  eQMI_LOC_SV_SYSTEM_GLONASS_V02 = 5, /**<  GLONASS satellite \n */
+  eQMI_LOC_SV_SYSTEM_BDS_V02 = 6, /**<  BDS satellite \n */
+  eQMI_LOC_SV_SYSTEM_QZSS_V02 = 7, /**<  QZSS satellite \n */
+  eQMI_LOC_SV_SYSTEM_NAVIC_V02 = 8, /**<  NavIC satellite  */
+  QMILOCSVSYSTEMENUMT_MAX_ENUM_VAL_V02 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
+}qmiLocSvSystemEnumT_v02;
+/**
+    @}
+  */
+
+/** @addtogroup loc_qmi_aggregates
+    @{
+  */
+typedef struct {
+
+  qmiLocSvSystemEnumT_v02 system;
+  /**<   Specifies the satellite system constellation.
+ Values: \n
+      - eQMI_LOC_SV_SYSTEM_GPS (1) --  GPS satellite \n
+      - eQMI_LOC_SV_SYSTEM_GALILEO (2) --  Galileo satellite \n
+      - eQMI_LOC_SV_SYSTEM_SBAS (3) --  SBAS satellite \n
+      - eQMI_LOC_SV_SYSTEM_COMPASS (4) --  COMPASS satellite (Deprecated) \n
+      - eQMI_LOC_SV_SYSTEM_GLONASS (5) --  GLONASS satellite \n
+      - eQMI_LOC_SV_SYSTEM_BDS (6) --  BDS satellite \n
+      - eQMI_LOC_SV_SYSTEM_QZSS (7) --  QZSS satellite \n
+      - eQMI_LOC_SV_SYSTEM_NAVIC (8) --  NavIC satellite
+ */
+
+  uint16_t systemWeek;
+  /**<   Current system week. \n
+      - GPS -- Calculated from midnight, Jan. 6, 1980. \n
+      - BDS -- Calculated from 00:00:00 on January 1, 2006 of Coordinated Universal Time (UTC). \n
+      - Galileo -- Calculated from 00:00 UT on Sunday August 22, 1999 (midnight between August 21 and August 22). \n
+      If the week is unknown, set this value to 65535. \n
+       - Units -- Weeks */
+
+  uint32_t systemMsec;
+  /**<   Amount of time into the current week. \n
+         - Units -- Milliseconds */
+
+  float systemClkTimeBias;
+  /**<   System clock time bias (submilliseconds). \n
+         - Units -- Milliseconds
+        (system time = systemMsec - systemClkTimeBias)
+    */
+
+  float systemClkTimeUncMs;
+  /**<   Single-sided maximum time bias uncertainty. \n
+         - Units -- Milliseconds
+    */
+}qmiLocGnssTimeStructT_v02;  /* Type */
+/**
+    @}
+  */
+
 /** @addtogroup loc_qmi_messages
     @{
   */
@@ -2160,26 +2224,13 @@ typedef struct {
   uint32_t jammerIndicatorListExt_len;  /**< Must be set to # of elements in jammerIndicatorListExt */
   qmiLocJammerIndicatorExtStructT_v02 jammerIndicatorListExt[QMI_LOC_MAX_GNSS_SIGNAL_TYPE_EXT_V02];
   /**<   \n Indicates the jammer indicator for GNSS signals. */
-}qmiLocEventPositionReportIndMsgT_v02;  /* Message */
-/**
-    @}
-  */
 
-/** @addtogroup loc_qmi_enums
-    @{
-  */
-typedef enum {
-  QMILOCSVSYSTEMENUMT_MIN_ENUM_VAL_V02 = -2147483647, /**< To force a 32 bit signed enum.  Do not change or use*/
-  eQMI_LOC_SV_SYSTEM_GPS_V02 = 1, /**<  GPS satellite \n */
-  eQMI_LOC_SV_SYSTEM_GALILEO_V02 = 2, /**<  Galileo satellite \n */
-  eQMI_LOC_SV_SYSTEM_SBAS_V02 = 3, /**<  SBAS satellite \n */
-  eQMI_LOC_SV_SYSTEM_COMPASS_V02 = 4, /**<  COMPASS satellite (Deprecated) \n */
-  eQMI_LOC_SV_SYSTEM_GLONASS_V02 = 5, /**<  GLONASS satellite \n */
-  eQMI_LOC_SV_SYSTEM_BDS_V02 = 6, /**<  BDS satellite \n */
-  eQMI_LOC_SV_SYSTEM_QZSS_V02 = 7, /**<  QZSS satellite \n */
-  eQMI_LOC_SV_SYSTEM_NAVIC_V02 = 8, /**<  NavIC satellite  */
-  QMILOCSVSYSTEMENUMT_MAX_ENUM_VAL_V02 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
-}qmiLocSvSystemEnumT_v02;
+  /* Optional */
+  /*  GNSS Time */
+  uint8_t gnssTime_valid;  /**< Must be set to true if gnssTime is being passed */
+  qmiLocGnssTimeStructT_v02 gnssTime;
+  /**<   GNSS Time. */
+}qmiLocEventPositionReportIndMsgT_v02;  /* Message */
 /**
     @}
   */
@@ -11894,6 +11945,12 @@ typedef struct {
   /**<   Indicates how well the input data considered for navigation solution conforms to expectations. \n
        - Range -- 0 (least conforming) to 1 (most conforming)
   */
+
+  /* Optional */
+  /*  GNSS Time */
+  uint8_t gnssTime_valid;  /**< Must be set to true if gnssTime is being passed */
+  qmiLocGnssTimeStructT_v02 gnssTime;
+  /**<   GNSS Time. */
 }qmiLocGetBestAvailablePositionIndMsgT_v02;  /* Message */
 /**
     @}
@@ -14212,6 +14269,12 @@ typedef struct {
       - eQMI_LOC_TIME_SRC_GAL_TOW_DECODE (17) --  Time is set after decoding Galileo satellites \n
       - eQMI_LOC_TIME_SRC_NAVIC_TOW_DECODE (18) --  Time is set after decoding NavIC satellites
  */
+
+  /* Optional */
+  /*  GNSS Time */
+  uint8_t gnssTime_valid;  /**< Must be set to true if gnssTime is being passed */
+  qmiLocGnssTimeStructT_v02 gnssTime;
+  /**<   GNSS Time. */
 }qmiLocGetAvailWwanPositionIndMsgT_v02;  /* Message */
 /**
     @}
@@ -14584,51 +14647,6 @@ typedef struct {
          - Units -- Milliseconds
     */
 }qmiLocInterSystemBiasStructT_v02;  /* Type */
-/**
-    @}
-  */
-
-/** @addtogroup loc_qmi_aggregates
-    @{
-  */
-typedef struct {
-
-  qmiLocSvSystemEnumT_v02 system;
-  /**<   Specifies the satellite system constellation.
- Values: \n
-      - eQMI_LOC_SV_SYSTEM_GPS (1) --  GPS satellite \n
-      - eQMI_LOC_SV_SYSTEM_GALILEO (2) --  Galileo satellite \n
-      - eQMI_LOC_SV_SYSTEM_SBAS (3) --  SBAS satellite \n
-      - eQMI_LOC_SV_SYSTEM_COMPASS (4) --  COMPASS satellite (Deprecated) \n
-      - eQMI_LOC_SV_SYSTEM_GLONASS (5) --  GLONASS satellite \n
-      - eQMI_LOC_SV_SYSTEM_BDS (6) --  BDS satellite \n
-      - eQMI_LOC_SV_SYSTEM_QZSS (7) --  QZSS satellite \n
-      - eQMI_LOC_SV_SYSTEM_NAVIC (8) --  NavIC satellite
- */
-
-  uint16_t systemWeek;
-  /**<   Current system week. \n
-      - GPS -- Calculated from midnight, Jan. 6, 1980. \n
-      - BDS -- Calculated from 00:00:00 on January 1, 2006 of Coordinated Universal Time (UTC). \n
-      - Galileo -- Calculated from 00:00 UT on Sunday August 22, 1999 (midnight between August 21 and August 22). \n
-      If the week is unknown, set this value to 65535. \n
-       - Units -- Weeks */
-
-  uint32_t systemMsec;
-  /**<   Amount of time into the current week. \n
-         - Units -- Milliseconds */
-
-  float systemClkTimeBias;
-  /**<   System clock time bias (submilliseconds). \n
-         - Units -- Milliseconds
-        (system time = systemMsec - systemClkTimeBias)
-    */
-
-  float systemClkTimeUncMs;
-  /**<   Single-sided maximum time bias uncertainty. \n
-         - Units -- Milliseconds
-    */
-}qmiLocGnssTimeStructT_v02;  /* Type */
 /**
     @}
   */
@@ -15453,6 +15471,16 @@ typedef struct {
       - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2A_Q (0x00080000) --  BeiDou B2a Q RF band.
       - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_I (0x00100000) --  BeiDou B2b I RF band (data) \n
       - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q (0x00200000) --  BeiDou B2b Q RF band (pilot)  */
+
+  /* Optional */
+  /*  GNSS Leap Second */
+  uint8_t gnssLeapSecond_valid;  /**< Must be set to true if gnssLeapSecond is being passed */
+  uint8_t gnssLeapSecond;
+
+  /* Optional */
+  /*  GNSS Leap Second Uncertainty */
+  uint8_t gnssLeapSecondUnc_valid;  /**< Must be set to true if gnssLeapSecondUnc is being passed */
+  uint8_t gnssLeapSecondUnc;
 }qmiLocEventGnssSvMeasInfoIndMsgT_v02;  /* Message */
 /**
     @}
@@ -20630,6 +20658,73 @@ typedef struct {
   /**<   \n Upcoming leap second information.
        Reported only when the receiver has information
        on an upcoming leap second change event.*/
+
+  /* Optional */
+  /*  System */
+  uint8_t system_valid;  /**< Must be set to true if system is being passed */
+  qmiLocSvSystemEnumT_v02 system;
+  /**<   Specifies the satellite system constellation.
+ Values: \n
+      - eQMI_LOC_SV_SYSTEM_GPS (1) --  GPS satellite \n
+      - eQMI_LOC_SV_SYSTEM_GALILEO (2) --  Galileo satellite \n
+      - eQMI_LOC_SV_SYSTEM_SBAS (3) --  SBAS satellite \n
+      - eQMI_LOC_SV_SYSTEM_COMPASS (4) --  COMPASS satellite (Deprecated) \n
+      - eQMI_LOC_SV_SYSTEM_GLONASS (5) --  GLONASS satellite \n
+      - eQMI_LOC_SV_SYSTEM_BDS (6) --  BDS satellite \n
+      - eQMI_LOC_SV_SYSTEM_QZSS (7) --  QZSS satellite \n
+      - eQMI_LOC_SV_SYSTEM_NAVIC (8) --  NavIC satellite
+ */
+
+  /* Optional */
+  /*  GNSS Week */
+  uint8_t gnssWeekCurrent_valid;  /**< Must be set to true if gnssWeekCurrent is being passed */
+  uint16_t gnssWeekCurrent;
+  /**<   Current GNSS week. \n
+      - GPS -- Calculated from midnight, Jan. 6, 1980. \n
+      - BDS -- Calculated from 00:00:00 on January 1, 2006 of Coordinated Universal Time (UTC). \n
+      - Galileo -- Calculated from 00:00 UT on Sunday August 22, 1999 (midnight between August 21 and August 22). \n
+      If the week is unknown, set this value to 65535. \n
+       - Units -- Weeks */
+
+  /* Optional */
+  /*  GNSS Time of Week */
+  uint8_t gnssTimeOfWeekCurrentMs_valid;  /**< Must be set to true if gnssTimeOfWeekCurrentMs is being passed */
+  uint32_t gnssTimeOfWeekCurrentMs;
+  /**<   Amount of time into the current week. \n
+         - Units -- Milliseconds */
+
+  /* Optional */
+  /*  GNSS Week Next Leap Second */
+  uint8_t gnssWeekNextLSEvent_valid;  /**< Must be set to true if gnssWeekNextLSEvent is being passed */
+  uint16_t gnssWeekNextLSEvent;
+  /**<   \vspace{0.06in} \n Number of weeks, and
+         for next leap-second change event.
+         Reported only when receiver has information
+         on upcoming change event. */
+
+  /* Optional */
+  /*  GNSS Next Leap Second Time of Week */
+  uint8_t gnssTimeOfWeekNextLSEventMs_valid;  /**< Must be set to true if gnssTimeOfWeekNextLSEventMs is being passed */
+  uint32_t gnssTimeOfWeekNextLSEventMs;
+  /**<   \vspace{0.06in} \n Milliseconds into the week for next leap-second change event.
+         Reported only when receiver has information
+         on upcoming change event. */
+
+  /* Optional */
+  /*  GNSS Next Leap Seconds */
+  uint8_t gnssleapSecondsNext_valid;  /**< Must be set to true if gnssleapSecondsNext is being passed */
+  uint8_t gnssleapSecondsNext;
+  /**<   Upcoming leap second information.
+         Reported only when receiver has information
+         on an upcoming change event.\n
+         - Units -- Seconds */
+
+  /* Optional */
+  /*  GNSS Current Leap Seconds */
+  uint8_t gnssleapSecondsCurrent_valid;  /**< Must be set to true if gnssleapSecondsCurrent is being passed */
+  uint8_t gnssleapSecondsCurrent;
+  /**<   Current leap second information.\n
+       - Units -- Seconds */
 }qmiLocSystemInfoIndMsgT_v02;  /* Message */
 /**
     @}
@@ -22252,7 +22347,9 @@ typedef enum {
   eQMI_LOC_POWER_STATE_UNKNOWN_V02 = 0, /**<  Platform power state unknown \n */
   eQMI_LOC_POWER_STATE_SUSPENDED_V02 = 1, /**<  Platform has entered a lower power state \n */
   eQMI_LOC_POWER_STATE_RESUME_V02 = 2, /**<  Platform has entered a higher power state \n */
-  eQMI_LOC_POWER_STATE_SHUTDOWN_V02 = 3, /**<  Platform has started to gracefully shutdown  */
+  eQMI_LOC_POWER_STATE_SHUTDOWN_V02 = 3, /**<  Platform has started to gracefully shutdown \n */
+  eQMI_LOC_POWER_STATE_DEEP_SLEEP_ENTRY_V02 = 4, /**<  Platform has entered deep sleep power state \n */
+  eQMI_LOC_POWER_STATE_DEEP_SLEEP_EXIT_V02 = 5, /**<  Platform has exited deep sleep power state    */
   QMILOCPLATFORMPOWERSTATEENUMT_MAX_ENUM_VAL_V02 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
 }qmiLocPlatformPowerStateEnumT_v02;
 /**
@@ -22270,7 +22367,14 @@ typedef struct {
   /*  Power State */
   qmiLocPlatformPowerStateEnumT_v02 powerState;
   /**<   Power state of the platform; can be used by the location
-       engine for its own power modes. */
+ engine for its own power modes.
+ Values: \n
+      - eQMI_LOC_POWER_STATE_UNKNOWN (0) --  Platform power state unknown \n
+      - eQMI_LOC_POWER_STATE_SUSPENDED (1) --  Platform has entered a lower power state \n
+      - eQMI_LOC_POWER_STATE_RESUME (2) --  Platform has entered a higher power state \n
+      - eQMI_LOC_POWER_STATE_SHUTDOWN (3) --  Platform has started to gracefully shutdown \n
+      - eQMI_LOC_POWER_STATE_DEEP_SLEEP_ENTRY (4) --  Platform has entered deep sleep power state \n
+      - eQMI_LOC_POWER_STATE_DEEP_SLEEP_EXIT (5) --  Platform has exited deep sleep power state   */
 }qmiLocInjectPlatformPowerStateReqMsgT_v02;  /* Message */
 /**
     @}
@@ -25022,6 +25126,22 @@ typedef struct {
   uint32_t fixHepeLimit;
   /**<   Session HEPE limit.\n
        - Units: meters */
+
+  /* Optional */
+  /*  GNSS Time */
+  uint8_t gnssTime_valid;  /**< Must be set to true if gnssTime is being passed */
+  qmiLocGnssTimeStructT_v02 gnssTime;
+  /**<   GNSS Time. */
+
+  /* Optional */
+  /*  GNSS Leap Second */
+  uint8_t gnssLeapSecond_valid;  /**< Must be set to true if gnssLeapSecond is being passed */
+  uint8_t gnssLeapSecond;
+
+  /* Optional */
+  /*  GNSS Leap Second Uncertainty */
+  uint8_t gnssLeapSecondUnc_valid;  /**< Must be set to true if gnssLeapSecondUnc is being passed */
+  uint8_t gnssLeapSecondUnc;
 }qmiLocEngineDebugDataIndMsgT_v02;  /* Message */
 /**
     @}
