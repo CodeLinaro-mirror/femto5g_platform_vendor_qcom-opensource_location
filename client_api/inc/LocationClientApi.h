@@ -1263,13 +1263,13 @@ enum DrSolutionStatusMask {
     DR_SOLUTION_STATUS_VEHICLE_SENSOR_SPEED_INPUT_USED     = (1<<1),
     /** DRE solution disengaged due to insufficient
       * calibration <br/> */
-    DR_SOLUTION_STATUS_ERROR_UNCALIBRATED                  = (1<<2),
+    DR_SOLUTION_STATUS_WARNING_UNCALIBRATED                = (1<<2),
     /** DRE solution disengaged due to bad GNSS
       * quality <br/> */
-    DR_SOLUTION_STATUS_ERROR_GNSS_QUALITY_INSUFFICIENT     = (1<<3),
+    DR_SOLUTION_STATUS_WARNING_GNSS_QUALITY_INSUFFICIENT   = (1<<3),
     /** DRE solution disengaged as ferry condition
       * detected <br/> */
-    DR_SOLUTION_STATUS_ERROR_FERRY_DETECTED                = (1<<4),
+    DR_SOLUTION_STATUS_WARNING_FERRY_DETECTED              = (1<<4),
     /** DRE solution disengaged as 6DOF sensor inputs
       * not available <br/> */
     DR_SOLUTION_STATUS_ERROR_6DOF_SENSOR_UNAVAILABLE       = (1<<5),
@@ -1284,16 +1284,25 @@ enum DrSolutionStatusMask {
     DR_SOLUTION_STATUS_ERROR_GNSS_MEAS_UNAVAILABLE         = (1<<8),
     /** DRE solution disengaged due non-availability of
       * stored position from previous session <br/> */
-    DR_SOLUTION_STATUS_ERROR_NO_STORED_POSITION            = (1<<9),
+    DR_SOLUTION_STATUS_WARNING_INIT_POSITION_INVALID       = (1<<9),
     /** DRE solution dis-engaged due to vehicle motion
       *  detected at session start <br/> */
-    DR_SOLUTION_STATUS_ERROR_MOVING_AT_START               = (1<<10),
+    DR_SOLUTION_STATUS_WARNING_INIT_POSITION_UNRELIABLE    = (1<<10),
     /** DRE solution dis-engaged due to unreliable
       * position <br/> */
-    DR_SOLUTION_STATUS_ERROR_POSITON_UNRELIABLE            = (1<<11),
+    DR_SOLUTION_STATUS_WARNING_POSITON_UNRELIABLE          = (1<<11),
     /** DRE solution dis-engaged due to a generic
       * error <br/> */
-    DR_SOLUTION_STATUS_ERROR_GENERIC                       = (1<<12)
+    DR_SOLUTION_STATUS_ERROR_GENERIC                       = (1<<12),
+    /** DRE solution dis-engaged due to Sensor Temperature
+      * being out of range <br/> */
+    DR_SOLUTION_STATUS_WARNING_SENSOR_TEMP_OUT_OF_RANGE    = (1<<13),
+    /** DRE solution dis-engaged due to insufficient
+      *  user dynamics <br/> */
+    DR_SOLUTION_STATUS_WARNING_USER_DYNAMICS_INSUFFICIENT  = (1<<14),
+    /** DRE solution dis-engaged due to inconsistent
+      *  factory data <br/> */
+    DR_SOLUTION_STATUS_WARNING_FACTORY_DATA_INCONSISTENT   = (1<<15)
 };
 
 /** Specify the session status. <br/> */
