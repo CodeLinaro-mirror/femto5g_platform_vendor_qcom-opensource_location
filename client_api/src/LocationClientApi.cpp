@@ -521,13 +521,14 @@ void LocationClientApi::addGeofences(std::vector<Geofence>& geofences,
                 LocationError* errs, uint32_t* ids) {
                 std::vector<pair<Geofence, LocationResponse>> responses;
                 LOC_LOGd("CollectiveRes Pload count: %zu", count);
-                for (int i=0; i < count; i++) {
-                    responses.push_back(make_pair(
-                            mApiImpl->getMappedGeofence(ids[i]),
-                            LocationClientApiImpl::parseLocationError(errs[i])));
+                if (errs != nullptr && ids != nullptr) {
+                    for (int i=0; i < count; i++) {
+                        responses.push_back(make_pair(
+                                    mApiImpl->getMappedGeofence(ids[i]),
+                                    LocationClientApiImpl::parseLocationError(errs[i])));
+                    }
+                    collRspCb(responses);
                 }
-
-                collRspCb(responses);
         };
     }
 
@@ -541,10 +542,8 @@ void LocationClientApi::addGeofences(std::vector<Geofence>& geofences,
         }
 
         gfBreachCb(geofences,
-                LocationClientApiImpl::parseLocation(
-                    geofenceBreachNotification.location),
-                GeofenceBreachTypeMask(
-                    geofenceBreachNotification.type),
+                LocationClientApiImpl::parseLocation(geofenceBreachNotification.location),
+                LocationClientApiImpl::parseGeofenceBreachType(geofenceBreachNotification.type),
                 geofenceBreachNotification.timestamp);
     };
 

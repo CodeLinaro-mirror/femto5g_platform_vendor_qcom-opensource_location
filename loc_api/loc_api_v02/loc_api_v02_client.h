@@ -871,6 +871,12 @@ typedef union
 
     const qmiLocSetSdkFeatureConfigReqMsgT_v02
             *pLocSetSdkFeatureConfigReq;
+    const qmiLocOsnmaPublicKeyMerkleTreeReqMsgT_v02
+            *pOsnmaPublicKeyMerkleTreeReq;
+    /*QMI_LOC_OSNMA_PUBLIC_KEY_MERKLE_TREE_REQ_V02*/
+    const qmiLocSetOsnmaStateReqMsgT_v02
+            *pOsnmaEnablementReq;
+    /*QMI_LOC_OSNMA_ENABLEMENT_REQ_V02*/
 }locClientReqUnionType;
 
 
