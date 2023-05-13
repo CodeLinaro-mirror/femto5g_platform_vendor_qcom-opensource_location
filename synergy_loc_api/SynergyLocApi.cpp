@@ -24,6 +24,12 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+ *
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ *
  */
 #define LOG_NDEBUG 0
 #define LOG_TAG "SynergyLoc_Api"
@@ -138,6 +144,21 @@ void handleSllReportPosition(UlpLocation& location,
 
     if (nullptr != context) {
         SynergyLocApi *synergyLocApiInstance = (SynergyLocApi*)context;
+
+        int64_t locationTimeNanos = ((int64_t)(location.gpsLocation.timestamp) * 1000000);
+        bool isCurDataTimeTrustable =
+          ((locationTimeNanos % ((int64_t) (synergyLocApiInstance->mMinInterval ) * 1000000)) == 0);
+        int64_t elapsedRealTime =
+            synergyLocApiInstance->mPositionElapsedRealTimeCal.getElapsedRealtimeEstimateNanos
+                                     (locationTimeNanos, isCurDataTimeTrustable,
+                                     ((int64_t)synergyLocApiInstance->mMinInterval * 1000000));
+        int unc = synergyLocApiInstance->mPositionElapsedRealTimeCal.getElapsedRealtimeUncNanos();
+        if (elapsedRealTime != -1) {
+            location.gpsLocation.flags |= LOC_GPS_LOCATION_HAS_ELAPSED_REAL_TIME;
+            location.gpsLocation.elapsedRealTime = elapsedRealTime;
+            location.gpsLocation.elapsedRealTimeUnc = unc;
+        }
+
         synergyLocApiInstance->reportPosition(location, locationExtended,
                             status, loc_technology_mask, pDataNotify, msInWeek);
     } else {
@@ -1231,7 +1252,8 @@ SynergyLocApi::SynergyLocApi(LOC_API_ADAPTER_EVENT_MASK_T exMask,
     mSlMask(0), mInSession(false), mPowerMode(GNSS_POWER_MODE_INVALID),
     mEngineOn(false), mMeasurementsStarted(false),
     mIsMasterRegistered(false), mMasterRegisterNotSupported(false),
-    mSvMeasurementSet(nullptr)
+    mSvMeasurementSet(nullptr), mPositionElapsedRealTimeCal(30000000),
+    mMinInterval(1000)
 {
     const char * libName = nullptr;
     void *handle = nullptr;
@@ -1433,6 +1455,8 @@ enum loc_api_adapter_err SynergyLocApi::close() {
 */
 void SynergyLocApi::startFix(const LocPosMode& fixCriteria, LocApiResponse *adapterResponse) {
 
+    mMinInterval = fixCriteria.min_interval;
+
     sendMsg(new LocApiMsg([this, fixCriteria, adapterResponse] () {
         LocationError err = LOCATION_ERROR_GENERAL_FAILURE;
         enum loc_api_adapter_err rtv = LOC_API_ADAPTER_ERR_SUCCESS;
@@ -1475,6 +1499,8 @@ void SynergyLocApi::startFix(const LocPosMode& fixCriteria, LocApiResponse *adap
 */
 void SynergyLocApi::stopFix(LocApiResponse *adapterResponse) {
 
+    mMinInterval = 0;
+
     sendMsg(new LocApiMsg([this, adapterResponse] () {
         LocationError err = LOCATION_ERROR_GENERAL_FAILURE;
         enum loc_api_adapter_err rtv = LOC_API_ADAPTER_ERR_SUCCESS;
@@ -1508,6 +1534,8 @@ void SynergyLocApi::stopFix(LocApiResponse *adapterResponse) {
        None.
 */
 void SynergyLocApi::setPositionMode(const LocPosMode& posMode) {
+
+    mMinInterval = posMode.min_interval;
 
     sendMsg(new LocApiMsg([this, posMode] () {
         LocationError err = LOCATION_ERROR_GENERAL_FAILURE;
