@@ -216,7 +216,8 @@ LocationApiService::LocationApiService(const configParamToRead & configParamRead
     mMsgTask(new MsgTask("HalMaintMsgTask", false)),
     mMaintTimer(this),
     mGtpWwanSsLocationApi(nullptr),
-    mOptInTerrestrialService(-1)
+    mOptInTerrestrialService(-1),
+    mGtpWwanSsLocationApiCallbacks{}
 #ifdef POWERMANAGER_ENABLED
     ,mPowerEventObserver(nullptr)
 #endif
@@ -958,9 +959,11 @@ void LocationApiService::deregisterXtraStatusUpdate(
     } else {
         std::string clientname(pReqMsg->mSocketName);
         LocHalDaemonClientHandler* pClient = getClient(clientname);
-        // inform client that request has been processed successfully
-        pClient->onControlResponseCb(LOCATION_ERROR_SUCCESS,
-                                     E_INTAPI_DEREGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID);
+        if (pClient) {
+            // inform client that request has been processed successfully
+            pClient->onControlResponseCb(LOCATION_ERROR_SUCCESS,
+                                         E_INTAPI_DEREGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID);
+        }
     }
 }
 
@@ -1606,7 +1609,9 @@ void LocationApiService::onGtpWwanTrackingCallback(Location location) {
 
         for (auto it = mTerrestrialFixReqs.begin(); it != mTerrestrialFixReqs.end();) {
             LocHalDaemonClientHandler* pClient = getClient(it->first);
-            pClient->sendTerrestrialFix(LOCATION_ERROR_SUCCESS, location);
+            if (pClient) {
+                pClient->sendTerrestrialFix(LOCATION_ERROR_SUCCESS, location);
+            }
             ++it;
         }
         mTerrestrialFixReqs.clear();
