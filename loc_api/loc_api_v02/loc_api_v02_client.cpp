@@ -29,7 +29,7 @@
  /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -804,6 +804,12 @@ static const locClientRespIndTableStructT locClientRespIndTable[]= {
 
    { QMI_LOC_SET_SDK_FEATURE_CONFIG_IND_V02,
      sizeof(qmiLocSetSdkFeatureConfigIndMsgT_v02) },
+
+   { QMI_LOC_OSNMA_PUBLIC_KEY_MERKLE_TREE_IND_V02,
+     sizeof(qmiLocGenReqStatusIndMsgT_v02) },
+
+   { QMI_LOC_SET_OSNMA_STATE_IND_V02,
+     sizeof(qmiLocGenReqStatusIndMsgT_v02) },
 };
 
 
@@ -1920,6 +1926,16 @@ bool validateRequest(
     case QMI_LOC_SET_SDK_FEATURE_CONFIG_REQ_V02:
     {
         *pOutLen = sizeof(qmiLocSetSdkFeatureConfigReqMsgT_v02);
+        break;
+    }
+    case QMI_LOC_OSNMA_PUBLIC_KEY_MERKLE_TREE_REQ_V02:
+    {
+        *pOutLen = sizeof(qmiLocOsnmaPublicKeyMerkleTreeReqMsgT_v02);
+        break;
+    }
+    case QMI_LOC_SET_OSNMA_STATE_REQ_V02:
+    {
+        *pOutLen = sizeof(qmiLocSetOsnmaStateReqMsgT_v02);
         break;
     }
     // ALL requests with no payload

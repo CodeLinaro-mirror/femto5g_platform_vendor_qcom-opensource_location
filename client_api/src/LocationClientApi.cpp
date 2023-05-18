@@ -521,13 +521,14 @@ void LocationClientApi::addGeofences(std::vector<Geofence>& geofences,
                 LocationError* errs, uint32_t* ids) {
                 std::vector<pair<Geofence, LocationResponse>> responses;
                 LOC_LOGd("CollectiveRes Pload count: %zu", count);
-                for (int i=0; i < count; i++) {
-                    responses.push_back(make_pair(
-                            mApiImpl->getMappedGeofence(ids[i]),
-                            LocationClientApiImpl::parseLocationError(errs[i])));
+                if (errs != nullptr && ids != nullptr) {
+                    for (int i=0; i < count; i++) {
+                        responses.push_back(make_pair(
+                                    mApiImpl->getMappedGeofence(ids[i]),
+                                    LocationClientApiImpl::parseLocationError(errs[i])));
+                    }
+                    collRspCb(responses);
                 }
-
-                collRspCb(responses);
         };
     }
 
@@ -541,10 +542,8 @@ void LocationClientApi::addGeofences(std::vector<Geofence>& geofences,
         }
 
         gfBreachCb(geofences,
-                LocationClientApiImpl::parseLocation(
-                    geofenceBreachNotification.location),
-                GeofenceBreachTypeMask(
-                    geofenceBreachNotification.type),
+                LocationClientApiImpl::parseLocation(geofenceBreachNotification.location),
+                LocationClientApiImpl::parseGeofenceBreachType(geofenceBreachNotification.type),
                 geofenceBreachNotification.timestamp);
     };
 
@@ -1082,7 +1081,19 @@ DECLARE_TBL(DrCalibrationStatusMask) = {
     {DR_PITCH_CALIBRATION_NEEDED, "PITCH"},
     {DR_YAW_CALIBRATION_NEEDED, "YAW"},
     {DR_ODO_CALIBRATION_NEEDED, "ODO"},
-    {DR_GYRO_CALIBRATION_NEEDED, "GYRO"}
+    {DR_GYRO_CALIBRATION_NEEDED, "GYRO"},
+    {DR_TURN_CALIBRATION_LOW, "TURN_LOW"},
+    {DR_TURN_CALIBRATION_MEDIUM, "TURN_MEDIUM"},
+    {DR_TURN_CALIBRATION_HIGH, "TURN_HIGH"},
+    {DR_LINEAR_ACCEL_CALIBRATION_LOW, "LINEAR_ACCEL_LOW"},
+    {DR_LINEAR_ACCEL_CALIBRATION_MEDIUM, "LINEAR_ACCEL_MEDIUM"},
+    {DR_LINEAR_ACCEL_CALIBRATION_HIGH, "LINEAR_ACCEL_HIGH"},
+    {DR_LINEAR_MOTION_CALIBRATION_LOW, "LINEAR_MOTION_LOW"},
+    {DR_LINEAR_MOTION_CALIBRATION_MEDIUM, "LINEAR_MOTION_MEDIUM"},
+    {DR_LINEAR_MOTION_CALIBRATION_HIGH, "LINEAR_MOTION_HIGH"},
+    {DR_STATIC_CALIBRATION_LOW, "STATIC_LOW"},
+    {DR_STATIC_CALIBRATION_MEDIUM, "STATIC_MEDIUM"},
+    {DR_STATIC_CALIBRATION_HIGH, "STATIC_HIGH"}
 };
 // LocReqEngineTypeMask
 DECLARE_TBL(LocReqEngineTypeMask) = {
@@ -1191,7 +1202,18 @@ DECLARE_TBL(LocationSystemInfoMask) = {
 // LocationSystemInfoMask
 DECLARE_TBL(DrSolutionStatusMask) = {
     {DR_SOLUTION_STATUS_VEHICLE_SENSOR_SPEED_INPUT_DETECTED, "VEHICLE_SENSOR_SPEED_INPUT_DETECTED"},
-    {DR_SOLUTION_STATUS_VEHICLE_SENSOR_SPEED_INPUT_USED, "VEHICLE_SENSOR_SPEED_INPUT_USED"}
+    {DR_SOLUTION_STATUS_VEHICLE_SENSOR_SPEED_INPUT_USED, "VEHICLE_SENSOR_SPEED_INPUT_USED"},
+    {DR_SOLUTION_STATUS_ERROR_UNCALIBRATED, "ERROR_UNCALIBRATED"},
+    {DR_SOLUTION_STATUS_ERROR_GNSS_QUALITY_INSUFFICIENT, "ERROR_GNSS_QUALITY_INSUFFICIENT"},
+    {DR_SOLUTION_STATUS_ERROR_FERRY_DETECTED, "ERROR_FERRY_DETECTED"},
+    {DR_SOLUTION_STATUS_ERROR_6DOF_SENSOR_UNAVAILABLE, "ERROR_6DOF_SENSOR_UNAVAILABLE"},
+    {DR_SOLUTION_STATUS_ERROR_VEHICLE_SPEED_UNAVAILABLE, "ERROR_VEHICLE_SPEED_UNAVAILABLE"},
+    {DR_SOLUTION_STATUS_ERROR_GNSS_EPH_UNAVAILABLE, "ERROR_GNSS_EPH_UNAVAILABLE"},
+    {DR_SOLUTION_STATUS_ERROR_GNSS_MEAS_UNAVAILABLE, "ERROR_GNSS_MEAS_UNAVAILABLE"},
+    {DR_SOLUTION_STATUS_ERROR_NO_STORED_POSITION, "ERROR_NO_STORED_POSITION"},
+    {DR_SOLUTION_STATUS_ERROR_MOVING_AT_START, "ERROR_MOVING_AT_START"},
+    {DR_SOLUTION_STATUS_ERROR_POSITON_UNRELIABLE, "ERROR_POSITON_UNRELIABLE"},
+    {DR_SOLUTION_STATUS_ERROR_GENERIC, "ERROR_GENERIC"}
 };
 
 DECLARE_TBL(GnssDcReportType) = {

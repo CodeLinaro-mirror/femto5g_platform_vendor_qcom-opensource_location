@@ -133,6 +133,12 @@ static LocConfigTypeEnum getLocConfigTypeFromMsgId(ELocMsgID  msgId) {
     case E_INTAPI_CONFIG_XTRA_PARAMS_MSG_ID:
         configType = CONFIG_XTRA_PARAMS;
         break;
+    case E_INTAPI_CONFIG_MERKLE_TREE_MSG_ID:
+        configType = CONFIG_MERKLE_TREE;
+        break;
+    case E_INTAPI_CONFIG_OSNMA_ENABLEMENT_MSG_ID:
+        configType = CONFIG_OSNMA_ENABLEMENT;
+        break;
     case E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID:
     case E_INTAPI_GET_ROBUST_LOCATION_CONFIG_RESP_MSG_ID:
         configType = GET_ROBUST_LOCATION_CONFIG;
@@ -471,6 +477,8 @@ void IpcListener::onReceive(const char* data, uint32_t length,
             case E_INTAPI_CONFIG_OUTPUT_NMEA_TYPES_MSG_ID:
             case E_INTAPI_CONFIG_ENGINE_INTEGRITY_RISK_MSG_ID:
             case E_INTAPI_CONFIG_XTRA_PARAMS_MSG_ID:
+            case E_INTAPI_CONFIG_MERKLE_TREE_MSG_ID:
+            case E_INTAPI_CONFIG_OSNMA_ENABLEMENT_MSG_ID:
             case E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID:
             case E_INTAPI_GET_MIN_GPS_WEEK_REQ_MSG_ID:
             case E_INTAPI_GET_MIN_SV_ELEVATION_REQ_MSG_ID:
@@ -1318,6 +1326,55 @@ uint32_t LocationIntegrationApiImpl::registerXtraStatusUpdate(bool registerUpdat
         return 1;
     }
     mMsgTask.sendMsg(new (nothrow) RegisterXtraStatusUpdateReq(this, registerUpdate));
+    return 0;
+}
+
+uint32_t LocationIntegrationApiImpl::configMerkleTree(const char * merkleTreeXml, int xmlSize) {
+    struct ConfigMerkleTreeReq : public LocMsg {
+        ConfigMerkleTreeReq(LocationIntegrationApiImpl* apiImpl,
+                      const char* merkleTreeConfigBuffer, int len):
+                mApiImpl(apiImpl), mMerkleTreeBuffer(merkleTreeConfigBuffer, len) {}
+        virtual ~ConfigMerkleTreeReq() {}
+        void proc() const {
+            string pbStr;
+            LocConfigMerkleTreeReqMsg msg(mApiImpl->mSocketName, mMerkleTreeBuffer,
+                    &mApiImpl->mPbufMsgConv);
+            if (msg.serializeToProtobuf(pbStr)) {
+                mApiImpl->sendConfigMsgToHalDaemon(CONFIG_MERKLE_TREE, pbStr);
+            } else {
+                LOC_LOGe("serializeToProtobuf failed");
+            }
+        }
+
+        LocationIntegrationApiImpl* mApiImpl;
+        std::string mMerkleTreeBuffer;
+    };
+
+    mMsgTask.sendMsg(new (nothrow) ConfigMerkleTreeReq(this, merkleTreeXml, xmlSize));
+    return 0;
+}
+
+uint32_t LocationIntegrationApiImpl::configOsnmaEnablement(bool isEnabled) {
+    struct ConfigOsnmaEnablementReq : public LocMsg {
+        ConfigOsnmaEnablementReq(LocationIntegrationApiImpl* apiImpl, bool enable):
+                mApiImpl(apiImpl), mEnable(enable) {}
+        virtual ~ConfigOsnmaEnablementReq() {}
+        void proc() const {
+            string pbStr;
+            LocConfigOsnmaEnablementReqMsg msg(mApiImpl->mSocketName, mEnable,
+                    &mApiImpl->mPbufMsgConv);
+            if (msg.serializeToProtobuf(pbStr)) {
+                mApiImpl->sendConfigMsgToHalDaemon(CONFIG_OSNMA_ENABLEMENT, pbStr);
+            } else {
+                LOC_LOGe("serializeToProtobuf failed");
+            }
+        }
+
+        LocationIntegrationApiImpl* mApiImpl;
+        bool mEnable;
+    };
+
+    mMsgTask.sendMsg(new (nothrow) ConfigOsnmaEnablementReq(this, isEnabled));
     return 0;
 }
 
