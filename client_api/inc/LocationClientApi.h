@@ -842,7 +842,31 @@ enum DrCalibrationStatusMask {
     DR_ODO_CALIBRATION_NEEDED   = (1<<3),
     /** Indicate that gyro calibration is needed. <br/>
      *  Need to take more turns on level ground. <br/>  */
-    DR_GYRO_CALIBRATION_NEEDED  = (1<<4)
+    DR_GYRO_CALIBRATION_NEEDED  = (1<<4),
+    /** Lot more turns on level ground needed */
+    DR_TURN_CALIBRATION_LOW     = (1<<5),
+    /** Some more turns on level ground needed */
+    DR_TURN_CALIBRATION_MEDIUM  = (1<<6),
+    /** Sufficient turns on level ground observed */
+    DR_TURN_CALIBRATION_HIGH    = (1<<7),
+    /** Lot more accelerations in straight line needed */
+    DR_LINEAR_ACCEL_CALIBRATION_LOW      = (1<<8),
+    /** Some more accelerations in straight line needed */
+    DR_LINEAR_ACCEL_CALIBRATION_MEDIUM   = (1<<9),
+    /** Sufficient acceleration events in straight line observed */
+    DR_LINEAR_ACCEL_CALIBRATION_HIGH     = (1<<10),
+    /** Lot more motion in straight line needed */
+    DR_LINEAR_MOTION_CALIBRATION_LOW     = (1<<11),
+    /** Some more motion in straight line needed */
+    DR_LINEAR_MOTION_CALIBRATION_MEDIUM  = (1<<12),
+    /** Sufficient motion events in straight line observed */
+    DR_LINEAR_MOTION_CALIBRATION_HIGH    = (1<<13),
+    /** Lot more stationary events on level ground needed */
+    DR_STATIC_CALIBRATION_LOW            = (1<<14),
+    /** Some more stationary events on level ground needed */
+    DR_STATIC_CALIBRATION_MEDIUM         = (1<<15),
+    /** Sufficient stationary events on level ground observed */
+    DR_STATIC_CALIBRATION_HIGH           = (1<<16)
 };
 
 /** Specify the set of SVs that are used to calculate
@@ -1232,6 +1256,39 @@ enum DrSolutionStatusMask {
     /** Vehicle sensor speed input was used by the DR position
      *  engine. <br/> */
     DR_SOLUTION_STATUS_VEHICLE_SENSOR_SPEED_INPUT_USED     = (1<<1),
+    /** DRE solution disengaged due to insufficient
+      * calibration <br/> */
+    DR_SOLUTION_STATUS_ERROR_UNCALIBRATED                  = (1<<2),
+    /** DRE solution disengaged due to bad GNSS
+      * quality <br/> */
+    DR_SOLUTION_STATUS_ERROR_GNSS_QUALITY_INSUFFICIENT     = (1<<3),
+    /** DRE solution disengaged as ferry condition
+      * detected <br/> */
+    DR_SOLUTION_STATUS_ERROR_FERRY_DETECTED                = (1<<4),
+    /** DRE solution disengaged as 6DOF sensor inputs
+      * not available <br/> */
+    DR_SOLUTION_STATUS_ERROR_6DOF_SENSOR_UNAVAILABLE       = (1<<5),
+    /** DRE solution disengaged as vehicle speed inputs
+      * not available <br/> */
+    DR_SOLUTION_STATUS_ERROR_VEHICLE_SPEED_UNAVAILABLE     = (1<<6),
+    /** DRE solution disengaged as Ephemeris info
+      * not available <br/> */
+    DR_SOLUTION_STATUS_ERROR_GNSS_EPH_UNAVAILABLE          = (1<<7),
+    /** DRE solution disengaged as GNSS measurement
+      * info not available <br/> */
+    DR_SOLUTION_STATUS_ERROR_GNSS_MEAS_UNAVAILABLE         = (1<<8),
+    /** DRE solution disengaged due non-availability of
+      * stored position from previous session <br/> */
+    DR_SOLUTION_STATUS_ERROR_NO_STORED_POSITION            = (1<<9),
+    /** DRE solution dis-engaged due to vehicle motion
+      *  detected at session start <br/> */
+    DR_SOLUTION_STATUS_ERROR_MOVING_AT_START               = (1<<10),
+    /** DRE solution dis-engaged due to unreliable
+      * position <br/> */
+    DR_SOLUTION_STATUS_ERROR_POSITON_UNRELIABLE            = (1<<11),
+    /** DRE solution dis-engaged due to a generic
+      * error <br/> */
+    DR_SOLUTION_STATUS_ERROR_GENERIC                       = (1<<12)
 };
 
 /** Specify the session status. <br/> */

@@ -1447,6 +1447,33 @@ uint64_t LocationApiPbMsgConv::getPBMaskForLocationCapabilitiesMask(
         pbLocCapabMask |= PB_LOCATION_CAPS_ANTENNA_INFO;
         LOC_LOGi("PB_LOCATION_CAPS_ANTENNA_INFO");
     }
+    if (locCapabMask & LOCATION_CAPABILITIES_GNSS_MSB_BIT) {
+        pbLocCapabMask |= PB_LOCATION_CAPABILITIES_GNSS_MSB_BIT;
+    }
+    if (locCapabMask & LOCATION_CAPABILITIES_GNSS_MSA_BIT) {
+        pbLocCapabMask |= PB_LOCATION_CAPABILITIES_GNSS_MSA_BIT;
+    }
+    if (locCapabMask & LOCATION_CAPABILITIES_DEBUG_DATA_BIT) {
+        pbLocCapabMask |= PB_LOCATION_CAPABILITIES_DEBUG_DATA_BIT;
+    }
+    if (locCapabMask & LOCATION_CAPABILITIES_AGPM_BIT) {
+        pbLocCapabMask |= PB_LOCATION_CAPABILITIES_AGPM_BIT;
+    }
+    if (locCapabMask & LOCATION_CAPABILITIES_PRIVACY_BIT) {
+        pbLocCapabMask |= PB_LOCATION_CAPABILITIES_PRIVACY_BIT;
+    }
+    if (locCapabMask & LOCATION_CAPABILITIES_MEASUREMENTS_CORRECTION_BIT) {
+        pbLocCapabMask |= PB_LOCATION_CAPABILITIES_MEASUREMENTS_CORRECTION_BIT;
+    }
+    if (locCapabMask & LOCATION_CAPABILITIES_CONFORMITY_INDEX_BIT) {
+        pbLocCapabMask |= PB_LOCATION_CAPABILITIES_CONFORMITY_INDEX_BIT;
+    }
+    if (locCapabMask & LOCATION_CAPABILITIES_EDGNSS_BIT) {
+        pbLocCapabMask |= PB_LOCATION_CAPABILITIES_EDGNSS_BIT;
+    }
+    if (locCapabMask & LOCATION_CAPABILITIES_QWES_SV_EPHEMERIS_BIT) {
+        pbLocCapabMask |= PB_LOCATION_CAPABILITIES_QWES_SV_EPHEMERIS_BIT;
+    }
     LOC_LOGi("LocApiPB: locCapabMask:0x%" PRIx64", pbLocCapabMask:0x%" PRIx64,
             locCapabMask, pbLocCapabMask);
     return pbLocCapabMask;
@@ -1864,6 +1891,42 @@ uint32_t LocationApiPbMsgConv::getPBMaskForDrCalibrationStatusMask(
     }
     if (drCalibStatusMask & DR_GYRO_CALIBRATION_NEEDED) {
         pbDrCalibStatusMask |= PB_DR_GYRO_CALIBRATION_NEEDED;
+    }
+    if (drCalibStatusMask & DR_TURN_CALIBRATION_LOW) {
+        pbDrCalibStatusMask |= PB_DR_TURN_CALIBRATION_LOW;
+    }
+    if (drCalibStatusMask & DR_TURN_CALIBRATION_MEDIUM) {
+        pbDrCalibStatusMask |= PB_DR_TURN_CALIBRATION_MEDIUM;
+    }
+    if (drCalibStatusMask & DR_TURN_CALIBRATION_HIGH) {
+        pbDrCalibStatusMask |= PB_DR_TURN_CALIBRATION_HIGH;
+    }
+    if (drCalibStatusMask & DR_LINEAR_ACCEL_CALIBRATION_LOW) {
+        pbDrCalibStatusMask |= PB_DR_LINEAR_ACCEL_CALIBRATION_LOW;
+    }
+    if (drCalibStatusMask & DR_LINEAR_ACCEL_CALIBRATION_MEDIUM) {
+        pbDrCalibStatusMask |= PB_DR_LINEAR_ACCEL_CALIBRATION_MEDIUM;
+    }
+    if (drCalibStatusMask & DR_LINEAR_ACCEL_CALIBRATION_HIGH) {
+        pbDrCalibStatusMask |= PB_DR_LINEAR_ACCEL_CALIBRATION_HIGH;
+    }
+    if (drCalibStatusMask & DR_LINEAR_MOTION_CALIBRATION_LOW) {
+        pbDrCalibStatusMask |= PB_DR_LINEAR_MOTION_CALIBRATION_LOW;
+    }
+    if (drCalibStatusMask & DR_LINEAR_MOTION_CALIBRATION_MEDIUM) {
+        pbDrCalibStatusMask |= PB_DR_LINEAR_MOTION_CALIBRATION_MEDIUM;
+    }
+    if (drCalibStatusMask & DR_LINEAR_MOTION_CALIBRATION_HIGH) {
+        pbDrCalibStatusMask |= PB_DR_LINEAR_MOTION_CALIBRATION_HIGH;
+    }
+    if (drCalibStatusMask & DR_STATIC_CALIBRATION_LOW) {
+        pbDrCalibStatusMask |= PB_DR_STATIC_CALIBRATION_LOW;
+    }
+    if (drCalibStatusMask & DR_STATIC_CALIBRATION_MEDIUM) {
+        pbDrCalibStatusMask |= PB_DR_STATIC_CALIBRATION_MEDIUM;
+    }
+    if (drCalibStatusMask & DR_STATIC_CALIBRATION_HIGH) {
+        pbDrCalibStatusMask |= PB_DR_STATIC_CALIBRATION_HIGH;
     }
     LocApiPb_LOGv("LocApiPB: drCalibStatusMask:%x, pbDrCalibStatusMask:%x",
             drCalibStatusMask, pbDrCalibStatusMask);
@@ -2319,6 +2382,39 @@ uint32_t LocationApiPbMsgConv::getPBMaskForDrSolutionStatusMask(
     if (drSolnStatusMask & VEHICLE_SENSOR_SPEED_INPUT_USED) {
         pbDrSolnStatusMask |= PB_VEHICLE_SENSOR_SPEED_INPUT_USED;
     }
+    if (drSolnStatusMask & DRE_ERROR_UNCALIBRATED) {
+        pbDrSolnStatusMask |= PB_DRE_ERROR_UNCALIBRATED;
+    }
+    if (drSolnStatusMask & DRE_ERROR_GNSS_QUALITY_INSUFFICIENT) {
+        pbDrSolnStatusMask |= PB_DRE_ERROR_GNSS_QUALITY_INSUFFICIENT;
+    }
+    if (drSolnStatusMask & DRE_ERROR_FERRY_DETECTED ) {
+        pbDrSolnStatusMask |= PB_DRE_ERROR_FERRY_DETECTED;
+    }
+    if (drSolnStatusMask & DRE_ERROR_6DOF_SENSOR_UNAVAILABLE) {
+        pbDrSolnStatusMask |= PB_DRE_ERROR_6DOF_SENSOR_UNAVAILABLE;
+    }
+    if (drSolnStatusMask & DRE_ERROR_VEHICLE_SPEED_UNAVAILABLE) {
+        pbDrSolnStatusMask |= PB_DRE_ERROR_VEHICLE_SPEED_UNAVAILABLE;
+    }
+    if (drSolnStatusMask & DRE_ERROR_GNSS_EPH_UNAVAILABLE ) {
+        pbDrSolnStatusMask |= PB_DRE_ERROR_GNSS_EPH_UNAVAILABLE;
+    }
+    if (drSolnStatusMask & DRE_ERROR_GNSS_MEAS_UNAVAILABLE) {
+        pbDrSolnStatusMask |= PB_DRE_ERROR_GNSS_MEAS_UNAVAILABLE;
+    }
+    if (drSolnStatusMask & DRE_ERROR_NO_STORED_POSITION) {
+        pbDrSolnStatusMask |= PB_DRE_ERROR_NO_STORED_POSITION;
+    }
+    if (drSolnStatusMask & DRE_ERROR_MOVING_AT_START) {
+        pbDrSolnStatusMask |= PB_DRE_ERROR_MOVING_AT_START;
+    }
+    if (drSolnStatusMask & DRE_ERROR_POSITON_UNRELIABLE) {
+        pbDrSolnStatusMask |= PB_DRE_ERROR_POSITON_UNRELIABLE;
+    }
+    if (drSolnStatusMask & DRE_ERROR_GENERIC) {
+        pbDrSolnStatusMask |= PB_DRE_ERROR_GENERIC;
+    }
     LocApiPb_LOGv("LocApiPB: drSolnStatusMask:%x, pbDrSolnStatusMask:%x",
             drSolnStatusMask, pbDrSolnStatusMask);
     return pbDrSolnStatusMask;
@@ -2388,6 +2484,33 @@ uint64_t LocationApiPbMsgConv::getLocationCapabilitiesMaskFromPB(
     if (pbLocCapabMask & PB_LOCATION_CAPS_ANTENNA_INFO) {
         locCapabMask |= LOCATION_CAPABILITIES_ANTENNA_INFO;
         LOC_LOGi("LOCATION_CAPABILITIES_ANTENNA_INFO");
+    }
+    if (pbLocCapabMask & PB_LOCATION_CAPABILITIES_GNSS_MSB_BIT) {
+        locCapabMask |= LOCATION_CAPABILITIES_GNSS_MSB_BIT;
+    }
+    if (pbLocCapabMask & PB_LOCATION_CAPABILITIES_GNSS_MSA_BIT) {
+        locCapabMask |= LOCATION_CAPABILITIES_GNSS_MSA_BIT;
+    }
+    if (pbLocCapabMask & PB_LOCATION_CAPABILITIES_DEBUG_DATA_BIT) {
+        locCapabMask |= LOCATION_CAPABILITIES_DEBUG_DATA_BIT;
+    }
+    if (pbLocCapabMask & PB_LOCATION_CAPABILITIES_AGPM_BIT) {
+        locCapabMask |= LOCATION_CAPABILITIES_AGPM_BIT;
+    }
+    if (pbLocCapabMask & PB_LOCATION_CAPABILITIES_PRIVACY_BIT) {
+        locCapabMask |= LOCATION_CAPABILITIES_PRIVACY_BIT;
+    }
+    if (pbLocCapabMask & PB_LOCATION_CAPABILITIES_MEASUREMENTS_CORRECTION_BIT) {
+        locCapabMask |= LOCATION_CAPABILITIES_MEASUREMENTS_CORRECTION_BIT;
+    }
+    if (pbLocCapabMask & PB_LOCATION_CAPABILITIES_CONFORMITY_INDEX_BIT) {
+        locCapabMask |= LOCATION_CAPABILITIES_CONFORMITY_INDEX_BIT;
+    }
+    if (pbLocCapabMask & PB_LOCATION_CAPABILITIES_EDGNSS_BIT) {
+        locCapabMask |= LOCATION_CAPABILITIES_EDGNSS_BIT;
+    }
+    if (pbLocCapabMask & PB_LOCATION_CAPABILITIES_QWES_SV_EPHEMERIS_BIT) {
+        locCapabMask |= LOCATION_CAPABILITIES_QWES_SV_EPHEMERIS_BIT;
     }
     LOC_LOGi("LocApiPB: pbLocCapabMask:0x%" PRIx64", locCapabMask:0x%" PRIx64,
             pbLocCapabMask, locCapabMask);
@@ -3104,6 +3227,43 @@ uint32_t LocationApiPbMsgConv::getDrCalibrationStatusMaskFromPB(
     if (pbDrCalibStatus & PB_DR_GYRO_CALIBRATION_NEEDED) {
         drCalibStatus |= DR_GYRO_CALIBRATION_NEEDED;
     }
+    if (pbDrCalibStatus & PB_DR_TURN_CALIBRATION_LOW) {
+        drCalibStatus |= DR_TURN_CALIBRATION_LOW;
+    }
+    if (pbDrCalibStatus & PB_DR_TURN_CALIBRATION_MEDIUM) {
+        drCalibStatus |= PB_DR_TURN_CALIBRATION_MEDIUM;
+    }
+    if (pbDrCalibStatus & PB_DR_TURN_CALIBRATION_HIGH) {
+        drCalibStatus |= PB_DR_TURN_CALIBRATION_HIGH;
+    }
+    if (pbDrCalibStatus & PB_DR_LINEAR_ACCEL_CALIBRATION_LOW) {
+        drCalibStatus |= DR_LINEAR_ACCEL_CALIBRATION_LOW;
+    }
+    if (pbDrCalibStatus & PB_DR_LINEAR_ACCEL_CALIBRATION_MEDIUM) {
+        drCalibStatus |= PB_DR_LINEAR_ACCEL_CALIBRATION_MEDIUM;
+    }
+    if (pbDrCalibStatus & PB_DR_LINEAR_ACCEL_CALIBRATION_HIGH) {
+        drCalibStatus |= PB_DR_LINEAR_ACCEL_CALIBRATION_HIGH;
+    }
+    if (pbDrCalibStatus & PB_DR_LINEAR_MOTION_CALIBRATION_LOW) {
+        drCalibStatus |= DR_LINEAR_MOTION_CALIBRATION_LOW;
+    }
+    if (pbDrCalibStatus & PB_DR_LINEAR_MOTION_CALIBRATION_MEDIUM) {
+        drCalibStatus |= PB_DR_LINEAR_MOTION_CALIBRATION_MEDIUM;
+    }
+    if (pbDrCalibStatus & PB_DR_LINEAR_MOTION_CALIBRATION_HIGH) {
+        drCalibStatus |= PB_DR_LINEAR_MOTION_CALIBRATION_HIGH;
+    }
+    if (pbDrCalibStatus & PB_DR_STATIC_CALIBRATION_LOW) {
+        drCalibStatus |= DR_STATIC_CALIBRATION_LOW;
+    }
+    if (pbDrCalibStatus & PB_DR_STATIC_CALIBRATION_MEDIUM) {
+        drCalibStatus |= PB_DR_STATIC_CALIBRATION_MEDIUM;
+    }
+    if (pbDrCalibStatus & PB_DR_STATIC_CALIBRATION_HIGH) {
+        drCalibStatus |= PB_DR_STATIC_CALIBRATION_HIGH;
+    }
+
     LocApiPb_LOGv("LocApiPB: pbDrCalibStatus:%x, drCalibStatus:%x", pbDrCalibStatus,
             drCalibStatus);
     return drCalibStatus;
@@ -3268,6 +3428,39 @@ uint32_t LocationApiPbMsgConv::getDrSolutionStatusMaskFromPB(
     }
     if (pbDrSolnStatusMask & PB_VEHICLE_SENSOR_SPEED_INPUT_USED) {
         drSolnStatusMask |= VEHICLE_SENSOR_SPEED_INPUT_USED;
+    }
+    if (pbDrSolnStatusMask & PB_DRE_ERROR_UNCALIBRATED) {
+        drSolnStatusMask |= DRE_ERROR_UNCALIBRATED;
+    }
+    if (pbDrSolnStatusMask & PB_DRE_ERROR_GNSS_QUALITY_INSUFFICIENT) {
+        drSolnStatusMask |= DRE_ERROR_GNSS_QUALITY_INSUFFICIENT;
+    }
+    if (pbDrSolnStatusMask & PB_DRE_ERROR_FERRY_DETECTED) {
+        drSolnStatusMask |= DRE_ERROR_FERRY_DETECTED;
+    }
+    if (pbDrSolnStatusMask & PB_DRE_ERROR_6DOF_SENSOR_UNAVAILABLE) {
+        drSolnStatusMask |= DRE_ERROR_6DOF_SENSOR_UNAVAILABLE;
+    }
+    if (pbDrSolnStatusMask & PB_DRE_ERROR_VEHICLE_SPEED_UNAVAILABLE) {
+        drSolnStatusMask |= DRE_ERROR_VEHICLE_SPEED_UNAVAILABLE;
+    }
+    if (pbDrSolnStatusMask & PB_DRE_ERROR_GNSS_EPH_UNAVAILABLE) {
+        drSolnStatusMask |= DRE_ERROR_GNSS_EPH_UNAVAILABLE;
+    }
+    if (pbDrSolnStatusMask & PB_DRE_ERROR_GNSS_MEAS_UNAVAILABLE) {
+        drSolnStatusMask |= DRE_ERROR_GNSS_MEAS_UNAVAILABLE;
+    }
+    if (pbDrSolnStatusMask & PB_DRE_ERROR_NO_STORED_POSITION) {
+        drSolnStatusMask |= DRE_ERROR_NO_STORED_POSITION;
+    }
+    if (pbDrSolnStatusMask & PB_DRE_ERROR_MOVING_AT_START) {
+        drSolnStatusMask |= DRE_ERROR_MOVING_AT_START;
+    }
+    if (pbDrSolnStatusMask & PB_DRE_ERROR_POSITON_UNRELIABLE) {
+        drSolnStatusMask |= DRE_ERROR_POSITON_UNRELIABLE;
+    }
+    if (pbDrSolnStatusMask & PB_DRE_ERROR_GENERIC) {
+        drSolnStatusMask |= DRE_ERROR_GENERIC;
     }
     LocApiPb_LOGv("LocApiPB: pbDrSolnStatusMask:%x, drSolnStatusMask:%x",
             pbDrSolnStatusMask, drSolnStatusMask);

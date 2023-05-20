@@ -366,7 +366,8 @@ LocApiV02 :: LocApiV02(LOC_API_ADAPTER_EVENT_MASK_T exMask,
     mTimeBiases{},
     mPlatformPowerState(eQMI_LOC_POWER_STATE_UNKNOWN_V02),
     mIsFullTracking(true),
-    mPreferredSignalType(QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L1CA_V02)
+    mPreferredSignalType(QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L1CA_V02),
+    mQesdkFeatureMask(0)
 {
   // initialize loc_sync_req interface
   loc_sync_req_init();
@@ -6668,9 +6669,10 @@ void LocApiV02::processGnssBandsSupportedInd(
                 }
             }
         }
-        char* svTypeString[] = { "UNKNOWN", "GPS", "SBAS",
+        const char* svTypeString[] = { "UNKNOWN", "GPS", "SBAS",
                                 "GLONASS", "QZSS", "BEIDOU", "GALILEO", "NAVIC" };
-        char* codeTypeString[] = {"A", "B", "C", "I", "L", "M", "P", "Q", "S", "W", "X", "Y", "Z"};
+        const char* codeTypeString[] =
+                {"A", "B", "C", "I", "L", "M", "P", "Q", "S", "W", "X", "Y", "Z"};
 
         for (int i = 0; i < gnssCapabNotification.count; i++) {
             if (gnssCapabNotification.gnssSignalType[i].svType > GNSS_SV_TYPE_NAVIC) {
@@ -8338,7 +8340,9 @@ void LocApiV02::reportEngineLockStatus(const qmiLocEngineLockStateEnumT_v02 engi
 {
     LOC_LOGd("Engine Lock State %d", engineLockState);
     EngineLockState lockState = convertEngineLockState(engineLockState);
-    if (lockState != getEngineLockState() && ENGINE_LOCK_STATE_INVALID != lockState ) {
+    // allowing to set engine lock state to INVALID to
+    // handle backward compatibility in cases of older modem
+    if (lockState != getEngineLockState()) {
         setEngineLockState(lockState);
         LocApiBase::reportEngineLockStatus(lockState);
     }
@@ -11332,6 +11336,23 @@ void LocApiV02::configPrecisePositioning(uint32_t featureId, bool enable,
             } else {
                 err = LOCATION_ERROR_GENERAL_FAILURE;
             }
+        } else if (ind.featureStatusReport_valid) {
+            //Report Modem side QESDK feature status to Adapters
+            if (featureId == QESDK_FEATURE_ID_EDGNSS || featureId == QESDK_FEATURE_ID_RTK) {
+                if (ind.featureStatusReport & QMI_LOC_FEATURE_STATUS_DGNSS_V02) {
+                    mQesdkFeatureMask |= MODEM_QESDK_FEATURE_DGNSS;
+                } else {
+                    mQesdkFeatureMask &= (~MODEM_QESDK_FEATURE_DGNSS);
+                }
+            }
+            if (featureId == QESDK_FEATURE_ID_RL) {
+                if (ind.featureStatusReport & QMI_LOC_FEATURE_STATUS_ROBUST_LOCATION_V02) {
+                    mQesdkFeatureMask |= MODEM_QESDK_FEATURE_ROBUST_LOCATION;
+                } else {
+                    mQesdkFeatureMask &= (~MODEM_QESDK_FEATURE_ROBUST_LOCATION);
+                }
+            }
+            LocApiBase::reportModemGnssQesdkFeatureStatus(mQesdkFeatureMask);
         }
         if (adapterResponse) {
             adapterResponse->returnToSender(err);
