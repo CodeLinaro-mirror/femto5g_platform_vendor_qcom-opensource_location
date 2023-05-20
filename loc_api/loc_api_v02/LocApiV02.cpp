@@ -10868,6 +10868,105 @@ void LocApiV02::getConstellationMultiBandConfig(
     }));
 }
 
+void LocApiV02::convertOsnmaTreeNode(qmiLocOsnmaTreeNodeT_v02& out, mgpOsnmaTreeNodeT& in) {
+    out.height = in.uj;
+    out.position = in.ui;
+    out.hash_len = in.wLengthInBits;
+    memcpy(out.hash, in.uHash, sizeof(in.uHash));
+}
+
+void LocApiV02::convertPublicKeyAndMerkleTreeStruct(
+        qmiLocOsnmaPublicKeyMerkleTreeReqMsgT_v02& qmiOut,
+        mgpOsnmaPublicKeyAndMerkleTreeStruct& in) {
+    qmiOut.publicKeyType_valid = in.zPublicKey.uFlag;
+    qmiOut.publicKeyType = (qmiLocPublicKeyTypeEnumT_v02)in.zPublicKey.eNpkt;
+    qmiOut.publicKeyId = in.zPublicKey.uNpkId;
+    qmiOut.publicKeyId_valid = true;
+    qmiOut.publicKey_valid = true;
+    qmiOut.publicKey_len = in.zPublicKey.wKeyLen;
+    memcpy(qmiOut.publicKey, in.zPublicKey.uKey, sizeof(in.zPublicKey.uKey));
+    for (int i = 0; i < QMI_LOC_MERKLE_TREE_NODE_ARRAY_LENGTH_V02; ++i) {
+        convertOsnmaTreeNode(qmiOut.intermediateNodes[i], in.zPublicKey.zNodes[i]);
+    }
+    qmiOut.intermediateNodes_valid = true;
+    qmiOut.hashFunctionType_valid = true;
+    qmiOut.hashFunctionType = (qmiLocHashFunctionTypeEnumT_v02)in.zMerkleTree.eHfType;
+    qmiOut.rootNode_valid = in.zMerkleTree.uFlag;
+    convertOsnmaTreeNode(qmiOut.rootNode, in.zMerkleTree.zRootNode);
+}
+
+void LocApiV02::configMerkleTree(mgpOsnmaPublicKeyAndMerkleTreeStruct* merkleTree,
+            LocApiResponse* adapterResponse) {
+    sendMsg(new LocApiMsg([this, merkleTree, adapterResponse] () {
+    LocationError err = LOCATION_ERROR_SUCCESS;
+
+    qmiLocOsnmaPublicKeyMerkleTreeReqMsgT_v02 req;
+    qmiLocGenReqStatusIndMsgT_v02 ind;
+    locClientStatusEnumType status;
+    locClientReqUnionType req_union;
+
+    memset(&req, 0, sizeof(req));
+    memset(&ind, 0, sizeof(ind));
+    convertPublicKeyAndMerkleTreeStruct(req, *merkleTree);
+
+    req_union.pOsnmaPublicKeyMerkleTreeReq = &req;
+    status = locSyncSendReq(QMI_LOC_OSNMA_PUBLIC_KEY_MERKLE_TREE_REQ_V02,
+                            req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
+                            QMI_LOC_OSNMA_PUBLIC_KEY_MERKLE_TREE_IND_V02,
+                            &ind);
+    if (status != eLOC_CLIENT_SUCCESS || ind.status != eQMI_LOC_SUCCESS_V02) {
+        LOC_LOGe("failed. status: %s, ind status:%s\n",
+                 loc_get_v02_client_status_name(status),
+                 loc_get_v02_qmi_status_name(ind.status));
+        if (status == eLOC_CLIENT_FAILURE_UNSUPPORTED ||
+                status == eLOC_CLIENT_FAILURE_INVALID_MESSAGE_ID) {
+            err = LOCATION_ERROR_NOT_SUPPORTED;
+        } else {
+            err = LOCATION_ERROR_GENERAL_FAILURE;
+        }
+    }
+    if (adapterResponse) {
+        adapterResponse->returnToSender(err);
+    }
+    LOC_LOGv("Exit. err: %u", err);
+    }));
+}
+
+void LocApiV02::configOsnmaEnablement(bool enable, LocApiResponse* adapterResponse) {
+    sendMsg(new LocApiMsg([this, enable, adapterResponse] () {
+    LocationError err = LOCATION_ERROR_SUCCESS;
+
+    qmiLocSetOsnmaStateReqMsgT_v02 req;
+    qmiLocGenReqStatusIndMsgT_v02 ind;
+    locClientStatusEnumType status;
+    locClientReqUnionType req_union;
+
+    memset(&req, 0, sizeof(req));
+    memset(&ind, 0, sizeof(ind));
+    req.enable = enable;
+
+    req_union.pOsnmaEnablementReq = &req;
+    status = locSyncSendReq(QMI_LOC_SET_OSNMA_STATE_REQ_V02,
+                            req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
+                            QMI_LOC_SET_OSNMA_STATE_IND_V02,
+                            &ind);
+    if (status != eLOC_CLIENT_SUCCESS || ind.status != eQMI_LOC_SUCCESS_V02) {
+        LOC_LOGe("failed. status: %s, ind status:%s\n",
+                 loc_get_v02_client_status_name(status),
+                 loc_get_v02_qmi_status_name(ind.status));
+        if (status == eLOC_CLIENT_FAILURE_UNSUPPORTED ||
+                status == eLOC_CLIENT_FAILURE_INVALID_MESSAGE_ID) {
+            err = LOCATION_ERROR_NOT_SUPPORTED;
+        } else {
+            err = LOCATION_ERROR_GENERAL_FAILURE;
+        }
+    }
+    if (adapterResponse) {
+        adapterResponse->returnToSender(err);
+    }
+    LOC_LOGv("Exit. err: %u", err);
+    }));
+}
 
 void LocApiV02::convertQmiSecondaryConfigToGnssConfig(
         qmiLocGNSSConstellEnumT_v02 qmiSecondaryBandConfig,

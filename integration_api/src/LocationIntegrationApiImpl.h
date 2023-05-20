@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -190,6 +190,8 @@ public:
     uint32_t configXtraParams(bool enable, const ::XtraConfigParams& configParams);
     uint32_t getXtraStatus();
     uint32_t registerXtraStatusUpdate(bool registerUpdate);
+    uint32_t configMerkleTree(const char * merkleTreeXml, int xmlSize);
+    uint32_t configOsnmaEnablement(bool isEnabled);
 
 private:
     ~LocationIntegrationApiImpl();
