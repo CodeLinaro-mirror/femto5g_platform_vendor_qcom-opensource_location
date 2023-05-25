@@ -37,6 +37,7 @@
  *============================================================================*/
 #include <stdbool.h>
 #include <stdint.h>
+#include "gps_extended.h"
 #include "gps_extended_c.h"
 #include "LocationDataTypes.h"
 #include "loc_gps.h"
