@@ -1,4 +1,4 @@
-#/bin/bash
+#!/bin/bash
 ##################################################################################################
 ## Copyright (c) 2020-2021 The Linux Foundation. All rights reserved.
 ##
