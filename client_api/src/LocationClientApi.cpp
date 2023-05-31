@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -817,7 +817,8 @@ DECLARE_TBL(GnssMeasurementsStateMask) = {
 DECLARE_TBL(GnssMeasurementsAdrStateMask) = {
     {GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_VALID_BIT, "VALID"},
     {GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_RESET_BIT, "RESET"},
-    {GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_CYCLE_SLIP_BIT, "CYCLE_SLIP"}
+    {GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_CYCLE_SLIP_BIT, "CYCLE_SLIP"},
+    {GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_HALF_CYCLE_RESOLVED_BIT, "HALF_CYCLE"}
 };
 // GnssMeasurementsMultipathIndicator
 DECLARE_TBL(GnssMeasurementsMultipathIndicator) = {
