@@ -1600,6 +1600,8 @@ enum GnssMeasurementsAdrStateMask {
     GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_RESET_BIT       = (1<<1),
     /** Accumulated delta range state is "cycle slip". <br/>   */
     GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_CYCLE_SLIP_BIT  = (1<<2),
+    /** Accumulated delta range state is hal cycle resolved". <br/>   */
+    GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_HALF_CYCLE_RESOLVED_BIT = (1<<3),
 };
 
 /** Specify the GNSS multipath indicator state in
