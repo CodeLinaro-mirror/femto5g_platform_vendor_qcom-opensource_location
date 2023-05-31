@@ -79,8 +79,8 @@ enum LocationApiDataTypesVersion {
     LOCAPI_DATA_TYPES_VER_MAJOR = 1;
     // Minor - New features / API addition, new message/elemtent addition.
     // Bump the last byte of version i.e. x.2 to x.3
-    // Minor version 29: Add support for B2B signals.
-    LOCAPI_DATA_TYPES_VER_MINOR = 29;
+    // Minor version 30: adr mask addition for hal cycle resolved bit.
+    LOCAPI_DATA_TYPES_VER_MINOR = 30;
 }
 
 // ============================================================================
@@ -485,10 +485,11 @@ enum PBDrEngineAidingDataMask {
 }
 
 enum PBGnssMeasurementsAdrStateMask {
-    PB_GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_UNKNOWN         = 0;
-    PB_GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_VALID_BIT       = 1;
-    PB_GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_RESET_BIT       = 2;
-    PB_GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_CYCLE_SLIP_BIT  = 4;
+    PB_GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_UNKNOWN                 = 0x00000000;
+    PB_GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_VALID_BIT               = 0x00000001;
+    PB_GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_RESET_BIT               = 0x00000002;
+    PB_GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_CYCLE_SLIP_BIT          = 0x00000004;
+    PB_GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_HALF_CYCLE_RESOLVED_BIT = 0x00000008;
 }
 
 enum PBGnssMeasurementsDataFlagsMask {
