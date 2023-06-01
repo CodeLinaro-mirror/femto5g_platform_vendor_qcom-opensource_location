@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -1497,6 +1497,10 @@ uint32_t LocationApiPbMsgConv::getPBMaskForLocationFlagsMask(const uint32_t &loc
     if (locFlagsMask & LOCATION_HAS_ELAPSED_REAL_TIME_BIT) {
         pbLocFlagsMask |= PB_LOCATION_HAS_ELAPSED_REAL_TIME_BIT;
     }
+    if (locFlagsMask & LOCATION_HAS_TIME_UNC_BIT) {
+        pbLocFlagsMask |= PB_LOCATION_HAS_TIME_UNC_BIT;
+    }
+
     LocApiPb_LOGv("LocApiPB: locFlagsMask:%x, pbLocFlagsMask:%x", locFlagsMask, pbLocFlagsMask);
     return pbLocFlagsMask;
 }
@@ -1611,9 +1615,6 @@ uint32_t LocationApiPbMsgConv::getPBMaskForGnssLocationInfoFlagMask(
     }
     if (gnssLocInfoFlagMask & GNSS_LOCATION_INFO_LEAP_SECONDS_BIT) {
         pbGnssLocInfoFlagMask |= PB_GNSS_LOCATION_INFO_LEAP_SECONDS_BIT;
-    }
-    if (gnssLocInfoFlagMask & GNSS_LOCATION_INFO_TIME_UNC_BIT) {
-        pbGnssLocInfoFlagMask |= PB_GNSS_LOCATION_INFO_TIME_UNC_BIT;
     }
     if (gnssLocInfoFlagMask & GNSS_LOCATION_INFO_NUM_SV_USED_IN_POSITION_BIT) {
         pbGnssLocInfoFlagMask |= PB_GNSS_LOCATION_INFO_NUM_SV_USED_IN_POSITION_BIT;
@@ -2603,6 +2604,9 @@ uint32_t LocationApiPbMsgConv::getLocationFlagsMaskFromPB(const uint32_t &pbLocF
     if (pbLocFlagsMask & PB_LOCATION_HAS_ELAPSED_REAL_TIME_BIT) {
         locFlagsMask |= LOCATION_HAS_ELAPSED_REAL_TIME_BIT;
     }
+    if (pbLocFlagsMask & PB_LOCATION_HAS_TIME_UNC_BIT) {
+        locFlagsMask |= LOCATION_HAS_TIME_UNC_BIT;
+    }
     LocApiPb_LOGv("LocApiPB: pbLocFlagsMask:%x, locFlagsMask:%x", pbLocFlagsMask, locFlagsMask);
     return locFlagsMask;
 }
@@ -2845,9 +2849,6 @@ uint64_t LocationApiPbMsgConv::getGnssLocationInfoFlagMaskFromPB(
     }
     if (pbGnssLocInfoFlagMask & PB_GNSS_LOCATION_INFO_LEAP_SECONDS_BIT) {
         gnssLocInfoFlagMask |= GNSS_LOCATION_INFO_LEAP_SECONDS_BIT;
-    }
-    if (pbGnssLocInfoFlagMask & PB_GNSS_LOCATION_INFO_TIME_UNC_BIT) {
-        gnssLocInfoFlagMask |= GNSS_LOCATION_INFO_TIME_UNC_BIT;
     }
     if (pbGnssLocInfoFlagMask & PB_GNSS_LOCATION_INFO_NUM_SV_USED_IN_POSITION_BIT) {
         gnssLocInfoFlagMask |= GNSS_LOCATION_INFO_NUM_SV_USED_IN_POSITION_BIT;
@@ -3634,12 +3635,16 @@ int LocationApiPbMsgConv::convertLocationToPB(const Location &location,
     // uint64 elapsedRealTimeUnc = 14;
     pbLocation->set_elapsedrealtimeunc(location.elapsedRealTimeUnc);
 
+    // float timeuncMs = 15;
+    pbLocation->set_timeuncms(location.timeUncMs);
+
     LOC_LOGd("LocApiPB: location - Timestamp: %" PRIu64" Lat:%lf, Lon:%lf, Alt:%lf, TechMask:%x",
             location.timestamp, location.latitude, location.longitude, location.altitude,
             location.techMask);
     LocApiPb_LOGd("LocApiPB: location - speed:%f, bear:%f, HorzAcc:%f, VertAcc:%f, SpeedAcc:%f, "
-            "BearAcc:%f", location.speed, location.bearing, location.accuracy,
-            location.verticalAccuracy, location.speedAccuracy, location.bearingAccuracy);
+                  "BearAcc:%f, time unc msec %f", location.speed, location.bearing,
+                  location.accuracy, location.verticalAccuracy, location.speedAccuracy,
+                  location.bearingAccuracy, location.timeUncMs);
     return 0;
 }
 
@@ -3856,7 +3861,7 @@ int LocationApiPbMsgConv::convertGnssLocInfoNotifToPB(
     pbGnssLocInfoNotif->set_leapseconds(gnssLocInfoNotif.leapSeconds);
 
     // float timeUncMs = 31;
-    pbGnssLocInfoNotif->set_timeuncms(gnssLocInfoNotif.timeUncMs);
+    pbGnssLocInfoNotif->set_timeuncms(gnssLocInfoNotif.location.timeUncMs);
 
     // uint32 calibrationConfidence = 32;
     pbGnssLocInfoNotif->set_calibrationconfidence(gnssLocInfoNotif.calibrationConfidence);
@@ -4850,11 +4855,14 @@ int LocationApiPbMsgConv::pbConvertToLocation(const PBLocation &pbLoc, Location 
     // uint64 elapsedRealTimeUnc = 14;
     loc.elapsedRealTimeUnc = pbLoc.elapsedrealtimeunc();
 
+    // float timeuncMs = 15;
+    loc.timeUncMs = pbLoc.timeuncms();
+
     LOC_LOGd("LocApiPB: pbLoc - Timestamp: %" PRIu64" Lat:%lf, Lon:%lf, Alt:%lf, TechMask:%x",
             loc.timestamp, loc.latitude, loc.longitude, loc.altitude, loc.techMask);
-    LocApiPb_LOGd("LocApiPB: pbLoc - speed:%f, bearing:%f, HorzAcc:%f, VertAcc:%f, SpeedAcc:%f, "\
-            "BearAcc:%f", loc.speed, loc.bearing, loc.accuracy, loc.verticalAccuracy,
-            loc.speedAccuracy, loc.bearingAccuracy);
+    LocApiPb_LOGd("LocApiPB: pbLoc - speed:%f, bearing:%f, HorzAcc:%f, VertAcc:%f, SpeedAcc:%f, "
+                  "BearAcc:%f, time unc ms %f", loc.speed, loc.bearing, loc.accuracy,
+                  loc.verticalAccuracy, loc.speedAccuracy, loc.bearingAccuracy, loc.timeUncMs);
     return 0;
 }
 
@@ -4994,7 +5002,7 @@ int LocationApiPbMsgConv::pbConvertToGnssLocInfoNotif(
     gnssLocInfoNotif.leapSeconds = pbGnssLocInfoNotif.leapseconds();
 
     // float timeUncMs = 31;
-    gnssLocInfoNotif.timeUncMs = pbGnssLocInfoNotif.timeuncms();
+    gnssLocInfoNotif.location.timeUncMs = pbGnssLocInfoNotif.timeuncms();
 
     // uint32 calibrationConfidence = 32;
     gnssLocInfoNotif.calibrationConfidence = pbGnssLocInfoNotif.calibrationconfidence();
