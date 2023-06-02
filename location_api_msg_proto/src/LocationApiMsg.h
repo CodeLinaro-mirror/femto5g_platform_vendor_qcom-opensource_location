@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -333,6 +333,8 @@ enum ELocMsgID {
     E_INTAPI_CONFIG_ENGINE_INTEGRITY_RISK_MSG_ID = 213,
     E_INTAPI_INJECT_LOCATION_MSG_ID = 214,
     E_INTAPI_CONFIG_XTRA_PARAMS_MSG_ID = 215,
+    E_INTAPI_CONFIG_MERKLE_TREE_MSG_ID = 216,
+    E_INTAPI_CONFIG_OSNMA_ENABLEMENT_MSG_ID = 217,
 
     // integration API config retrieval request/response
     E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID  = 300,
@@ -1397,6 +1399,36 @@ struct LocConfigXtraReqMsg: LocAPIMsgHeader
 
     LocConfigXtraReqMsg(const char* name, const PBLocConfigXtraReqMsg &pbConfigXtraMsg,
                         const LocationApiPbMsgConv *pbMsgConv);
+
+    int serializeToProtobuf(string& protoStr) override;
+};
+
+struct LocConfigMerkleTreeReqMsg: LocAPIMsgHeader {
+    std::string mMerkleTreeConfig;
+
+    inline LocConfigMerkleTreeReqMsg(const char* name, const std::string& merkleTreeConfig,
+            const LocationApiPbMsgConv *pbMsgConv) :
+        LocAPIMsgHeader(name, E_INTAPI_CONFIG_MERKLE_TREE_MSG_ID, pbMsgConv),
+        mMerkleTreeConfig(merkleTreeConfig) { }
+
+    LocConfigMerkleTreeReqMsg(const char* name,
+            const PBLocConfigMerkleTreeReqMsg &pbConfigMerkleTreeMsg,
+            const LocationApiPbMsgConv *pbMsgConv);
+
+    int serializeToProtobuf(string& protoStr) override;
+};
+
+struct LocConfigOsnmaEnablementReqMsg: LocAPIMsgHeader {
+    bool mEnable;
+
+    inline LocConfigOsnmaEnablementReqMsg(const char* name, bool enable,
+            const LocationApiPbMsgConv *pbMsgConv) :
+        LocAPIMsgHeader(name, E_INTAPI_CONFIG_OSNMA_ENABLEMENT_MSG_ID, pbMsgConv),
+        mEnable(enable) { }
+
+    LocConfigOsnmaEnablementReqMsg(const char* name,
+            const PBLocConfigOsnmaEnablementReqMsg &pbConfigOsnmaEnablementMsg,
+            const LocationApiPbMsgConv *pbMsgConv);
 
     int serializeToProtobuf(string& protoStr) override;
 };
