@@ -265,6 +265,12 @@ ELocMsgID LocationApiPbMsgConv::getEnumForPBELocMsgID(const PBELocMsgID &pbLocMs
         case PB_E_INTAPI_CONFIG_XTRA_PARAMS_MSG_ID:
             eLocMsgId = E_INTAPI_CONFIG_XTRA_PARAMS_MSG_ID;
             break;
+        case PB_E_INTAPI_CONFIG_MERKLE_TREE_MSG_ID:
+            eLocMsgId = E_INTAPI_CONFIG_MERKLE_TREE_MSG_ID;
+            break;
+        case PB_E_INTAPI_CONFIG_OSNMA_ENABLEMENT_MSG_ID:
+            eLocMsgId = E_INTAPI_CONFIG_OSNMA_ENABLEMENT_MSG_ID;
+            break;
         case PB_E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID:
             eLocMsgId = E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID;
             break;
@@ -1027,6 +1033,12 @@ PBELocMsgID LocationApiPbMsgConv::getPBEnumForELocMsgID(const ELocMsgID &eLocMsg
             break;
         case E_INTAPI_CONFIG_XTRA_PARAMS_MSG_ID:
             pbLocMsgId = PB_E_INTAPI_CONFIG_XTRA_PARAMS_MSG_ID;
+            break;
+        case E_INTAPI_CONFIG_MERKLE_TREE_MSG_ID:
+            pbLocMsgId = PB_E_INTAPI_CONFIG_MERKLE_TREE_MSG_ID;
+            break;
+        case E_INTAPI_CONFIG_OSNMA_ENABLEMENT_MSG_ID:
+            pbLocMsgId = PB_E_INTAPI_CONFIG_OSNMA_ENABLEMENT_MSG_ID;
             break;
         case E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID:
             pbLocMsgId = PB_E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID;
@@ -5286,7 +5298,7 @@ int LocationApiPbMsgConv::pbConvertToLocAPIGfBreachNotification(
     uint32_t gfBreachCnt = pbLocApiGfBreachNotif.id_size();
     LOC_LOGv("LocApiPB: gfBreachCnt: %" PRIu32"", gfBreachCnt);
     for (uint32_t i=0; i < gfBreachCnt; i++) {
-        locApiGfBreachNotif.id.push_back(pbLocApiGfBreachNotif.id(0));
+        locApiGfBreachNotif.id.push_back(pbLocApiGfBreachNotif.id(i));
     }
 
     LOC_LOGv("LocApiPB: pbLocApiGfBreachNotif - BreachTypMask: %x, timestamp: %" PRIu64,

@@ -712,6 +712,28 @@ void LocationApiService::processClientMsg(const char* data, uint32_t length) {
             break;
         }
 
+        case E_INTAPI_CONFIG_MERKLE_TREE_MSG_ID : {
+            PBLocConfigMerkleTreeReqMsg pbLocConf;
+            if (0 == pbLocConf.ParseFromString(pbLocApiMsg.payload())) {
+                LOC_LOGe("Failed to parse pbLocConfigMerkleTree from payload!!");
+                return;
+            }
+            LocConfigMerkleTreeReqMsg msg(sockName.c_str(), pbLocConf, &mPbufMsgConv);
+            configMerkleTree(reinterpret_cast<LocConfigMerkleTreeReqMsg*>(&msg));
+            break;
+        }
+
+        case E_INTAPI_CONFIG_OSNMA_ENABLEMENT_MSG_ID : {
+            PBLocConfigOsnmaEnablementReqMsg pbLocConf;
+            if (0 == pbLocConf.ParseFromString(pbLocApiMsg.payload())) {
+                LOC_LOGe("Failed to parse pbLocConfigOsnmaEnablement from payload!!");
+                return;
+            }
+            LocConfigOsnmaEnablementReqMsg msg(sockName.c_str(), pbLocConf, &mPbufMsgConv);
+            configOsnmaEnablement(reinterpret_cast<LocConfigOsnmaEnablementReqMsg*>(&msg));
+            break;
+        }
+
         case E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID: {
             getGnssConfig(&locApiMsg, GNSS_CONFIG_FLAGS_ROBUST_LOCATION_BIT);
             break;
@@ -1526,6 +1548,33 @@ void LocationApiService::configXtraParams(const LocConfigXtraReqMsg* pMsg) {
 
     uint32_t sessionId =
             mLocationControlApi->configXtraParams(pMsg->mEnable, pMsg->mXtraParams);
+
+    addConfigRequestToMap(sessionId, pMsg);
+}
+
+void LocationApiService::configMerkleTree(const LocConfigMerkleTreeReqMsg* pMsg) {
+    if (!pMsg) {
+        return;
+    }
+    std::lock_guard<std::recursive_mutex> lock(mMutex);
+
+    LOC_LOGi("client %s, merkle tree config", pMsg->mSocketName);
+
+    uint32_t sessionId = mLocationControlApi->configMerkleTree(pMsg->mMerkleTreeConfig.c_str(),
+            pMsg->mMerkleTreeConfig.length());
+
+    addConfigRequestToMap(sessionId, pMsg);
+}
+
+void LocationApiService::configOsnmaEnablement(const LocConfigOsnmaEnablementReqMsg* pMsg) {
+    if (!pMsg) {
+        return;
+    }
+    std::lock_guard<std::recursive_mutex> lock(mMutex);
+
+    LOC_LOGi("client %s, osnma enablement config", pMsg->mSocketName);
+
+    uint32_t sessionId = mLocationControlApi->configOsnmaEnablement(pMsg->mEnable);
 
     addConfigRequestToMap(sessionId, pMsg);
 }
