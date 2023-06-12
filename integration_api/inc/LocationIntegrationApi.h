@@ -125,6 +125,12 @@ enum LocConfigTypeEnum{
     /** Config the xtra parameters used by the standard position
      *  engine (SPE). <br/> */
     CONFIG_XTRA_PARAMS = 16,
+    /** Inject the MerkleTree used by the standard position
+        engine (SPE). <br/> */
+    CONFIG_MERKLE_TREE = 17,
+    /** Config OSNMA enablement status used by the standard
+     *  position engine (SPE). <br/> */
+    CONFIG_OSNMA_ENABLEMENT = 18,
     /** Max config enum supported. <br/> */
     CONFIG_ENUM_MAX = 99,
 
@@ -1762,6 +1768,34 @@ public:
                 <br/>
     */
     bool registerXtraStatusUpdate(bool registerUpdate);
+
+    /** @brief
+        Inject Merkle tree configure buffer which reads from a .xml configure file.
+        Configure file contains Merkle Root, Merkle Nodes and information for
+        up to 2 public keys. This merkle tree is used by the standard position
+        engine (SPE).
+        Please note that caller should free the merkleTreeXml. <br/>
+        @param
+        merkleTreeXml: char buffer read from Merkle Tree configure file <br/>
+
+        @param
+        xmlSize: the length of char buffer
+        @return true, if the configure file buffer injected success. <br/>
+
+        @return false, if the configure file buffer failed to inject. <br/>
+    */
+    bool configMerkleTree(const char * merkleTreeXml, int xmlSize);
+
+    /** @brief
+        API to Enable/Disable OSNMA (Open Source Navigation Message Authentication)
+        operation in standard position engine (SPE).
+        @param
+        isEnabled - The flag to indicate enable or disable OSNMA
+        @return true, if the configure file buffer injected success. <br/>
+
+        @return false, if the configure file buffer failed to inject. <br/>
+    */
+    bool configOsnmaEnablement(bool IsEnabled);
 
     /** @example example1:testGetConfigApi
     * <pre>

@@ -70,7 +70,6 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <LocationIntegrationApiImpl.h>
 #include <log_util.h>
 #include <loc_pla.h>
-
 namespace location_integration {
 
 
@@ -983,5 +982,21 @@ bool LocationIntegrationApi::registerXtraStatusUpdate(bool registerUpdate) {
     }
 }
 
+bool LocationIntegrationApi::configMerkleTree(const char * merkleTreeXml, int xmlSize) {
+    if (mApiImpl) {
+        return (mApiImpl->configMerkleTree(merkleTreeXml, xmlSize) == 0);
+    } else {
+        LOC_LOGe ("NULL mApiImpl");
+        return false;
+    }
+}
+bool LocationIntegrationApi::configOsnmaEnablement(bool isEnabled) {
+    if (mApiImpl) {
+        return (mApiImpl->configOsnmaEnablement(isEnabled) == 0);
+    } else {
+        LOC_LOGe ("NULL mApiImpl");
+        return false;
+    }
+}
 } // namespace location_integration
 
