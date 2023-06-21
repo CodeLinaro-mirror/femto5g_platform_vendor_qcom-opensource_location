@@ -292,6 +292,9 @@ private:
   static GnssSignalTypeMask convertQmiGnssSignalType(
         qmiLocGnssSignalTypeMaskT_v02 qmiGnssSignalType);
 
+  void convertOsnmaTreeNode(qmiLocOsnmaTreeNodeT_v02& out, mgpOsnmaTreeNodeT& in);
+  void convertPublicKeyAndMerkleTreeStruct(qmiLocOsnmaPublicKeyMerkleTreeReqMsgT_v02& qmiOut,
+          mgpOsnmaPublicKeyAndMerkleTreeStruct& in);
   /* If Confidence value is less than 68%, then scale the accuracy value to 68%
      confidence.*/
   void scaleAccuracyTo68PercentConfidence(const uint8_t confidenceValue,
@@ -643,6 +646,10 @@ public:
 
   virtual void configConstellationMultiBand(const GnssSvTypeConfig& secondaryBandConfig,
                                             LocApiResponse* adapterResponse=nullptr);
+  virtual void configMerkleTree(mgpOsnmaPublicKeyAndMerkleTreeStruct* merkleTree,
+          LocApiResponse* adapterResponse=nullptr);
+
+  virtual void configOsnmaEnablement(bool enable, LocApiResponse* adapterResponse=nullptr);
 
   virtual void getConstellationMultiBandConfig(uint32_t sessionId,
                                       LocApiResponse* adapterResponse=nullptr);
