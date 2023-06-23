@@ -191,7 +191,8 @@ typedef enum {
     RF_LOSS_GAL_CONF        = 7,
     RF_LOSS_GAL_E5_CONF     = 8,
     RF_LOSS_NAVIC_CONF      = 9,
-    RF_LOSS_MAX_CONF        = 10
+    RF_LOSS_BDS_B2B_CONF    = 10,
+    RF_LOSS_MAX_CONF        = 11
 } rfLossConf;
 
 static uint32_t rfLossNV[RF_LOSS_MAX_CONF] = { 0 };
@@ -209,6 +210,7 @@ static loc_param_s_type gps_conf_param_table[] =
     { "RF_LOSS_GAL",                &rfLossNV[RF_LOSS_GAL_CONF],        NULL, 'n' },
     { "RF_LOSS_GAL_E5",             &rfLossNV[RF_LOSS_GAL_E5_CONF],     NULL, 'n' },
     { "RF_LOSS_NAVIC",              &rfLossNV[RF_LOSS_NAVIC_CONF],      NULL, 'n' },
+    { "RF_LOSS_BDS_B2B",            &rfLossNV[RF_LOSS_BDS_B2B_CONF],    NULL, 'n' },
 };
 
 /* static event callbacks that call the LocApiV02 callbacks*/
@@ -3834,6 +3836,9 @@ void  LocApiV02 :: reportSv (
                         case GNSS_SIGNAL_BEIDOU_B2AI:
                             rfLoss = rfLossNV[RF_LOSS_BDS_B2A_CONF]/10.0;
                             break;
+                        case GNSS_SIGNAL_BEIDOU_B2BI:
+                            rfLoss = rfLossNV[RF_LOSS_BDS_B2B_CONF]/10.0;
+                            break;
                         case GNSS_SIGNAL_GLONASS_G1:
                         case GNSS_SIGNAL_GLONASS_G2:
                             {
@@ -5798,8 +5803,6 @@ void LocApiV02::setGnssBiases() {
                 measData->flags |= GNSS_MEASUREMENTS_DATA_FULL_ISB_UNCERTAINTY_BIT;
             }
             break;
-
-
         /* not supported */
         case GNSS_SIGNAL_GPS_L1C:
         case GNSS_SIGNAL_GLONASS_G2:

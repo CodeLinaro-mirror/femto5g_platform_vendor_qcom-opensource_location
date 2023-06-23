@@ -2090,7 +2090,12 @@ uint32_t LocationApiPbMsgConv::getPBMaskForGnssMeasurementsAdrStateMask(
         pbGnssMeasAdrStateMask |= PB_GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_RESET_BIT;
     }
     if (gnssMeasAdrStateMask & GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_CYCLE_SLIP_BIT) {
-       pbGnssMeasAdrStateMask |= PB_GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_CYCLE_SLIP_BIT;
+        pbGnssMeasAdrStateMask |= PB_GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_CYCLE_SLIP_BIT;
+    }
+    if (gnssMeasAdrStateMask &
+            GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_HALF_CYCLE_RESOLVED_BIT) {
+        pbGnssMeasAdrStateMask |=
+            PB_GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_HALF_CYCLE_RESOLVED_BIT;
     }
     LocApiPb_LOGv("LocApiPB: gnssMeasAdrStateMask:%x, pbGnssMeasAdrStateMask:%x",
             gnssMeasAdrStateMask, pbGnssMeasAdrStateMask);
@@ -2324,6 +2329,12 @@ uint32_t LocationApiPbMsgConv::getPBMaskForGnssSignalTypeMask(
     if (gnssSignalTypeMask & GNSS_SIGNAL_BEIDOU_B2AQ) {
         pbGnssSignalTypeMask |= PB_GNSS_SIGNAL_BEIDOU_B2AQ_BIT;
     }
+    if (gnssSignalTypeMask & GNSS_SIGNAL_BEIDOU_B2BI) {
+        pbGnssSignalTypeMask |= PB_GNSS_SIGNAL_BEIDOU_B2BI_BIT;
+    }
+    if (gnssSignalTypeMask & GNSS_SIGNAL_BEIDOU_B2BQ) {
+        pbGnssSignalTypeMask |= PB_GNSS_SIGNAL_BEIDOU_B2BQ_BIT;
+    }
     LocApiPb_LOGv("LocApiPB: gnssSignalTypeMask:%x, pbGnssSignalTypeMask:%x",
             gnssSignalTypeMask, pbGnssSignalTypeMask);
     return pbGnssSignalTypeMask;
@@ -2394,14 +2405,14 @@ uint32_t LocationApiPbMsgConv::getPBMaskForDrSolutionStatusMask(
     if (drSolnStatusMask & VEHICLE_SENSOR_SPEED_INPUT_USED) {
         pbDrSolnStatusMask |= PB_VEHICLE_SENSOR_SPEED_INPUT_USED;
     }
-    if (drSolnStatusMask & DRE_ERROR_UNCALIBRATED) {
-        pbDrSolnStatusMask |= PB_DRE_ERROR_UNCALIBRATED;
+    if (drSolnStatusMask & DRE_WARNING_UNCALIBRATED) {
+        pbDrSolnStatusMask |= PB_DRE_WARNING_UNCALIBRATED;
     }
-    if (drSolnStatusMask & DRE_ERROR_GNSS_QUALITY_INSUFFICIENT) {
-        pbDrSolnStatusMask |= PB_DRE_ERROR_GNSS_QUALITY_INSUFFICIENT;
+    if (drSolnStatusMask & DRE_WARNING_GNSS_QUALITY_INSUFFICIENT) {
+        pbDrSolnStatusMask |= PB_DRE_WARNING_GNSS_QUALITY_INSUFFICIENT;
     }
-    if (drSolnStatusMask & DRE_ERROR_FERRY_DETECTED ) {
-        pbDrSolnStatusMask |= PB_DRE_ERROR_FERRY_DETECTED;
+    if (drSolnStatusMask & DRE_WARNING_FERRY_DETECTED ) {
+        pbDrSolnStatusMask |= PB_DRE_WARNING_FERRY_DETECTED;
     }
     if (drSolnStatusMask & DRE_ERROR_6DOF_SENSOR_UNAVAILABLE) {
         pbDrSolnStatusMask |= PB_DRE_ERROR_6DOF_SENSOR_UNAVAILABLE;
@@ -2415,18 +2426,28 @@ uint32_t LocationApiPbMsgConv::getPBMaskForDrSolutionStatusMask(
     if (drSolnStatusMask & DRE_ERROR_GNSS_MEAS_UNAVAILABLE) {
         pbDrSolnStatusMask |= PB_DRE_ERROR_GNSS_MEAS_UNAVAILABLE;
     }
-    if (drSolnStatusMask & DRE_ERROR_NO_STORED_POSITION) {
-        pbDrSolnStatusMask |= PB_DRE_ERROR_NO_STORED_POSITION;
+    if (drSolnStatusMask & DRE_WARNING_INIT_POSITION_INVALID) {
+        pbDrSolnStatusMask |= PB_DRE_WARNING_INIT_POSITION_INVALID;
     }
-    if (drSolnStatusMask & DRE_ERROR_MOVING_AT_START) {
-        pbDrSolnStatusMask |= PB_DRE_ERROR_MOVING_AT_START;
+    if (drSolnStatusMask & DRE_WARNING_INIT_POSITION_UNRELIABLE) {
+        pbDrSolnStatusMask |= PB_DRE_WARNING_INIT_POSITION_UNRELIABLE;
     }
-    if (drSolnStatusMask & DRE_ERROR_POSITON_UNRELIABLE) {
-        pbDrSolnStatusMask |= PB_DRE_ERROR_POSITON_UNRELIABLE;
+    if (drSolnStatusMask & DRE_WARNING_POSITON_UNRELIABLE) {
+        pbDrSolnStatusMask |= PB_DRE_WARNING_POSITON_UNRELIABLE;
     }
     if (drSolnStatusMask & DRE_ERROR_GENERIC) {
         pbDrSolnStatusMask |= PB_DRE_ERROR_GENERIC;
     }
+    if (drSolnStatusMask & DRE_WARNING_SENSOR_TEMP_OUT_OF_RANGE) {
+        pbDrSolnStatusMask |= PB_DRE_WARNING_SENSOR_TEMP_OUT_OF_RANGE;
+    }
+    if (drSolnStatusMask & DRE_WARNING_USER_DYNAMICS_INSUFFICIENT) {
+        pbDrSolnStatusMask |= PB_DRE_WARNING_USER_DYNAMICS_INSUFFICIENT;
+    }
+    if (drSolnStatusMask & DRE_WARNING_FACTORY_DATA_INCONSISTENT) {
+        pbDrSolnStatusMask |= PB_DRE_WARNING_FACTORY_DATA_INCONSISTENT;
+    }
+
     LocApiPb_LOGv("LocApiPB: drSolnStatusMask:%x, pbDrSolnStatusMask:%x",
             drSolnStatusMask, pbDrSolnStatusMask);
     return pbDrSolnStatusMask;
@@ -2795,6 +2816,12 @@ uint32_t LocationApiPbMsgConv::getGnssSignalTypeMaskFromPB(
     if (pbGnssSignalTypeMask & PB_GNSS_SIGNAL_BEIDOU_B2AQ_BIT) {
         gnssSignalTypeMask |= GNSS_SIGNAL_BEIDOU_B2AQ;
     }
+    if (pbGnssSignalTypeMask & PB_GNSS_SIGNAL_BEIDOU_B2BI_BIT) {
+        gnssSignalTypeMask |= GNSS_SIGNAL_BEIDOU_B2BI;
+    }
+    if (pbGnssSignalTypeMask & PB_GNSS_SIGNAL_BEIDOU_B2BQ_BIT) {
+        gnssSignalTypeMask |= GNSS_SIGNAL_BEIDOU_B2BQ;
+    }
     LocApiPb_LOGv("LocApiPB: pbGnssSignalTypeMask:%x, gnssSignalTypeMask:%x",
             pbGnssSignalTypeMask, gnssSignalTypeMask);
     return gnssSignalTypeMask;
@@ -3055,6 +3082,11 @@ uint32_t LocationApiPbMsgConv::getGnssMeasurementsAdrStateMaskFromPB(
     if (pbGnssMeasAdrStateMask &
             PB_GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_CYCLE_SLIP_BIT) {
         gnssMeasAdrStateMask |= GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_CYCLE_SLIP_BIT;
+    }
+    if (pbGnssMeasAdrStateMask &
+            PB_GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_HALF_CYCLE_RESOLVED_BIT) {
+        gnssMeasAdrStateMask |=
+            GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_HALF_CYCLE_RESOLVED_BIT;
     }
     LocApiPb_LOGv("LocApiPB: pbGnssMeasAdrStateMask:%x, gnssMeasAdrStateMask:%x",
             pbGnssMeasAdrStateMask, gnssMeasAdrStateMask);
@@ -3441,14 +3473,14 @@ uint32_t LocationApiPbMsgConv::getDrSolutionStatusMaskFromPB(
     if (pbDrSolnStatusMask & PB_VEHICLE_SENSOR_SPEED_INPUT_USED) {
         drSolnStatusMask |= VEHICLE_SENSOR_SPEED_INPUT_USED;
     }
-    if (pbDrSolnStatusMask & PB_DRE_ERROR_UNCALIBRATED) {
-        drSolnStatusMask |= DRE_ERROR_UNCALIBRATED;
+    if (pbDrSolnStatusMask & PB_DRE_WARNING_UNCALIBRATED) {
+        drSolnStatusMask |= DRE_WARNING_UNCALIBRATED;
     }
-    if (pbDrSolnStatusMask & PB_DRE_ERROR_GNSS_QUALITY_INSUFFICIENT) {
-        drSolnStatusMask |= DRE_ERROR_GNSS_QUALITY_INSUFFICIENT;
+    if (pbDrSolnStatusMask & PB_DRE_WARNING_GNSS_QUALITY_INSUFFICIENT) {
+        drSolnStatusMask |= DRE_WARNING_GNSS_QUALITY_INSUFFICIENT;
     }
-    if (pbDrSolnStatusMask & PB_DRE_ERROR_FERRY_DETECTED) {
-        drSolnStatusMask |= DRE_ERROR_FERRY_DETECTED;
+    if (pbDrSolnStatusMask & PB_DRE_WARNING_FERRY_DETECTED) {
+        drSolnStatusMask |= DRE_WARNING_FERRY_DETECTED;
     }
     if (pbDrSolnStatusMask & PB_DRE_ERROR_6DOF_SENSOR_UNAVAILABLE) {
         drSolnStatusMask |= DRE_ERROR_6DOF_SENSOR_UNAVAILABLE;
@@ -3462,18 +3494,28 @@ uint32_t LocationApiPbMsgConv::getDrSolutionStatusMaskFromPB(
     if (pbDrSolnStatusMask & PB_DRE_ERROR_GNSS_MEAS_UNAVAILABLE) {
         drSolnStatusMask |= DRE_ERROR_GNSS_MEAS_UNAVAILABLE;
     }
-    if (pbDrSolnStatusMask & PB_DRE_ERROR_NO_STORED_POSITION) {
-        drSolnStatusMask |= DRE_ERROR_NO_STORED_POSITION;
+    if (pbDrSolnStatusMask & PB_DRE_WARNING_INIT_POSITION_INVALID) {
+        drSolnStatusMask |= DRE_WARNING_INIT_POSITION_INVALID;
     }
-    if (pbDrSolnStatusMask & PB_DRE_ERROR_MOVING_AT_START) {
-        drSolnStatusMask |= DRE_ERROR_MOVING_AT_START;
+    if (pbDrSolnStatusMask & PB_DRE_WARNING_INIT_POSITION_UNRELIABLE) {
+        drSolnStatusMask |= DRE_WARNING_INIT_POSITION_UNRELIABLE;
     }
-    if (pbDrSolnStatusMask & PB_DRE_ERROR_POSITON_UNRELIABLE) {
-        drSolnStatusMask |= DRE_ERROR_POSITON_UNRELIABLE;
+    if (pbDrSolnStatusMask & PB_DRE_WARNING_POSITON_UNRELIABLE) {
+        drSolnStatusMask |= DRE_WARNING_POSITON_UNRELIABLE;
     }
     if (pbDrSolnStatusMask & PB_DRE_ERROR_GENERIC) {
         drSolnStatusMask |= DRE_ERROR_GENERIC;
     }
+    if (pbDrSolnStatusMask & PB_DRE_WARNING_SENSOR_TEMP_OUT_OF_RANGE) {
+        drSolnStatusMask |= DRE_WARNING_SENSOR_TEMP_OUT_OF_RANGE;
+    }
+    if (pbDrSolnStatusMask & PB_DRE_WARNING_USER_DYNAMICS_INSUFFICIENT) {
+        drSolnStatusMask |= DRE_WARNING_USER_DYNAMICS_INSUFFICIENT;
+    }
+    if (pbDrSolnStatusMask & PB_DRE_WARNING_FACTORY_DATA_INCONSISTENT) {
+        drSolnStatusMask |= DRE_WARNING_FACTORY_DATA_INCONSISTENT;
+    }
+
     LocApiPb_LOGv("LocApiPB: pbDrSolnStatusMask:%x, drSolnStatusMask:%x",
             pbDrSolnStatusMask, drSolnStatusMask);
     return drSolnStatusMask;
