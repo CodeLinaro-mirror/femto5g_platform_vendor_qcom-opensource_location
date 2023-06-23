@@ -79,8 +79,8 @@ enum LocationApiDataTypesVersion {
     LOCAPI_DATA_TYPES_VER_MAJOR = 1;
     // Minor - New features / API addition, new message/elemtent addition.
     // Bump the last byte of version i.e. x.2 to x.3
-    // Minor version 31: Add support for 3 new DRE cues.
-    LOCAPI_DATA_TYPES_VER_MINOR = 31;
+    // Minor version 32: Add xtra diag logging status
+    LOCAPI_DATA_TYPES_VER_MINOR = 32;
 }
 
 // ============================================================================
@@ -1570,6 +1570,8 @@ message PBXtraConfigParams {
     bool xtraIntegrityDownloadEnable = 9;
     // XTRA integrity download interval in unit of minutes
     uint32 xtraIntegrityDownloadIntervalMinute = 10;
+    // To indicate if Diag logging to be enabled for XTRA
+    uint32 xtraDaemonDiagLoggingStatus = 11;
 };
 
 enum PBXtraStatusUpdateType {
