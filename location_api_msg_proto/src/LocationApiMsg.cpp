@@ -2804,7 +2804,6 @@ int LocConfigGetXtraStatusRespMsg::serializeToProtobuf(string& protoStr) {
 
     // uint32   payloadSize = 5;
     pLocApiMsgHdr.set_payloadsize(sizeof(LocConfigGetXtraStatusRespMsg));
-        LOC_LOGe("enter 7");
     if (!pLocApiMsgHdr.SerializeToString(&protoStr)) {
         LOC_LOGe("SerializeToString on pLocApiMsgHdr failed!");
         return 0;
