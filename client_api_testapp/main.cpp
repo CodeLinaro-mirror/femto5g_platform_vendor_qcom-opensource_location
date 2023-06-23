@@ -1041,6 +1041,11 @@ void parseXtraConfig(char* buf, bool &xtraEnabled, XtraConfigParams& oemConfig) 
             oemConfig.ntsKeServerURL = std::string(token);
         }
 
+        token = strtok_r(NULL, " ", &save);
+        if (token != NULL) {
+            oemConfig.xtraDaemonDiagLoggingStatus = atoi(token);
+        }
+
         printf ("xtra config: enabled %d, %d %d %d %d ca path: %s, "
                 "xtra url: %s %s %s, ntp url: %s %s %s, nts ke server url : %s\n",
                 xtraEnabled, oemConfig.xtraDownloadIntervalMinute,
@@ -1054,6 +1059,9 @@ void parseXtraConfig(char* buf, bool &xtraEnabled, XtraConfigParams& oemConfig) 
                 oemConfig.ntsKeServerURL.c_str());
         printf("integerity download %d %d\n", oemConfig.xtraIntegrityDownloadEnable,
                oemConfig.xtraIntegrityDownloadIntervalMinute);
+        printf("DebugLogLevel %d DiagLoggingStatus%d\n", oemConfig.xtraDaemonDebugLogLevel,
+               oemConfig.xtraDaemonDiagLoggingStatus);
+
     } else {
         printf("xtra disabled \n");
     }

@@ -3790,6 +3790,9 @@ int LocationApiPbMsgConv::convertXtraConfigParamsToPB(
             xtraParams.xtraIntegrityDownloadEnable);
     pbXtraParams->set_xtraintegritydownloadintervalminute(
             xtraParams.xtraIntegrityDownloadIntervalMinute);
+    pbXtraParams->set_xtradaemondiagloggingstatus(
+            xtraParams.xtraDaemonDiagLoggingStatus);
+
     return 0;
 }
 
@@ -3828,6 +3831,8 @@ int LocationApiPbMsgConv::pbConvertToXtraConfig(const PBXtraConfigParams &pbXtra
     xtraParams.xtraIntegrityDownloadEnable = pbXtraParams.xtraintegritydownloadenable();
     xtraParams.xtraIntegrityDownloadIntervalMinute =
             pbXtraParams.xtraintegritydownloadintervalminute();
+    xtraParams.xtraDaemonDiagLoggingStatus =
+            pbXtraParams.xtradaemondiagloggingstatus();
     return 0;
 }
 

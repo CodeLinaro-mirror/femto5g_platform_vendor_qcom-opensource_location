@@ -976,6 +976,8 @@ bool LocationIntegrationApi::configXtraParams(bool enable, XtraConfigParams* con
         }
         halConfigParams.xtraDaemonDebugLogLevel =
                 getHalLogLevel(configParams->xtraDaemonDebugLogLevel);
+        halConfigParams.xtraDaemonDiagLoggingStatus =
+                configParams->xtraDaemonDiagLoggingStatus;
 
         validparam = true;
     } while (0);

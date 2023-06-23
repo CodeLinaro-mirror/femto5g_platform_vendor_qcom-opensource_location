@@ -898,6 +898,12 @@ struct XtraConfigParams {
      *  the default URL of https://nts.xtracloud.net:4460. <br/>
      */
     std::string ntsKeServerURL;
+
+    /** To set the diag logging status for XTRA. <br/>
+     *
+     * 0 to disable diag logging <br/>
+     * 1 to enable diag logging <br/> */
+    uint32_t xtraDaemonDiagLoggingStatus;
 };
 
 class LocationIntegrationApiImpl;
