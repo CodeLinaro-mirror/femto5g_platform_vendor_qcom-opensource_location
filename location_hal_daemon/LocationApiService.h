@@ -72,9 +72,6 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <loc_cfg.h>
 #include <LocIpc.h>
 #include <LocTimer.h>
-#ifdef POWERMANAGER_ENABLED
-#include <PowerEvtHandler.h>
-#endif
 #include <location_interface.h>
 #include <ILocationAPI.h>
 #include <LocationApiMsg.h>
@@ -200,10 +197,6 @@ public:
 
     // from IPC receiver
     void onListenerReady(bool externalApIpc);
-
-#ifdef POWERMANAGER_ENABLED
-    void onPowerEvent(PowerStateType powerState);
-#endif
 
     // other APIs
     void deleteClientbyName(const std::string name);
@@ -353,11 +346,6 @@ private:
     // OSFramework instance
     void createOSFrameworkInstance();
     void destroyOSFrameworkInstance();
-
-#ifdef POWERMANAGER_ENABLED
-    // power event observer
-    PowerEvtHandler* mPowerEventObserver;
-#endif
 
     // singleton instance
     static LocationApiService *mInstance;
