@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -118,7 +118,12 @@ int main(int argc, char *argv[])
     // set supplementary groups for sysvinit
     // For openwrt, procd does not have support for supplementary groups. So set here.
     // For systemd, common supplementary groups are set via service files
+#ifdef OPENWRT_BUILD
+    // OpenWrt requires Deep sleep in its group list to connect to DS related file descriptors.
+    char groupNames[LOC_MAX_PARAM_NAME] = "gps system radio diag powermgr locclient inet vnw";
+#else
     char groupNames[LOC_MAX_PARAM_NAME] = "gps radio diag powermgr locclient inet vnw";
+#endif
 
     gid_t groupIds[LOC_PROCESS_MAX_NUM_GROUPS] = {};
     char *splitGrpString[LOC_PROCESS_MAX_NUM_GROUPS];
