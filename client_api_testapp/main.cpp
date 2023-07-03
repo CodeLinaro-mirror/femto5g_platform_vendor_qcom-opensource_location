@@ -104,8 +104,12 @@ static uint32_t numGnssMeasurementsCb = 0;
 static LocationClientApi* pLcaClient = nullptr;
 static location_integration::LocationIntegrationApi* pIntClient = nullptr;
 static sem_t semCompleted;
+static sem_t semGfCompleted;
+static sem_t semBatchingCompleted;
 static int fixCnt = 0x7fffffff;
 static uint64_t autoTestStartTimeMs = 0;
+static uint64_t autoTestStartGfTimeMs = 0;
+static uint64_t autoTestStartBatchingTimeMs = 0;
 static int autoTestTimeoutSec = 0x7FFFFFFF;
 static uint32_t gtpFixCnt = 0;
 static uint32_t singleShotFixCnt = 0;
@@ -239,6 +243,12 @@ static void cleanupAfterAutoStart() {
     if (pLcaClient) {
         printf("calling stopPosition and delete LCA client\n");
         pLcaClient->stopPositionSession();
+        if (autoTestStartGfTimeMs != 0) {
+            pLcaClient->removeGeofences(sGeofences);
+        }
+        if (autoTestStartBatchingTimeMs != 0) {
+            pLcaClient->stopBatchingSession();
+        }
         delete pLcaClient;
         pLcaClient = nullptr;
     }
@@ -1268,6 +1278,7 @@ void addGeofences(char* buf) {
 
     if (!pLcaClient) {
         pLcaClient = new LocationClientApi(onCapabilitiesCb);
+        sleep(1); // wait for capability callback
     }
     pLcaClient->addGeofences(addGfVec, onGeofenceBreachCb, onCollectiveResponseCb);
     sGeofences.insert(sGeofences.end(), addGfVec.begin(), addGfVec.end());
@@ -1431,6 +1442,8 @@ void removeGeofences(char* buf) {
 static bool checkForAutoStart(int argc, char *argv[]) {
     bool autoRun = false;
     bool deleteAll = false;
+    bool addGfs = false;
+    string gfStr = "-g";
     uint32_t aidingDataMask = 0;
     int interval = 100;
     LocReqEngineTypeMask reqEngMask = (LocReqEngineTypeMask) 0x7;
@@ -1451,12 +1464,14 @@ static bool checkForAutoStart(int argc, char *argv[]) {
         {"timeout", required_argument,   0,  't' },
         {"fixcnt",   required_argument,  0,  'l' },
         {"reportType", required_argument, 0,  'r' },
+        {"addgeofences", required_argument, 0,  'g' },
+        {"startBatching", required_argument, 0,  'b' },
         {0,           0,                 0,   0  }
     };
 
     int long_index =0;
     int opt = -1;
-    while ((opt = getopt_long(argc, argv, "aVNDd:s:e:i:t:l:r:U:z",
+    while ((opt = getopt_long(argc, argv, "aVNDd:s:e:i:t:l:r:U:z:g:b:",
                    long_options, &long_index)) != -1) {
         switch (opt) {
              case 'a' :
@@ -1513,6 +1528,39 @@ static bool checkForAutoStart(int argc, char *argv[]) {
                  printf("route to NMEA port: %s\n", optarg);
                  routeToNMEAPort = atoi(optarg);
                  break;
+             case 'g' :
+                 for (int i = optind-1; i< argc &&
+                         !(argv[i][0] == '-' && (argv[i][1] < '0' || argv[i][1] > '9')); ++i) {
+                     gfStr.append(" ");
+                     gfStr.append(argv[i]);
+                 }
+                 addGfs = true;
+                 break;
+             case 'b' :
+                 if (!pLcaClient) {
+                    pLcaClient = new LocationClientApi(onCapabilitiesCb);
+                 }
+                 sleep(1);
+                 if (pLcaClient) {
+                     int intervalmsec = 60000;
+                     int distance = 0;
+                     int duration = 600; // default test duration is 10mins
+                     intervalmsec = atoi(argv[optind - 1]);
+                     distance = atoi(argv[optind]);
+                     duration = atoi(argv[optind + 1]);
+                     printf("start routine batching with interval %d msec, distance %d meters, "
+                             "duration %d seconds\n",
+                             intervalmsec, distance, duration);
+                     autoTestStartBatchingTimeMs = getTimestampMs();
+                     pLcaClient->startRoutineBatchingSession(intervalmsec, distance,
+                             onBatchingCb, onResponseCb);
+                     std::thread t([duration] {
+                             usleep(duration * 1000000);
+                             sem_post(&semBatchingCompleted);
+                             });
+                     t.detach();
+                 }
+                 break;
              default:
                  printf("unsupported args provided\n");
                  break;
@@ -1527,6 +1575,7 @@ static bool checkForAutoStart(int argc, char *argv[]) {
     // check for auto-start option
     if (autoRun) {
         uint32_t pid = (uint32_t)getpid();
+        printf("pid: %d\n", pid);
 
         if (deleteAll == true || aidingDataMask != 0) {
             // create location integratin API
@@ -1550,6 +1599,7 @@ static bool checkForAutoStart(int argc, char *argv[]) {
 
         if (trackingType != NO_TRACKING) {
             pLcaClient = new LocationClientApi(onCapabilitiesCb);
+            sleep(1); // wait for capability callback
             if (nullptr == pLcaClient) {
                 printf("can not create Location client API");
                 exit(1);
@@ -1568,9 +1618,30 @@ static bool checkForAutoStart(int argc, char *argv[]) {
                                                        reportcbs, onResponseCb);
             }
             autoTestStartTimeMs = getTimestampMs();
-            sem_wait(&semCompleted);
         }
 
+    }
+    if (addGfs) {
+        printf("addGeofence option param %s: \n", gfStr.c_str());
+        sleep(1);
+        autoTestStartGfTimeMs = getTimestampMs();
+        addGeofences(const_cast<char*>(gfStr.c_str()));
+        std::thread t([autoTestTimeoutSec] {
+                usleep(autoTestTimeoutSec * 1000000);
+                sem_post(&semGfCompleted);
+                });
+        t.detach();
+    }
+    if (pLcaClient) {
+        if (trackingType != NO_TRACKING && autoTestStartTimeMs != 0) {
+            sem_wait(&semCompleted);
+        }
+        if (autoTestStartGfTimeMs != 0) {
+            sem_wait(&semGfCompleted);
+        }
+        if (autoTestStartBatchingTimeMs != 0) {
+            sem_wait(&semBatchingCompleted);
+        }
         cleanupAfterAutoStart();
         exit(0);
     }
