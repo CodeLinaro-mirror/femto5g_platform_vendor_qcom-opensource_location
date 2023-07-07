@@ -1103,7 +1103,7 @@ uint32_t LocationIntegrationApiImpl::configOutputNmeaTypes(
         GnssNmeaTypesMask mEnabledNmeaTypes;
     };
 
-    LOC_LOGi("nmea output type: 0x%x, datum type: %d", enabledNmeaTypes, nmeaDatumType);
+    LOC_LOGi("nmea output type: 0x%x ", enabledNmeaTypes);
     mMsgTask->sendMsg(new (nothrow) ConfigOutputNmeaReq(this, enabledNmeaTypes));
 
     return 0;
