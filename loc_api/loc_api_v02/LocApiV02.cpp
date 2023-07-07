@@ -7302,6 +7302,10 @@ bool LocApiV02 :: convertGnssMeasurements(
             tempAdrData.nHzMeasurement = gnss_measurement_report_ptr.nHzMeasurement;
             *it = tempAdrData;
         } else {
+            // set cycle slip bit if it is not found in the previous epoch
+            measurementData.adrStateMask |=
+                    GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_CYCLE_SLIP_BIT;
+
             // now add the current satellite info to the vector
             tempAdrData.counter = mCounter;
             tempAdrData.system = gnss_measurement_report_ptr.system;
