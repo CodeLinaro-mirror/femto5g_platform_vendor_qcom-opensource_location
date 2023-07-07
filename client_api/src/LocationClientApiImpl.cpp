@@ -453,6 +453,12 @@ GnssSignalTypeMask LocationClientApiImpl::parseGnssSignalType(
     if (halGnssSignalTypeMask & ::GNSS_SIGNAL_BEIDOU_B2) {
         gnssSignalTypeMask |= GNSS_SIGNAL_BEIDOU_B2;
     }
+    if (halGnssSignalTypeMask & ::GNSS_SIGNAL_BEIDOU_B2BI) {
+        gnssSignalTypeMask |= GNSS_SIGNAL_BEIDOU_B2BI_BIT;
+    }
+    if (halGnssSignalTypeMask & ::GNSS_SIGNAL_BEIDOU_B2BQ) {
+        gnssSignalTypeMask |= GNSS_SIGNAL_BEIDOU_B2BQ_BIT;
+    }
     return (GnssSignalTypeMask)gnssSignalTypeMask;
 }
 
