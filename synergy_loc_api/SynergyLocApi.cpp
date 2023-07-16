@@ -29,7 +29,7 @@
  /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022, 2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -1263,7 +1263,7 @@ const SllInterfaceReq sllDefultReq = {
 SynergyLocApi::SynergyLocApi(LOC_API_ADAPTER_EVENT_MASK_T exMask,
                        ContextBase* context) :
     LocApiBase(exMask, context),
-    mSlMask(0), mInSession(false), mPowerMode(GNSS_POWER_MODE_INVALID),
+    mSlMask(0), mInSession(false), mPowerMode(GNSS_POWER_MODE_DEFAULT),
     mEngineOn(false), mMeasurementsStarted(false),
     mIsMasterRegistered(false), mMasterRegisterNotSupported(false),
     mSvMeasurementSet(nullptr)
