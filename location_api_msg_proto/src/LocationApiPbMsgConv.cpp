@@ -1501,6 +1501,9 @@ uint64_t LocationApiPbMsgConv::getPBMaskForLocationCapabilitiesMask(
     if (locCapabMask & LOCATION_CAPABILITIES_QWES_SV_EPHEMERIS_BIT) {
         pbLocCapabMask |= PB_LOCATION_CAPABILITIES_QWES_SV_EPHEMERIS_BIT;
     }
+    if (locCapabMask & LOCATION_CAPABILITIES_NLOS_ML20) {
+        pbLocCapabMask |= PB_LOCATION_CAPABILITIES_QWES_NLOS_ML20;
+    }
     LOC_LOGi("LocApiPB: locCapabMask:0x%" PRIx64", pbLocCapabMask:0x%" PRIx64,
             locCapabMask, pbLocCapabMask);
     return pbLocCapabMask;
@@ -2559,6 +2562,9 @@ uint64_t LocationApiPbMsgConv::getLocationCapabilitiesMaskFromPB(
     }
     if (pbLocCapabMask & PB_LOCATION_CAPABILITIES_QWES_SV_EPHEMERIS_BIT) {
         locCapabMask |= LOCATION_CAPABILITIES_QWES_SV_EPHEMERIS_BIT;
+    }
+    if (pbLocCapabMask & PB_LOCATION_CAPABILITIES_QWES_NLOS_ML20) {
+        locCapabMask |= LOCATION_CAPABILITIES_NLOS_ML20;
     }
     LOC_LOGi("LocApiPB: pbLocCapabMask:0x%" PRIx64", locCapabMask:0x%" PRIx64,
             pbLocCapabMask, locCapabMask);
