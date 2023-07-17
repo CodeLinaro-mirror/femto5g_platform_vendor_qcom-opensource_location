@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -203,6 +203,7 @@ private:
     void onGnssNiCb(uint32_t id, GnssNiNotification gnssNiNotification);
     void onGnssSvCb(const GnssSvNotification &gnssSvNotification);
     void onGnssNmeaCb(GnssNmeaNotification);
+    void onEngineNmeaCb(GnssNmeaNotification);
     void onGnssDataCb(const GnssDataNotification& gnssDataNotification);
     void onGnssMeasurementsCb(const GnssMeasurementsNotification &gnssMeasurementsNotification);
     void onLocationSystemInfoCb(LocationSystemInfo systemInfo);
