@@ -6202,6 +6202,8 @@ void LocApiV02::processGnssBandsSupportedInd(
 
     if (pGnssBandsSupportedIndMsg->gnssSupportedSignals_valid) {
         GnssCapabNotification gnssCapabNotification = {};
+         gnssCapabNotification.gnssSupportedSignals =
+                pGnssBandsSupportedIndMsg->gnssSupportedSignals;
 
         if (pGnssBandsSupportedIndMsg->gnssSupportedSignals_valid) {
             for (qmiLocGnssSignalTypeMaskT_v02 sig = QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L1CA_V02;
