@@ -998,9 +998,19 @@ bool LocationIntegrationApi::configMerkleTree(const char * merkleTreeXml, int xm
         return false;
     }
 }
+
 bool LocationIntegrationApi::configOsnmaEnablement(bool isEnabled) {
     if (mApiImpl) {
         return (mApiImpl->configOsnmaEnablement(isEnabled) == 0);
+    } else {
+        LOC_LOGe ("NULL mApiImpl");
+        return false;
+    }
+}
+
+bool LocationIntegrationApi::registerGnssSignalTypesUpdate(bool registerUpdate) {
+    if (mApiImpl) {
+        return (mApiImpl->registerGnssSignalTypesUpdate(registerUpdate) == 0);
     } else {
         LOC_LOGe ("NULL mApiImpl");
         return false;

@@ -354,6 +354,9 @@ enum ELocMsgID {
 
     E_INTAPI_REGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID = 310,
     E_INTAPI_DEREGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID = 311,
+
+    E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_REQ_MSG_ID = 312,
+    E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_RESP_MSG_ID = 313,
 };
 
 const char* LocApiMsgString(ELocMsgID msgId);
@@ -1607,6 +1610,36 @@ struct LocIntApiInjectLocationMsg : LocAPIMsgHeader
     int serializeToProtobuf(string& protoStr) override;
 };
 
+struct LocConfigRegisterGnssSignalTypesUpdateReqMsg: LocAPIMsgHeader {
+    bool mRegisterUpdate;
+    inline LocConfigRegisterGnssSignalTypesUpdateReqMsg(const char* name,
+                                bool registerUpdate,
+                                const LocationApiPbMsgConv *pbMsgConv) :
+        LocAPIMsgHeader(name, E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_REQ_MSG_ID, pbMsgConv),
+        mRegisterUpdate(registerUpdate) { }
+    inline LocConfigRegisterGnssSignalTypesUpdateReqMsg(
+            const char* name, PBLocConfigRegisterGnssSignalTypesUpdateReqMsg& pbMsg,
+            const LocationApiPbMsgConv *pbMsgConv) :
+        LocAPIMsgHeader(name, E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_REQ_MSG_ID, pbMsgConv),
+        mRegisterUpdate(pbMsg.mregisterupdate()) { }
+
+    int serializeToProtobuf(string& protoStr) override;
+};
+
+struct LocConfigRegisterGnssSignalTypesUpdateRespMsg : LocAPIMsgHeader {
+    GnssSignalTypeMask mSignalTypeMask;
+
+    inline LocConfigRegisterGnssSignalTypesUpdateRespMsg(const char* name,
+                                GnssSignalTypeMask signalTypeMask,
+                                const LocationApiPbMsgConv *pbMsgConv) :
+        LocAPIMsgHeader(name, E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_RESP_MSG_ID, pbMsgConv),
+        mSignalTypeMask(signalTypeMask) { }
+    LocConfigRegisterGnssSignalTypesUpdateRespMsg(const char* name,
+                            const PBLocConfigRegisterGnssSignalTypesUpdateRespMsg &pbMsg,
+                            const LocationApiPbMsgConv *pbMsgConv);
+
+    int serializeToProtobuf(string& protoStr) override;
+};
 /**************** XTRA related section **********************/
 struct LocConfigGetXtraStatusReqMsg: LocAPIMsgHeader
 {
