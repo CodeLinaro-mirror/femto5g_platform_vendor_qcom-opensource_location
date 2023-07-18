@@ -67,6 +67,8 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <loc_pla.h>
 #include <unordered_set>
+#include <LocationClientApi.h>
+
 #ifdef NO_UNORDERED_SET_OR_MAP
     #include <map>
 #else
@@ -134,6 +136,9 @@ enum LocConfigTypeEnum{
     /** Get the secondary band configuration for constellation
      *  used by the GNSS standard position engine (SPE). <br/> */
     GET_CONSTELLATION_SECONDARY_BAND_CONFIG = 103,
+    /** Register the callback to get update on GNSS signal type
+     *  capabilities. <br/> */
+    REGISTER_SIGNAL_TYPES_UPDATE = 109,
 } ;
 
 /**
@@ -534,6 +539,23 @@ typedef std::function<void(
 )> LocConfigGetConstellationSecondaryBandConfigCb;
 
 /**
+ *  Specify the callback to receive GNSS signal type capabilities
+ *  that modem supports. These capabilities represent the
+ *  signal types the GNSS implementation supports with
+ *  temporarily disabled signal types taken into account,
+ *  such as the blocklisted satellites/constellations or
+ *  the constellations disabled by regional restrictions. <br/>
+ *
+ *  In order to receive the GNSS signal type capabilities,
+ *  client shall first instantiate the callback and
+ *  pass it to the LocationIntegrationApi constructor
+ *  and then invoke registerGnssSignalTypesUpdate() <br/> */
+typedef std::function<void(
+    /**  GNSS signal type capabilities with RF band. <br/> */
+    location_client::GnssSignalTypeMask signalType
+)> LocConfigGnssSignalTypesCb;
+
+/**
  *  Specify the set of callbacks that can be passed to
  *  LocationIntegrationAPI constructor to receive configuration
  *  command processing status and the requested data. <br/>
@@ -553,6 +575,9 @@ struct LocIntegrationCbs {
     /** Callback to receive the secondary band configuration for
      *  constellation. <br/> */
     LocConfigGetConstellationSecondaryBandConfigCb getConstellationSecondaryBandConfigCb;
+    /** Callback to receive the supported GNSS signal type
+     *  capabilities. <br/> */
+    LocConfigGnssSignalTypesCb gnssSignalTypesCb;
 };
 
 /** Specify the NMEA sentence types that the device will output
@@ -1330,7 +1355,49 @@ public:
     bool configEngineIntegrityRisk(LocIntegrationEngineType engineType,
                                    uint32_t integrityRisk);
 
-   /** @example example1:testGetConfigApi
+
+    /** @brief
+        Register the callback to get update on GNSS signal type
+        capabilities that modem supports. These capabilities
+        represent the supported signal types with
+        temporarily disabled signal types excluded,
+        like the blocklisted satellites/constellations or
+        the constellations disabled by regional restrictions.
+        The callback to receive the signal types update,
+        e.g.: LocConfigGnssSignalTypesCb() shall be
+        instantiated and passed via the Location Integration API
+        constructor. <br/>
+
+        If the processing of this command is successful,
+        the GNSS signal type capabilities update will be returned
+        via LocConfigGnssSignalTypesCb() which is passed via
+        the constructor. <br/>
+
+        Please see below for some triggers that
+        LocConfigGnssSignalTypesCb() will be invoked: <br/>
+        (1) upon successful registering the API <br/>
+        (2) upon change in the active GNSS/bands configuration <br/>
+
+        @param
+        registerUpdate: true, to register for GNSS signal types update
+                        false, to un-register for GNSS signal types update
+                        <br/>
+
+        @return true, if the API request has been accepted.
+                LocConfigCb() will be invoked to deliver asynchronous
+                processing status. The GNSS signal type capabilities will
+                be returned via LocConfigGnssSignalTypesCb().
+                <br/>
+
+        @return false, if the API request has not been accepted for
+                further processing. When returning false,
+                LocConfigGnssSignalTypesCb() will not be invoked.
+                <br/>
+
+    */
+    bool registerGnssSignalTypesUpdate(bool registerUpdate);
+
+    /** @example example1:testGetConfigApi
     * <pre>
     * <code>
     *    // Sample Code

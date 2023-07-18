@@ -150,6 +150,7 @@ enum TrackingSessionType {
 #define GET_MIN_SV_ELEVATION       "getMinSvElevation"
 #define CONFIG_NMEA_TYPES          "configOutputNmeaTypes"
 #define CONFIG_ENGINE_INTEGRITY_RISK "configEngineIntegrityRisk"
+#define REGISTER_SIGNAL_TYPES_UPDATE "registerGnssSignalTypesUpdate"
 
 // debug utility
 static uint64_t getTimestampMs() {
@@ -368,6 +369,10 @@ static void onGNSSExtendedDataInfoCb(const std::vector<uint8_t>& payload) {
     printf("<<<  onGNSSExtendedDataInfoCb payload size %d \n", payload.size());
 }
 
+static void onGnssSignalTypesCb(GnssSignalTypeMask signalType) {
+    printf("<<< onGnssSignalTypesCb, supported signalType mask %x \n", signalType);
+}
+
 static void printHelp() {
     printf("\n************* options *************\n");
     printf("e: Concurrent engine report session with 100 ms interval\n");
@@ -401,6 +406,7 @@ static void printHelp() {
     printf("%s: get min sv elevation angle\n", GET_MIN_SV_ELEVATION);
     printf("%s: config nmea types \n", CONFIG_NMEA_TYPES);
     printf("%s: config engine integrity risk \n", CONFIG_ENGINE_INTEGRITY_RISK);
+    printf("%s: register GNSS signal types update \n", REGISTER_SIGNAL_TYPES_UPDATE);
 }
 
 void setRequiredPermToRunAsLocClient()
@@ -879,6 +885,7 @@ int main(int argc, char *argv[]) {
     intCbs.getMinSvElevationCb = LocConfigGetMinSvElevationCb(onGetMinSvElevationCb);
     intCbs.getConstellationSecondaryBandConfigCb =
             LocConfigGetConstellationSecondaryBandConfigCb(onGetSecondaryBandConfigCb);
+    intCbs.gnssSignalTypesCb = LocConfigGnssSignalTypesCb(onGnssSignalTypesCb);
 
     LocConfigPriorityMap priorityMap;
     pIntClient = new LocationIntegrationApi(priorityMap, intCbs);
@@ -1091,6 +1098,17 @@ int main(int argc, char *argv[]) {
             }
             printf("nmeaTypes 0x%x, geodetic type %d\n", nmeaTypes, nmeaDatumType);
             pIntClient->configOutputNmeaTypes(nmeaTypes, nmeaDatumType);
+        } else if (strncmp(buf, REGISTER_SIGNAL_TYPES_UPDATE,
+                           strlen(REGISTER_SIGNAL_TYPES_UPDATE)) == 0) {
+            bool registerUpdate = false;;
+            static char *save = nullptr;
+            char* token = strtok_r(buf, " ", &save);
+            token = strtok_r(NULL, " ", &save);
+            if (token != NULL) {
+                registerUpdate = (atoi(token) != 0);
+            }
+            printf("register GNSS signal types update %d\n", registerUpdate);
+            pIntClient->registerGnssSignalTypesUpdate(registerUpdate);
         } else {
             int command = buf[0];
             switch(command) {

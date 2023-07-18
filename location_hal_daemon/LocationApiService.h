@@ -219,6 +219,12 @@ private:
     void onControlCollectiveResponseCallback(size_t count, LocationError *errs, uint32_t *ids);
     void onGnssConfigCallback(uint32_t sessionId, const GnssConfig& config);
     void onGnssEnergyConsumedCb(uint64_t totalEnergyConsumedSinceFirstBoot);
+    void onGnssSignalTypesCb(const GnssCapabNotification& gnssCapabNotification);
+
+    // Callbacks for location api used service
+    void onCapabilitiesCallback(LocationCapabilitiesMask mask);
+    void onResponseCb(LocationError err, uint32_t id);
+    void onCollectiveResponseCallback(size_t count, LocationError *errs, uint32_t *ids);
 
     // Location configuration API requests
     void configConstrainedTunc(
@@ -238,6 +244,7 @@ private:
     void configMinSvElevation(const LocConfigMinSvElevationReqMsg* pMsg);
     void configOutputNmeaTypes(const LocConfigOutputNmeaTypesReqMsg* pMsg);
     void configEngineIntegrityRisk(const LocConfigEngineIntegrityRiskReqMsg* pMsg);
+    void registerGnssSignalTypesUpdate(const LocConfigRegisterGnssSignalTypesUpdateReqMsg* pReqMsg);
 
     // Location configuration API get/read requests
     void getGnssConfig(const LocAPIMsgHeader* pReqMsg,
@@ -311,6 +318,9 @@ private:
 
     // maintenance timer
     MaintTimer mMaintTimer;
+    // Location api interface to register Gnss signal types callback
+    ILocationAPI* mSignalTypesLocationApi;
+    LocationCallbacks mSignalTypesLocationApiCallbacks;
 };
 
 #endif //LOCATIONAPISERVICE_H

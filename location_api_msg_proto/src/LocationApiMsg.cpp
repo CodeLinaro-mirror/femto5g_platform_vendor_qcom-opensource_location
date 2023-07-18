@@ -78,6 +78,128 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <LocationApiPbMsgConv.h>
 
 using namespace loc_util;
+const char* LocApiMsgString(ELocMsgID msgId) {
+    switch (msgId) {
+    case E_LOCAPI_UNDEFINED_MSG_ID:
+        return "E_LOCAPI_UNDEFINED_MSG_ID";
+    case E_LOCAPI_CLIENT_REGISTER_MSG_ID:
+        return "E_LOCAPI_CLIENT_REGISTER_MSG_ID";
+    case E_LOCAPI_CLIENT_DEREGISTER_MSG_ID:
+        return "E_LOCAPI_CLIENT_DEREGISTER_MSG_ID";
+    case E_LOCAPI_CAPABILILTIES_MSG_ID:
+        return "E_LOCAPI_CAPABILILTIES_MSG_ID";
+    case E_LOCAPI_HAL_READY_MSG_ID:
+        return "E_LOCAPI_HAL_READY_MSG_ID";
+    case E_LOCAPI_START_TRACKING_MSG_ID:
+        return "E_LOCAPI_START_TRACKING_MSG_ID";
+    case E_LOCAPI_STOP_TRACKING_MSG_ID:
+        return "E_LOCAPI_STOP_TRACKING_MSG_ID";
+    case E_LOCAPI_UPDATE_CALLBACKS_MSG_ID:
+        return "E_LOCAPI_UPDATE_CALLBACKS_MSG_ID";
+    case E_LOCAPI_UPDATE_TRACKING_OPTIONS_MSG_ID:
+        return "E_LOCAPI_UPDATE_TRACKING_OPTIONS_MSG_ID";
+    case E_LOCAPI_CONTROL_UPDATE_CONFIG_MSG_ID:
+        return "E_LOCAPI_CONTROL_UPDATE_CONFIG_MSG_ID";
+    case E_LOCAPI_CONTROL_DELETE_AIDING_DATA_MSG_ID:
+        return "E_LOCAPI_CONTROL_DELETE_AIDING_DATA_MSG_ID";
+    case E_LOCAPI_CONTROL_UPDATE_NETWORK_AVAILABILITY_MSG_ID:
+        return "E_LOCAPI_CONTROL_UPDATE_NETWORK_AVAILABILITY_MSG_ID";
+    case E_LOCAPI_LOCATION_MSG_ID:
+        return "E_LOCAPI_LOCATION_MSG_ID";
+    case E_LOCAPI_LOCATION_INFO_MSG_ID:
+        return "E_LOCAPI_LOCATION_INFO_MSG_ID";
+    case E_LOCAPI_SATELLITE_VEHICLE_MSG_ID:
+        return "E_LOCAPI_SATELLITE_VEHICLE_MSG_ID";
+    case E_LOCAPI_NMEA_MSG_ID:
+        return "E_LOCAPI_NMEA_MSG_ID";
+    case E_LOCAPI_DATA_MSG_ID:
+        return "E_LOCAPI_DATA_MSG_ID";
+    case E_LOCAPI_GET_GNSS_ENGERY_CONSUMED_MSG_ID:
+        return "E_LOCAPI_GET_GNSS_ENGERY_CONSUMED_MSG_ID";
+    case E_LOCAPI_LOCATION_SYSTEM_INFO_MSG_ID:
+        return "E_LOCAPI_LOCATION_SYSTEM_INFO_MSG_ID";
+    case E_LOCAPI_ENGINE_LOCATIONS_INFO_MSG_ID:
+        return "E_LOCAPI_ENGINE_LOCATIONS_INFO_MSG_ID";
+    case E_LOCAPI_START_BATCHING_MSG_ID:
+        return "E_LOCAPI_START_BATCHING_MSG_ID";
+    case E_LOCAPI_STOP_BATCHING_MSG_ID:
+        return "E_LOCAPI_STOP_BATCHING_MSG_ID";
+    case E_LOCAPI_UPDATE_BATCHING_OPTIONS_MSG_ID:
+        return "E_LOCAPI_UPDATE_BATCHING_OPTIONS_MSG_ID";
+    case E_LOCAPI_BATCHING_MSG_ID:
+        return "E_LOCAPI_BATCHING_MSG_ID";
+    case E_LOCAPI_ADD_GEOFENCES_MSG_ID:
+        return "E_LOCAPI_ADD_GEOFENCES_MSG_ID";
+    case E_LOCAPI_REMOVE_GEOFENCES_MSG_ID:
+        return "E_LOCAPI_REMOVE_GEOFENCES_MSG_ID";
+    case E_LOCAPI_MODIFY_GEOFENCES_MSG_ID:
+        return "E_LOCAPI_MODIFY_GEOFENCES_MSG_ID";
+    case E_LOCAPI_PAUSE_GEOFENCES_MSG_ID:
+        return "E_LOCAPI_PAUSE_GEOFENCES_MSG_ID";
+    case E_LOCAPI_RESUME_GEOFENCES_MSG_ID:
+        return "E_LOCAPI_RESUME_GEOFENCES_MSG_ID";
+    case E_LOCAPI_GEOFENCE_BREACH_MSG_ID:
+        return "E_LOCAPI_GEOFENCE_BREACH_MSG_ID";
+    case E_LOCAPI_MEAS_MSG_ID:
+        return "E_LOCAPI_MEAS_MSG_ID";
+    case E_LOCAPI_PINGTEST_MSG_ID:
+        return "E_LOCAPI_PINGTEST_MSG_ID";
+    case E_INTAPI_CONFIG_CONSTRAINTED_TUNC_MSG_ID:
+        return "E_INTAPI_CONFIG_CONSTRAINTED_TUNC_MSG_ID";
+    case E_INTAPI_CONFIG_POSITION_ASSISTED_CLOCK_ESTIMATOR_MSG_ID:
+        return "E_INTAPI_CONFIG_POSITION_ASSISTED_CLOCK_ESTIMATOR_MSG_ID";
+    case E_INTAPI_CONFIG_SV_CONSTELLATION_MSG_ID:
+        return "E_INTAPI_CONFIG_SV_CONSTELLATION_MSG_ID";
+    case E_INTAPI_CONFIG_AIDING_DATA_DELETION_MSG_ID:
+        return "E_INTAPI_CONFIG_AIDING_DATA_DELETION_MSG_ID";
+    case E_INTAPI_CONFIG_LEVER_ARM_MSG_ID:
+        return "E_INTAPI_CONFIG_LEVER_ARM_MSG_ID";
+    case E_INTAPI_CONFIG_ROBUST_LOCATION_MSG_ID:
+        return "E_INTAPI_CONFIG_ROBUST_LOCATION_MSG_ID";
+    case E_INTAPI_CONFIG_MIN_GPS_WEEK_MSG_ID:
+        return "E_INTAPI_CONFIG_MIN_GPS_WEEK_MSG_ID";
+    case E_INTAPI_CONFIG_DEAD_RECKONING_ENGINE_MSG_ID:
+        return "E_INTAPI_CONFIG_DEAD_RECKONING_ENGINE_MSG_ID";
+    case E_INTAPI_CONFIG_MIN_SV_ELEVATION_MSG_ID:
+        return "E_INTAPI_CONFIG_MIN_SV_ELEVATION_MSG_ID";
+    case E_INTAPI_CONFIG_CONSTELLATION_SECONDARY_BAND_MSG_ID:
+        return "E_INTAPI_CONFIG_CONSTELLATION_SECONDARY_BAND_MSG_ID";
+    case E_INTAPI_CONFIG_OUTPUT_NMEA_TYPES_MSG_ID:
+        return "E_INTAPI_CONFIG_OUTPUT_NMEA_TYPES_MSG_ID";
+    case E_INTAPI_CONFIG_ENGINE_INTEGRITY_RISK_MSG_ID:
+        return "E_INTAPI_CONFIG_ENGINE_INTEGRITY_RISK_MSG_ID";
+    case E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID:
+        return "E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID";
+    case E_INTAPI_GET_ROBUST_LOCATION_CONFIG_RESP_MSG_ID:
+        return "E_INTAPI_GET_ROBUST_LOCATION_CONFIG_RESP_MSG_ID";
+    case E_INTAPI_GET_MIN_GPS_WEEK_REQ_MSG_ID:
+        return "E_INTAPI_GET_MIN_GPS_WEEK_REQ_MSG_ID";
+    case E_INTAPI_GET_MIN_GPS_WEEK_RESP_MSG_ID:
+        return "E_INTAPI_GET_MIN_GPS_WEEK_RESP_MSG_ID";
+    case E_INTAPI_GET_MIN_SV_ELEVATION_REQ_MSG_ID:
+        return "E_INTAPI_GET_MIN_SV_ELEVATION_REQ_MSG_ID";
+    case E_INTAPI_GET_MIN_SV_ELEVATION_RESP_MSG_ID:
+        return "E_INTAPI_GET_MIN_SV_ELEVATION_RESP_MSG_ID";
+    case E_INTAPI_GET_CONSTELLATION_SECONDARY_BAND_CONFIG_REQ_MSG_ID:
+        return "E_INTAPI_GET_CONSTELLATION_SECONDARY_BAND_CONFIG_REQ_MSG_ID";
+    case E_INTAPI_GET_CONSTELLATION_SECONDARY_BAND_CONFIG_RESP_MSG_ID:
+        return "E_INTAPI_GET_CONSTELLATION_SECONDARY_BAND_CONFIG_RESP_MSG_ID";
+    case E_INTAPI_GET_XTRA_STATUS_REQ_MSG_ID:
+        return "E_INTAPI_GET_XTRA_STATUS_REQ_MSG_ID";
+    case E_INTAPI_GET_XTRA_STATUS_RESP_MSG_ID:
+        return "E_INTAPI_GET_XTRA_STATUS_REQ_MSG_ID";
+    case E_INTAPI_REGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID:
+        return "E_INTAPI_REGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID";
+    case E_INTAPI_DEREGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID:
+        return "E_INTAPI_DEREGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID";
+    case E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_REQ_MSG_ID:
+        return "E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_REQ_MSG_ID";
+    case E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_RESP_MSG_ID:
+        return "E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_RESP_MSG_ID";
+    default:
+        return "unknown ELocMsgID";
+    }
+}
 
 // SERIALIZE RIGID TO PROTOBUF FORMAT
 // **********************************
@@ -2303,6 +2425,7 @@ int LocAPIPingTestReqMsg::serializeToProtobuf(string& protoStr) {
 // Convert LocConfigEngineIntegrityRiskReqMsg ->
 // PBLocConfigEngineIntegrityRiskReqMsg
 int LocConfigEngineIntegrityRiskReqMsg::serializeToProtobuf(string& protoStr) {
+
     PBLocAPIMsgHeader pLocApiMsgHdr;
     PBLocConfigEngineIntegrityRiskReqMsg pbLocConfMsg;
 
@@ -2399,6 +2522,88 @@ int LocAPIPingTestIndMsg::serializeToProtobuf(string& protoStr) {
     return protoStr.size();
 }
 
+// Convert LocConfigRegisterGnssSignalTypesUpdateReqMsg ->
+// PBLocConfigRegisterGnssSignalTypesUpdateReqMsg
+int LocConfigRegisterGnssSignalTypesUpdateReqMsg::serializeToProtobuf(string& protoStr) {
+    PBLocAPIMsgHeader pLocApiMsgHdr;
+    PBLocConfigRegisterGnssSignalTypesUpdateReqMsg pbMsg;
+
+    if (nullptr == pLocApiPbMsgConv) {
+        LOC_LOGe("pLocApiPbMsgConv is null!");
+        return 0;
+    }
+    // string      mSocketName = 1;
+    pLocApiMsgHdr.set_msocketname(mSocketName);
+    // PBELocMsgID  msgId = 2;
+    pLocApiMsgHdr.set_msgid(pLocApiPbMsgConv->getPBEnumForELocMsgID(msgId));
+    // uint32   msgVersion = 3;
+    pLocApiMsgHdr.set_msgversion(msgVersion);
+
+    // bool mRegisterUpdate = 1;
+    pbMsg.set_mregisterupdate(mRegisterUpdate);
+
+    string pbStr;
+    if (!pbMsg.SerializeToString(&pbStr)) {
+        LOC_LOGe("SerializeToString failed!");
+        return 0;
+    }
+    // bytes       payload = 4;
+    pLocApiMsgHdr.set_payload(pbStr);
+    // uint32   payloadSize = 5;
+    pLocApiMsgHdr.set_payloadsize(sizeof(LocConfigRegisterGnssSignalTypesUpdateReqMsg));
+
+    if (!pLocApiMsgHdr.SerializeToString(&protoStr)) {
+        LOC_LOGe("SerializeToString on pLocApiMsgHdr failed!");
+        return 0;
+    }
+    return protoStr.size();
+}
+// Convert LocConfigRegisterGnssSignalTypesUpdateRespMsg ->
+// PBLocConfigRegisterGnssSignalTypesUpdateRespMsg
+int LocConfigRegisterGnssSignalTypesUpdateRespMsg::serializeToProtobuf(string& protoStr) {
+    PBLocAPIMsgHeader pLocApiMsgHdr;
+    PBLocConfigRegisterGnssSignalTypesUpdateRespMsg pbMsg;
+
+    if (nullptr == pLocApiPbMsgConv) {
+        LOC_LOGe("pLocApiPbMsgConv is null!");
+        return 0;
+    }
+    // string      mSocketName = 1;
+    pLocApiMsgHdr.set_msocketname(mSocketName);
+    // PBELocMsgID  msgId = 2;
+    pLocApiMsgHdr.set_msgid(pLocApiPbMsgConv->getPBEnumForELocMsgID(msgId));
+    // uint32   msgVersion = 3;
+    pLocApiMsgHdr.set_msgversion(msgVersion);
+
+    //GnssSignalTypeMask mSignalTypeMask = 1;
+    pbMsg.set_msignaltypemask(pLocApiPbMsgConv->getPBMaskForGnssSignalTypeMask(mSignalTypeMask));
+
+    string pbStr;
+    if (!pbMsg.SerializeToString(&pbStr)) {
+        LOC_LOGe("SerializeToString on pbMsg failed!");
+        return 0;
+    }
+    // bytes       payload = 4;
+    pLocApiMsgHdr.set_payload(pbStr);
+
+    // uint32   payloadSize = 5;
+    pLocApiMsgHdr.set_payloadsize(sizeof(LocConfigRegisterGnssSignalTypesUpdateRespMsg));
+
+    if (!pLocApiMsgHdr.SerializeToString(&protoStr)) {
+        LOC_LOGe("SerializeToString on pLocApiMsgHdr failed!");
+        return 0;
+    }
+    return protoStr.size();
+}
+// Decode PBLocConfigRegisterGnssSignalTypesUpdateRespMsg ->
+// LocConfigRegisterGnssSignalTypesUpdateRespMsg
+LocConfigRegisterGnssSignalTypesUpdateRespMsg::LocConfigRegisterGnssSignalTypesUpdateRespMsg(
+        const char* name, const PBLocConfigRegisterGnssSignalTypesUpdateRespMsg &pbMsg,
+        const LocationApiPbMsgConv *pbMsgConv) :
+        LocAPIMsgHeader(name, E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_RESP_MSG_ID, pbMsgConv) {
+    mSignalTypeMask = pLocApiPbMsgConv->getPBMaskForGnssSignalTypeMask(pbMsg.msignaltypemask());
+    LOC_LOGd("supported GNSS signal type: %x", mSignalTypeMask);
+}
 
 // SERIALIZE PROTOBUF TO RIGID FORMAT
 // **********************************

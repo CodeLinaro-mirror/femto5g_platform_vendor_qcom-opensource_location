@@ -315,6 +315,15 @@ enum ELocMsgID {
 
     E_INTAPI_GET_CONSTELLATION_SECONDARY_BAND_CONFIG_REQ_MSG_ID = 306,
     E_INTAPI_GET_CONSTELLATION_SECONDARY_BAND_CONFIG_RESP_MSG_ID = 307,
+
+    E_INTAPI_GET_XTRA_STATUS_REQ_MSG_ID = 308,
+    E_INTAPI_GET_XTRA_STATUS_RESP_MSG_ID = 309,
+
+    E_INTAPI_REGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID = 310,
+    E_INTAPI_DEREGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID = 311,
+
+    E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_REQ_MSG_ID = 312,
+    E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_RESP_MSG_ID = 313,
 };
 
 typedef uint32_t LocationCallbacksMask;
@@ -1316,6 +1325,37 @@ struct LocConfigGetConstellationSecondaryBandConfigRespMsg: LocAPIMsgHeader
     LocConfigGetConstellationSecondaryBandConfigRespMsg(const char* name,
             const PBLocConfigGetConstltnSecondaryBandConfigRespMsg &pbCfgGetConstSecBandCfgResp,
             const LocationApiPbMsgConv *pbMsgConv);
+
+    int serializeToProtobuf(string& protoStr) override;
+};
+
+struct LocConfigRegisterGnssSignalTypesUpdateReqMsg: LocAPIMsgHeader {
+    bool mRegisterUpdate;
+    inline LocConfigRegisterGnssSignalTypesUpdateReqMsg(const char* name,
+                                bool registerUpdate,
+                                const LocationApiPbMsgConv *pbMsgConv) :
+        LocAPIMsgHeader(name, E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_REQ_MSG_ID, pbMsgConv),
+        mRegisterUpdate(registerUpdate) { }
+    inline LocConfigRegisterGnssSignalTypesUpdateReqMsg(
+            const char* name, PBLocConfigRegisterGnssSignalTypesUpdateReqMsg& pbMsg,
+            const LocationApiPbMsgConv *pbMsgConv) :
+        LocAPIMsgHeader(name, E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_REQ_MSG_ID, pbMsgConv),
+        mRegisterUpdate(pbMsg.mregisterupdate()) { }
+
+    int serializeToProtobuf(string& protoStr) override;
+};
+
+struct LocConfigRegisterGnssSignalTypesUpdateRespMsg : LocAPIMsgHeader {
+    GnssSignalTypeMask mSignalTypeMask;
+
+    inline LocConfigRegisterGnssSignalTypesUpdateRespMsg(const char* name,
+                                GnssSignalTypeMask signalTypeMask,
+                                const LocationApiPbMsgConv *pbMsgConv) :
+        LocAPIMsgHeader(name, E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_RESP_MSG_ID, pbMsgConv),
+        mSignalTypeMask(signalTypeMask) { }
+    LocConfigRegisterGnssSignalTypesUpdateRespMsg(const char* name,
+                            const PBLocConfigRegisterGnssSignalTypesUpdateRespMsg &pbMsg,
+                            const LocationApiPbMsgConv *pbMsgConv);
 
     int serializeToProtobuf(string& protoStr) override;
 };
