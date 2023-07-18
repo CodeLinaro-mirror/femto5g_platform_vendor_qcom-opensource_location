@@ -622,6 +622,8 @@ public:
     XtraDataStatus getXtraDataStatusFromPB(const PBXtraDataStatus &pbXtraDataStatus) const;
     PBXtraDataStatus getPBEnumForXtraDataStatus(const XtraDataStatus &xtraDataStatus) const;
     PBOdcpiPriority getPBEnumForOdcpiPriority(const OdcpiPrioritytype &priority) const;
+    // GnssSignalTypeMask to PBGnssSignalTypeMask
+    uint32_t getPBMaskForGnssSignalTypeMask(const uint32_t &gnssSignalTypeMask) const;
 
 private:
     bool mPbDebugLogEnabled;
@@ -749,8 +751,6 @@ private:
             const uint32_t &gnssGloTimeStructTypeFlags) const;
     // GnssSvOptionsMask to PBLocApiGnssSvOptionsMask
     uint32_t getPBMaskForGnssSvOptionsMask(const uint32_t &gnssSvOptMask) const;
-    // GnssSignalTypeMask to PBGnssSignalTypeMask
-    uint32_t getPBMaskForGnssSignalTypeMask(const uint32_t &gnssSignalTypeMask) const;
     // GeofenceBreachTypeMask to PBGeofenceBreachTypeMask
     uint32_t getPBMaskForGeofenceBreachTypeMask(const uint32_t &gfBreachTypeMask) const;
     // DeadReckoningEngineConfigValidMask to PBDeadReckoningEngineConfigValidMask
