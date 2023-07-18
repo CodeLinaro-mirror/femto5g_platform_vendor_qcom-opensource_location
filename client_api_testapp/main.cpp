@@ -171,6 +171,7 @@ enum TrackingSessionType {
 #define CONFIG_OSNMA_ENABLEMENT     "configOsnmaEnablement"
 #define REGISTER_XTRA_STATUS_UPDATE "registerXtraUpdateStatus"
 #define ENABLE_XTRA_ON_DEMAND_DOWNLOAD "enableXtraOnDemandDownload"
+#define REGISTER_SIGNAL_TYPES_UPDATE "registerGnssSignalTypesUpdate"
 #define ADD_GEOFENCES               "addGeofences"
 #define PAUSE_GEOFENCES             "pauseGeofences"
 #define RESUME_GEOFENCES            "resumeGeofences"
@@ -557,6 +558,10 @@ static void onGetXtraStatusCb(XtraStatusUpdateTrigger updateTrigger, const XtraS
            xtraStatus.xtraValidForHours);
 }
 
+static void onGnssSignalTypesCb(GnssSignalTypeMask signalType) {
+    printf("<<< onGnssSignalTypesCb, supported signalType mask %x \n", signalType);
+}
+
 static void printHelp() {
     printf("\n************* options *************\n");
     printf("e reprottype tbf: Concurrent engine report session with 100 ms interval\n");
@@ -605,6 +610,7 @@ static void printHelp() {
     printf("%s: config osnam enablement \n", CONFIG_OSNMA_ENABLEMENT);
     printf("%s: register xtra status update \n", REGISTER_XTRA_STATUS_UPDATE);
     printf("%s: enable xtra on demand download \n", ENABLE_XTRA_ON_DEMAND_DOWNLOAD);
+    printf("%s: register GNSS signal types update \n", REGISTER_SIGNAL_TYPES_UPDATE);
     printf("%s: add geofences with lat/lon/radius/breachtype/responsiveness/dwelltime\n",
             ADD_GEOFENCES);
     printf("%s: pause geofences with indexes\n",  PAUSE_GEOFENCES );
@@ -1928,6 +1934,7 @@ int main(int argc, char *argv[]) {
     intCbs.getConstellationSecondaryBandConfigCb =
             LocConfigGetConstellationSecondaryBandConfigCb(onGetSecondaryBandConfigCb);
     intCbs.getXtraStatusCb = LocConfigGetXtraStatusCb(onGetXtraStatusCb);
+    intCbs.gnssSignalTypesCb = LocConfigGnssSignalTypesCb(onGnssSignalTypesCb);
 
     LocConfigPriorityMap priorityMap;
     pIntClient = new LocationIntegrationApi(priorityMap, intCbs);
@@ -2309,6 +2316,17 @@ int main(int argc, char *argv[]) {
             }
             printf("config osnma enablement %d\n", enable);
             pIntClient->configOsnmaEnablement(enable);
+        } else if (strncmp(buf, REGISTER_SIGNAL_TYPES_UPDATE,
+                           strlen(REGISTER_SIGNAL_TYPES_UPDATE)) == 0) {
+            bool registerUpdate = false;;
+            static char *save = nullptr;
+            char* token = strtok_r(buf, " ", &save);
+            token = strtok_r(NULL, " ", &save);
+            if (token != NULL) {
+                registerUpdate = (atoi(token) != 0);
+            }
+            printf("register GNSS signal types update %d\n", registerUpdate);
+            pIntClient->registerGnssSignalTypesUpdate(registerUpdate);
         } else if (strncmp(buf, ADD_GEOFENCES,
                            strlen(ADD_GEOFENCES)) == 0) {
             printf("usage: addGeofences "
