@@ -7302,6 +7302,10 @@ bool LocApiV02 :: convertGnssMeasurements(
             tempAdrData.nHzMeasurement = gnss_measurement_report_ptr.nHzMeasurement;
             *it = tempAdrData;
         } else {
+            // set cycle slip bit if it is not found in the previous epoch
+            measurementData.adrStateMask |=
+                    GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_CYCLE_SLIP_BIT;
+
             // now add the current satellite info to the vector
             tempAdrData.counter = mCounter;
             tempAdrData.system = gnss_measurement_report_ptr.system;
@@ -11207,19 +11211,22 @@ void LocApiV02::getConstellationMultiBandConfig(
 void LocApiV02::convertOsnmaTreeNode(qmiLocOsnmaTreeNodeT_v02& out, mgpOsnmaTreeNodeT& in) {
     out.height = in.uj;
     out.position = in.ui;
-    out.hash_len = in.wLengthInBits;
+    out.hash_len = in.wLengthInBits / 8; // hash_len is the # of hash elements in uint8_t
+    LOC_LOGv("in.wLengthInBits : %d, out.hash_len: %d", in.wLengthInBits, out.hash_len);
     memcpy(out.hash, in.uHash, sizeof(in.uHash));
 }
 
 void LocApiV02::convertPublicKeyAndMerkleTreeStruct(
         qmiLocOsnmaPublicKeyMerkleTreeReqMsgT_v02& qmiOut,
         mgpOsnmaPublicKeyAndMerkleTreeStruct& in) {
-    qmiOut.publicKeyType_valid = in.zPublicKey.uFlag;
+    qmiOut.publicKeyType_valid = true;
     qmiOut.publicKeyType = (qmiLocPublicKeyTypeEnumT_v02)in.zPublicKey.eNpkt;
     qmiOut.publicKeyId = in.zPublicKey.uNpkId;
     qmiOut.publicKeyId_valid = true;
     qmiOut.publicKey_valid = true;
-    qmiOut.publicKey_len = in.zPublicKey.wKeyLen;
+    qmiOut.publicKey_len = in.zPublicKey.wKeyLen / 8; // publicKey_len is the # of keys in uint8_t
+    LOC_LOGv("in.zPublicKey.wKeyLen : %d, qmiOut.publicKey_len: %d", in.zPublicKey.wKeyLen,
+            qmiOut.publicKey_len);
     memcpy(qmiOut.publicKey, in.zPublicKey.uKey, sizeof(in.zPublicKey.uKey));
     for (int i = 0; i < QMI_LOC_MERKLE_TREE_NODE_ARRAY_LENGTH_V02; ++i) {
         convertOsnmaTreeNode(qmiOut.intermediateNodes[i], in.zPublicKey.zNodes[i]);
@@ -11227,7 +11234,7 @@ void LocApiV02::convertPublicKeyAndMerkleTreeStruct(
     qmiOut.intermediateNodes_valid = true;
     qmiOut.hashFunctionType_valid = true;
     qmiOut.hashFunctionType = (qmiLocHashFunctionTypeEnumT_v02)in.zMerkleTree.eHfType;
-    qmiOut.rootNode_valid = in.zMerkleTree.uFlag;
+    qmiOut.rootNode_valid = true;
     convertOsnmaTreeNode(qmiOut.rootNode, in.zMerkleTree.zRootNode);
 }
 

@@ -1583,11 +1583,16 @@ void getTrackingParams(char *buf, uint32_t *reportTypePtr, uint32_t *tbfMsecPtr,
     }
 
     // initialize to default value in case of invalid input
-    if (*reportTypePtr == 0) {
-        *reportTypePtr = 0xFF;
+    if (reportTypePtr) {
+        if (*reportTypePtr == 0) {
+            *reportTypePtr = 0xFF;
+        }
     }
-    if (*tbfMsecPtr == 0) {
-        *tbfMsecPtr = 100;
+
+    if (tbfMsecPtr) {
+        if (*tbfMsecPtr == 0) {
+            *tbfMsecPtr = 100;
+        }
     }
     if (reqEngMaskPtr) {
         if (*reqEngMaskPtr == (LocReqEngineTypeMask) 0) {
@@ -1821,7 +1826,7 @@ void menuRemoveGeofence() {
     pLcaClient->removeGeofences(removeGfVec);
 }
 void geofenceTestMenu() {
-    char buf[16], *p;
+    char buf[16], *p = NULL;
     bool exit_loop = false;
 
     while (!exit_loop)
@@ -1839,8 +1844,9 @@ void geofenceTestMenu() {
         p = fgets (buf, 16, stdin);
         if (p == nullptr) {
             printf("Error: fgets returned nullptr !!");
+            exit_loop = true;
+            continue;
         }
-
         switch (p[0]) {
         case '1':
             menuAddGeofence();
