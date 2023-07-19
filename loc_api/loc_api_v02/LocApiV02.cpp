@@ -191,7 +191,8 @@ typedef enum {
     RF_LOSS_GAL_CONF        = 7,
     RF_LOSS_GAL_E5_CONF     = 8,
     RF_LOSS_NAVIC_CONF      = 9,
-    RF_LOSS_MAX_CONF        = 10
+    RF_LOSS_BDS_B2B_CONF    = 10,
+    RF_LOSS_MAX_CONF        = 11
 } rfLossConf;
 
 static uint32_t rfLossNV[RF_LOSS_MAX_CONF] = { 0 };
@@ -209,6 +210,7 @@ static loc_param_s_type gps_conf_param_table[] =
     { "RF_LOSS_GAL",                &rfLossNV[RF_LOSS_GAL_CONF],        NULL, 'n' },
     { "RF_LOSS_GAL_E5",             &rfLossNV[RF_LOSS_GAL_E5_CONF],     NULL, 'n' },
     { "RF_LOSS_NAVIC",              &rfLossNV[RF_LOSS_NAVIC_CONF],      NULL, 'n' },
+    { "RF_LOSS_BDS_B2B",            &rfLossNV[RF_LOSS_BDS_B2B_CONF],    NULL, 'n' },
 };
 
 /* static event callbacks that call the LocApiV02 callbacks*/
@@ -349,7 +351,7 @@ LocApiV02 :: LocApiV02(LOC_API_ADAPTER_EVENT_MASK_T exMask,
                        ContextBase* context):
     LocApiBase(exMask, context),
     clientHandle(LOC_CLIENT_INVALID_HANDLE_VALUE),
-    mQmiMask(0), mInSession(false), mPowerMode(GNSS_POWER_MODE_INVALID),
+    mQmiMask(0), mInSession(false), mPowerMode(GNSS_POWER_MODE_DEFAULT),
     mEngineOn(false), mMeasurementsStarted(false),
     mMasterRegisterNotSupported(false),
     mCounter(0), mMinInterval(1000),
@@ -736,8 +738,9 @@ locClientEventMaskType LocApiV02 :: adjustLocClientEventMask(locClientEventMaskT
     // By default, every loc api client will need to registers for power state event
     qmiMask |= QMI_LOC_EVENT_MASK_PLATFORM_POWER_STATE_CHANGED_V02;
 
-    if ((mPlatformPowerState == eQMI_LOC_POWER_STATE_SUSPENDED_V02) ||
-        (mPlatformPowerState == eQMI_LOC_POWER_STATE_SHUTDOWN_V02)) {
+    if ((eQMI_LOC_POWER_STATE_SUSPENDED_V02 == mPlatformPowerState) ||
+            (eQMI_LOC_POWER_STATE_SHUTDOWN_V02 == mPlatformPowerState) ||
+                (eQMI_LOC_POWER_STATE_DEEP_SLEEP_ENTRY_V02 == mPlatformPowerState)) {
         // device in suspended/shutdown state, clear the engine state mask
         // to avoid wake up
         qmiMask &= ~QMI_LOC_EVENT_MASK_ENGINE_STATE_V02;
@@ -3834,6 +3837,9 @@ void  LocApiV02 :: reportSv (
                         case GNSS_SIGNAL_BEIDOU_B2AI:
                             rfLoss = rfLossNV[RF_LOSS_BDS_B2A_CONF]/10.0;
                             break;
+                        case GNSS_SIGNAL_BEIDOU_B2BI:
+                            rfLoss = rfLossNV[RF_LOSS_BDS_B2B_CONF]/10.0;
+                            break;
                         case GNSS_SIGNAL_GLONASS_G1:
                         case GNSS_SIGNAL_GLONASS_G2:
                             {
@@ -5798,8 +5804,6 @@ void LocApiV02::setGnssBiases() {
                 measData->flags |= GNSS_MEASUREMENTS_DATA_FULL_ISB_UNCERTAINTY_BIT;
             }
             break;
-
-
         /* not supported */
         case GNSS_SIGNAL_GPS_L1C:
         case GNSS_SIGNAL_GLONASS_G2:
@@ -7000,6 +7004,10 @@ bool LocApiV02 :: convertGnssMeasurements(
             tempAdrData.nHzMeasurement = gnss_measurement_report_ptr.nHzMeasurement;
             *it = tempAdrData;
         } else {
+            // set cycle slip bit if it is not found in the previous epoch
+            measurementData.adrStateMask |=
+                    GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_CYCLE_SLIP_BIT;
+
             // now add the current satellite info to the vector
             tempAdrData.counter = mCounter;
             tempAdrData.system = gnss_measurement_report_ptr.system;
@@ -7349,8 +7357,9 @@ void LocApiV02 :: eventCb(locClientHandleType /*clientHandle*/,
   uint32_t eventId, locClientEventIndUnionType eventPayload)
 {
   LOC_LOGd("event id = 0x%X, event name %s", eventId, loc_get_v02_event_name(eventId));
-  if ((mPlatformPowerState == eQMI_LOC_POWER_STATE_SUSPENDED_V02) ||
-            (mPlatformPowerState == eQMI_LOC_POWER_STATE_SHUTDOWN_V02)) {
+  if ((eQMI_LOC_POWER_STATE_SUSPENDED_V02 == mPlatformPowerState) ||
+        (eQMI_LOC_POWER_STATE_DEEP_SLEEP_ENTRY_V02 == mPlatformPowerState) ||
+            (eQMI_LOC_POWER_STATE_SHUTDOWN_V02 == mPlatformPowerState)) {
       syslog(LOG_INFO, "eventCb: event id = 0x%X, event name %s",
              eventId, loc_get_v02_event_name(eventId));
   }
@@ -7895,6 +7904,12 @@ void LocApiV02 :: updateSystemPowerState(PowerStateType powerState){
         break;
     case POWER_STATE_SHUTDOWN:
         qmiPowerState = eQMI_LOC_POWER_STATE_SHUTDOWN_V02;
+        break;
+    case POWER_STATE_DEEP_SLEEP_ENTRY:
+        qmiPowerState = eQMI_LOC_POWER_STATE_DEEP_SLEEP_ENTRY_V02;
+        break;
+    case POWER_STATE_DEEP_SLEEP_EXIT:
+        qmiPowerState = eQMI_LOC_POWER_STATE_DEEP_SLEEP_EXIT_V02;
         break;
     default:
         break;
@@ -8742,7 +8757,8 @@ locClientStatusEnumType LocApiV02::locSyncSendReq(uint32_t req_id,
     if (eLOC_CLIENT_FAILURE_ENGINE_BUSY == status ||
             (eLOC_CLIENT_SUCCESS == status && nullptr != ind_payload_ptr &&
             eQMI_LOC_ENGINE_BUSY_V02 == *((qmiLocStatusEnumT_v02*)ind_payload_ptr))) {
-        if (mPlatformPowerState == eQMI_LOC_POWER_STATE_RESUME_V02 &&
+        if (((eQMI_LOC_POWER_STATE_RESUME_V02 == mPlatformPowerState) ||
+                (eQMI_LOC_POWER_STATE_DEEP_SLEEP_EXIT_V02 == mPlatformPowerState)) &&
             mResenders.empty() && ((mQmiMask & QMI_LOC_EVENT_MASK_ENGINE_STATE_V02) == 0)) {
             locClientRegisterEventMask(clientHandle,
                                        mQmiMask | QMI_LOC_EVENT_MASK_ENGINE_STATE_V02, isMaster());
@@ -10710,11 +10726,9 @@ LocApiV02::startTimeBasedTracking(const TrackingOptions& options, LocApiResponse
     }
 
     // power mode
-    if (GNSS_POWER_MODE_INVALID != options.powerMode) {
+    if (!(GNSS_POWER_MODE_DEFAULT == options.powerMode && options.tbm == 0)) {
         start_msg.powerMode_valid = 1;
-        start_msg.powerMode.powerMode =
-                convertPowerMode(options.powerMode);
-        start_msg.powerMode.timeBetweenMeasurement = options.tbm;
+        start_msg.powerMode.powerMode = convertPowerMode(options.powerMode);
         // Force low accuracy for background power modes
         if (GNSS_POWER_MODE_M3 == options.powerMode ||
                 GNSS_POWER_MODE_M4 == options.powerMode ||
@@ -10724,6 +10738,8 @@ LocApiV02::startTimeBasedTracking(const TrackingOptions& options, LocApiResponse
         // Force TBM = TBF for power mode M4
         if (GNSS_POWER_MODE_M4 == options.powerMode) {
             start_msg.powerMode.timeBetweenMeasurement = start_msg.minInterval;
+        } else {
+            start_msg.powerMode.timeBetweenMeasurement = options.tbm;
         }
     }
 
@@ -10871,19 +10887,22 @@ void LocApiV02::getConstellationMultiBandConfig(
 void LocApiV02::convertOsnmaTreeNode(qmiLocOsnmaTreeNodeT_v02& out, mgpOsnmaTreeNodeT& in) {
     out.height = in.uj;
     out.position = in.ui;
-    out.hash_len = in.wLengthInBits;
+    out.hash_len = in.wLengthInBits / 8; // hash_len is the # of hash elements in uint8_t
+    LOC_LOGv("in.wLengthInBits : %d, out.hash_len: %d", in.wLengthInBits, out.hash_len);
     memcpy(out.hash, in.uHash, sizeof(in.uHash));
 }
 
 void LocApiV02::convertPublicKeyAndMerkleTreeStruct(
         qmiLocOsnmaPublicKeyMerkleTreeReqMsgT_v02& qmiOut,
         mgpOsnmaPublicKeyAndMerkleTreeStruct& in) {
-    qmiOut.publicKeyType_valid = in.zPublicKey.uFlag;
+    qmiOut.publicKeyType_valid = true;
     qmiOut.publicKeyType = (qmiLocPublicKeyTypeEnumT_v02)in.zPublicKey.eNpkt;
     qmiOut.publicKeyId = in.zPublicKey.uNpkId;
     qmiOut.publicKeyId_valid = true;
     qmiOut.publicKey_valid = true;
-    qmiOut.publicKey_len = in.zPublicKey.wKeyLen;
+    qmiOut.publicKey_len = in.zPublicKey.wKeyLen / 8; // publicKey_len is the # of keys in uint8_t
+    LOC_LOGv("in.zPublicKey.wKeyLen : %d, qmiOut.publicKey_len: %d", in.zPublicKey.wKeyLen,
+            qmiOut.publicKey_len);
     memcpy(qmiOut.publicKey, in.zPublicKey.uKey, sizeof(in.zPublicKey.uKey));
     for (int i = 0; i < QMI_LOC_MERKLE_TREE_NODE_ARRAY_LENGTH_V02; ++i) {
         convertOsnmaTreeNode(qmiOut.intermediateNodes[i], in.zPublicKey.zNodes[i]);
@@ -10891,7 +10910,7 @@ void LocApiV02::convertPublicKeyAndMerkleTreeStruct(
     qmiOut.intermediateNodes_valid = true;
     qmiOut.hashFunctionType_valid = true;
     qmiOut.hashFunctionType = (qmiLocHashFunctionTypeEnumT_v02)in.zMerkleTree.eHfType;
-    qmiOut.rootNode_valid = in.zMerkleTree.uFlag;
+    qmiOut.rootNode_valid = true;
     convertOsnmaTreeNode(qmiOut.rootNode, in.zMerkleTree.zRootNode);
 }
 
@@ -11148,7 +11167,7 @@ LocApiV02::stopTimeBasedTracking(LocApiResponse* adapterResponse)
     } else {
         mIsFirstFinalFixReported = false;
         mInSession = false;
-        mPowerMode = GNSS_POWER_MODE_INVALID;
+        mPowerMode = GNSS_POWER_MODE_DEFAULT;
         registerEventMask();
     }
 

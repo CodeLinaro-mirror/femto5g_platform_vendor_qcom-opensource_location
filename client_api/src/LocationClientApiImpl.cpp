@@ -453,6 +453,12 @@ GnssSignalTypeMask LocationClientApiImpl::parseGnssSignalType(
     if (halGnssSignalTypeMask & ::GNSS_SIGNAL_BEIDOU_B2) {
         gnssSignalTypeMask |= GNSS_SIGNAL_BEIDOU_B2;
     }
+    if (halGnssSignalTypeMask & ::GNSS_SIGNAL_BEIDOU_B2BI) {
+        gnssSignalTypeMask |= GNSS_SIGNAL_BEIDOU_B2BI_BIT;
+    }
+    if (halGnssSignalTypeMask & ::GNSS_SIGNAL_BEIDOU_B2BQ) {
+        gnssSignalTypeMask |= GNSS_SIGNAL_BEIDOU_B2BQ_BIT;
+    }
     return (GnssSignalTypeMask)gnssSignalTypeMask;
 }
 
@@ -2133,11 +2139,17 @@ void LocationClientApiImpl::addGeofences(const LocationCallbacks& callbacksOptio
             if (mApiImpl->mPositionSessionResponseCbPending) {
                 int cnt = mGeofences.size();
                 LocationError* errs = new LocationError[cnt];
-                uint32_t* ids = new uint32_t[cnt];
-                if (nullptr == errs || nullptr == ids) {
-                    LOC_LOGe("failed to create ClientIds/LocationErrors");
+                if (nullptr == errs) {
+                    LOC_LOGe("failed to create LocationErrors");
                     return;
                 }
+                uint32_t* ids = new uint32_t[cnt];
+                if (nullptr == ids) {
+                    LOC_LOGe("failed to create ClientIds");
+                    delete [] errs;
+                    return;
+                }
+                memset (ids, 0, cnt * sizeof(uint32_t));
                 for (int i = 0; i < cnt; ++i) {
                     errs[i] = ::LOCATION_ERROR_ALREADY_STARTED;
                     if (mGeofences[i].mGeofenceImpl) {
