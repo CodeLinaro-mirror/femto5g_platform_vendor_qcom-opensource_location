@@ -82,8 +82,8 @@ enum LocationApiMsgVersion {
     LOCAPI_MSG_VER_MAJOR = 1;
     // Minor - New features / API addition, new message/elemtent addition.
     // Bump the last byte of version i.e. x.2 to x.3
-    // Minor version 18: Add MerkleTree and OsnmaEnablement config msg
-    LOCAPI_MSG_VER_MINOR = 18;
+    // Minor version 19: Add support for LCA engine PVT report NMEA
+    LOCAPI_MSG_VER_MINOR = 19;
 }
 
 // ============================================================================
@@ -246,6 +246,8 @@ enum PBLocationCallbacksMask {
     PB_E_LOC_CB_GNSS_NHZ_MEAS_BIT           = 0x1000;
     /**< Register for disater and crisis report */
     PB_E_LOC_CB_GNSS_DC_REPORT_BIT          = 0x2000;
+    /**< Register for Engine NMEA */
+    PB_E_LOC_CB_ENGINE_NMEA_BIT             = 0x4000;
 }
 
 enum PBEngineInfoCallbacksMask {
@@ -275,6 +277,7 @@ enum PBGeofenceBreachTypeMask {
 message PBLocAPINmeaSerializedPayload {
     uint64 timestamp = 1;
     string nmea = 2;
+    PBLocApiOutputEngineType locOutputEngType = 3;
 }
 
 message PBLocAPIBatchNotification {
@@ -616,6 +619,7 @@ message PBLocConfigUserConsentTerrestrialPositioningReqMsg {
 message PBLocConfigOutputNmeaTypesReqMsg {
     uint32 nmeaTypesMask = 1;
     PBGnssGeodeticDatumType nmeaDatumType = 2;
+    uint32 nmeaReqEngMask = 3;
 }
 
 // defintion for message with msg id of
