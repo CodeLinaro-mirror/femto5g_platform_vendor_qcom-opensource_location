@@ -27,7 +27,7 @@
  */
 
 /*
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -490,9 +490,11 @@ LocEngineRunState LocationApiPbMsgConv::getEnumForPBLocEngineRunState(
         locEngRunState = LOC_ENGINE_RUN_STATE_PAUSE;
     } else if (pbLocEngRunState == PB_LOC_ENGINE_RUN_STATE_RESUME) {
         locEngRunState = LOC_ENGINE_RUN_STATE_RESUME;
+    } else if (pbLocEngRunState == PB_LOC_ENGINE_RUN_STATE_PAUSE_RETAIN) {
+        locEngRunState = LOC_ENGINE_RUN_STATE_PAUSE_RETAIN;
     }
 
-    LocApiPb_LOGv("LocApiPB: pbEngineRunState:%d, llocEngRunState:%d",
+    LocApiPb_LOGv("LocApiPB: pbEngineRunState:%d, locEngRunState:%d",
             pbLocEngRunState, locEngRunState);
     return locEngRunState;
 }
@@ -507,6 +509,8 @@ uint32_t LocationApiPbMsgConv::getPBEnumForLocEngineRunState(
         pbEngineRunState = PB_LOC_ENGINE_RUN_STATE_PAUSE;
     } else if (locEngineRunState ==LOC_ENGINE_RUN_STATE_RESUME) {
         pbEngineRunState = PB_LOC_ENGINE_RUN_STATE_RESUME;
+    } else if (locEngineRunState ==LOC_ENGINE_RUN_STATE_PAUSE_RETAIN) {
+        pbEngineRunState = PB_LOC_ENGINE_RUN_STATE_PAUSE_RETAIN;
     }
     LocApiPb_LOGd("LocApiPB: locEngineRunState: %d, pbEngineRunState: %d",
                   locEngineRunState, pbEngineRunState);
