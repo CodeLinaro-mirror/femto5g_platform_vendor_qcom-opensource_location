@@ -587,8 +587,10 @@ bool LocationIntegrationApi::configEngineRunState(LocIntegrationEngineType engTy
             halEngState = LOC_ENGINE_RUN_STATE_PAUSE;
         } else if (engState == LOC_INT_ENGINE_RUN_STATE_RESUME) {
             halEngState = LOC_ENGINE_RUN_STATE_RESUME;
+        } else if (engState == LOC_INT_ENGINE_RUN_STATE_PAUSE_RETAIN) {
+            halEngState = LOC_ENGINE_RUN_STATE_PAUSE_RETAIN;
         } else {
-             LOC_LOGe("unknown engine state %d", engState);
+            LOC_LOGe("unknown engine state %d", engState);
             return false;
         }
         return (mApiImpl->configEngineRunState(halEngType, halEngState) == 0);
