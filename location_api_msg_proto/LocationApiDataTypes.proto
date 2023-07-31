@@ -79,8 +79,8 @@ enum LocationApiDataTypesVersion {
     LOCAPI_DATA_TYPES_VER_MAJOR = 1;
     // Minor - New features / API addition, new message/elemtent addition.
     // Bump the last byte of version i.e. x.2 to x.3
-    // Minor version changes: Add missing feature IDs to PBLocationCapabilitiesMask
-    LOCAPI_DATA_TYPES_VER_MINOR = 26;
+    // Minor version 33: Add ENGINE_RUN_STATE_PAUSE_RETAIN
+    LOCAPI_DATA_TYPES_VER_MINOR = 33;
 }
 
 // ============================================================================
@@ -101,51 +101,55 @@ enum PBFixQualityLevel {
 
 /** GNSS Signal Type and RF Band */
 enum PBGnssSignalTypeMask {
-    PB_GNSS_SIGNAL_TYPE_MASK_INVALID = 0;
+    PB_GNSS_SIGNAL_TYPE_MASK_INVALID       = 0x00000000;
     /** GPS L1CA Signal */
-    PB_GNSS_SIGNAL_GPS_L1CA_BIT            = 1;
+    PB_GNSS_SIGNAL_GPS_L1CA_BIT            = 0x00000001;
     /** GPS L1C Signal */
-    PB_GNSS_SIGNAL_GPS_L1C_BIT             = 2;
+    PB_GNSS_SIGNAL_GPS_L1C_BIT             = 0x00000002;
     /** GPS L2 RF Band */
-    PB_GNSS_SIGNAL_GPS_L2_BIT              = 4;
+    PB_GNSS_SIGNAL_GPS_L2_BIT              = 0x00000004;
     /** GPS L5 RF Band */
-    PB_GNSS_SIGNAL_GPS_L5_BIT              = 8;
+    PB_GNSS_SIGNAL_GPS_L5_BIT              = 0x00000008;
     /** GLONASS G1 (L1OF) RF Band */
-    PB_GNSS_SIGNAL_GLONASS_G1_BIT          = 16;
+    PB_GNSS_SIGNAL_GLONASS_G1_BIT          = 0x00000010;
     /** GLONASS G2 (L2OF) RF Band */
-    PB_GNSS_SIGNAL_GLONASS_G2_BIT          = 32;
+    PB_GNSS_SIGNAL_GLONASS_G2_BIT          = 0x00000020;
     /** GALILEO E1 RF Band */
-    PB_GNSS_SIGNAL_GALILEO_E1_BIT          = 64;
+    PB_GNSS_SIGNAL_GALILEO_E1_BIT          = 0x00000040;
     /** GALILEO E5A RF Band */
-    PB_GNSS_SIGNAL_GALILEO_E5A_BIT         = 128;
+    PB_GNSS_SIGNAL_GALILEO_E5A_BIT         = 0x00000080;
     /** GALILEO E5B RF Band */
-    PB_GNSS_SIGNAL_GALILEO_E5B_BIT         = 256;
+    PB_GNSS_SIGNAL_GALILEO_E5B_BIT         = 0x00000100;
     /** BEIDOU B1 RF Band */
-    PB_GNSS_SIGNAL_BEIDOU_B1_BIT           = 512;
+    PB_GNSS_SIGNAL_BEIDOU_B1_BIT           = 0x00000200;
     /** BEIDOU B2 RF Band */
-    PB_GNSS_SIGNAL_BEIDOU_B2_BIT           = 1024;
+    PB_GNSS_SIGNAL_BEIDOU_B2_BIT           = 0x00000400;
     /** QZSS L1CA RF Band */
-    PB_GNSS_SIGNAL_QZSS_L1CA_BIT           = 2048;
+    PB_GNSS_SIGNAL_QZSS_L1CA_BIT           = 0x00000800;
     /** QZSS L1S RF Band */
-    PB_GNSS_SIGNAL_QZSS_L1S_BIT            = 4096;
+    PB_GNSS_SIGNAL_QZSS_L1S_BIT            = 0x00001000;
     /** QZSS L2 RF Band */
-    PB_GNSS_SIGNAL_QZSS_L2_BIT             = 8192;
+    PB_GNSS_SIGNAL_QZSS_L2_BIT             = 0x00002000;
     /** QZSS L5 RF Band */
-    PB_GNSS_SIGNAL_QZSS_L5_BIT             = 16384;
+    PB_GNSS_SIGNAL_QZSS_L5_BIT             = 0x00004000;
     /** SBAS L1 RF Band */
-    PB_GNSS_SIGNAL_SBAS_L1_BIT             = 32768;
+    PB_GNSS_SIGNAL_SBAS_L1_BIT             = 0x00008000;
     /** BEIDOU B1I RF Band */
-    PB_GNSS_SIGNAL_BEIDOU_B1I_BIT          = 65536;
+    PB_GNSS_SIGNAL_BEIDOU_B1I_BIT          = 0x00010000;
     /** BEIDOU B1C RF Band */
-    PB_GNSS_SIGNAL_BEIDOU_B1C_BIT          = 131072;
+    PB_GNSS_SIGNAL_BEIDOU_B1C_BIT          = 0x00020000;
     /** BEIDOU B2I RF Band */
-    PB_GNSS_SIGNAL_BEIDOU_B2I_BIT          = 262144;
+    PB_GNSS_SIGNAL_BEIDOU_B2I_BIT          = 0x00040000;
     /** BEIDOU B2AI RF Band */
-    PB_GNSS_SIGNAL_BEIDOU_B2AI_BIT         = 524288;
+    PB_GNSS_SIGNAL_BEIDOU_B2AI_BIT         = 0x00080000;
     /** NAVIC L5 RF Band */
-    PB_GNSS_SIGNAL_NAVIC_L5_BIT            = 1048576;
+    PB_GNSS_SIGNAL_NAVIC_L5_BIT            = 0x00100000;
     /** BEIDOU B2A_Q RF Band */
-    PB_GNSS_SIGNAL_BEIDOU_B2AQ_BIT         = 2097152;
+    PB_GNSS_SIGNAL_BEIDOU_B2AQ_BIT         = 0x00200000;
+    /** BEIDOU B2B_I RF Band */
+    PB_GNSS_SIGNAL_BEIDOU_B2BI_BIT         = 0x00400000;
+    /** BEIDOU B2B_Q RF Band */
+    PB_GNSS_SIGNAL_BEIDOU_B2BQ_BIT         = 0x00800000;
 }
 
 enum PBLocApiGnss_LocSvSystemEnumType {
@@ -330,17 +334,42 @@ enum PBLocationSystemInfoMask {
 }
 
 enum PBLocApiDrCalibrationStatusMask {
-    PB_DR_CALIBRATION_INVALID      = 0;
+    PB_DR_CALIBRATION_INVALID                = 0x00000000;
     // Indicate that roll calibration is needed. Need to take more turns on level ground
-    PB_DR_ROLL_CALIBRATION_NEEDED  = 1;
+    PB_DR_ROLL_CALIBRATION_NEEDED            = 0x00000001;
     // Indicate that pitch calibration is needed. Need to take more turns on level ground
-    PB_DR_PITCH_CALIBRATION_NEEDED = 2;
+    PB_DR_PITCH_CALIBRATION_NEEDED           = 0x00000002;
     // Indicate that yaw calibration is needed. Need to accelerate in a straight line
-    PB_DR_YAW_CALIBRATION_NEEDED   = 4;
+    PB_DR_YAW_CALIBRATION_NEEDED             = 0x00000004;
     // Indicate that odo calibration is needed. Need to accelerate in a straight line
-    PB_DR_ODO_CALIBRATION_NEEDED   = 8;
+    PB_DR_ODO_CALIBRATION_NEEDED             = 0x00000008;
     // Indicate that gyro calibration is needed. Need to take more turns on level ground
-    PB_DR_GYRO_CALIBRATION_NEEDED  = 16;
+    PB_DR_GYRO_CALIBRATION_NEEDED            = 0x00000010;
+    // Lot more turns on level ground needed
+    PB_DR_TURN_CALIBRATION_LOW               = 0x00000020;
+    // Some more turns on level ground needed
+    PB_DR_TURN_CALIBRATION_MEDIUM            = 0x00000040;
+    // Sufficient turns on level ground observed
+    PB_DR_TURN_CALIBRATION_HIGH              = 0x00000080;
+    // Lot more accelerations in straight line needed
+    PB_DR_LINEAR_ACCEL_CALIBRATION_LOW       = 0x00000100;
+    // Some more accelerations in straight line needed
+    PB_DR_LINEAR_ACCEL_CALIBRATION_MEDIUM    = 0x00000200;
+    // Sufficient acceleration events in straight line observed
+    PB_DR_LINEAR_ACCEL_CALIBRATION_HIGH      = 0x00000400;
+    // Lot more motion in straight line needed
+    PB_DR_LINEAR_MOTION_CALIBRATION_LOW      = 0x00000800;
+    // Some more motion in straight line needed
+    PB_DR_LINEAR_MOTION_CALIBRATION_MEDIUM   = 0x00001000;
+    // Sufficient motion events in straight line observed
+    PB_DR_LINEAR_MOTION_CALIBRATION_HIGH     = 0x00002000;
+    // Lot more stationary events on level ground needed
+    PB_DR_STATIC_CALIBRATION_LOW             = 0x00004000;
+    // Some more stationary events on level ground needed
+    PB_DR_STATIC_CALIBRATION_MEDIUM          = 0x00008000;
+    // Sufficient stationary events on level ground observed
+    PB_DR_STATIC_CALIBRATION_HIGH            = 0x00010000;
+
 }
 
 enum PBLeapSecondSysInfoMask {
@@ -444,9 +473,10 @@ enum PBLocApiPositioningEngineMask {
 }
 
 enum PBLocEngineRunState {
-    PB_LOC_ENGINE_RUN_STATE_INVALID = 0;
-    PB_LOC_ENGINE_RUN_STATE_PAUSE   = 1;
-    PB_LOC_ENGINE_RUN_STATE_RESUME  = 2;
+    PB_LOC_ENGINE_RUN_STATE_INVALID       = 0;
+    PB_LOC_ENGINE_RUN_STATE_PAUSE         = 1;
+    PB_LOC_ENGINE_RUN_STATE_RESUME        = 2;
+    PB_LOC_ENGINE_RUN_STATE_PAUSE_RETAIN  = 3;
 };
 
 enum PBDrEngineAidingDataMask {
@@ -456,10 +486,11 @@ enum PBDrEngineAidingDataMask {
 }
 
 enum PBGnssMeasurementsAdrStateMask {
-    PB_GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_UNKNOWN         = 0;
-    PB_GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_VALID_BIT       = 1;
-    PB_GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_RESET_BIT       = 2;
-    PB_GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_CYCLE_SLIP_BIT  = 4;
+    PB_GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_UNKNOWN                 = 0x00000000;
+    PB_GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_VALID_BIT               = 0x00000001;
+    PB_GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_RESET_BIT               = 0x00000002;
+    PB_GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_CYCLE_SLIP_BIT          = 0x00000004;
+    PB_GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_HALF_CYCLE_RESOLVED_BIT = 0x00000008;
 }
 
 enum PBGnssMeasurementsDataFlagsMask {
@@ -707,9 +738,23 @@ enum PBLIALeverArmTypeMask {
 }
 
 enum PBDrSolutionStatusMask {
-    PB_VEHICLE_DRSOLUTION_INVALID = 0;
-    PB_VEHICLE_SENSOR_SPEED_INPUT_DETECTED = 1;
-    PB_VEHICLE_SENSOR_SPEED_INPUT_USED = 2;
+    PB_VEHICLE_DRSOLUTION_INVALID             = 0x00000000;
+    PB_VEHICLE_SENSOR_SPEED_INPUT_DETECTED    = 0x00000001;
+    PB_VEHICLE_SENSOR_SPEED_INPUT_USED        = 0x00000002;
+    PB_DRE_WARNING_UNCALIBRATED               = 0x00000004;
+    PB_DRE_WARNING_GNSS_QUALITY_INSUFFICIENT  = 0x00000008;
+    PB_DRE_WARNING_FERRY_DETECTED             = 0x00000010;
+    PB_DRE_ERROR_6DOF_SENSOR_UNAVAILABLE      = 0x00000020;
+    PB_DRE_ERROR_VEHICLE_SPEED_UNAVAILABLE    = 0x00000040;
+    PB_DRE_ERROR_GNSS_EPH_UNAVAILABLE         = 0x00000080;
+    PB_DRE_ERROR_GNSS_MEAS_UNAVAILABLE        = 0x00000100;
+    PB_DRE_WARNING_INIT_POSITION_INVALID      = 0x00000200;
+    PB_DRE_WARNING_INIT_POSITION_UNRELIABLE   = 0x00000400;
+    PB_DRE_WARNING_POSITON_UNRELIABLE         = 0x00000800;
+    PB_DRE_ERROR_GENERIC                      = 0x00001000;
+    PB_DRE_WARNING_SENSOR_TEMP_OUT_OF_RANGE   = 0x00002000;
+    PB_DRE_WARNING_USER_DYNAMICS_INSUFFICIENT = 0x00004000;
+    PB_DRE_WARNING_FACTORY_DATA_INCONSISTENT  = 0x00008000;
 }
 
 enum PBLocationSessionStatus {
@@ -1302,6 +1347,10 @@ message PBGnssDcReportInfo {
     uint32              numValidBits = 2;
     // dc report data, packed into uint8_t
     repeated uint32     dcReportData = 3;
+    // SV's Pseudo-Random Number valid
+    bool              prnValid = 4;
+    // SV's Pseudo-Random Number
+    uint32              prn = 5;
 };
 
 message PBGnssConfigRobustLocationVersion {
@@ -1522,6 +1571,8 @@ message PBXtraConfigParams {
     bool xtraIntegrityDownloadEnable = 9;
     // XTRA integrity download interval in unit of minutes
     uint32 xtraIntegrityDownloadIntervalMinute = 10;
+    // To indicate if Diag logging to be enabled for XTRA
+    uint32 xtraDaemonDiagLoggingStatus = 11;
 };
 
 enum PBXtraStatusUpdateType {

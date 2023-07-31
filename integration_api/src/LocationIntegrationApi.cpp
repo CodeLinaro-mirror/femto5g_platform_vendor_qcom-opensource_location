@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -588,8 +588,10 @@ bool LocationIntegrationApi::configEngineRunState(LocIntegrationEngineType engTy
             halEngState = LOC_ENGINE_RUN_STATE_PAUSE;
         } else if (engState == LOC_INT_ENGINE_RUN_STATE_RESUME) {
             halEngState = LOC_ENGINE_RUN_STATE_RESUME;
+        } else if (engState == LOC_INT_ENGINE_RUN_STATE_PAUSE_RETAIN) {
+            halEngState = LOC_ENGINE_RUN_STATE_PAUSE_RETAIN;
         } else {
-             LOC_LOGe("unknown engine state %d", engState);
+            LOC_LOGe("unknown engine state %d", engState);
             return false;
         }
         return (mApiImpl->configEngineRunState(halEngType, halEngState) == 0);

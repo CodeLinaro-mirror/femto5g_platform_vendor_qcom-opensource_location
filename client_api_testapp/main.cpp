@@ -30,7 +30,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -1407,7 +1407,7 @@ int main(int argc, char *argv[]) {
         } else if (strncmp(buf, GET_MIN_SV_ELEVATION, strlen(GET_MIN_SV_ELEVATION)) == 0) {
             retVal = pIntClient->getMinSvElevation();
         } else if (strncmp(buf, CONFIG_ENGINE_RUN_STATE, strlen(CONFIG_ENGINE_RUN_STATE)) == 0) {
-            printf("%s 3(DRE) 1(pause)/2(resume)", CONFIG_ENGINE_RUN_STATE);
+            printf("%s 3(DRE) 1(pause)/2(resume)/3(pause_retain)", CONFIG_ENGINE_RUN_STATE);
             static char *save = nullptr;
             LocIntegrationEngineType engType = (LocIntegrationEngineType)0;
             LocIntegrationEngineRunState engState = (LocIntegrationEngineRunState) 0;
