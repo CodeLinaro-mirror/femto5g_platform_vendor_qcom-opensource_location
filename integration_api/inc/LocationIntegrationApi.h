@@ -62,7 +62,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 /*
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -225,6 +225,17 @@ enum LocIntegrationEngineRunState {
     /** Request the position engine to be put into resume state.
      *  <br/> */
     LOC_INT_ENGINE_RUN_STATE_RESUME   = 2,
+    /** Request the selected position engine to be put into pause state
+     *  while retaining of any useful state data.
+     *  This engine run state is currently applicable to QDR engine only.
+     *  It is strongly advised to link this state to a vehicle state in which
+     *  the vehicle is expected to be stationary at the time of invocation of API
+     *  and subsequently, until the state is changed to Running.
+     *  For QDR, transition out of PAUSE_RETAIN happens
+     *  when either the state is changed to RESUME state via same command OR
+     *  when the device taken through suspend/resume or reboot power-state cycles.
+     *  <br/> */
+    LOC_INT_ENGINE_RUN_STATE_PAUSE_RETAIN   = 3,
 };
 
 /**
