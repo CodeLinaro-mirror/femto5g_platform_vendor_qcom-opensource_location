@@ -79,8 +79,8 @@ enum LocationApiDataTypesVersion {
     LOCAPI_DATA_TYPES_VER_MAJOR = 1;
     // Minor - New features / API addition, new message/elemtent addition.
     // Bump the last byte of version i.e. x.2 to x.3
-    // Minor version 34: Add ntsKeServerURL in PBXtraConfigParams
-    LOCAPI_DATA_TYPES_VER_MINOR = 34;
+    // Minor version 35: Add ML feature capability
+    LOCAPI_DATA_TYPES_VER_MINOR = 35;
 }
 
 // ============================================================================
@@ -712,6 +712,8 @@ enum PBLocationCapabilitiesMask {
     /** This mask indicates supports SV Ephemeris for tightly coupled external
      * PPE engines. This is a Standalone Feature..  <br/>   */
     PB_LOCATION_CAPABILITIES_QWES_SV_EPHEMERIS_BIT             = 0x10000000;
+    /** This mask indicates support fot PR meas ML inference <br/>   */
+    PB_LOCATION_CAPABILITIES_QWES_NLOS_ML20                    = 0x20000000;
 }
 
 enum PBGnssDataMask {
