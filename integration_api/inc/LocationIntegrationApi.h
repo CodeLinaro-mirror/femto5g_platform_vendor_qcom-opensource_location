@@ -1513,7 +1513,7 @@ public:
         The NMEA sentence types are per-device setting and calling
         this API will impact all the location api clients that
         register to receive NMEA sentences. This API call is not
-        incremental and the new NMEA sentence types will completely
+        incremental and all the settings in the API will completely
         overwrite the previous call. <br/>
 
         If one or more unspecified bits are set in the NMEA mask,
@@ -1535,9 +1535,9 @@ public:
         running on the client process on the different processor.
         <br/>
 
-        Please note that both output nmea types and datum type is
-        only applicable if NMEA_PROVIDER in gps.conf is set to 0 to
-        use HLOS generated NMEA. <br/>
+        Please note that both output nmea types, datum type and engine
+        mask is only applicable if NMEA_PROVIDER in gps.conf is set to
+        0 to use HLOS generated NMEA. <br/>
 
         @param
         enabledNmeaTypes: specify the set of NMEA sentences the
@@ -1553,6 +1553,13 @@ public:
         when generating NMEA sentences. If this parameter is not
         specified, it will default to WGS-84. <br/>
 
+        @param
+        locReqEngineMask: specify the set of position engines that NMEA
+        are generated from. If this parameter is not
+        specified, it will default to LOC_REQ_ENGINE_FUSED_BIT.
+        <br/>
+
+
         Please note that the configured nmeaDatumType is only
         applicable if NMEA_PROVIDER in gps.conf is set to 0 to use
         HLOS generated NMEA. NMEA dataum type specified in this API
@@ -1567,7 +1574,9 @@ public:
                 further processing. <br/>
     */
     bool configOutputNmeaTypes(NmeaTypesMask enabledNmeaTypes,
-                               GeodeticDatumType nmeaDatumType = GEODETIC_TYPE_WGS_84);
+                               GeodeticDatumType nmeaDatumType = GEODETIC_TYPE_WGS_84,
+            location_client::LocReqEngineTypeMask locReqEngineMask =
+            location_client::LOC_REQ_ENGINE_FUSED_BIT);
 
    /** @brief
         This API is used to instruct the specified engine to use

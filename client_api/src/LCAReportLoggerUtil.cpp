@@ -133,9 +133,9 @@ void LCAReportLoggerUtil::log(const std::vector<GnssSv>& gnssSvsVector) {
 }
 
 void LCAReportLoggerUtil::log(
-        uint64_t timestamp, uint32_t length, const char* nmea) {
+        uint64_t timestamp, uint32_t length, const char* nmea, LocOutputEngineType engType) {
     if (mLogNmea != nullptr) {
-        mLogNmea(timestamp, length, nmea);
+        mLogNmea(timestamp, length, nmea, engType);
     }
 }
 

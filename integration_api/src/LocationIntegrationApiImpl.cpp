@@ -1092,24 +1092,27 @@ uint32_t LocationIntegrationApiImpl::setUserConsentForTerrestrialPositioning(boo
 
 uint32_t LocationIntegrationApiImpl::configOutputNmeaTypes(
         GnssNmeaTypesMask enabledNmeaTypes,
-        GnssGeodeticDatumType nmeaDatumType) {
+        GnssGeodeticDatumType nmeaDatumType,
+        LocReqEngineTypeMask locReqEngMask) {
     struct ConfigOutputNmeaReq : public LocMsg {
         ConfigOutputNmeaReq(LocationIntegrationApiImpl* apiImpl,
                             GnssNmeaTypesMask enabledNmeaTypes,
-                            GnssGeodeticDatumType nmeaDatumType) :
+                            GnssGeodeticDatumType nmeaDatumType,
+                            LocReqEngineTypeMask locReqEngMask) :
                 mApiImpl(apiImpl), mEnabledNmeaTypes(enabledNmeaTypes),
-                mNmeaDatumType(nmeaDatumType) {}
+                mNmeaDatumType(nmeaDatumType), mLocReqEngMask(locReqEngMask) {}
         virtual ~ConfigOutputNmeaReq() {}
         void proc() const {
             string pbStr;
             LocConfigOutputNmeaTypesReqMsg msg(
                     mApiImpl->mSocketName, mEnabledNmeaTypes,
-                    mNmeaDatumType, &mApiImpl->mPbufMsgConv);
+                    mNmeaDatumType, mLocReqEngMask, &mApiImpl->mPbufMsgConv);
             if (msg.serializeToProtobuf(pbStr)) {
                 if (mApiImpl->sendConfigMsgToHalDaemon(CONFIG_OUTPUT_NMEA_TYPES, pbStr)) {
                     mApiImpl->mNmeaConfigInfo.isValid = true;
                     mApiImpl->mNmeaConfigInfo.enabledNmeaTypes = mEnabledNmeaTypes;
                     mApiImpl->mNmeaConfigInfo.nmeaDatumType = mNmeaDatumType;
+                    mApiImpl->mNmeaConfigInfo.locReqEngMask = mLocReqEngMask;
                 }
             } else {
                 LOC_LOGe("serializeToProtobuf failed");
@@ -1119,11 +1122,13 @@ uint32_t LocationIntegrationApiImpl::configOutputNmeaTypes(
         LocationIntegrationApiImpl* mApiImpl;
         GnssNmeaTypesMask mEnabledNmeaTypes;
         GnssGeodeticDatumType mNmeaDatumType;
+        LocReqEngineTypeMask mLocReqEngMask;
     };
 
-    LOC_LOGi("nmea output type: 0x%x, datum type: %d", enabledNmeaTypes, nmeaDatumType);
-    mMsgTask.sendMsg(new (nothrow) ConfigOutputNmeaReq(this, enabledNmeaTypes, nmeaDatumType));
-
+    LOC_LOGi("nmea output type: 0x%x, datum type: %d, request engine mask: 0x%x", enabledNmeaTypes,
+            nmeaDatumType, locReqEngMask);
+    mMsgTask.sendMsg(new (nothrow) ConfigOutputNmeaReq(this, enabledNmeaTypes, nmeaDatumType,
+            locReqEngMask));
     return 0;
 }
 
@@ -1547,7 +1552,7 @@ void LocationIntegrationApiImpl::processHalReadyMsg() {
         string pbStr;
         LocConfigOutputNmeaTypesReqMsg msg(
                     mSocketName, mNmeaConfigInfo.enabledNmeaTypes,
-                    mNmeaConfigInfo.nmeaDatumType, &mPbufMsgConv);
+                    mNmeaConfigInfo.nmeaDatumType, mNmeaConfigInfo.locReqEngMask, &mPbufMsgConv);
         if (msg.serializeToProtobuf(pbStr)) {
             sendConfigMsgToHalDaemon(CONFIG_OUTPUT_NMEA_TYPES, pbStr, false);
         } else {
