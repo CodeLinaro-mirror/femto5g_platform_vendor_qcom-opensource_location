@@ -1036,8 +1036,13 @@ void parseXtraConfig(char* buf, bool &xtraEnabled, XtraConfigParams& oemConfig) 
             oemConfig.xtraDaemonDebugLogLevel = (DebugLogLevel) atoi(token);
         }
 
+        token = strtok_r(NULL, " ", &save);
+        if (token != NULL) {
+            oemConfig.ntsKeServerURL = std::string(token);
+        }
+
         printf ("xtra config: enabled %d, %d %d %d %d ca path: %s, "
-                "xtra url: %s %s %s, ntp url: %s %s %s\n",
+                "xtra url: %s %s %s, ntp url: %s %s %s, nts ke server url : %s\n",
                 xtraEnabled, oemConfig.xtraDownloadIntervalMinute,
                 oemConfig.xtraDownloadTimeoutSec,
                 oemConfig.xtraDownloadRetryIntervalMinute,
@@ -1045,7 +1050,8 @@ void parseXtraConfig(char* buf, bool &xtraEnabled, XtraConfigParams& oemConfig) 
                 oemConfig.xtraCaPath.c_str(),
                 oemConfig.xtraServerURLs[0].c_str(), oemConfig.xtraServerURLs[1].c_str(),
                 oemConfig.xtraServerURLs[2].c_str(), oemConfig.ntpServerURLs[0].c_str(),
-                oemConfig.ntpServerURLs[1].c_str(), oemConfig.ntpServerURLs[2].c_str());
+                oemConfig.ntpServerURLs[1].c_str(), oemConfig.ntpServerURLs[2].c_str(),
+                oemConfig.ntsKeServerURL.c_str());
         printf("integerity download %d %d\n", oemConfig.xtraIntegrityDownloadEnable,
                oemConfig.xtraIntegrityDownloadIntervalMinute);
     } else {
@@ -2015,7 +2021,7 @@ int main(int argc, char *argv[]) {
     pLcaClient = new LocationClientApi(onCapabilitiesCb);
     if (!pLcaClient) {
         printf("failed to create client, return");
-        return -1;;
+        return -1;
     }
 
     // gnss callbacks
@@ -2341,7 +2347,7 @@ int main(int argc, char *argv[]) {
                            strlen(ENABLE_XTRA_ON_DEMAND_DOWNLOAD)) == 0) {
             printf("usage: enableXtraOnDemandDownload 0/1 (enable/disable xtra download) "
                    "0/1 (enable/disable) integrity\n");
-            bool enableXtra = false;;
+            bool enableXtra = false;
             XtraConfigParams xtraConfig = {};
 
             static char *save = nullptr;
@@ -2368,7 +2374,7 @@ int main(int argc, char *argv[]) {
                 printf("config xtra successful\n");
             }
         } else if (strncmp(buf, CONFIG_XTRA_PARAMS, strlen(CONFIG_XTRA_PARAMS)) == 0) {
-            bool enableXtra = false;;
+            bool enableXtra = false;
             XtraConfigParams xtraConfig = {};
             parseXtraConfig(buf, enableXtra, xtraConfig);
             bool retval = pIntClient->configXtraParams(enableXtra, &xtraConfig);
@@ -2379,7 +2385,7 @@ int main(int argc, char *argv[]) {
             pIntClient->getXtraStatus();
         } else if (strncmp(buf, REGISTER_XTRA_STATUS_UPDATE,
                            strlen(REGISTER_XTRA_STATUS_UPDATE)) == 0) {
-            bool registerUpdate = false;;
+            bool registerUpdate = false;
             static char *save = nullptr;
             char* token = strtok_r(buf, " ", &save);
             token = strtok_r(NULL, " ", &save);
@@ -2408,7 +2414,7 @@ int main(int argc, char *argv[]) {
                 delete[] buffer;
             }
         } else if (strncmp(buf, CONFIG_OSNMA_ENABLEMENT, strlen(CONFIG_OSNMA_ENABLEMENT)) == 0) {
-            bool enable = false;;
+            bool enable = false;
             static char *save = nullptr;
             char* token = strtok_r(buf, " ", &save);
             token = strtok_r(NULL, " ", &save);
@@ -2419,7 +2425,7 @@ int main(int argc, char *argv[]) {
             pIntClient->configOsnmaEnablement(enable);
         } else if (strncmp(buf, REGISTER_SIGNAL_TYPES_UPDATE,
                            strlen(REGISTER_SIGNAL_TYPES_UPDATE)) == 0) {
-            bool registerUpdate = false;;
+            bool registerUpdate = false;
             static char *save = nullptr;
             char* token = strtok_r(buf, " ", &save);
             token = strtok_r(NULL, " ", &save);
