@@ -882,6 +882,22 @@ struct XtraConfigParams {
 
     /** Level of debug log messages that will be logged. <br/> */
     DebugLogLevel xtraDaemonDebugLogLevel;
+
+    /** URL of NTS KE Server. <br/>
+     *
+     *  The URL, if provided, shall be complete and shall include
+     *  the port number. <br/>
+     *
+     *  Max of 128 bytes, including null-terminating byte will be
+     *  supported. <br/>
+     *
+     *  Valid NTS KE server URL should start with "https://".
+     *  <br/>
+     *
+     *  If NTS KE server URL is not specified, then device will use
+     *  the default URL of https://nts.xtracloud.net:4460. <br/>
+     */
+    std::string ntsKeServerURL;
 };
 
 class LocationIntegrationApiImpl;

@@ -703,7 +703,7 @@ void LocationApiService::processClientMsg(const char* data, uint32_t length) {
         case E_INTAPI_CONFIG_XTRA_PARAMS_MSG_ID : {
             PBLocConfigXtraReqMsg pbLocConf;
             if (0 == pbLocConf.ParseFromString(pbLocApiMsg.payload())) {
-                LOC_LOGe("Failed to parse pbLocConfEngineIntegrityRisk from payload!!");
+                LOC_LOGe("Failed to parse PBLocConfigXtraReqMsg from payload!!");
                 return;
             }
             LocConfigXtraReqMsg msg(sockName.c_str(), pbLocConf, &mPbufMsgConv);

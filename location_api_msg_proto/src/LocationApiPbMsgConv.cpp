@@ -3775,6 +3775,7 @@ int LocationApiPbMsgConv::convertXtraConfigParamsToPB(
         LOC_LOGv("add %s", xtraParams.ntpServerURLs[index]);
     }
 
+    pbXtraParams->set_ntskeserverurl(xtraParams.ntsKeServerURL);
     // conversion routine for debug level
     pbXtraParams->set_xtradaemondebugloglevel(
             getPBEnumForDebugLogLevel(xtraParams.xtraDaemonDebugLogLevel));
@@ -3811,6 +3812,9 @@ int LocationApiPbMsgConv::pbConvertToXtraConfig(const PBXtraConfigParams &pbXtra
         LOC_LOGv("ntp server url: %d %s", index, xtraParams.ntpServerURLs[index]);
     }
     xtraParams.ntpServerURLsCount = pbXtraParams.ntpserverurls_size();
+    strlcpy(xtraParams.ntsKeServerURL, pbXtraParams.ntskeserverurl().c_str(),
+            sizeof(xtraParams.ntsKeServerURL));
+    LOC_LOGv("nts ke server url: %s", xtraParams.ntsKeServerURL);
 
     xtraParams.xtraDaemonDebugLogLevel =
             getDebugLogLevelFromPB(pbXtraParams.xtradaemondebugloglevel());
