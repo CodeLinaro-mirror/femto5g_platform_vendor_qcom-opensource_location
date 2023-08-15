@@ -2496,6 +2496,7 @@ int LocConfigOutputNmeaTypesReqMsg::serializeToProtobuf(
     pbMsg.set_nmeatypesmask(pLocApiPbMsgConv->getPBMaskForNmeaTypesMask(mEnabledNmeaTypes));
     pbMsg.set_nmeadatumtype((mNmeaDatumType == GEODETIC_TYPE_PZ_90) ?
                             PB_GEODETIC_TYPE_PZ_90 : PB_GEODETIC_TYPE_WGS_84);
+    pbMsg.set_nmeareqengmask(pLocApiPbMsgConv->getPBMaskForLocReqEngineTypeMask(mNmeaReqEngMask));
 
     string pbStr;
     if (!pbMsg.SerializeToString(&pbStr)) {
@@ -2530,6 +2531,8 @@ LocConfigOutputNmeaTypesReqMsg::
             pLocApiPbMsgConv->getNmeaTypesMaskFromPB(pbMsg.nmeatypesmask());
     mNmeaDatumType = (pbMsg.nmeadatumtype() == PB_GEODETIC_TYPE_PZ_90) ?
             GEODETIC_TYPE_PZ_90 : GEODETIC_TYPE_WGS_84;
+    mNmeaReqEngMask = (LocReqEngineTypeMask)
+            pLocApiPbMsgConv->getLocReqEngineTypeMaskFromPB(pbMsg.nmeareqengmask());
 }
 
 // Convert LocConfigEngineIntegrityRiskReqMsg ->

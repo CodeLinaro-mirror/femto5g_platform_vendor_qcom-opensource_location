@@ -562,6 +562,10 @@ enum GnssSignalTypeMask {
     GNSS_SIGNAL_NAVIC_L5_BIT            = (1<<20),
     /** GNSS signal is of BEIDOU B2A_Q RF band. <br/>   */
     GNSS_SIGNAL_BEIDOU_B2AQ_BIT         = (1<<21),
+    /** GNSS signal is of BEIDOU B2B_I RF band. <br/>   */
+    GNSS_SIGNAL_BEIDOU_B2BI_BIT         = (1<<22),
+    /** GNSS signal is of BEIDOU B2B_Q RF band. <br/>   */
+    GNSS_SIGNAL_BEIDOU_B2BQ_BIT         = (1<<23),
 };
 
 /** Specify LocationClientApi function call processing status.
@@ -1259,13 +1263,13 @@ enum DrSolutionStatusMask {
     DR_SOLUTION_STATUS_VEHICLE_SENSOR_SPEED_INPUT_USED     = (1<<1),
     /** DRE solution disengaged due to insufficient
       * calibration <br/> */
-    DR_SOLUTION_STATUS_ERROR_UNCALIBRATED                  = (1<<2),
+    DR_SOLUTION_STATUS_WARNING_UNCALIBRATED                = (1<<2),
     /** DRE solution disengaged due to bad GNSS
       * quality <br/> */
-    DR_SOLUTION_STATUS_ERROR_GNSS_QUALITY_INSUFFICIENT     = (1<<3),
+    DR_SOLUTION_STATUS_WARNING_GNSS_QUALITY_INSUFFICIENT   = (1<<3),
     /** DRE solution disengaged as ferry condition
       * detected <br/> */
-    DR_SOLUTION_STATUS_ERROR_FERRY_DETECTED                = (1<<4),
+    DR_SOLUTION_STATUS_WARNING_FERRY_DETECTED              = (1<<4),
     /** DRE solution disengaged as 6DOF sensor inputs
       * not available <br/> */
     DR_SOLUTION_STATUS_ERROR_6DOF_SENSOR_UNAVAILABLE       = (1<<5),
@@ -1280,16 +1284,25 @@ enum DrSolutionStatusMask {
     DR_SOLUTION_STATUS_ERROR_GNSS_MEAS_UNAVAILABLE         = (1<<8),
     /** DRE solution disengaged due non-availability of
       * stored position from previous session <br/> */
-    DR_SOLUTION_STATUS_ERROR_NO_STORED_POSITION            = (1<<9),
+    DR_SOLUTION_STATUS_WARNING_INIT_POSITION_INVALID       = (1<<9),
     /** DRE solution dis-engaged due to vehicle motion
       *  detected at session start <br/> */
-    DR_SOLUTION_STATUS_ERROR_MOVING_AT_START               = (1<<10),
+    DR_SOLUTION_STATUS_WARNING_INIT_POSITION_UNRELIABLE    = (1<<10),
     /** DRE solution dis-engaged due to unreliable
       * position <br/> */
-    DR_SOLUTION_STATUS_ERROR_POSITON_UNRELIABLE            = (1<<11),
+    DR_SOLUTION_STATUS_WARNING_POSITON_UNRELIABLE          = (1<<11),
     /** DRE solution dis-engaged due to a generic
       * error <br/> */
-    DR_SOLUTION_STATUS_ERROR_GENERIC                       = (1<<12)
+    DR_SOLUTION_STATUS_ERROR_GENERIC                       = (1<<12),
+    /** DRE solution dis-engaged due to Sensor Temperature
+      * being out of range <br/> */
+    DR_SOLUTION_STATUS_WARNING_SENSOR_TEMP_OUT_OF_RANGE    = (1<<13),
+    /** DRE solution dis-engaged due to insufficient
+      *  user dynamics <br/> */
+    DR_SOLUTION_STATUS_WARNING_USER_DYNAMICS_INSUFFICIENT  = (1<<14),
+    /** DRE solution dis-engaged due to inconsistent
+      *  factory data <br/> */
+    DR_SOLUTION_STATUS_WARNING_FACTORY_DATA_INCONSISTENT   = (1<<15)
 };
 
 /** Specify the session status. <br/> */
@@ -1793,6 +1806,8 @@ enum GnssMeasurementsAdrStateMask {
     GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_RESET_BIT       = (1<<1),
     /** Accumulated delta range state is "cycle slip". <br/>   */
     GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_CYCLE_SLIP_BIT  = (1<<2),
+    /** Accumulated delta range state is hal cycle resolved". <br/>   */
+    GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_HALF_CYCLE_RESOLVED_BIT = (1<<3),
 };
 
 /** Specify the GNSS multipath indicator state in
@@ -2226,6 +2241,21 @@ typedef std::function<void(
 )> GnssNmeaCb;
 
 /** @brief
+    EngineNmeaCb is for receiving NMEA sentences when
+    LocationClientApi is in a positioning session. <br/>
+    @param engType: engine type that NMEA is derived from
+    @param timestamp: timestamp that NMEA sentence is
+                    generated. <br/>
+    @param nmea: nmea strings generated from position and SV
+           report. <br/>
+*/
+typedef std::function<void(
+    LocOutputEngineType engType,
+    uint64_t timestamp,
+    const std::string& nmea
+)> EngineNmeaCb;
+
+/** @brief
     GnssDataCb is for receiving GnssData, e.g.:
     jammer information when LocationClientApi is in a
     positioning session. <br/>
@@ -2321,7 +2351,15 @@ struct GnssReportCbs {
     GnssLocationCb gnssLocationCallback;
     /** Callback to receive GnssSv from modem GNSS engine. <br/> */
     GnssSvCb gnssSvCallback;
-    /** Callback to receive NMEA sentences. <br/> */
+    /** Callback to receive NMEA sentences. <br/>
+     *  NMEA will be generated from GnssSv and position report.
+     *  <br/>
+     *  When there are multiple engines running on the system,
+     *  position related NMEA sentences will be generated from the
+     *  fused position report. <br/>
+     *  When there is only SPE engine running on the system,
+     *  position related NMEA sentences will be generated from the
+     *  position report from modem GNSS engine report. <br/> */
     GnssNmeaCb gnssNmeaCallback;
     /** Callback to receive GnssData from modem GNSS engine.
      *  <br/> */
@@ -2369,6 +2407,16 @@ struct EngineReportCbs {
     /** Callback to receive disaster and crisis report from modem
      *  GNSS engine. <br/> */
     GnssDcReportCb gnssDcReportCallback;
+    /**
+     * Receive NMEA related to position report from all registered engines
+     * if those engines are configured to generate NMEA report via
+     * API configOutputNmeaTypes(NmeaTypesMask, GeodeticDatumType, LocReqEngineTypeMask)
+     * The SV report will come from GNSS engine.
+     * User should pick one nmea callback, either GnssNmeaCb or EngineNmeaCb
+     * to use. Don't register both at the same time, otherwise
+     * LOCATION_ERROR_INVALID_PARAMETER will be thrown.
+     * Recommend to use EngineNmeaCb. <br/> */
+    EngineNmeaCb engineNmeaCallback;
 };
 
 /**

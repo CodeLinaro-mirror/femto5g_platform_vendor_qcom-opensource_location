@@ -214,6 +214,7 @@ private:
   uint64_t mHlosQtimer1, mHlosQtimer2;
   uint32_t mRefFCount;
   std::string mPackageName[eQMI_LOC_R3_V02+1];
+  ModemGnssQesdkFeatureMask mQesdkFeatureMask;
 
   // Below two member variables are for elapsedRealTime calculation
   ElapsedRealtimeEstimator mMeasElapsedRealTimeCal;

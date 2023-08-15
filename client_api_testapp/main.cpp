@@ -97,6 +97,7 @@ static uint32_t numGnssLocationCb = 0;
 static uint32_t numEngLocationCb = 0;
 static uint32_t numGnssSvCb = 0;
 static uint32_t numGnssNmeaCb = 0;
+static uint32_t numEngineNmeaCb = 0;
 static uint32_t numDataCb         = 0;
 static uint32_t numGnssMeasurementsCb = 0;
 
@@ -110,6 +111,9 @@ static uint32_t gtpFixCnt = 0;
 static uint32_t singleShotFixCnt = 0;
 vector<Geofence> sGeofences;
 
+static char NMEA_PORT[] = "/dev/at_usb1";
+static int ttyFd = -1;
+static int routeToNMEAPort = 0;
 enum ReportType {
     POSITION_REPORT = 1 << 0,
     NMEA_REPORT     = 1 << 1,
@@ -118,6 +122,7 @@ enum ReportType {
     MEAS_REPORT     = 1 << 4,
     NHZ_MEAS_REPORT = 1 << 5,
     DC_REPORT       = 1 << 6,
+    ENGINE_NMEA_REPORT = 1 << 7,
 };
 
 enum TrackingSessionType {
@@ -171,6 +176,55 @@ enum TrackingSessionType {
 #define RESUME_GEOFENCES            "resumeGeofences"
 #define MODIFY_GEOFENCES            "modifyGeofences"
 #define REMOVE_GEOFENCES            "removeGeofences"
+
+static bool openPort(void)
+{
+    bool retVal = true;
+
+    if (ttyFd == -1) {
+        printf("opening NMEA port %s ", NMEA_PORT);
+        ttyFd = open(NMEA_PORT, O_RDWR | O_NOCTTY | O_NDELAY);
+        if (ttyFd == -1) {
+            /* Could not open the port. */
+            printf("Unable to open %s \n", NMEA_PORT);
+            retVal = false;
+        } else {
+            printf("openPort success ttyFd: %d\n", ttyFd);
+        }
+    }
+    return retVal;
+}
+
+static bool sendNMEAToTty(const std::string& nmea)
+{
+    int n;
+    char buffer[201] = { 0 };
+    bool retVal = true;
+    strlcpy(buffer, nmea.c_str(), sizeof(buffer));
+    if (1 < nmea.length() && sizeof(buffer) > nmea.length()) {
+        n = write(ttyFd, buffer, nmea.length());
+        if (n < 0) {
+            printf("write() of %d bytes failed!\n", n);
+            retVal = false;
+        } else if (0 == n) {
+            printf("write() of %d bytes returned 0, errno:%d [%s]\n",
+                nmea.length(), errno, strerror(errno));
+            /* Sleep of 0.1 msec and reattempt to write*/
+            usleep(100);
+            n = write(ttyFd, buffer, nmea.length() - 1);
+            if (n < 0) {
+                printf("reattempt write() failed! errno:%d [%s] \n", errno, strerror(errno));
+                retVal = false;
+            } else if (0 == n) {
+                printf("reattempt write() of %d bytes returned 0, errno:%d [%s]\n",
+                    nmea.length(), errno, strerror(errno));
+            }
+        }
+    } else {
+        printf("Failed to write Len: %d %s \n", nmea.length(), nmea.c_str());
+    }
+    return true;
+}
 
 // debug utility
 static uint64_t getTimestampMs() {
@@ -407,6 +461,23 @@ static void onGnssNmeaCb(uint64_t timestamp, const std::string& nmea) {
     }
     printf("<<< onGnssNmeaCb cnt=%u time=%" PRIu64" nmea=%s",
             numGnssNmeaCb, timestamp, nmea.c_str());
+    if (routeToNMEAPort && openPort()) {
+                sendNMEAToTty(nmea);
+    }
+}
+
+static void onEngineNmeaCb(LocOutputEngineType engType,
+                           uint64_t timestamp,
+                           const std::string& nmea) {
+    numEngineNmeaCb++;
+    if (!outputEnabled) {
+        return;
+    }
+    printf("<<< onEngineNmeaCb cnt=%u engine type=%u time=%" PRIu64" nmea=%s",
+            numEngineNmeaCb, engType, timestamp, nmea.c_str());
+    if (routeToNMEAPort && openPort()) {
+                sendNMEAToTty(nmea);
+    }
 }
 
 static void onGnssDataCb(const location_client::GnssData& gnssData) {
@@ -1047,6 +1118,9 @@ static void setupEngineReportCbs(uint32_t reportType, EngineReportCbs& reportcbs
     if (reportType & DC_REPORT) {
         reportcbs.gnssDcReportCallback = GnssDcReportCb(onGnssDcReportCb);
     }
+    if (reportType & ENGINE_NMEA_REPORT) {
+        reportcbs.engineNmeaCallback = EngineNmeaCb(onEngineNmeaCb);
+    }
 }
 
 void getMultipleFusedFixes(uint32_t timeoutMsec, float horQoS,
@@ -1360,7 +1434,7 @@ static bool checkForAutoStart(int argc, char *argv[]) {
     uint32_t aidingDataMask = 0;
     int interval = 100;
     LocReqEngineTypeMask reqEngMask = (LocReqEngineTypeMask) 0x7;
-    uint32_t reportType = 0xff;
+    uint32_t reportType = 0xfd;
     TrackingSessionType trackingType = NO_TRACKING;
 
     //Specifying the expected options
@@ -1382,7 +1456,7 @@ static bool checkForAutoStart(int argc, char *argv[]) {
 
     int long_index =0;
     int opt = -1;
-    while ((opt = getopt_long(argc, argv, "aVNDd:s:e:i:t:l:r:",
+    while ((opt = getopt_long(argc, argv, "aVNDd:s:e:i:t:l:r:U:z",
                    long_options, &long_index)) != -1) {
         switch (opt) {
              case 'a' :
@@ -1435,6 +1509,10 @@ static bool checkForAutoStart(int argc, char *argv[]) {
                  printf("report type: %s\n", optarg);
                  reportType = atoi(optarg);
                  break;
+             case 'U' :
+                 printf("route to NMEA port: %s\n", optarg);
+                 routeToNMEAPort = atoi(optarg);
+                 break;
              default:
                  printf("unsupported args provided\n");
                  break;
@@ -1442,9 +1520,9 @@ static bool checkForAutoStart(int argc, char *argv[]) {
     }
 
     printf("auto run %d, deleteAll %d, delete mask 0x%x, session type %d,"
-           "outputEnabled %d, detailedOutputEnabled %d",
+           "outputEnabled %d, detailedOutputEnabled %d routeToNMEAPort %d",
            autoRun, deleteAll, aidingDataMask, trackingType,
-           outputEnabled, detailedOutputEnabled);
+           outputEnabled, detailedOutputEnabled, routeToNMEAPort);
 
     // check for auto-start option
     if (autoRun) {
@@ -1507,7 +1585,10 @@ void getTrackingParams(char *buf, uint32_t *reportTypePtr, uint32_t *tbfMsecPtr,
     token = strtok_r(NULL, " ", &save);
     if (token != nullptr) {
         if (reportTypePtr) {
-            *reportTypePtr = atoi(token);
+            *reportTypePtr = strtoul(token, NULL, 10);
+            if (0 == *reportTypePtr) {
+                *reportTypePtr = strtoul(token, NULL, 16);
+            }
         }
     }
     token = strtok_r(NULL, " ", &save);
@@ -1524,11 +1605,16 @@ void getTrackingParams(char *buf, uint32_t *reportTypePtr, uint32_t *tbfMsecPtr,
     }
 
     // initialize to default value in case of invalid input
-    if (*reportTypePtr == 0) {
-        *reportTypePtr = 0xFF;
+    if (reportTypePtr) {
+        if (*reportTypePtr == 0) {
+            *reportTypePtr = 0xFF;
+        }
     }
-    if (*tbfMsecPtr == 0) {
-        *tbfMsecPtr = 100;
+
+    if (tbfMsecPtr) {
+        if (*tbfMsecPtr == 0) {
+            *tbfMsecPtr = 100;
+        }
     }
     if (reqEngMaskPtr) {
         if (*reqEngMaskPtr == (LocReqEngineTypeMask) 0) {
@@ -1762,7 +1848,7 @@ void menuRemoveGeofence() {
     pLcaClient->removeGeofences(removeGfVec);
 }
 void geofenceTestMenu() {
-    char buf[16], *p;
+    char buf[16], *p = NULL;
     bool exit_loop = false;
 
     while (!exit_loop)
@@ -1780,8 +1866,9 @@ void geofenceTestMenu() {
         p = fgets (buf, 16, stdin);
         if (p == nullptr) {
             printf("Error: fgets returned nullptr !!");
+            exit_loop = true;
+            continue;
         }
-
         switch (p[0]) {
         case '1':
             menuAddGeofence();
@@ -2102,8 +2189,21 @@ int main(int argc, char *argv[]) {
                     nmeaDatumType = GEODETIC_TYPE_PZ_90;
                 }
             }
-            printf("nmeaTypes 0x%x, geodetic type %d\n", nmeaTypes, nmeaDatumType);
-            pIntClient->configOutputNmeaTypes(nmeaTypes, nmeaDatumType);
+            LocReqEngineTypeMask engTypeMask = LOC_REQ_ENGINE_FUSED_BIT;
+            token = strtok_r(NULL, " ", &save);
+            if (token != NULL) {
+                engTypeMask = (LocReqEngineTypeMask) strtoul(token, NULL, 10);
+                if (0 == engTypeMask) {
+                    engTypeMask = (LocReqEngineTypeMask) strtoul(token, NULL, 16);
+                }
+            }
+            printf("nmeaTypes 0x%x, geodetic type %d engineTypeMask 0x%x\n", nmeaTypes,
+                    nmeaDatumType, engTypeMask);
+            if (0 == engTypeMask) {
+                pIntClient->configOutputNmeaTypes(nmeaTypes, nmeaDatumType);
+            } else {
+                pIntClient->configOutputNmeaTypes(nmeaTypes, nmeaDatumType, engTypeMask);
+            }
         } else if (strncmp(buf, INJECT_LOCATION,
                            strlen(INJECT_LOCATION)) == 0) {
             location_client::Location injectLocation = {};
@@ -2264,7 +2364,7 @@ int main(int argc, char *argv[]) {
                     pLcaClient = new LocationClientApi(onCapabilitiesCb);
                 }
                 if (pLcaClient) {
-                    uint32_t reportType = 0xff;
+                    uint32_t reportType = 0xfd;
                     uint32_t tbfMsec = 100;
                     LocReqEngineTypeMask reqEngMask = (LocReqEngineTypeMask)
                         (LOC_REQ_ENGINE_FUSED_BIT|LOC_REQ_ENGINE_SPE_BIT|

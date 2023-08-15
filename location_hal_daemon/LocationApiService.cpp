@@ -71,9 +71,6 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <LocationApiMsg.h>
 #include <gps_extended_c.h>
 
-#ifdef POWERMANAGER_ENABLED
-#include <PowerEvtHandler.h>
-#endif
 #include <LocHalDaemonClientHandler.h>
 #include <LocationApiService.h>
 #include <location_interface.h>
@@ -88,6 +85,8 @@ using namespace std;
 typedef void* (getLocationInterface)();
 typedef void  (createOSFramework)();
 typedef void  (destroyOSFramework)();
+
+typedef int (initGnssPowerHandler)();
 
 /******************************************************************************
 LocationApiService - static members
@@ -196,9 +195,6 @@ LocationApiService::LocationApiService(const configParamToRead & configParamRead
     mSingleFixTrackingSessionId(0),
     mSingleFixLocationApiCallbacks{},
     mSingleFixLastLocation{}
-#ifdef POWERMANAGER_ENABLED
-    ,mPowerEventObserver(nullptr)
-#endif
     {
 
     LOC_LOGd("AutoStartGnss=%u", mAutoStartGnss);
@@ -232,14 +228,15 @@ LocationApiService::LocationApiService(const configParamToRead & configParamRead
     LOC_LOGd("-->enable=%u", mLocationControlId);
     // this is a unique id assigned to this daemon - will be used when disable
 
-#ifdef POWERMANAGER_ENABLED
-    // register power event handler
-    mPowerEventObserver = PowerEvtHandler::getPwrEvtHandler(this);
-    if (nullptr == mPowerEventObserver) {
-        LOC_LOGe("Failed to regiseter Powerevent handler");
-        return;
+    void* libHandle = nullptr;
+    initGnssPowerHandler* initGnssPwrHdlrFn = (initGnssPowerHandler*) dlGetSymFromLib(
+            libHandle, "libgnsspowerhandler.so", "initGnssPowerHandler");
+    if (nullptr != initGnssPwrHdlrFn) {
+        int retVal = (*initGnssPwrHdlrFn)();
+        LOC_LOGi("Init Powerevent handler ret:%d", retVal);
+    } else {
+        LOC_LOGi("Load Powerevent handler library failed!");
     }
-#endif
 
     // Create OSFramework and IzatManager instance
     createOSFrameworkInstance();
@@ -1516,10 +1513,12 @@ void LocationApiService::configOutputNmeaTypes(const LocConfigOutputNmeaTypesReq
     }
     std::lock_guard<std::recursive_mutex> lock(mMutex);
 
-    LOC_LOGi(">-- client %s, mEnabledNmeaTypes 0x%x, mNmeaDatumType %d",
-             pMsg->mSocketName, pMsg->mEnabledNmeaTypes, pMsg->mNmeaDatumType);
+    LOC_LOGi(">-- client %s, mEnabledNmeaTypes 0x%x, mNmeaDatumType %d, mLocReqEngMask 0x%x",
+             pMsg->mSocketName, pMsg->mEnabledNmeaTypes, pMsg->mNmeaDatumType,
+             pMsg->mNmeaReqEngMask);
     uint32_t sessionId = mLocationControlApi->configOutputNmeaTypes(pMsg->mEnabledNmeaTypes,
-                                                                    pMsg->mNmeaDatumType);
+                                                                    pMsg->mNmeaDatumType,
+                                               (LocReqEngineTypeMask)pMsg->mNmeaReqEngMask);
     addConfigRequestToMap(sessionId, pMsg);
 }
 
@@ -1791,19 +1790,6 @@ void LocationApiService::onGnssLocationInfoCb(const GnssLocationInfoNotification
     // stop the tracking session
     stopTrackingSessionForSingleFixes();
 }
-
-/******************************************************************************
-LocationApiService - power event handlers
-******************************************************************************/
-#ifdef POWERMANAGER_ENABLED
-void LocationApiService::onPowerEvent(PowerStateType powerState) {
-    std::lock_guard<std::recursive_mutex> lock(mMutex);
-    LOC_LOGd("--< onPowerEvent %d", powerState);
-    mPowerState = powerState;
-    /*GnssAdapter handles session management for suspend/resume power events*/
-    mLocationControlApi->powerStateEvent(powerState);
-}
-#endif
 
 /******************************************************************************
 LocationApiService - on query callback from location engines
