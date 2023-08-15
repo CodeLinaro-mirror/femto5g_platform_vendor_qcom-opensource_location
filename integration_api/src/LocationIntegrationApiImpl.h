@@ -194,6 +194,7 @@ public:
     uint32_t registerXtraStatusUpdate(bool registerUpdate);
     uint32_t configMerkleTree(const char * merkleTreeXml, int xmlSize);
     uint32_t configOsnmaEnablement(bool isEnabled);
+    uint32_t registerGnssSignalTypesUpdate(bool registerUpdate);
 
 private:
     ~LocationIntegrationApiImpl();
@@ -215,6 +216,8 @@ private:
             const LocConfigGetConstellationSecondaryBandConfigRespMsg* pRespMsg);
     void processGetXtraStatusRespCb(
             const LocConfigGetXtraStatusRespMsg* pRespMsg);
+    void processRegisterGnssSignalTypesRespCb(
+            const LocConfigRegisterGnssSignalTypesUpdateRespMsg* msg);
 
     // protobuf conversion util class
     LocationApiPbMsgConv mPbufMsgConv;
