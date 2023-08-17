@@ -1144,6 +1144,9 @@ LocationResponse LocationClientApiImpl::parseLocationError(::LocationError error
         case LOCATION_ERROR_EXCLUSIVE_SESSION_IN_PROGRESS:
             response = LOCATION_RESPONSE_EXCLUSIVE_SESSION_IN_PROGRESS;
             break;
+        case LOCATION_ERROR_INVALID_PARAMETER:
+            response = LOCATION_RESPONSE_PARAM_INVALID;
+            break;
         default:
             response = LOCATION_RESPONSE_UNKOWN_FAILURE;
             break;
@@ -1605,6 +1608,10 @@ void LocationClientApiImpl::updateCallbacksSync(LocationCallbacks& callbacks) {
         callBacksMask |= E_LOC_CB_GNSS_DC_REPORT_BIT;
         mLocationCbs.gnssDcReportCb = callbacks.gnssDcReportCb;
     }
+    if (callbacks.engineNmeaCb) {
+        callBacksMask |= E_LOC_CB_ENGINE_NMEA_BIT;
+        mLocationCbs.engineNmeaCb = callbacks.engineNmeaCb;
+    }
     // handle callbacks that are not related to a fix session
     if (mLocationSysInfoCb) {
         callBacksMask |= E_LOC_CB_SYSTEM_INFO_BIT;
@@ -1770,6 +1777,11 @@ void LocationClientApiImpl::startPositionSession(
             if (mApiImpl->isInBatching()) {
                 mApiImpl->mLocationCbs.responseCb(
                         ::LOCATION_ERROR_EXCLUSIVE_SESSION_IN_PROGRESS, 0);
+                return;
+            }
+            //only one nmea callback should be registered
+            if (mCallbacksOption.gnssNmeaCb && mCallbacksOption.engineNmeaCb) {
+                mCallbacksOption.responseCb(::LOCATION_ERROR_INVALID_PARAMETER, 0);
                 return;
             }
             // set up the flag to indicate that responseCb is pending
@@ -2139,11 +2151,17 @@ void LocationClientApiImpl::addGeofences(const LocationCallbacks& callbacksOptio
             if (mApiImpl->mPositionSessionResponseCbPending) {
                 int cnt = mGeofences.size();
                 LocationError* errs = new LocationError[cnt];
-                uint32_t* ids = new uint32_t[cnt];
-                if (nullptr == errs || nullptr == ids) {
-                    LOC_LOGe("failed to create ClientIds/LocationErrors");
+                if (nullptr == errs) {
+                    LOC_LOGe("failed to create LocationErrors");
                     return;
                 }
+                uint32_t* ids = new uint32_t[cnt];
+                if (nullptr == ids) {
+                    LOC_LOGe("failed to create ClientIds");
+                    delete [] errs;
+                    return;
+                }
+                memset (ids, 0, cnt * sizeof(uint32_t));
                 for (int i = 0; i < cnt; ++i) {
                     errs[i] = ::LOCATION_ERROR_ALREADY_STARTED;
                     if (mGeofences[i].mGeofenceImpl) {
@@ -3242,10 +3260,12 @@ void IpcListener::onReceive(const char* data, uint32_t length,
 
             case E_LOCAPI_NMEA_MSG_ID:
             {
+                LOC_LOGd("<<< message = nmea");
                 if ((mApiImpl.mSessionId != LOCATION_CLIENT_SESSION_ID_INVALID) &&
                         (mApiImpl.mPositionSessionResponseCbPending == false) &&
-                        (mApiImpl.mCallbacksMask & E_LOC_CB_GNSS_NMEA_BIT) &&
-                        (mApiImpl.mLocationCbs.gnssNmeaCb)) {
+                        (mApiImpl.mCallbacksMask & (E_LOC_CB_GNSS_NMEA_BIT |
+                        E_LOC_CB_ENGINE_NMEA_BIT)) &&
+                        (mApiImpl.mLocationCbs.gnssNmeaCb || mApiImpl.mLocationCbs.engineNmeaCb)) {
 
                     PBLocAPINmeaIndMsg pbLocApiNmeaIndMsg;
                     if (0 == pbLocApiNmeaIndMsg.ParseFromString(pbLocApiMsg.payload())) {
@@ -3259,9 +3279,17 @@ void IpcListener::onReceive(const char* data, uint32_t length,
                     ::GnssNmeaNotification nmeaNotif = {};
                     nmeaNotif.size = sizeof(GnssNmeaNotification);
                     nmeaNotif.timestamp = pNmeaIndMsg->gnssNmeaNotification.timestamp;
+                    nmeaNotif.locOutputEngType =
+                            pNmeaIndMsg->gnssNmeaNotification.locOutputEngType;
                     nmeaNotif.nmea = pNmeaIndMsg->gnssNmeaNotification.nmea.c_str();
                     nmeaNotif.length = pNmeaIndMsg->gnssNmeaNotification.nmea.length();
-                    mApiImpl.mLocationCbs.gnssNmeaCb(nmeaNotif);
+                    if (mApiImpl.mLocationCbs.gnssNmeaCb) {
+                        mApiImpl.mLocationCbs.gnssNmeaCb(nmeaNotif);
+                    }
+                    if (mApiImpl.mLocationCbs.engineNmeaCb) {
+                        mApiImpl.mLocationCbs.engineNmeaCb(nmeaNotif);
+                    }
+
                 }
                 break;
             }

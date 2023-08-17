@@ -62,6 +62,11 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/*
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
 // ============================================================================
 // LocationApiMsg.proto
 // Location Api messages definition - structs, enums etc
@@ -82,8 +87,8 @@ enum LocationApiMsgVersion {
     LOCAPI_MSG_VER_MAJOR = 1;
     // Minor - New features / API addition, new message/elemtent addition.
     // Bump the last byte of version i.e. x.2 to x.3
-    // Minor version 18: Add MerkleTree and OsnmaEnablement config msg
-    LOCAPI_MSG_VER_MINOR = 18;
+    // Minor version 20: Add Gnss signal types register msg
+    LOCAPI_MSG_VER_MINOR = 20;
 }
 
 // ============================================================================
@@ -208,6 +213,9 @@ enum PBELocMsgID {
 
     PB_E_INTAPI_REGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID = 310;
     PB_E_INTAPI_DEREGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID = 311;
+
+    PB_E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_REQ_MSG_ID = 312;
+    PB_E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_RESP_MSG_ID = 313;
 }
 
 enum PBClientType {
@@ -246,6 +254,8 @@ enum PBLocationCallbacksMask {
     PB_E_LOC_CB_GNSS_NHZ_MEAS_BIT           = 0x1000;
     /**< Register for disater and crisis report */
     PB_E_LOC_CB_GNSS_DC_REPORT_BIT          = 0x2000;
+    /**< Register for Engine NMEA */
+    PB_E_LOC_CB_ENGINE_NMEA_BIT             = 0x4000;
 }
 
 enum PBEngineInfoCallbacksMask {
@@ -275,6 +285,7 @@ enum PBGeofenceBreachTypeMask {
 message PBLocAPINmeaSerializedPayload {
     uint64 timestamp = 1;
     string nmea = 2;
+    PBLocApiOutputEngineType locOutputEngType = 3;
 }
 
 message PBLocAPIBatchNotification {
@@ -616,6 +627,7 @@ message PBLocConfigUserConsentTerrestrialPositioningReqMsg {
 message PBLocConfigOutputNmeaTypesReqMsg {
     uint32 nmeaTypesMask = 1;
     PBGnssGeodeticDatumType nmeaDatumType = 2;
+    uint32 nmeaReqEngMask = 3;
 }
 
 // defintion for message with msg id of
@@ -719,6 +731,18 @@ message PBLocAPIAntennaInfoMsg {
 // PB_E_INTAPI_INJECT_LOCATION_MSG_ID
 message PBLocIntApiInjectLocationMsg {
     PBLocation location = 1;
+}
+
+// defintion for message with msg id of
+// PB_E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_REQ_MSG_ID
+message PBLocConfigRegisterGnssSignalTypesUpdateReqMsg {
+    bool mRegisterUpdate = 1; // true for register and false for unregister
+}
+
+// defintion for message with msg id of
+// PB_E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_RESP_MSG_ID
+message PBLocConfigRegisterGnssSignalTypesUpdateRespMsg {
+    uint32 mSignalTypeMask = 1; //Specifies GNSS signal type - bitwise OR of PBGnssSignalTypeMask
 }
 
 //*****************************

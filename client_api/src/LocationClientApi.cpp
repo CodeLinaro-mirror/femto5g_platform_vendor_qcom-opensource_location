@@ -134,6 +134,26 @@ class TrackingSessCbHandler {
                 };
             }
 
+            if (engineReportCbs.engineNmeaCallback) {
+                mCallbackOptions.engineNmeaCb =
+                [pClientApiImpl, engineNmeaCallback = engineReportCbs.engineNmeaCallback](
+                        ::GnssNmeaNotification n) {
+                    uint64_t timestamp = n.timestamp;
+                    LocOutputEngineType locOutputEngType = (LocOutputEngineType)n.locOutputEngType;
+                    std::string nmea(n.nmea);
+                    LOC_LOGv("<<< message = nmea[%s] locOutputEngType = %d", nmea.c_str(),
+                        locOutputEngType);
+                    std::stringstream ss(nmea);
+                    std::string each;
+                    while (std::getline(ss, each, '\n')) {
+                        each += '\n';
+                        engineNmeaCallback(locOutputEngType, timestamp, each);
+                    }
+                    pClientApiImpl->getLogger().log(timestamp, nmea.size(), nmea.c_str(),
+                            locOutputEngType);
+               };
+            }
+
             initializeCommonCbs(pClientApiImpl, rspCb,
                                 engineReportCbs.gnssSvCallback,
                                 engineReportCbs.gnssNmeaCallback,
@@ -189,6 +209,7 @@ void TrackingSessCbHandler::initializeCommonCbs(LocationClientApiImpl *pClientAp
         mCallbackOptions.gnssNmeaCb =
                 [pClientApiImpl, gnssNmeaCallback](::GnssNmeaNotification n) {
             uint64_t timestamp = n.timestamp;
+            LocOutputEngineType locOutputEngType = (LocOutputEngineType)n.locOutputEngType;
             std::string nmea(n.nmea);
             LOC_LOGv("<<< message = nmea[%s]", nmea.c_str());
             std::stringstream ss(nmea);
@@ -197,7 +218,7 @@ void TrackingSessCbHandler::initializeCommonCbs(LocationClientApiImpl *pClientAp
                 each += '\n';
                 gnssNmeaCallback(timestamp, each);
             }
-            pClientApiImpl->getLogger().log(timestamp, nmea.size(), nmea.c_str());
+            pClientApiImpl->getLogger().log(timestamp, nmea.size(), nmea.c_str(), locOutputEngType);
         };
     }
     if (gnssDataCallback) {

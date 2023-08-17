@@ -126,6 +126,7 @@ struct NmeaConfigInfo{
     bool isValid;
     GnssNmeaTypesMask enabledNmeaTypes;
     GnssGeodeticDatumType nmeaDatumType;
+    LocReqEngineTypeMask locReqEngMask;
 };
 
 struct ProtoMsgInfo{
@@ -133,7 +134,7 @@ struct ProtoMsgInfo{
     string protoStr;
 
     inline ProtoMsgInfo() :
-            configType((LocConfigTypeEnum) 0), protoStr(nullptr) {}
+            configType((LocConfigTypeEnum) 0), protoStr("") {}
     inline ProtoMsgInfo(LocConfigTypeEnum inType, string inStr) :
             configType(inType), protoStr(std::move(inStr)) {}
 };
@@ -185,13 +186,15 @@ public:
     uint32_t setUserConsentForTerrestrialPositioning(bool userConsent);
 
     uint32_t configOutputNmeaTypes(GnssNmeaTypesMask enabledNmeaTypes,
-                                   GnssGeodeticDatumType nmeaDatumType) override;
+                                   GnssGeodeticDatumType nmeaDatumType,
+                                   LocReqEngineTypeMask locReqEngMask) override;
 
     uint32_t configXtraParams(bool enable, const ::XtraConfigParams& configParams);
     uint32_t getXtraStatus();
     uint32_t registerXtraStatusUpdate(bool registerUpdate);
     uint32_t configMerkleTree(const char * merkleTreeXml, int xmlSize);
     uint32_t configOsnmaEnablement(bool isEnabled);
+    uint32_t registerGnssSignalTypesUpdate(bool registerUpdate);
 
 private:
     ~LocationIntegrationApiImpl();
@@ -213,6 +216,8 @@ private:
             const LocConfigGetConstellationSecondaryBandConfigRespMsg* pRespMsg);
     void processGetXtraStatusRespCb(
             const LocConfigGetXtraStatusRespMsg* pRespMsg);
+    void processRegisterGnssSignalTypesRespCb(
+            const LocConfigRegisterGnssSignalTypesUpdateRespMsg* msg);
 
     // protobuf conversion util class
     LocationApiPbMsgConv mPbufMsgConv;
