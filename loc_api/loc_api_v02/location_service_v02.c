@@ -64,8 +64,8 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *THIS IS AN AUTO GENERATED FILE. DO NOT ALTER IN ANY WAY
  *====*====*====*====*====*====*====*====*====*====*====*====*====*====*====*/
 
-/* This file was generated with Tool version 6.14.7
-   It was generated on: Tue May 16 2023 (Spin 0)
+/* This file was generated with Tool version 6.14.9
+   It was generated on: Thu Mar 23 2023 (Spin 0)
    From IDL File: location_service_v02.idl */
 
 #include "stdint.h"
@@ -10683,4 +10683,3 @@ qmi_idl_service_object_type loc_get_service_object_internal_v02
   }
   return (qmi_idl_service_object_type)&loc_qmi_idl_service_object_v02;
 }
-
