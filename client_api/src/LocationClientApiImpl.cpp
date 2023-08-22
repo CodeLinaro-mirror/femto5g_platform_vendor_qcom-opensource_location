@@ -26,6 +26,13 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/*
+Changes from Qualcomm Innovation Center are provided under the following license:
+Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+
+SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
+
 #define LOG_TAG "LocSvc_LocationClientApi"
 
 #include <LocationClientApiImpl.h>
@@ -1456,6 +1463,13 @@ void LocationClientApiImpl::onReceive(const string& data) {
         void proc() const {
             LocAPIMsgHeader *pMsg = (LocAPIMsgHeader *)(mMsgData.data());
 
+            // Check if received message is greater than the size of header or not
+            // If data received is less than the heqder, drop the packet
+            if (mMsgData.length() < sizeof(LocAPIMsgHeader)) {
+                LOC_LOGe("onReceive mMsgData.length %u < sizeof(LocAPIMsgHeader) %u !! return",
+                        mMsgData.length(), sizeof(LocAPIMsgHeader));
+                return;
+            }
             switch (pMsg->msgId) {
                 case E_LOCAPI_CAPABILILTIES_MSG_ID:
                     {
@@ -1463,6 +1477,7 @@ void LocationClientApiImpl::onReceive(const string& data) {
                         if (sizeof(LocAPICapabilitiesIndMsg) != mMsgData.length()) {
                             LOC_LOGw("payload size does not match for message with id: %d",
                                      pMsg->msgId);
+                            break;
                         }
                         mApiImpl->capabilitesCallback(pMsg->msgId, (void*)pMsg);
                         break;
@@ -1474,6 +1489,7 @@ void LocationClientApiImpl::onReceive(const string& data) {
                         if (sizeof(LocAPIHalReadyIndMsg) != mMsgData.length()) {
                             LOC_LOGw("payload size does not match for message with id: %d",
                                      pMsg->msgId);
+                            break;
                         }
                         // location hal deamon has restarted, need to set this
                         // flag to false to prevent messages to be sent to hal
@@ -1499,6 +1515,7 @@ void LocationClientApiImpl::onReceive(const string& data) {
                         if (sizeof(LocAPIGenericRespMsg) != mMsgData.length()) {
                             LOC_LOGw("payload size does not match for message with id: %d",
                                      pMsg->msgId);
+                            break;
                         }
                         const LocAPIGenericRespMsg* pRespMsg = (LocAPIGenericRespMsg*)(pMsg);
                         LocationResponse response = parseLocationError(pRespMsg->err);
@@ -1514,6 +1531,7 @@ void LocationClientApiImpl::onReceive(const string& data) {
                         if (sizeof(LocAPIGenericRespMsg) != mMsgData.length()) {
                             LOC_LOGw("payload size does not match for message with id: %d",
                                      pMsg->msgId);
+                            break;
                         }
                         const LocAPIGenericRespMsg* pRespMsg = (LocAPIGenericRespMsg*)(pMsg);
                         LocationResponse response = parseLocationError(pRespMsg->err);
@@ -1536,6 +1554,7 @@ void LocationClientApiImpl::onReceive(const string& data) {
                         if (sizeof(LocAPILocationIndMsg) != mMsgData.length()) {
                             LOC_LOGw("payload size does not match for message with id: %d",
                                      pMsg->msgId);
+                            break;
                         }
                         LocationCallbacksMask tempMask =
                                 (E_LOC_CB_DISTANCE_BASED_TRACKING_BIT |
@@ -1557,6 +1576,7 @@ void LocationClientApiImpl::onReceive(const string& data) {
                         if (sizeof(LocAPILocationInfoIndMsg) != mMsgData.length()) {
                             LOC_LOGw("payload size does not match for message with id: %d",
                                      pMsg->msgId);
+                            break;
                         }
                         if ((mApiImpl->mSessionId != LOCATION_CLIENT_SESSION_ID_INVALID) &&
                                     (mApiImpl->mCallbacksMask & E_LOC_CB_GNSS_LOCATION_INFO_BIT)) {
@@ -1583,6 +1603,7 @@ void LocationClientApiImpl::onReceive(const string& data) {
                             if (pEngLocationsInfoIndMsg->getMsgSize() != mMsgData.length()) {
                                 LOC_LOGw("payload size does not match for message with id: %d",
                                      pMsg->msgId);
+                                break;
                             }
 
                             std::vector<GnssLocation> engLocationsVector;
@@ -1603,11 +1624,20 @@ void LocationClientApiImpl::onReceive(const string& data) {
                 case E_LOCAPI_SATELLITE_VEHICLE_MSG_ID:
                     {
                         LOC_LOGd("<<< message = sv\n");
+                        if (sizeof(LocAPISatelliteVehicleIndMsg) != mMsgData.length()) {
+                            LOC_LOGw("payload size does not match with id: %d eap %u src %u",
+                                     pMsg->msgId, sizeof(LocAPISatelliteVehicleIndMsg),
+                                     mMsgData.length());
+                            break;
+                        }
+
                         if (mApiImpl->mCallbacksMask & E_LOC_CB_GNSS_SV_BIT) {
                             const LocAPISatelliteVehicleIndMsg* pSvIndMsg =
                                     (LocAPISatelliteVehicleIndMsg*)(pMsg);
                             std::vector<GnssSv> gnssSvsVector;
-                            for (int i=0; i< pSvIndMsg->gnssSvNotification.count; i++) {
+                            for (int i = 0;
+                                      (i < pSvIndMsg->gnssSvNotification.count && i < GNSS_SV_MAX);
+                                      i++) {
                                   GnssSv gnssSv;
                                   gnssSv = parseGnssSv(pSvIndMsg->gnssSvNotification.gnssSvs[i]);
                                   gnssSvsVector.push_back(gnssSv);
@@ -1646,6 +1676,11 @@ void LocationClientApiImpl::onReceive(const string& data) {
                                      (mApiImpl->mGnssNmeaCb))) {
                             // nmea is variable length, can not be checked
                             const LocAPINmeaIndMsg* pNmeaIndMsg = (LocAPINmeaIndMsg*)(pMsg);
+                            if (sizeof(LocAPINmeaIndMsg) > mMsgData.length()) {
+                                LOC_LOGw("payload size does not match for message with id: %d",
+                                        pMsg->msgId);
+                                break;
+                            }
                             uint64_t timestamp = pNmeaIndMsg->gnssNmeaNotification.timestamp;
                             std::string nmea(pNmeaIndMsg->gnssNmeaNotification.nmea,
                                              pNmeaIndMsg->gnssNmeaNotification.length);
@@ -1666,6 +1701,7 @@ void LocationClientApiImpl::onReceive(const string& data) {
                         if (sizeof(LocAPIDataIndMsg) != mMsgData.length()) {
                             LOC_LOGw("payload size does not match for message with id: %d",
                                      pMsg->msgId);
+                            break;
                         }
                         if ((mApiImpl->mSessionId != LOCATION_CLIENT_SESSION_ID_INVALID) &&
                                     (mApiImpl->mCallbacksMask & E_LOC_CB_GNSS_DATA_BIT)) {
@@ -1685,6 +1721,7 @@ void LocationClientApiImpl::onReceive(const string& data) {
                         if (sizeof(LocAPIGnssEnergyConsumedIndMsg) != mMsgData.length()) {
                             LOC_LOGw("payload size does not match for message with id: %d",
                                      pMsg->msgId);
+                            break;
                         }
                         LocAPIGnssEnergyConsumedIndMsg* pEnergyMsg =
                                 (LocAPIGnssEnergyConsumedIndMsg*) pMsg;
@@ -1712,6 +1749,7 @@ void LocationClientApiImpl::onReceive(const string& data) {
                         if (sizeof(LocAPILocationSystemInfoIndMsg) != mMsgData.length()) {
                             LOC_LOGw("payload size does not match for message with id: %d",
                                      pMsg->msgId);
+                            break;
                         }
                         if (mApiImpl->mCallbacksMask & E_LOC_CB_SYSTEM_INFO_BIT) {
                             const LocAPILocationSystemInfoIndMsg * pDataIndMsg =
@@ -1730,6 +1768,7 @@ void LocationClientApiImpl::onReceive(const string& data) {
                         if (sizeof(LocAPIPingTestIndMsg) != mMsgData.length()) {
                             LOC_LOGw("payload size does not match for message with id: %d",
                                      pMsg->msgId);
+                            break;
                         }
                         const LocAPIPingTestIndMsg* pIndMsg = (LocAPIPingTestIndMsg*)(pMsg);
                         if (mApiImpl->mPingTestCb) {
