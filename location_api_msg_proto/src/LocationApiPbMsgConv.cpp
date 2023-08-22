@@ -322,6 +322,12 @@ ELocMsgID LocationApiPbMsgConv::getEnumForPBELocMsgID(const PBELocMsgID &pbLocMs
         case PB_E_INTAPI_DEREGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID:
             eLocMsgId = E_INTAPI_DEREGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID;
             break;
+        case PB_E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_REQ_MSG_ID:
+            eLocMsgId = E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_REQ_MSG_ID;
+            break;
+        case PB_E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_RESP_MSG_ID:
+            eLocMsgId = E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_RESP_MSG_ID;
+            break;
         default:
             break;
     }
@@ -1091,6 +1097,12 @@ PBELocMsgID LocationApiPbMsgConv::getPBEnumForELocMsgID(const ELocMsgID &eLocMsg
         case E_INTAPI_DEREGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID:
             pbLocMsgId = PB_E_INTAPI_DEREGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID;
             break;
+        case E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_REQ_MSG_ID:
+            pbLocMsgId = PB_E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_REQ_MSG_ID;
+            break;
+        case E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_RESP_MSG_ID:
+            pbLocMsgId = PB_E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_RESP_MSG_ID;
+            break;
         default:
             break;
     }
@@ -1390,6 +1402,9 @@ uint32_t LocationApiPbMsgConv::getPBMaskForLocationCallbacksMask(const uint32_t 
     }
     if (locCbMask & E_LOC_CB_GNSS_DC_REPORT_BIT) {
         pbLocCbMask |= PB_E_LOC_CB_GNSS_DC_REPORT_BIT;
+    }
+    if (locCbMask & E_LOC_CB_ENGINE_NMEA_BIT) {
+        pbLocCbMask |= PB_E_LOC_CB_ENGINE_NMEA_BIT;
     }
     LocApiPb_LOGv("LocApiPB: locCbMask:%x, pbLocCbMask:%x", locCbMask, pbLocCbMask);
     return pbLocCbMask;
@@ -2593,6 +2608,9 @@ uint32_t LocationApiPbMsgConv::getLocationCallbacksMaskFromPB(const uint32_t &pb
     }
     if (pbLocCbMask & PB_E_LOC_CB_GNSS_DC_REPORT_BIT) {
         locCbMask |= E_LOC_CB_GNSS_DC_REPORT_BIT;
+    }
+    if (pbLocCbMask & PB_E_LOC_CB_ENGINE_NMEA_BIT) {
+        locCbMask |= E_LOC_CB_ENGINE_NMEA_BIT;
     }
     LocApiPb_LOGv("LocApiPB: pbLocCbMask:%x, locCbMask:%x", pbLocCbMask, locCbMask);
     return locCbMask;
@@ -4479,9 +4497,12 @@ int LocationApiPbMsgConv::convertLocAPINmeaSerializedPayloadToPB(
     pbLocAPINmeaSerPload->set_timestamp(locAPINmeaSerPload.timestamp);
     // string nmea = 2;
     pbLocAPINmeaSerPload->set_nmea(locAPINmeaSerPload.nmea);
+    // PBLocApiOutputEngineType = 3;
+    pbLocAPINmeaSerPload->set_locoutputengtype(
+            getPBEnumForLocOutputEngineType(locAPINmeaSerPload.locOutputEngType));
 
-    LocApiPb_LOGv("LocApiPB: locAPINmeaSerPload - Timestamp: %" PRIu64,
-            locAPINmeaSerPload.timestamp);
+    LocApiPb_LOGv("LocApiPB: locAPINmeaSerPload - Timestamp: %" PRIu64 "locOutputEngType=%d",
+            locAPINmeaSerPload.timestamp, locAPINmeaSerPload.locOutputEngType );
     return 0;
 }
 
@@ -5579,6 +5600,9 @@ int LocationApiPbMsgConv::pbConvertToLocAPINmeaSerializedPayload(
     locApiNmeaSerPayload.timestamp = pbLocApiNmeaSerPayload.timestamp();
     // string nmea = 2;
     locApiNmeaSerPayload.nmea = pbLocApiNmeaSerPayload.nmea();
+    //PBLocApiOutputEngineType logOutputEngineType = 3;
+    locApiNmeaSerPayload.locOutputEngType =
+            getEnumForPBLocOutputEngineType(pbLocApiNmeaSerPayload.locoutputengtype());
     LocApiPb_LOGv("LocApiPB: pbLocApiNmeaSerPayload %" PRIu64, locApiNmeaSerPayload.timestamp);
     return 0;
 }
