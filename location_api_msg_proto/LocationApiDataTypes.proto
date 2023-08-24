@@ -79,8 +79,8 @@ enum LocationApiDataTypesVersion {
     LOCAPI_DATA_TYPES_VER_MAJOR = 1;
     // Minor - New features / API addition, new message/elemtent addition.
     // Bump the last byte of version i.e. x.2 to x.3
-    // Minor version 32: Add xtra diag logging status
-    LOCAPI_DATA_TYPES_VER_MINOR = 32;
+    // Minor version 33: Add ENGINE_RUN_STATE_PAUSE_RETAIN
+    LOCAPI_DATA_TYPES_VER_MINOR = 33;
 }
 
 // ============================================================================
@@ -473,9 +473,10 @@ enum PBLocApiPositioningEngineMask {
 }
 
 enum PBLocEngineRunState {
-    PB_LOC_ENGINE_RUN_STATE_INVALID = 0;
-    PB_LOC_ENGINE_RUN_STATE_PAUSE   = 1;
-    PB_LOC_ENGINE_RUN_STATE_RESUME  = 2;
+    PB_LOC_ENGINE_RUN_STATE_INVALID       = 0;
+    PB_LOC_ENGINE_RUN_STATE_PAUSE         = 1;
+    PB_LOC_ENGINE_RUN_STATE_RESUME        = 2;
+    PB_LOC_ENGINE_RUN_STATE_PAUSE_RETAIN  = 3;
 };
 
 enum PBDrEngineAidingDataMask {
