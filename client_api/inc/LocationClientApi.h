@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -92,6 +92,12 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
          LOCATION_TECHNOLOGY_HYBRID_BIT
 #define LOCATION_POS_TECH_PPE_BIT \
          LOCATION_TECHNOLOGY_PPE_BIT
+#define LOCATION_POS_TECH_VEH_BIT \
+         LOCATION_TECHNOLOGY_VEH_BIT
+#define LOCATION_POS_TECH_VIS_BIT \
+         LOCATION_TECHNOLOGY_VIS_BIT
+#define LOCATION_POS_TECH_PROPAGATED_BIT \
+         LOCATION_TECHNOLOGY_PROPAGATED_BIT
 // DEPRECATION - BACKWARD COMPATIBILITY SECTION
 
 using std::string;
@@ -411,7 +417,10 @@ enum LocationTechnologyMask {
     LOCATION_TECHNOLOGY_VEH_BIT                      = (1<<9),
     /** Visual data was used to calculate
      *  Location. <br/>   */
-    LOCATION_TECHNOLOGY_VIS_BIT                      = (1<<10)
+    LOCATION_TECHNOLOGY_VIS_BIT                      = (1<<10),
+    /** Propagation logic was used to calculate
+     *  Location. <br/>   */
+    LOCATION_TECHNOLOGY_PROPAGATED_BIT               = (1<<11)
 };
 
 /** Specify the set of navigation solutions that contribute
@@ -553,6 +562,10 @@ enum GnssSignalTypeMask {
     GNSS_SIGNAL_NAVIC_L5_BIT            = (1<<20),
     /** GNSS signal is of BEIDOU B2A_Q RF band. <br/>   */
     GNSS_SIGNAL_BEIDOU_B2AQ_BIT         = (1<<21),
+    /** GNSS signal is of BEIDOU B2B_I RF band. <br/>   */
+    GNSS_SIGNAL_BEIDOU_B2BI_BIT         = (1<<22),
+    /** GNSS signal is of BEIDOU B2B_Q RF band. <br/>   */
+    GNSS_SIGNAL_BEIDOU_B2BQ_BIT         = (1<<23),
 };
 
 /** Specify LocationClientApi function call processing status.
@@ -680,7 +693,8 @@ typedef uint64_t LCAGnssLocationInfoFlagMask;
      *  GnssLocation::leapSeconds. <br/>   */
 #define LCA_GNSS_LOCATION_INFO_LEAP_SECONDS_BIT                             (1ULL<<22)
     /** GnssLocation has valid
-     *  GnssLocation::timeUncMs. <br/>   */
+     *  GnssLocation::timeUncMs.
+     *  this enum has been deprecated. <br/>  */
 #define LCA_GNSS_LOCATION_INFO_TIME_UNC_BIT                                 (1ULL<<23)
     /** GnssLocation has valid
      *  GnssLocation::numSvUsedInPosition. <br/>   */
@@ -833,7 +847,31 @@ enum DrCalibrationStatusMask {
     DR_ODO_CALIBRATION_NEEDED   = (1<<3),
     /** Indicate that gyro calibration is needed. <br/>
      *  Need to take more turns on level ground. <br/>  */
-    DR_GYRO_CALIBRATION_NEEDED  = (1<<4)
+    DR_GYRO_CALIBRATION_NEEDED  = (1<<4),
+    /** Lot more turns on level ground needed */
+    DR_TURN_CALIBRATION_LOW     = (1<<5),
+    /** Some more turns on level ground needed */
+    DR_TURN_CALIBRATION_MEDIUM  = (1<<6),
+    /** Sufficient turns on level ground observed */
+    DR_TURN_CALIBRATION_HIGH    = (1<<7),
+    /** Lot more accelerations in straight line needed */
+    DR_LINEAR_ACCEL_CALIBRATION_LOW      = (1<<8),
+    /** Some more accelerations in straight line needed */
+    DR_LINEAR_ACCEL_CALIBRATION_MEDIUM   = (1<<9),
+    /** Sufficient acceleration events in straight line observed */
+    DR_LINEAR_ACCEL_CALIBRATION_HIGH     = (1<<10),
+    /** Lot more motion in straight line needed */
+    DR_LINEAR_MOTION_CALIBRATION_LOW     = (1<<11),
+    /** Some more motion in straight line needed */
+    DR_LINEAR_MOTION_CALIBRATION_MEDIUM  = (1<<12),
+    /** Sufficient motion events in straight line observed */
+    DR_LINEAR_MOTION_CALIBRATION_HIGH    = (1<<13),
+    /** Lot more stationary events on level ground needed */
+    DR_STATIC_CALIBRATION_LOW            = (1<<14),
+    /** Some more stationary events on level ground needed */
+    DR_STATIC_CALIBRATION_MEDIUM         = (1<<15),
+    /** Sufficient stationary events on level ground observed */
+    DR_STATIC_CALIBRATION_HIGH           = (1<<16)
 };
 
 /** Specify the set of SVs that are used to calculate
@@ -1223,6 +1261,48 @@ enum DrSolutionStatusMask {
     /** Vehicle sensor speed input was used by the DR position
      *  engine. <br/> */
     DR_SOLUTION_STATUS_VEHICLE_SENSOR_SPEED_INPUT_USED     = (1<<1),
+    /** DRE solution disengaged due to insufficient
+      * calibration <br/> */
+    DR_SOLUTION_STATUS_WARNING_UNCALIBRATED                = (1<<2),
+    /** DRE solution disengaged due to bad GNSS
+      * quality <br/> */
+    DR_SOLUTION_STATUS_WARNING_GNSS_QUALITY_INSUFFICIENT   = (1<<3),
+    /** DRE solution disengaged as ferry condition
+      * detected <br/> */
+    DR_SOLUTION_STATUS_WARNING_FERRY_DETECTED              = (1<<4),
+    /** DRE solution disengaged as 6DOF sensor inputs
+      * not available <br/> */
+    DR_SOLUTION_STATUS_ERROR_6DOF_SENSOR_UNAVAILABLE       = (1<<5),
+    /** DRE solution disengaged as vehicle speed inputs
+      * not available <br/> */
+    DR_SOLUTION_STATUS_ERROR_VEHICLE_SPEED_UNAVAILABLE     = (1<<6),
+    /** DRE solution disengaged as Ephemeris info
+      * not available <br/> */
+    DR_SOLUTION_STATUS_ERROR_GNSS_EPH_UNAVAILABLE          = (1<<7),
+    /** DRE solution disengaged as GNSS measurement
+      * info not available <br/> */
+    DR_SOLUTION_STATUS_ERROR_GNSS_MEAS_UNAVAILABLE         = (1<<8),
+    /** DRE solution disengaged due non-availability of
+      * stored position from previous session <br/> */
+    DR_SOLUTION_STATUS_WARNING_INIT_POSITION_INVALID       = (1<<9),
+    /** DRE solution dis-engaged due to vehicle motion
+      *  detected at session start <br/> */
+    DR_SOLUTION_STATUS_WARNING_INIT_POSITION_UNRELIABLE    = (1<<10),
+    /** DRE solution dis-engaged due to unreliable
+      * position <br/> */
+    DR_SOLUTION_STATUS_WARNING_POSITON_UNRELIABLE          = (1<<11),
+    /** DRE solution dis-engaged due to a generic
+      * error <br/> */
+    DR_SOLUTION_STATUS_ERROR_GENERIC                       = (1<<12),
+    /** DRE solution dis-engaged due to Sensor Temperature
+      * being out of range <br/> */
+    DR_SOLUTION_STATUS_WARNING_SENSOR_TEMP_OUT_OF_RANGE    = (1<<13),
+    /** DRE solution dis-engaged due to insufficient
+      *  user dynamics <br/> */
+    DR_SOLUTION_STATUS_WARNING_USER_DYNAMICS_INSUFFICIENT  = (1<<14),
+    /** DRE solution dis-engaged due to inconsistent
+      *  factory data <br/> */
+    DR_SOLUTION_STATUS_WARNING_FACTORY_DATA_INCONSISTENT   = (1<<15)
 };
 
 /** Specify the session status. <br/> */
@@ -1726,6 +1806,8 @@ enum GnssMeasurementsAdrStateMask {
     GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_RESET_BIT       = (1<<1),
     /** Accumulated delta range state is "cycle slip". <br/>   */
     GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_CYCLE_SLIP_BIT  = (1<<2),
+    /** Accumulated delta range state is hal cycle resolved". <br/>   */
+    GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_HALF_CYCLE_RESOLVED_BIT = (1<<3),
 };
 
 /** Specify the GNSS multipath indicator state in
@@ -2159,6 +2241,21 @@ typedef std::function<void(
 )> GnssNmeaCb;
 
 /** @brief
+    EngineNmeaCb is for receiving NMEA sentences when
+    LocationClientApi is in a positioning session. <br/>
+    @param engType: engine type that NMEA is derived from
+    @param timestamp: timestamp that NMEA sentence is
+                    generated. <br/>
+    @param nmea: nmea strings generated from position and SV
+           report. <br/>
+*/
+typedef std::function<void(
+    LocOutputEngineType engType,
+    uint64_t timestamp,
+    const std::string& nmea
+)> EngineNmeaCb;
+
+/** @brief
     GnssDataCb is for receiving GnssData, e.g.:
     jammer information when LocationClientApi is in a
     positioning session. <br/>
@@ -2254,7 +2351,15 @@ struct GnssReportCbs {
     GnssLocationCb gnssLocationCallback;
     /** Callback to receive GnssSv from modem GNSS engine. <br/> */
     GnssSvCb gnssSvCallback;
-    /** Callback to receive NMEA sentences. <br/> */
+    /** Callback to receive NMEA sentences. <br/>
+     *  NMEA will be generated from GnssSv and position report.
+     *  <br/>
+     *  When there are multiple engines running on the system,
+     *  position related NMEA sentences will be generated from the
+     *  fused position report. <br/>
+     *  When there is only SPE engine running on the system,
+     *  position related NMEA sentences will be generated from the
+     *  position report from modem GNSS engine report. <br/> */
     GnssNmeaCb gnssNmeaCallback;
     /** Callback to receive GnssData from modem GNSS engine.
      *  <br/> */
@@ -2302,6 +2407,16 @@ struct EngineReportCbs {
     /** Callback to receive disaster and crisis report from modem
      *  GNSS engine. <br/> */
     GnssDcReportCb gnssDcReportCallback;
+    /**
+     * Receive NMEA related to position report from all registered engines
+     * if those engines are configured to generate NMEA report via
+     * API configOutputNmeaTypes(NmeaTypesMask, GeodeticDatumType, LocReqEngineTypeMask)
+     * The SV report will come from GNSS engine.
+     * User should pick one nmea callback, either GnssNmeaCb or EngineNmeaCb
+     * to use. Don't register both at the same time, otherwise
+     * LOCATION_ERROR_INVALID_PARAMETER will be thrown.
+     * Recommend to use EngineNmeaCb. <br/> */
+    EngineNmeaCb engineNmeaCallback;
 };
 
 /**
@@ -2592,6 +2707,10 @@ public:
         Retrieve single-shot terrestrial position using the set of
         specified terrestrial technologies. <br/>
 
+        In order to retrieve terrestrial positions,
+        the client must give consent first through
+        LocationIntegrationApi::setUserConsentForTerrestrialPositioning() <br/>
+
         For this phase, only TERRESTRIAL_TECH_GTP_WWAN will be
         supported and this will return cell-based position. <br/>.
 
@@ -2673,6 +2792,10 @@ public:
         Retrieve single-shot position using the position
         technologies supported and enabled on the device. <br/>
 
+        For single shot position to utilize terrestrial position technology,
+        the client must give consent first through
+        LocationIntegrationApi::setUserConsentForTerrestrialPositioning() <br/>
+
         This API can be invoked with on-going tracking session
         initiated via startPositionSession() and single shot
         terrestrial fix request initiated via
@@ -2696,7 +2819,7 @@ public:
         callback to receive the position fix. Some fields in
         LocationClientApi::Location, e.g.: speed, bearing and their
         uncertainty may not be available, e.g.: when the position is
-        produced with terrestria position technology. Please check
+        produced with terrestrial position technology. Please check
         Location::flags for the fields that are available. <br/>
 
         This callback will only be invoked when
@@ -3327,8 +3450,8 @@ class Geofence {
     double mLongitude;
     double mRadius;
     GeofenceBreachTypeMask mBreachType;
-    uint32_t mResponsiveness;
-    uint32_t mDwellTime;
+    uint32_t mResponsiveness; // in milliseconds
+    uint32_t mDwellTime; // in seconds
 public:
     virtual ~Geofence() {}
     inline Geofence(double lat, double lon, double r, GeofenceBreachTypeMask type,

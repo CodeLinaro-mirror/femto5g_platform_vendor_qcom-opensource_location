@@ -30,7 +30,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -67,7 +67,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdlib.h>
 #include <unistd.h>
 #include <inttypes.h>
-#include <string.h>
+#include <string>
 #include <sstream>
 #include <grp.h>
 #include <sys/types.h>
@@ -80,6 +80,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <loc_misc_utils.h>
 #include <thread>
 #include <unordered_map>
+#include <algorithm>
 
 #include <LocationClientApi.h>
 #include <LocationIntegrationApi.h>
@@ -96,19 +97,27 @@ static uint32_t numGnssLocationCb = 0;
 static uint32_t numEngLocationCb = 0;
 static uint32_t numGnssSvCb = 0;
 static uint32_t numGnssNmeaCb = 0;
+static uint32_t numEngineNmeaCb = 0;
 static uint32_t numDataCb         = 0;
 static uint32_t numGnssMeasurementsCb = 0;
 
 static LocationClientApi* pLcaClient = nullptr;
 static location_integration::LocationIntegrationApi* pIntClient = nullptr;
 static sem_t semCompleted;
+static sem_t semGfCompleted;
+static sem_t semBatchingCompleted;
 static int fixCnt = 0x7fffffff;
 static uint64_t autoTestStartTimeMs = 0;
+static uint64_t autoTestStartGfTimeMs = 0;
+static uint64_t autoTestStartBatchingTimeMs = 0;
 static int autoTestTimeoutSec = 0x7FFFFFFF;
 static uint32_t gtpFixCnt = 0;
 static uint32_t singleShotFixCnt = 0;
 vector<Geofence> sGeofences;
 
+static char NMEA_PORT[] = "/dev/at_usb1";
+static int ttyFd = -1;
+static int routeToNMEAPort = 0;
 enum ReportType {
     POSITION_REPORT = 1 << 0,
     NMEA_REPORT     = 1 << 1,
@@ -117,6 +126,7 @@ enum ReportType {
     MEAS_REPORT     = 1 << 4,
     NHZ_MEAS_REPORT = 1 << 5,
     DC_REPORT       = 1 << 6,
+    ENGINE_NMEA_REPORT = 1 << 7,
 };
 
 enum TrackingSessionType {
@@ -161,7 +171,65 @@ enum TrackingSessionType {
 #define CANCEL_SINGLE_FUSED_FIX    "cancelSingleFusedFix"
 #define CONFIG_XTRA_PARAMS         "configXtraParams"
 #define GET_XTRA_STATUS             "getXtraStatus"
+#define CONFIG_MERKLE_TREE          "configMerkleTree"
+#define CONFIG_OSNMA_ENABLEMENT     "configOsnmaEnablement"
 #define REGISTER_XTRA_STATUS_UPDATE "registerXtraUpdateStatus"
+#define ENABLE_XTRA_ON_DEMAND_DOWNLOAD "enableXtraOnDemandDownload"
+#define REGISTER_SIGNAL_TYPES_UPDATE "registerGnssSignalTypesUpdate"
+#define ADD_GEOFENCES               "addGeofences"
+#define PAUSE_GEOFENCES             "pauseGeofences"
+#define RESUME_GEOFENCES            "resumeGeofences"
+#define MODIFY_GEOFENCES            "modifyGeofences"
+#define REMOVE_GEOFENCES            "removeGeofences"
+
+static bool openPort(void)
+{
+    bool retVal = true;
+
+    if (ttyFd == -1) {
+        printf("opening NMEA port %s ", NMEA_PORT);
+        ttyFd = open(NMEA_PORT, O_RDWR | O_NOCTTY | O_NDELAY);
+        if (ttyFd == -1) {
+            /* Could not open the port. */
+            printf("Unable to open %s \n", NMEA_PORT);
+            retVal = false;
+        } else {
+            printf("openPort success ttyFd: %d\n", ttyFd);
+        }
+    }
+    return retVal;
+}
+
+static bool sendNMEAToTty(const std::string& nmea)
+{
+    int n;
+    char buffer[201] = { 0 };
+    bool retVal = true;
+    strlcpy(buffer, nmea.c_str(), sizeof(buffer));
+    if (1 < nmea.length() && sizeof(buffer) > nmea.length()) {
+        n = write(ttyFd, buffer, nmea.length());
+        if (n < 0) {
+            printf("write() of %d bytes failed!\n", n);
+            retVal = false;
+        } else if (0 == n) {
+            printf("write() of %d bytes returned 0, errno:%d [%s]\n",
+                nmea.length(), errno, strerror(errno));
+            /* Sleep of 0.1 msec and reattempt to write*/
+            usleep(100);
+            n = write(ttyFd, buffer, nmea.length() - 1);
+            if (n < 0) {
+                printf("reattempt write() failed! errno:%d [%s] \n", errno, strerror(errno));
+                retVal = false;
+            } else if (0 == n) {
+                printf("reattempt write() of %d bytes returned 0, errno:%d [%s]\n",
+                    nmea.length(), errno, strerror(errno));
+            }
+        }
+    } else {
+        printf("Failed to write Len: %d %s \n", nmea.length(), nmea.c_str());
+    }
+    return true;
+}
 
 // debug utility
 static uint64_t getTimestampMs() {
@@ -176,6 +244,12 @@ static void cleanupAfterAutoStart() {
     if (pLcaClient) {
         printf("calling stopPosition and delete LCA client\n");
         pLcaClient->stopPositionSession();
+        if (autoTestStartGfTimeMs != 0) {
+            pLcaClient->removeGeofences(sGeofences);
+        }
+        if (autoTestStartBatchingTimeMs != 0) {
+            pLcaClient->stopBatchingSession();
+        }
         delete pLcaClient;
         pLcaClient = nullptr;
     }
@@ -342,7 +416,8 @@ static void onBatchingCb(const std::vector<Location>& locations,
 
 static void onGeofenceBreachCb( const vector<Geofence>& geofences, Location location,
         GeofenceBreachTypeMask type, uint64_t timestamp) {
-    printf("<<< onGeofenceBreachCb, breach type: %d, timestamp: %" PRIu64, type, timestamp);
+    printf("<<< onGeofenceBreachCb, breach type: %d, gf cnt: %d, timestamp: %" PRIu64, type,
+           geofences.size(), timestamp);
     for (Geofence gf : geofences) {
         printf("<<< onGeofenceBreachCb, lat=%f lon=%f rad=%f, responsiveness: %u, dwellTime: %u\n",
                gf.getLatitude(), gf.getLongitude(), gf.getRadius(), gf.getResponsiveness(),
@@ -350,11 +425,13 @@ static void onGeofenceBreachCb( const vector<Geofence>& geofences, Location loca
     }
 }
 static void onCollectiveResponseCb(vector<std::pair<Geofence, LocationResponse>>& responses) {
+    printf("<<< onCollectiveResponseCb, geofence cnt: %d\n", responses.size());
     for (std::pair<Geofence, LocationResponse> pair : responses) {
-        printf("<<< onCollectiveResponseCb, lat=%f lon=%f rad=%f, responsiveness: %u, "
-                "dwellTime: %u, response: %d\n",
+        printf("<<< onCollectiveResponseCb, lat=%f lon=%f rad=%f, breachType: %d, "
+                "responsiveness: %u, dwellTime: %u, response: %d\n",
                pair.first.getLatitude(), pair.first.getLongitude(), pair.first.getRadius(),
-               pair.first.getResponsiveness(), pair.first.getDwellTime(), pair.second);
+               pair.first.getBreachType(), pair.first.getResponsiveness(),
+               pair.first.getDwellTime(), pair.second);
     }
 }
 static void onGnssSvCb(const std::vector<location_client::GnssSv>& gnssSvs) {
@@ -395,6 +472,23 @@ static void onGnssNmeaCb(uint64_t timestamp, const std::string& nmea) {
     }
     printf("<<< onGnssNmeaCb cnt=%u time=%" PRIu64" nmea=%s",
             numGnssNmeaCb, timestamp, nmea.c_str());
+    if (routeToNMEAPort && openPort()) {
+                sendNMEAToTty(nmea);
+    }
+}
+
+static void onEngineNmeaCb(LocOutputEngineType engType,
+                           uint64_t timestamp,
+                           const std::string& nmea) {
+    numEngineNmeaCb++;
+    if (!outputEnabled) {
+        return;
+    }
+    printf("<<< onEngineNmeaCb cnt=%u engine type=%u time=%" PRIu64" nmea=%s",
+            numEngineNmeaCb, engType, timestamp, nmea.c_str());
+    if (routeToNMEAPort && openPort()) {
+                sendNMEAToTty(nmea);
+    }
 }
 
 static void onGnssDataCb(const location_client::GnssData& gnssData) {
@@ -474,6 +568,10 @@ static void onGetXtraStatusCb(XtraStatusUpdateTrigger updateTrigger, const XtraS
            xtraStatus.xtraValidForHours);
 }
 
+static void onGnssSignalTypesCb(GnssSignalTypeMask signalType) {
+    printf("<<< onGnssSignalTypesCb, supported signalType mask %x \n", signalType);
+}
+
 static void printHelp() {
     printf("\n************* options *************\n");
     printf("e reprottype tbf: Concurrent engine report session with 100 ms interval\n");
@@ -518,7 +616,18 @@ static void printHelp() {
     printf("%s: cancle single shot fix \n", CANCEL_SINGLE_FUSED_FIX );
     printf("%s: config xtra params \n", CONFIG_XTRA_PARAMS);
     printf("%s: get xtra status \n", GET_XTRA_STATUS);
+    printf("%s: config merkle tree \n", CONFIG_MERKLE_TREE);
+    printf("%s: config osnam enablement \n", CONFIG_OSNMA_ENABLEMENT);
     printf("%s: register xtra status update \n", REGISTER_XTRA_STATUS_UPDATE);
+    printf("%s: enable xtra on demand download \n", ENABLE_XTRA_ON_DEMAND_DOWNLOAD);
+    printf("%s: register GNSS signal types update \n", REGISTER_SIGNAL_TYPES_UPDATE);
+    printf("%s: add geofences with lat/lon/radius/breachtype/responsiveness/dwelltime\n",
+            ADD_GEOFENCES);
+    printf("%s: pause geofences with indexes\n",  PAUSE_GEOFENCES );
+    printf("%s: resume geofences with indexes\n", RESUME_GEOFENCES );
+    printf("%s: modify geofences with index/breachtype/responsiveness/dwelltime\n",
+            MODIFY_GEOFENCES );
+    printf("%s: remove geofences with indexes\n", REMOVE_GEOFENCES );
 }
 
 void setRequiredPermToRunAsLocClient() {
@@ -1025,6 +1134,9 @@ static void setupEngineReportCbs(uint32_t reportType, EngineReportCbs& reportcbs
     if (reportType & DC_REPORT) {
         reportcbs.gnssDcReportCallback = GnssDcReportCb(onGnssDcReportCb);
     }
+    if (reportType & ENGINE_NMEA_REPORT) {
+        reportcbs.engineNmeaCallback = EngineNmeaCb(onEngineNmeaCb);
+    }
 }
 
 void getMultipleFusedFixes(uint32_t timeoutMsec, float horQoS,
@@ -1099,13 +1211,249 @@ void getFusedFixes(char* buf) {
     }
 }
 
+void addGeofences(char* buf) {
+    double latitude = 32.896535;
+    double longitude = -117.201025;
+    double radiusM = 50;
+    GeofenceBreachTypeMask breachType = (GeofenceBreachTypeMask) (
+            GEOFENCE_BREACH_ENTER_BIT | GEOFENCE_BREACH_EXIT_BIT);
+    uint32_t responsivenessMs = 4000;
+    uint32_t dwellTimeSec = 4;
+    vector<Geofence> addGfVec;
+
+    static char *save = nullptr;
+    static char *inner = nullptr;
+    char* token = strtok_r(buf, " ", &save); // skip first token ;
+    string paramStr;
+    int index = sGeofences.size();
+
+    while ((token = strtok_r(NULL, ",", &save)) != NULL) {
+        buf = token;
+        try {
+            // get latitude
+            token = strtok_r(buf, " ", &inner);
+            if (token != NULL) {
+                paramStr.assign(token);
+                latitude = ::std::stof(paramStr);
+            }
+            // get longitude
+            token = strtok_r(NULL, " ", &inner);
+            if (token != NULL) {
+                paramStr.assign(token);
+                longitude = ::std::stof(paramStr);
+            }
+        } catch (std::exception const & e) {
+            printf("invalid input.\n");
+            return;
+        }
+        // get radius
+        token = strtok_r(NULL, " ", &inner);
+        if (token != NULL && atof(token) >= 0) {
+            radiusM = atof(token);
+        }
+        // get breachType
+        token = strtok_r(NULL, " ", &inner);
+        if (token != NULL && atoi(token) >= 0) {
+            breachType = (GeofenceBreachTypeMask)atoi(token);
+        } else {
+            breachType = (GeofenceBreachTypeMask)(
+                    GEOFENCE_BREACH_ENTER_BIT | GEOFENCE_BREACH_EXIT_BIT);
+        }
+        // get responsiveness
+        token = strtok_r(NULL, " ", &inner);
+        if (token != NULL && atoi(token) >= 0) {
+            responsivenessMs = atoi(token);
+        }
+        // get dwellTime
+        token = strtok_r(NULL, " ", &inner);
+        if (token != NULL && atoi(token) >= 0) {
+            dwellTimeSec = atoi(token);
+        }
+        Geofence gf(latitude, longitude, radiusM, breachType, responsivenessMs,
+                dwellTimeSec);
+        if (addGfVec.size() < 20) {
+            printf("addGeofences, index: %d, latitude: %f, longitude: %f, radiusM: %f, "
+                    "breachType: %d, responsivenessMs: %d, dwellTimeSec: %d\n", index++,
+                    latitude, longitude, radiusM, breachType, responsivenessMs, dwellTimeSec);
+            addGfVec.push_back(gf);
+        } else {
+            printf("Input more than 20 geofences. Only the first 20 would be added\n");
+            break;
+        }
+    }
+
+    if (!pLcaClient) {
+        pLcaClient = new LocationClientApi(onCapabilitiesCb);
+        sleep(1); // wait for capability callback
+    }
+    pLcaClient->addGeofences(addGfVec, onGeofenceBreachCb, onCollectiveResponseCb);
+    sGeofences.insert(sGeofences.end(), addGfVec.begin(), addGfVec.end());
+    printf("currently there are %d geofences available, please input index and the "
+            "latitude/longitude/radius/breachType/responsiveness/dwelltime\n", sGeofences.size());
+}
+
+void modifyGeofences(char* buf) {
+    int32_t seqNum = 0;
+    GeofenceBreachTypeMask breachType = (GeofenceBreachTypeMask) (
+            GEOFENCE_BREACH_ENTER_BIT | GEOFENCE_BREACH_EXIT_BIT);
+    uint32_t responsivenessMs = 4000;
+    uint32_t dwellTimeSec = 4;
+    vector<Geofence> modifyGfVec;
+
+    static char *save = nullptr;
+    static char *inner = nullptr;
+    char* token = strtok_r(buf, " ", &save); // skip first token
+
+    printf("currently there are %d geofences available, please input index and "
+            "breachType/responsiveness/dwelltime\n", sGeofences.size());
+    while ((token = strtok_r(NULL, ",", &save)) != NULL) {
+        buf = token;
+        // get index
+        token = strtok_r(buf, " ", &inner);
+        if (token != NULL) {
+            seqNum = atoi(token);
+        }
+        // get breachType
+        token = strtok_r(NULL, " ", &inner);
+        if (token != NULL && atoi(token) >= 0) {
+            breachType = (GeofenceBreachTypeMask)atoi(token);
+        } else {
+            breachType = (GeofenceBreachTypeMask)(
+                    GEOFENCE_BREACH_ENTER_BIT | GEOFENCE_BREACH_EXIT_BIT);
+        }
+        // get responsiveness
+        token = strtok_r(NULL, " ", &inner);
+        if (token != NULL && atoi(token) >= 0) {
+            responsivenessMs = atoi(token);
+        }
+        // get dwellTime
+        token = strtok_r(NULL, " ", &inner);
+        if (token != NULL && atoi(token) >= 0) {
+            dwellTimeSec = atoi(token);
+        }
+        if (sGeofences.size() <= seqNum) {
+            printf("index not exists!! \n");
+            return;
+        }
+        printf("modifyGeofences seqNum: %d, latitude: %f, longitude: %f, radiusM: %f,"
+               " Updated breachType: %d, responsivenessMs: %d, dwellTimeSec: %d\n", seqNum,
+               sGeofences[seqNum].getLatitude(), sGeofences[seqNum].getLongitude(),
+               sGeofences[seqNum].getRadius(), breachType, responsivenessMs, dwellTimeSec);
+        sGeofences[seqNum].setBreachType(breachType);
+        sGeofences[seqNum].setResponsiveness(responsivenessMs);
+        sGeofences[seqNum].setDwellTime(dwellTimeSec);
+        modifyGfVec.push_back(sGeofences[seqNum]);
+    }
+
+    if (!pLcaClient) {
+        pLcaClient = new LocationClientApi(onCapabilitiesCb);
+    }
+    pLcaClient->modifyGeofences(modifyGfVec);
+}
+void pauseGeofences(char* buf) {
+    static char *save = nullptr;
+    char* token = strtok_r(buf, " ", &save); // skip first token
+    int32_t seqNum = 0;
+    vector<Geofence> pauseGfVec;
+
+    printf("currently there are %d geofences available, please input index \n",
+            sGeofences.size());
+    // get index
+    while ((token = strtok_r(NULL, " ", &save)) != NULL) {
+        seqNum = atoi(token);
+        if (sGeofences.size() <= seqNum) {
+            printf("index not exists!! \n");
+            return;
+        }
+        printf("pauseGeofences seqNum: %d, lat: %f, lon: %f, radiusM: %f, breachType: %d,"
+                "responsivenessMs: %d, dwellTimeSec: %d\n", seqNum,
+                sGeofences[seqNum].getLatitude(), sGeofences[seqNum].getLongitude(),
+                sGeofences[seqNum].getRadius(), sGeofences[seqNum].getBreachType(),
+                sGeofences[seqNum].getResponsiveness(), sGeofences[seqNum].getDwellTime());
+        pauseGfVec.push_back(sGeofences[seqNum]);
+    }
+
+    if (!pLcaClient) {
+        pLcaClient = new LocationClientApi(onCapabilitiesCb);
+    }
+    pLcaClient->pauseGeofences(pauseGfVec);
+}
+
+void resumeGeofences(char* buf) {
+    static char *save = nullptr;
+    char* token = strtok_r(buf, " ", &save); // skip first token
+    int32_t seqNum = 0;
+    vector<Geofence> resumeGfVec;
+
+    printf("currently there are %d geofences available, please input index \n",
+            sGeofences.size());
+    while ((token = strtok_r(NULL, " ", &save)) != NULL) {
+        // get index
+        seqNum = atoi(token);
+        if (sGeofences.size() <= seqNum) {
+            printf("index not exists!! \n");
+            return;
+        }
+        printf("resumeGeofences seqNum: %d, lat: %f, lon: %f, radiusM: %f, breachType: %d,"
+                "responsivenessMs: %d, dwellTimeSec: %d\n", seqNum,
+                sGeofences[seqNum].getLatitude(), sGeofences[seqNum].getLongitude(),
+                sGeofences[seqNum].getRadius(), sGeofences[seqNum].getBreachType(),
+                sGeofences[seqNum].getResponsiveness(), sGeofences[seqNum].getDwellTime());
+        resumeGfVec.push_back(sGeofences[seqNum]);
+    }
+
+    if (!pLcaClient) {
+        pLcaClient = new LocationClientApi(onCapabilitiesCb);
+    }
+    pLcaClient->resumeGeofences(resumeGfVec);
+}
+void removeGeofences(char* buf) {
+    static char *save = nullptr;
+    char* token = strtok_r(buf, " ", &save); // skip first token
+    int32_t seqNum = 0;
+    vector<Geofence> removeGfVec;
+    vector<int> seqNumVec;
+
+    printf("currently there are %d geofences available, please input index \n",
+            sGeofences.size());
+    while ((token = strtok_r(NULL, " ", &save)) != NULL) {
+        // get index
+        seqNum = atoi(token);
+        if (sGeofences.size() <= seqNum) {
+            printf("index not exists!! \n");
+            return;
+        }
+        printf("removeGeofences seqNum: %d, lat: %f, long: %f, radiusM: %f, breachType: %d,"
+                "responsivenessMs: %d, dwellTimeSec: %d\n", seqNum,
+                sGeofences[seqNum].getLatitude(), sGeofences[seqNum].getLongitude(),
+                sGeofences[seqNum].getRadius(), sGeofences[seqNum].getBreachType(),
+                sGeofences[seqNum].getResponsiveness(), sGeofences[seqNum].getDwellTime());
+        removeGfVec.push_back(sGeofences[seqNum]);
+        seqNumVec.push_back(seqNum);
+    }
+
+    if (!pLcaClient) {
+        pLcaClient = new LocationClientApi(onCapabilitiesCb);
+    }
+    pLcaClient->removeGeofences(removeGfVec);
+
+    std::sort(seqNumVec.begin(), seqNumVec.end());
+    std::reverse(seqNumVec.begin(), seqNumVec.end());
+    for (int seq: seqNumVec) {
+        printf("geofenceSeq: %d \n", seq);
+        sGeofences.erase(sGeofences.begin()+seq);
+    }
+}
+
 static bool checkForAutoStart(int argc, char *argv[]) {
     bool autoRun = false;
     bool deleteAll = false;
+    bool addGfs = false;
+    string gfStr = "-g";
     uint32_t aidingDataMask = 0;
     int interval = 100;
     LocReqEngineTypeMask reqEngMask = (LocReqEngineTypeMask) 0x7;
-    uint32_t reportType = 0xff;
+    uint32_t reportType = 0xfd;
     TrackingSessionType trackingType = NO_TRACKING;
 
     //Specifying the expected options
@@ -1122,12 +1470,14 @@ static bool checkForAutoStart(int argc, char *argv[]) {
         {"timeout", required_argument,   0,  't' },
         {"fixcnt",   required_argument,  0,  'l' },
         {"reportType", required_argument, 0,  'r' },
+        {"addgeofences", required_argument, 0,  'g' },
+        {"startBatching", required_argument, 0,  'b' },
         {0,           0,                 0,   0  }
     };
 
     int long_index =0;
     int opt = -1;
-    while ((opt = getopt_long(argc, argv, "aVNDd:s:e:i:t:l:r:",
+    while ((opt = getopt_long(argc, argv, "aVNDd:s:e:i:t:l:r:U:z:g:b:",
                    long_options, &long_index)) != -1) {
         switch (opt) {
              case 'a' :
@@ -1180,6 +1530,43 @@ static bool checkForAutoStart(int argc, char *argv[]) {
                  printf("report type: %s\n", optarg);
                  reportType = atoi(optarg);
                  break;
+             case 'U' :
+                 printf("route to NMEA port: %s\n", optarg);
+                 routeToNMEAPort = atoi(optarg);
+                 break;
+             case 'g' :
+                 for (int i = optind-1; i< argc &&
+                         !(argv[i][0] == '-' && (argv[i][1] < '0' || argv[i][1] > '9')); ++i) {
+                     gfStr.append(" ");
+                     gfStr.append(argv[i]);
+                 }
+                 addGfs = true;
+                 break;
+             case 'b' :
+                 if (!pLcaClient) {
+                    pLcaClient = new LocationClientApi(onCapabilitiesCb);
+                 }
+                 sleep(1);
+                 if (pLcaClient) {
+                     int intervalmsec = 60000;
+                     int distance = 0;
+                     int duration = 600; // default test duration is 10mins
+                     intervalmsec = atoi(argv[optind - 1]);
+                     distance = atoi(argv[optind]);
+                     duration = atoi(argv[optind + 1]);
+                     printf("start routine batching with interval %d msec, distance %d meters, "
+                             "duration %d seconds\n",
+                             intervalmsec, distance, duration);
+                     autoTestStartBatchingTimeMs = getTimestampMs();
+                     pLcaClient->startRoutineBatchingSession(intervalmsec, distance,
+                             onBatchingCb, onResponseCb);
+                     std::thread t([duration] {
+                             usleep(duration * 1000000);
+                             sem_post(&semBatchingCompleted);
+                             });
+                     t.detach();
+                 }
+                 break;
              default:
                  printf("unsupported args provided\n");
                  break;
@@ -1187,13 +1574,14 @@ static bool checkForAutoStart(int argc, char *argv[]) {
     }
 
     printf("auto run %d, deleteAll %d, delete mask 0x%x, session type %d,"
-           "outputEnabled %d, detailedOutputEnabled %d",
+           "outputEnabled %d, detailedOutputEnabled %d routeToNMEAPort %d",
            autoRun, deleteAll, aidingDataMask, trackingType,
-           outputEnabled, detailedOutputEnabled);
+           outputEnabled, detailedOutputEnabled, routeToNMEAPort);
 
     // check for auto-start option
     if (autoRun) {
         uint32_t pid = (uint32_t)getpid();
+        printf("pid: %d\n", pid);
 
         if (deleteAll == true || aidingDataMask != 0) {
             // create location integratin API
@@ -1217,6 +1605,7 @@ static bool checkForAutoStart(int argc, char *argv[]) {
 
         if (trackingType != NO_TRACKING) {
             pLcaClient = new LocationClientApi(onCapabilitiesCb);
+            sleep(1); // wait for capability callback
             if (nullptr == pLcaClient) {
                 printf("can not create Location client API");
                 exit(1);
@@ -1235,9 +1624,30 @@ static bool checkForAutoStart(int argc, char *argv[]) {
                                                        reportcbs, onResponseCb);
             }
             autoTestStartTimeMs = getTimestampMs();
-            sem_wait(&semCompleted);
         }
 
+    }
+    if (addGfs) {
+        printf("addGeofence option param %s: \n", gfStr.c_str());
+        sleep(1);
+        autoTestStartGfTimeMs = getTimestampMs();
+        addGeofences(const_cast<char*>(gfStr.c_str()));
+        std::thread t([autoTestTimeoutSec] {
+                usleep(autoTestTimeoutSec * 1000000);
+                sem_post(&semGfCompleted);
+                });
+        t.detach();
+    }
+    if (pLcaClient) {
+        if (trackingType != NO_TRACKING && autoTestStartTimeMs != 0) {
+            sem_wait(&semCompleted);
+        }
+        if (autoTestStartGfTimeMs != 0) {
+            sem_wait(&semGfCompleted);
+        }
+        if (autoTestStartBatchingTimeMs != 0) {
+            sem_wait(&semBatchingCompleted);
+        }
         cleanupAfterAutoStart();
         exit(0);
     }
@@ -1252,7 +1662,10 @@ void getTrackingParams(char *buf, uint32_t *reportTypePtr, uint32_t *tbfMsecPtr,
     token = strtok_r(NULL, " ", &save);
     if (token != nullptr) {
         if (reportTypePtr) {
-            *reportTypePtr = atoi(token);
+            *reportTypePtr = strtoul(token, NULL, 10);
+            if (0 == *reportTypePtr) {
+                *reportTypePtr = strtoul(token, NULL, 16);
+            }
         }
     }
     token = strtok_r(NULL, " ", &save);
@@ -1269,11 +1682,16 @@ void getTrackingParams(char *buf, uint32_t *reportTypePtr, uint32_t *tbfMsecPtr,
     }
 
     // initialize to default value in case of invalid input
-    if (*reportTypePtr == 0) {
-        *reportTypePtr = 0xFF;
+    if (reportTypePtr) {
+        if (*reportTypePtr == 0) {
+            *reportTypePtr = 0xFF;
+        }
     }
-    if (*tbfMsecPtr == 0) {
-        *tbfMsecPtr = 100;
+
+    if (tbfMsecPtr) {
+        if (*tbfMsecPtr == 0) {
+            *tbfMsecPtr = 100;
+        }
     }
     if (reqEngMaskPtr) {
         if (*reqEngMaskPtr == (LocReqEngineTypeMask) 0) {
@@ -1308,7 +1726,7 @@ void menuAddGeofence() {
     GeofenceBreachTypeMask breachType = (GeofenceBreachTypeMask) (
             GEOFENCE_BREACH_ENTER_BIT | GEOFENCE_BREACH_EXIT_BIT);
     uint32_t responsivenessMs = 4000;
-    uint32_t dwellTimeMs = 4000;
+    uint32_t dwellTimeSec = 4;
     char buf[16], *p;
     vector<Geofence> addGfVec;
     for (int i=0; i<count; ++i) {
@@ -1372,14 +1790,14 @@ void menuAddGeofence() {
             return;
         }
         if (atoi(p) != 0) {
-            dwellTimeMs = atoi(p) * 1000;
+            dwellTimeSec = atoi(p);
         }
         Geofence gf(latitude, longitude, radiusM, breachType, responsivenessMs,
-                dwellTimeMs);
+                dwellTimeSec);
         addGfVec.push_back(gf);
     }
+    sGeofences.insert(sGeofences.end(), addGfVec.begin(), addGfVec.end());
     pLcaClient->addGeofences(addGfVec, onGeofenceBreachCb, onCollectiveResponseCb);
-    sGeofences.assign(addGfVec.begin(), addGfVec.end());
 }
 
 void menuModifyGeofence() {
@@ -1388,7 +1806,7 @@ void menuModifyGeofence() {
     GeofenceBreachTypeMask breachType = (GeofenceBreachTypeMask) (
             GEOFENCE_BREACH_ENTER_BIT | GEOFENCE_BREACH_EXIT_BIT);
     uint32_t responsivenessMs = 4000;
-    uint32_t dwellTimeMs = 4000;
+    uint32_t dwellTimeSec = 4;
     char buf[16], *p;
     vector<Geofence> modifyGfVec;
 
@@ -1425,7 +1843,7 @@ void menuModifyGeofence() {
             responsivenessMs = atoi(p) * 1000;
         }
         printf ("\nEnter dwelltime in seconds: (default %d):",
-                dwellTimeMs / 1000);
+                dwellTimeSec);
         fflush (stdout);
         p = fgets (buf, 16, stdin);
         if (p == nullptr) {
@@ -1433,11 +1851,11 @@ void menuModifyGeofence() {
             return;
         }
         if (atoi(p) != 0) {
-            dwellTimeMs = atoi(p) * 1000;
+            dwellTimeSec = atoi(p);
         }
         sGeofences[seqNum].setBreachType(breachType);
         sGeofences[seqNum].setResponsiveness(responsivenessMs);
-        sGeofences[seqNum].setDwellTime(dwellTimeMs);
+        sGeofences[seqNum].setDwellTime(dwellTimeSec);
         modifyGfVec.push_back(sGeofences[seqNum]);
     }
     pLcaClient->modifyGeofences(modifyGfVec);
@@ -1507,7 +1925,7 @@ void menuRemoveGeofence() {
     pLcaClient->removeGeofences(removeGfVec);
 }
 void geofenceTestMenu() {
-    char buf[16], *p;
+    char buf[16], *p = NULL;
     bool exit_loop = false;
 
     while (!exit_loop)
@@ -1525,8 +1943,9 @@ void geofenceTestMenu() {
         p = fgets (buf, 16, stdin);
         if (p == nullptr) {
             printf("Error: fgets returned nullptr !!");
+            exit_loop = true;
+            continue;
         }
-
         switch (p[0]) {
         case '1':
             menuAddGeofence();
@@ -1585,6 +2004,8 @@ int main(int argc, char *argv[]) {
     intCbs.getMinSvElevationCb = LocConfigGetMinSvElevationCb(onGetMinSvElevationCb);
     intCbs.getConstellationSecondaryBandConfigCb =
             LocConfigGetConstellationSecondaryBandConfigCb(onGetSecondaryBandConfigCb);
+    intCbs.getXtraStatusCb = LocConfigGetXtraStatusCb(onGetXtraStatusCb);
+    intCbs.gnssSignalTypesCb = LocConfigGnssSignalTypesCb(onGnssSignalTypesCb);
 
     LocConfigPriorityMap priorityMap;
     pIntClient = new LocationIntegrationApi(priorityMap, intCbs);
@@ -1595,7 +2016,7 @@ int main(int argc, char *argv[]) {
     // main loop
     while (1) {
         bool retVal = true;
-        char buf[300];
+        char buf[1500];
         memset (buf, 0, sizeof(buf));
         fgets(buf, sizeof(buf), stdin);
 
@@ -1846,8 +2267,21 @@ int main(int argc, char *argv[]) {
                     nmeaDatumType = GEODETIC_TYPE_PZ_90;
                 }
             }
-            printf("nmeaTypes 0x%x, geodetic type %d\n", nmeaTypes, nmeaDatumType);
-            pIntClient->configOutputNmeaTypes(nmeaTypes, nmeaDatumType);
+            LocReqEngineTypeMask engTypeMask = LOC_REQ_ENGINE_FUSED_BIT;
+            token = strtok_r(NULL, " ", &save);
+            if (token != NULL) {
+                engTypeMask = (LocReqEngineTypeMask) strtoul(token, NULL, 10);
+                if (0 == engTypeMask) {
+                    engTypeMask = (LocReqEngineTypeMask) strtoul(token, NULL, 16);
+                }
+            }
+            printf("nmeaTypes 0x%x, geodetic type %d engineTypeMask 0x%x\n", nmeaTypes,
+                    nmeaDatumType, engTypeMask);
+            if (0 == engTypeMask) {
+                pIntClient->configOutputNmeaTypes(nmeaTypes, nmeaDatumType);
+            } else {
+                pIntClient->configOutputNmeaTypes(nmeaTypes, nmeaDatumType, engTypeMask);
+            }
         } else if (strncmp(buf, INJECT_LOCATION,
                            strlen(INJECT_LOCATION)) == 0) {
             location_client::Location injectLocation = {};
@@ -1873,6 +2307,36 @@ int main(int argc, char *argv[]) {
                 pLcaClient->getSinglePosition(0, 0, nullptr, onSingleShotResponseCb);
             }
             singleShotFixCnt = 0;
+        } else if (strncmp(buf, ENABLE_XTRA_ON_DEMAND_DOWNLOAD,
+                           strlen(ENABLE_XTRA_ON_DEMAND_DOWNLOAD)) == 0) {
+            printf("usage: enableXtraOnDemandDownload 0/1 (enable/disable xtra download) "
+                   "0/1 (enable/disable) integrity\n");
+            bool enableXtra = false;;
+            XtraConfigParams xtraConfig = {};
+
+            static char *save = nullptr;
+            char* token = strtok_r(buf, " ", &save); // skip header
+
+            token = strtok_r(NULL, " ", &save);
+            if (token != NULL) {
+                enableXtra = atoi(token);
+            }
+
+            token = strtok_r(NULL, " ", &save);
+            if (token != NULL) {
+                if (enableXtra) {
+                    xtraConfig.xtraIntegrityDownloadEnable = atoi(token);
+                }
+            }
+            xtraConfig.xtraDaemonDebugLogLevel = DEBUG_LOG_LEVEL_VERBOSE;
+            printf("xtra enabled %d, integrity enabled %d, debug level set to 5",
+                   enableXtra, xtraConfig.xtraIntegrityDownloadEnable);
+            bool retval = pIntClient->configXtraParams(enableXtra, &xtraConfig);
+            if (retval == false) {
+                printf("config xtra params failed\n");
+            } else {
+                printf("config xtra successful\n");
+            }
         } else if (strncmp(buf, CONFIG_XTRA_PARAMS, strlen(CONFIG_XTRA_PARAMS)) == 0) {
             bool enableXtra = false;;
             XtraConfigParams xtraConfig = {};
@@ -1894,6 +2358,93 @@ int main(int argc, char *argv[]) {
             }
             printf("register update %d\n", registerUpdate);
             pIntClient->registerXtraStatusUpdate(registerUpdate);
+        } else if (strncmp(buf, CONFIG_MERKLE_TREE, strlen(CONFIG_MERKLE_TREE)) == 0) {
+            FILE *xmlFile = fopen("/etc/merkletree.xml", "rb");
+            if (nullptr == xmlFile) {
+                printf("failed to open merkletree config file\n");
+                break;
+            }
+            // File opened. Read it
+            fseek(xmlFile, 0, SEEK_END);
+            int xmlSize = (int)ftell(xmlFile);
+            fseek(xmlFile, 0, SEEK_SET);
+            char* buffer = new char[xmlSize+1];
+            if (buffer != nullptr) {
+                fread(buffer, 1, xmlSize, xmlFile);
+                buffer[xmlSize] = 0;
+
+                printf("config merkle tree, file size %d, buffer: %p\n", xmlSize, buffer);
+                pIntClient->configMerkleTree(buffer, xmlSize);
+                delete[] buffer;
+            }
+        } else if (strncmp(buf, CONFIG_OSNMA_ENABLEMENT, strlen(CONFIG_OSNMA_ENABLEMENT)) == 0) {
+            bool enable = false;;
+            static char *save = nullptr;
+            char* token = strtok_r(buf, " ", &save);
+            token = strtok_r(NULL, " ", &save);
+            if (token != NULL) {
+                enable = (atoi(token) != 0);
+            }
+            printf("config osnma enablement %d\n", enable);
+            pIntClient->configOsnmaEnablement(enable);
+        } else if (strncmp(buf, REGISTER_SIGNAL_TYPES_UPDATE,
+                           strlen(REGISTER_SIGNAL_TYPES_UPDATE)) == 0) {
+            bool registerUpdate = false;;
+            static char *save = nullptr;
+            char* token = strtok_r(buf, " ", &save);
+            token = strtok_r(NULL, " ", &save);
+            if (token != NULL) {
+                registerUpdate = (atoi(token) != 0);
+            }
+            printf("register GNSS signal types update %d\n", registerUpdate);
+            pIntClient->registerGnssSignalTypesUpdate(registerUpdate);
+        } else if (strncmp(buf, ADD_GEOFENCES,
+                           strlen(ADD_GEOFENCES)) == 0) {
+            printf("usage: addGeofences "
+                    "[lat lon radius breachType responsiveness dwellTime ] ...\n");
+            if (!pLcaClient) {
+                pLcaClient = new LocationClientApi(onCapabilitiesCb);
+            }
+            if (pLcaClient) {
+                addGeofences(buf);
+            }
+        } else if (strncmp(buf, PAUSE_GEOFENCES,
+                           strlen(PAUSE_GEOFENCES)) == 0) {
+            printf("usage: pauseGeofences gfIndex ... \n");
+            if (!pLcaClient) {
+                pLcaClient = new LocationClientApi(onCapabilitiesCb);
+            }
+            if (pLcaClient) {
+                pauseGeofences(buf);
+            }
+        } else if (strncmp(buf, RESUME_GEOFENCES,
+                           strlen(RESUME_GEOFENCES)) == 0) {
+            printf("usage: resumeGeofences gfIndex ... \n");
+            if (!pLcaClient) {
+                pLcaClient = new LocationClientApi(onCapabilitiesCb);
+            }
+            if (pLcaClient) {
+                resumeGeofences(buf);
+            }
+        } else if (strncmp(buf, REMOVE_GEOFENCES,
+                           strlen(REMOVE_GEOFENCES)) == 0) {
+            printf("usage: removeGeofences gfIndex ... \n");
+            if (!pLcaClient) {
+                pLcaClient = new LocationClientApi(onCapabilitiesCb);
+            }
+            if (pLcaClient) {
+                removeGeofences(buf);
+            }
+        } else if (strncmp(buf, MODIFY_GEOFENCES,
+                           strlen(MODIFY_GEOFENCES)) == 0) {
+            printf("usage: modifyGeofences "
+                    "[gfIndex breachType responsiveness dwellTime] ... \n");
+            if (!pLcaClient) {
+                pLcaClient = new LocationClientApi(onCapabilitiesCb);
+            }
+            if (pLcaClient) {
+                modifyGeofences(buf);
+            }
         } else {
             int command = buf[0];
             switch(command) {
@@ -1902,7 +2453,7 @@ int main(int argc, char *argv[]) {
                     pLcaClient = new LocationClientApi(onCapabilitiesCb);
                 }
                 if (pLcaClient) {
-                    uint32_t reportType = 0xff;
+                    uint32_t reportType = 0xfd;
                     uint32_t tbfMsec = 100;
                     LocReqEngineTypeMask reqEngMask = (LocReqEngineTypeMask)
                         (LOC_REQ_ENGINE_FUSED_BIT|LOC_REQ_ENGINE_SPE_BIT|

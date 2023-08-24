@@ -29,7 +29,7 @@
  /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -61,7 +61,6 @@ IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-
 #ifndef LOC_API_V_0_2_H
 #define LOC_API_V_0_2_H
 
@@ -215,9 +214,12 @@ private:
   uint64_t mHlosQtimer1, mHlosQtimer2;
   uint32_t mRefFCount;
   std::string mPackageName[eQMI_LOC_R3_V02+1];
+  ModemGnssQesdkFeatureMask mQesdkFeatureMask;
+  bool mIsFullTracking;
 
   // Below two member variables are for elapsedRealTime calculation
   ElapsedRealtimeEstimator mMeasElapsedRealTimeCal;
+  GnssMeasurementsNotification m1HzMeasurementsNotify;
 
   /* Convert event mask from loc eng to loc_api_v02 format */
   static locClientEventMaskType convertLocClientEventMask(LOC_API_ADAPTER_EVENT_MASK_T mask);
@@ -276,6 +278,9 @@ private:
   static GnssSignalTypeMask convertQmiGnssSignalType(
         qmiLocGnssSignalTypeMaskT_v02 qmiGnssSignalType);
 
+  void convertOsnmaTreeNode(qmiLocOsnmaTreeNodeT_v02& out, mgpOsnmaTreeNodeT& in);
+  void convertPublicKeyAndMerkleTreeStruct(qmiLocOsnmaPublicKeyMerkleTreeReqMsgT_v02& qmiOut,
+          mgpOsnmaPublicKeyAndMerkleTreeStruct& in);
   /* If Confidence value is less than 68%, then scale the accuracy value to 68%
      confidence.*/
   void scaleAccuracyTo68PercentConfidence(const uint8_t confidenceValue,
@@ -427,6 +432,19 @@ private:
 
   /* report disaster and crisis message */
   void reportDcMessage(const qmiLocEventDcReportIndMsgT_v02* pDcReportIndMsg);
+
+  bool isMeasurementRefreshForSv(uint16_t gnssSvId,
+                                 GnssSignalTypeMask gnssSignalTypeMask);
+
+  bool isTOAValid(const qmiLocEventPositionReportIndMsgT_v02 *location_report_ptr,
+          const GnssMeasurementsNotification *pOneHzMeasurements);
+
+  void processGnssBandsSupportedInd(
+            const qmiLocGnssBandsSupportedIndMsgT_v02* pGnssBandsSupportedIndMsg);
+
+  GnssMeasurementsCodeType getCodeType(qmiLocGnssSignalTypeMaskT_v02 gnssSignalType);
+  void updateGnssCapabNotification(GnssCapabNotification& gnssCapabNotification,
+                                   qmiLocGnssSignalTypeMaskT_v02 gnssSignalType);
 
 protected:
   virtual enum loc_api_adapter_err
@@ -611,6 +629,10 @@ public:
 
   virtual void configConstellationMultiBand(const GnssSvTypeConfig& secondaryBandConfig,
                                             LocApiResponse* adapterResponse=nullptr);
+  virtual void configMerkleTree(mgpOsnmaPublicKeyAndMerkleTreeStruct* merkleTree,
+          LocApiResponse* adapterResponse=nullptr);
+
+  virtual void configOsnmaEnablement(bool enable, LocApiResponse* adapterResponse=nullptr);
 
   virtual void getConstellationMultiBandConfig(uint32_t sessionId,
                                       LocApiResponse* adapterResponse=nullptr);
