@@ -608,7 +608,8 @@ bool LocationIntegrationApi::setUserConsentForTerrestrialPositioning(bool userCo
 }
 
 bool LocationIntegrationApi::configOutputNmeaTypes(NmeaTypesMask enabledNMEATypes,
-                                                   GeodeticDatumType nmeaDatumType) {
+                                                   GeodeticDatumType nmeaDatumType,
+                            location_client::LocReqEngineTypeMask locIntEngineMask) {
     if (mApiImpl) {
         uint32_t halNmeaTypes = ::NMEA_TYPE_NONE;
         if (enabledNMEATypes & NMEA_TYPE_GGA) {
@@ -651,9 +652,16 @@ bool LocationIntegrationApi::configOutputNmeaTypes(NmeaTypesMask enabledNMEAType
         if (nmeaDatumType == GEODETIC_TYPE_PZ_90) {
             halDatumType = ::GEODETIC_TYPE_PZ_90;
         }
-        LOC_LOGd("datum type 0x%x %d", halNmeaTypes, halDatumType);
-        return (mApiImpl->configOutputNmeaTypes((GnssNmeaTypesMask) halNmeaTypes,
-                                                halDatumType) == 0);
+        uint32_t halEngineMask = ::LOC_REQ_ENGINE_FUSED_BIT;
+        if (locIntEngineMask & LOC_REQ_ENGINE_SPE_BIT ) {
+            halEngineMask |= ::LOC_REQ_ENGINE_SPE_BIT;
+        }
+        if (locIntEngineMask & LOC_REQ_ENGINE_PPE_BIT) {
+            halEngineMask |= ::LOC_REQ_ENGINE_PPE_BIT;
+        }
+        LOC_LOGd("datum type 0x%x %d, 0x%x", halNmeaTypes, halDatumType, halEngineMask);
+        return (mApiImpl->configOutputNmeaTypes((GnssNmeaTypesMask) halNmeaTypes, halDatumType,
+                (LocReqEngineTypeMask)halEngineMask) == 0);
     } else {
         LOC_LOGe ("NULL mApiImpl");
         return false;
@@ -990,9 +998,19 @@ bool LocationIntegrationApi::configMerkleTree(const char * merkleTreeXml, int xm
         return false;
     }
 }
+
 bool LocationIntegrationApi::configOsnmaEnablement(bool isEnabled) {
     if (mApiImpl) {
         return (mApiImpl->configOsnmaEnablement(isEnabled) == 0);
+    } else {
+        LOC_LOGe ("NULL mApiImpl");
+        return false;
+    }
+}
+
+bool LocationIntegrationApi::registerGnssSignalTypesUpdate(bool registerUpdate) {
+    if (mApiImpl) {
+        return (mApiImpl->registerGnssSignalTypesUpdate(registerUpdate) == 0);
     } else {
         LOC_LOGe ("NULL mApiImpl");
         return false;

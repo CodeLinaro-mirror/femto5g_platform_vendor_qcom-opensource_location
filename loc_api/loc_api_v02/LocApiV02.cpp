@@ -6655,6 +6655,9 @@ void LocApiV02 :: reportDcMessage(const qmiLocEventDcReportIndMsgT_v02* pDcRepor
 
 void LocApiV02::processGnssBandsSupportedInd(
         const qmiLocGnssBandsSupportedIndMsgT_v02* pGnssBandsSupportedIndMsg) {
+    LOC_LOGd("primaryGnssSignalType: %" PRIu64 ", supported signals: %" PRIu64,
+            pGnssBandsSupportedIndMsg->primaryGnssSignalType,
+            pGnssBandsSupportedIndMsg->gnssSupportedSignals);
 
     if (pGnssBandsSupportedIndMsg->primaryGnssSignalType_valid) {
         mPreferredSignalType = pGnssBandsSupportedIndMsg->primaryGnssSignalType;
@@ -6662,6 +6665,8 @@ void LocApiV02::processGnssBandsSupportedInd(
 
     if (pGnssBandsSupportedIndMsg->gnssSupportedSignals_valid) {
         GnssCapabNotification gnssCapabNotification = {};
+         gnssCapabNotification.gnssSupportedSignals =
+                pGnssBandsSupportedIndMsg->gnssSupportedSignals;
 
         if (pGnssBandsSupportedIndMsg->gnssSupportedSignals_valid) {
             for (qmiLocGnssSignalTypeMaskT_v02 sig = QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L1CA_V02;

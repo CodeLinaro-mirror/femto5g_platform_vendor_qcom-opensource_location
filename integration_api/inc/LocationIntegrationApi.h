@@ -153,6 +153,9 @@ enum LocConfigTypeEnum{
     /** Register the callback to get update on xtra feature setting
      *  and xtra assistance data status. <br/> */
     REGISTER_XTRA_STATUS_UPDATE = 105,
+    /** Register the callback to get update on GNSS signal type
+     *  capabilities. <br/> */
+    REGISTER_SIGNAL_TYPES_UPDATE = 106,
 } ;
 
 /**
@@ -642,6 +645,23 @@ typedef std::function<void(
 )> LocConfigGetXtraStatusCb;
 
 /**
+ *  Specify the callback to receive GNSS signal type capabilities
+ *  that modem supports. These capabilities represent the
+ *  signal types the GNSS implementation supports with
+ *  temporarily disabled signal types taken into account,
+ *  such as the blocklisted satellites/constellations or
+ *  the constellations disabled by regional restrictions. <br/>
+ *
+ *  In order to receive the GNSS signal type capabilities,
+ *  client shall first instantiate the callback and
+ *  pass it to the LocationIntegrationApi constructor
+ *  and then invoke registerGnssSignalTypesUpdate() <br/> */
+typedef std::function<void(
+    /**  GNSS signal type capabilities with RF band. <br/> */
+    location_client::GnssSignalTypeMask signalType
+)> LocConfigGnssSignalTypesCb;
+
+/**
  *  Specify the set of callbacks that can be passed to
  *  LocationIntegrationAPI constructor to receive configuration
  *  command processing status and the requested data. <br/>
@@ -664,6 +684,9 @@ struct LocIntegrationCbs {
     /** Callback to receive the xtra feature enablement setting and
      *  xtra assistance data status. <br/> */
     LocConfigGetXtraStatusCb getXtraStatusCb;
+    /** Callback to receive the supported GNSS signal type
+     *  capabilities. <br/> */
+    LocConfigGnssSignalTypesCb gnssSignalTypesCb;
 };
 
 /** Specify the NMEA sentence types that the device will output
@@ -1513,7 +1536,7 @@ public:
         The NMEA sentence types are per-device setting and calling
         this API will impact all the location api clients that
         register to receive NMEA sentences. This API call is not
-        incremental and the new NMEA sentence types will completely
+        incremental and all the settings in the API will completely
         overwrite the previous call. <br/>
 
         If one or more unspecified bits are set in the NMEA mask,
@@ -1535,9 +1558,9 @@ public:
         running on the client process on the different processor.
         <br/>
 
-        Please note that both output nmea types and datum type is
-        only applicable if NMEA_PROVIDER in gps.conf is set to 0 to
-        use HLOS generated NMEA. <br/>
+        Please note that both output nmea types, datum type and engine
+        mask is only applicable if NMEA_PROVIDER in gps.conf is set to
+        0 to use HLOS generated NMEA. <br/>
 
         @param
         enabledNmeaTypes: specify the set of NMEA sentences the
@@ -1553,6 +1576,13 @@ public:
         when generating NMEA sentences. If this parameter is not
         specified, it will default to WGS-84. <br/>
 
+        @param
+        locReqEngineMask: specify the set of position engines that NMEA
+        are generated from. If this parameter is not
+        specified, it will default to LOC_REQ_ENGINE_FUSED_BIT.
+        <br/>
+
+
         Please note that the configured nmeaDatumType is only
         applicable if NMEA_PROVIDER in gps.conf is set to 0 to use
         HLOS generated NMEA. NMEA dataum type specified in this API
@@ -1567,7 +1597,9 @@ public:
                 further processing. <br/>
     */
     bool configOutputNmeaTypes(NmeaTypesMask enabledNmeaTypes,
-                               GeodeticDatumType nmeaDatumType = GEODETIC_TYPE_WGS_84);
+                               GeodeticDatumType nmeaDatumType = GEODETIC_TYPE_WGS_84,
+            location_client::LocReqEngineTypeMask locReqEngineMask =
+            location_client::LOC_REQ_ENGINE_FUSED_BIT);
 
    /** @brief
         This API is used to instruct the specified engine to use
@@ -1774,28 +1806,89 @@ public:
         Configure file contains Merkle Root, Merkle Nodes and information for
         up to 2 public keys. This merkle tree is used by the standard position
         engine (SPE).
+        Client should wait for the command to finish, e.g.: via
+        LocConfigCb() received before issuing a second configMerkleTree()
+        command. Behavior is not defined if client issues a second
+        request of configMerkleTree() without waiting for the
+        previous configMerkleTree() to finish. <br/>
         Please note that caller should free the merkleTreeXml. <br/>
         @param
         merkleTreeXml: char buffer read from Merkle Tree configure file <br/>
 
         @param
         xmlSize: the length of char buffer
-        @return true, if the configure file buffer injected success. <br/>
+        @return true, if the API request has been accepted. The
+                status will be returned via configCb. When returning
+                true, LocConfigCb() will be invoked to deliver
+                asynchronous processing status.
+                <br/>
 
-        @return false, if the configure file buffer failed to inject. <br/>
+        @return false, if the API request has not been accepted for
+                further processing. <br/>
     */
     bool configMerkleTree(const char * merkleTreeXml, int xmlSize);
 
     /** @brief
         API to Enable/Disable OSNMA (Open Source Navigation Message Authentication)
         operation in standard position engine (SPE).
+        Client should wait for the command to finish, e.g.: via
+        LocConfigCb() received before issuing a second configOsnmaEnablement()
+        command. Behavior is not defined if client issues a second
+        request of configOsnmaEnablement() without waiting for the
+        previous configOsnmaEnablement() to finish. <br/>
         @param
         isEnabled - The flag to indicate enable or disable OSNMA
-        @return true, if the configure file buffer injected success. <br/>
+        @return true, if the API request has been accepted. The
+                status will be returned via configCb. When returning
+                true, LocConfigCb() will be invoked to deliver
+                asynchronous processing status.
+                <br/>
 
-        @return false, if the configure file buffer failed to inject. <br/>
+        @return false, if the API request has not been accepted for
+                further processing. <br/>
     */
-    bool configOsnmaEnablement(bool IsEnabled);
+    bool configOsnmaEnablement(bool isEnabled);
+
+    /** @brief
+        Register the callback to get update on GNSS signal type
+        capabilities that modem supports. These capabilities
+        represent the supported signal types with
+        temporarily disabled signal types excluded,
+        like the blocklisted satellites/constellations or
+        the constellations disabled by regional restrictions.
+        The callback to receive the signal types update,
+        e.g.: LocConfigGnssSignalTypesCb() shall be
+        instantiated and passed via the Location Integration API
+        constructor. <br/>
+
+        If the processing of this command is successful,
+        the GNSS signal type capabilities update will be returned
+        via LocConfigGnssSignalTypesCb() which is passed via
+        the constructor. <br/>
+
+        Please see below for some triggers that
+        LocConfigGnssSignalTypesCb() will be invoked: <br/>
+        (1) upon successful registering the API <br/>
+        (2) upon change in the active GNSS/bands configuration <br/>
+
+        @param
+        registerUpdate: true, to register for GNSS signal types update
+                        false, to un-register for GNSS signal types update
+                        <br/>
+
+        @return true, if the API request has been accepted.
+                LocConfigCb() will be invoked to deliver asynchronous
+                processing status. The GNSS signal type capabilities will
+                be returned via LocConfigGnssSignalTypesCb().
+                <br/>
+
+        @return false, if the API request has not been accepted for
+                further processing. When returning false,
+                LocConfigGnssSignalTypesCb() will not be invoked.
+                <br/>
+
+    */
+    bool registerGnssSignalTypesUpdate(bool registerUpdate);
 
     /** @example example1:testGetConfigApi
     * <pre>
