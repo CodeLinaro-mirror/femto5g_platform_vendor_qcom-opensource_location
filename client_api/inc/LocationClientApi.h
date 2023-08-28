@@ -382,6 +382,12 @@ enum LocationResponse {
     LOCATION_RESPONSE_NOT_SUPPORTED = 2,
     /** LocationClientApi call has invalid parameter. <br/>   */
     LOCATION_RESPONSE_PARAM_INVALID = 3,
+    /** LocationClientApi call timeout */
+    LOCATION_RESPONSE_TIMEOUT = 4,
+    /** LocationClientApi is busy. */
+    LOCATION_RESPONSE_REQUEST_ALREADY_IN_PROGRESS = 5,
+    /** System is not ready, e.g.: hal daemon is not yet ready. */
+    LOCATION_RESPONSE_SYSTEM_NOT_READY = 6,
 };
 
 /** Specify the SV constellation type in GnssSv
@@ -2076,12 +2082,20 @@ public:
         <br/>
 
         If locationCallback is nullptr, this call is no op. <br/>
-        Otherwise, if this API is called for first time or after
-        stopPositionSession(), a position session will be started
-        with the specified parameters and callbacks. <br/>
 
-        If called during a session (no matter from which
-        location_client::startPositionSession()), parameters and
+        Otherwise, if this API is called for first time or after
+        previous position/baching/geofence session has been stopped,
+        a position session will be started with the specified
+        parameters and callbacks. <br/>
+
+        If this API is called when the previous
+        position/batching/geofence session has not yet received
+        responseCallback, this API will receive an error code of
+        LOCATION_RESPONSE_REQUEST_ALREADY_IN_PROGRESS via its
+        responseCallback. <br/>
+
+        If called during on-going session after the responseCb has
+        been received for the on-going session, parameters and
         callbacks will be updated, and the session continues but
         with the new set of parameters and callbacks. <br/>
 
@@ -2146,13 +2160,22 @@ public:
                info in format of GnssLocation and other reports,
                e.g.: SV report and NMEA report.
         If gnssReportCallbacks is nullptr, this call is no op. <br/>
+
         Otherwise, if this API is called for first time or after
-        stopPositionSession(), a position session will be started
-        with the specified parameters and callbacks. <br/>
-        If this API is called during a session (no matter from which
-        startPositionSession() API), parameters and callbacks will
-        be updated, and the session continues but with the new set
-        of parameters and callbacks. <br/>
+        previous position/baching/geofence session has been stopped,
+        a position session will be started with the specified
+        parameters and callbacks. <br/>
+
+        If this API is called when the previous
+        position/batching/geofence session has not yet received
+        responseCallback, this API will receive an error code of
+        LOCATION_RESPONSE_REQUEST_ALREADY_IN_PROGRESS via its
+        responseCallback. <br/>
+
+        If called during on-going session after the responseCb has
+        been received for the on-going session, parameters and
+        callbacks will be updated, and the session continues but
+        with the new set of parameters and callbacks. <br/>
 
         @param intervalInMs <br/>
         Time between fixes, or TBF, in milliseconds. <br/>
@@ -2199,14 +2222,23 @@ public:
         report, SV measurement reports. <br/>
 
         If EngineReportCbs is populated with nullptr only, this call
-        is no op. Otherwise...<br/>
-        If this API is called for first time or after
-        stopPositionSession(), a position session will be started
-        with the specified parameters and callbacks. <br/>
-        If this API is called during a session (no matter from which
-        startPositionSession() API), parameters / callback will be
-        updated, and the session continues but with the new set of
-        parameters / callbacks. <br/>
+        is no op. <br/>
+
+        Otherwise, if this API is called for first time or after
+        previous position/baching/geofence session has been stopped,
+        a position session will be started with the specified
+        parameters and callbacks. <br/>
+
+        If this API is called when the previous
+        position/batching/geofence session has not yet received
+        responseCallback, this API will receive an error code of
+        LOCATION_RESPONSE_REQUEST_ALREADY_IN_PROGRESS via its
+        responseCallback. <br/>
+
+        If called during on-going session after the responseCb has
+        been received for the on-going session, parameters /
+        callback will be updated, and the session continues but with
+        the new set of parameters / callbacks. <br/>
 
         @param intervalInMs
         Time between fixes, or TBF, in milliseconds. <br/>
@@ -2324,18 +2356,27 @@ public:
 
     /** @brief starts an outdoor trip mode batching session with specified parameters.
         Trip mode batching completes on its own when trip distance is covered.
-        The behavior of the call is non contextual. The current state or the history of
-        actions does not influence the end result of this call. For example, calling
-        this function when idle, or calling this function after another startTripBatchingSession()
-        or startRoutineBatchingSession(), or calling this function after stopBatchingSession()
-        achieve the same result, which is one of the below:
-        If batchingCallback is nullptr, this call is no op. Otherwise...
-        If both minInterval and tripDistance are don't care, this call is no op.
-           Otherwise...
-        If called during a session (no matter from which startTripBatchingSession()/
-        startRoutineBatchingSession() API), parameters / callback will be updated,
-        and the session continues but with the new set of parameters / callback.
-        locations are reported on the batchingCallback in batches when batch is full.
+
+        Calling this function when idle, or calling this function
+        after another the previous position/batching/geofence
+        session is stopped will achieve the same result, which is
+        one of the below: If batchingCallback is nullptr, this call
+        is no op. If both minInterval and tripDistance are don't
+        care, this call is no op. Otherwise a batching session will
+        be started with the specified parameters and callbacks.
+
+        If this API is called when any previous
+        position/batching/geofence session has not yet received
+        responseCallback, this API will receive an error code of
+        LOCATION_RESPONSE_REQUEST_ALREADY_IN_PROGRESS via its
+        responseCallback.
+
+        If called during on-going session after the responseCb has
+        been received for the on-going session, parameters /
+        callback will be updated. parameters / callback will be
+        updated, and the session continues but with the new set of
+        parameters / callback. locations are reported on the
+        batchingCallback in batches when batch is full.
         @param minInterval
         Time between fixes, or TBF, in milliseconds. The actual
         interval of reports recieved will be no larger than
@@ -2364,18 +2405,26 @@ public:
                                   BatchingCb batchingCallback, ResponseCb responseCallback);
 
     /** @brief starts a routine mode batching session with specified parameters.
-        The behavior of the call is non contextual. The current state or the history of
-        actions does not influence the end result of this call. For example, calling
-        this function when idle, or calling this function after another startTripBatchingSession()
-        or startRoutineBatchingSession(), or calling this function after stopBatchingSession()
-        achieve the same result, which is one of the below:
-        If batchingCallback is nullptr, this call is no op. Otherwise...
-        If both minInterval and minDistance are don't care, this call is no op.
-           Otherwise...
-        If called during a session (no matter from which startTripBatchingSession()/
-        startRoutineBatchingSession() API), parameters / callback will be updated,
-        and the session continues but with the new set of parameters / callback.
-        locations are reported on the batchingCallback in batches when batch is full.
+
+        Calling this function when idle, or calling this function
+        after another the previous position/batching/geofence
+        session is stopped will achieve the same result, which is
+        one of the below: If batchingCallback is nullptr, this call
+        is no op. If both minInterval and tripDistance are don't
+        care, this call is no op. Otherwise a batching session will
+        be started with the specified parameters and callbacks.
+
+        If this API is called when any previous
+        position/batching/geofence session has not yet received
+        responseCallback, this API will receive an error code of
+        LOCATION_RESPONSE_REQUEST_ALREADY_IN_PROGRESS via its
+        responseCallback.
+
+        If called during on-going session after the responseCb has
+        been received for the on-going session, parameters /
+        callback will be updated, and the session continues but with
+        the new set of parameters / callback. locations are reported
+        on the batchingCallback in batches when batch is full.
         @param minInterval
         Time between fixes, or TBF, in milliseconds. The actual
         interval of reports recieved will be no larger than
@@ -2434,6 +2483,13 @@ public:
     /* ================================== Geofence ================================== */
     /** @brief Adds any number of geofences. The geofenceBreachCallback will
         deliver the status of each geofence according to the Geofence parameter for each.
+
+        If this API is called when any previous
+        position/batching/geofence session has not yet received
+        responseCallback, this API will receive an error code of
+        LOCATION_RESPONSE_REQUEST_ALREADY_IN_PROGRESS via its
+        responseCallback.
+
         @param geofences
         Geofence objects, Once addGeofences returns, each Geofence object in the vector would
         be the identifier throughout the remaining communication of that geofence.
