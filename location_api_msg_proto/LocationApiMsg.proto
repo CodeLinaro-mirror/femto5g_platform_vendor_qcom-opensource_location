@@ -35,6 +35,8 @@ syntax = "proto3";
 
 import "LocationApiDataTypes.proto";
 
+option optimize_for = LITE_RUNTIME;
+
 // ============================================================================
 // Proto file versioning
 // ============================================================================
@@ -45,8 +47,10 @@ enum LocationApiMsgVersion {
     LOCAPI_MSG_VER_INVALID = 0;
     // Major changes - compatibility breakage. Bump the first byte of version i.e. 1.x.y to 2.0.0
     LOCAPI_MSG_VER_MAJOR = 1;
-    // Minor - New features / API addition. Bump the middle byte of version i.e. x.8.y to x.9.0
-    LOCAPI_MSG_VER_MINOR = 0;
+    // Minor - New features / API addition, new message/elemtent addition.
+    // Bump the last byte of version i.e. x.2 to x.3
+    // Minor version 8: Add option for using protobuf-lite at runtime
+    LOCAPI_MSG_VER_MINOR = 8;
     // Micro - Bug fixes. Bump the last byte of version i.e. x.y.2 to x.y.3
     LOCAPI_MSG_VER_MICRO = 0;
 }
