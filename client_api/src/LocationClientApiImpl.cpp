@@ -807,7 +807,8 @@ static GnssLocation parseLocationInfo(const ::GnssLocationInfoNotification &halL
     locationInfo.protectAlongTrack =  halLocationInfo.protectAlongTrack;
     locationInfo.protectCrossTrack =  halLocationInfo.protectCrossTrack;
     locationInfo.protectVertical =  halLocationInfo.protectVertical;
-    for (uint32_t i = 0; i < halLocationInfo.numOfDgnssStationId; i++) {
+    for (uint32_t i = 0; (i < halLocationInfo.numOfDgnssStationId) &&
+            (DGNSS_STATION_ID_MAX > i); i++) {
         locationInfo.dgnssStationId.push_back(halLocationInfo.dgnssStationId[i]);
     }
 
