@@ -47,10 +47,11 @@ enum LocationApiDataTypesVersion {
     LOCAPI_DATA_TYPES_VER_MAJOR = 1;
     // Minor - New features / API addition, new message/elemtent addition.
     // Bump the last byte of version i.e. x.2 to x.3
-    // Minor version 14: Add option for using protobuf-lite at runtime
-    LOCAPI_DATA_TYPES_VER_MINOR = 14;
+    // Minor version 16: Add elevation and azimuth validity bits for sv info report
+    LOCAPI_DATA_TYPES_VER_MINOR = 16;
     // Micro - Bug fixes. Bump the last byte of version i.e. x.y.2 to x.y.3
     LOCAPI_DATA_TYPES_VER_MICRO = 0;
+
 }
 
 // ============================================================================
@@ -220,11 +221,14 @@ enum PBGnssSvTypesMask {
 
 enum PBLocApiGnssSvOptionsMask {
     PB_GNSS_SV_OPTIONS_INVALID                     = 0;
-    PB_GNSS_SV_OPTIONS_HAS_EPHEMER_BIT             = 1;
-    PB_GNSS_SV_OPTIONS_HAS_ALMANAC_BIT             = 2;
-    PB_GNSS_SV_OPTIONS_USED_IN_FIX_BIT             = 4;
-    PB_GNSS_SV_OPTIONS_HAS_CARRIER_FREQUENCY_BIT   = 8;
-    PB_GNSS_SV_OPTIONS_HAS_GNSS_SIGNAL_TYPE_BIT    = 16;
+    PB_GNSS_SV_OPTIONS_HAS_EPHEMER_BIT             = 0x1;
+    PB_GNSS_SV_OPTIONS_HAS_ALMANAC_BIT             = 0x2;
+    PB_GNSS_SV_OPTIONS_USED_IN_FIX_BIT             = 0x4;
+    PB_GNSS_SV_OPTIONS_HAS_CARRIER_FREQUENCY_BIT   = 0x8;
+    PB_GNSS_SV_OPTIONS_HAS_GNSS_SIGNAL_TYPE_BIT    = 0x10;
+    PB_GNSS_SV_OPTIONS_HAS_BASEBAND_CARRIER_TO_NOISE_BIT = 0x20;
+    PB_GNSS_SV_OPTIONS_HAS_ELEVATION_BIT           = 0x40;
+    PB_GNSS_SV_OPTIONS_HAS_AZIMUTH_BIT             = 0x80;
 }
 
 enum PBGnssGloTimeStructTypeFlags {
