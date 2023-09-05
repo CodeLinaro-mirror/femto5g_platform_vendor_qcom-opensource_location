@@ -101,10 +101,7 @@ uint32_t GeofenceImpl::nextId() {
 Utilities
 ******************************************************************************/
 static LocationCapabilitiesMask parseCapabilitiesMask(::LocationCapabilitiesMask mask) {
-    uint64_t capsMask = 0;
-
-    LOC_LOGd ("LocationCapabilitiesMask =0x%x ", mask);
-
+    LocationCapabilitiesMask capsMask = 0;
     if (::LOCATION_CAPABILITIES_TIME_BASED_TRACKING_BIT & mask) {
         capsMask |= LOCATION_CAPS_TIME_BASED_TRACKING_BIT;
     }
@@ -123,8 +120,45 @@ static LocationCapabilitiesMask parseCapabilitiesMask(::LocationCapabilitiesMask
     if (::LOCATION_CAPABILITIES_OUTDOOR_TRIP_BATCHING_BIT & mask) {
         capsMask |=  LOCATION_CAPS_OUTDOOR_TRIP_BATCHING_BIT;
     }
-
-    return static_cast<LocationCapabilitiesMask>(capsMask);
+    if (::LOCATION_CAPABILITIES_GNSS_MEASUREMENTS_BIT & mask) {
+        capsMask |=  LOCATION_CAPS_GNSS_MEASUREMENTS_BIT;
+    }
+    if (::LOCATION_CAPABILITIES_CONSTELLATION_ENABLEMENT_BIT & mask) {
+        capsMask |=  LOCATION_CAPS_CONSTELLATION_ENABLEMENT_BIT;
+    }
+    if (::LOCATION_CAPABILITIES_QWES_CARRIER_PHASE_BIT & mask) {
+        capsMask |=  LOCATION_CAPS_CARRIER_PHASE_BIT;
+    }
+    if (::LOCATION_CAPABILITIES_QWES_SV_POLYNOMIAL_BIT & mask) {
+        capsMask |=  LOCATION_CAPS_SV_POLYNOMIAL_BIT;
+    }
+    if (::LOCATION_CAPABILITIES_QWES_GNSS_SINGLE_FREQUENCY & mask) {
+        capsMask |=  LOCATION_CAPS_QWES_GNSS_SINGLE_FREQUENCY;
+    }
+    if (::LOCATION_CAPABILITIES_QWES_GNSS_MULTI_FREQUENCY & mask) {
+        capsMask |=  LOCATION_CAPS_QWES_GNSS_MULTI_FREQUENCY;
+    }
+    if (::LOCATION_CAPABILITIES_QWES_VPE & mask) {
+        capsMask |=  LOCATION_CAPS_QWES_VPE;
+    }
+    if (::LOCATION_CAPABILITIES_QWES_CV2X_LOCATION_BASIC & mask) {
+        capsMask |=  LOCATION_CAPS_QWES_CV2X_LOCATION_BASIC;
+    }
+    if (::LOCATION_CAPABILITIES_QWES_CV2X_LOCATION_PREMIUM & mask) {
+        capsMask |=  LOCATION_CAPS_QWES_CV2X_LOCATION_PREMIUM;
+    }
+    if (::LOCATION_CAPABILITIES_QWES_PPE & mask) {
+        capsMask |=  LOCATION_CAPS_QWES_PPE;
+    }
+    if (::LOCATION_CAPABILITIES_QWES_QDR2 & mask) {
+        capsMask |=  LOCATION_CAPS_QWES_QDR2;
+    }
+    if (::LOCATION_CAPABILITIES_QWES_QDR3 & mask) {
+        capsMask |=  LOCATION_CAPS_QWES_QDR3;
+    }
+    LOC_LOGd ("parseCapabilitiesMask LocCapabMask =0x%" PRIx64 " LCA mask 0x%" PRIx64,
+            mask, capsMask);
+    return capsMask;
 }
 
 static uint16_t parseYearOfHw(::LocationCapabilitiesMask mask) {
@@ -2204,7 +2238,7 @@ void LocationClientApiImpl::capabilitesCallback(ELocMsgID msgId, const void* msg
         }
     }
 
-    LOC_LOGe(">>> session id %d, cap mask 0x%x", mSessionId, mCapsMask);
+    LOC_LOGe(">>> session id %d, cap mask 0x%" PRIx64, mSessionId, mCapsMask);
     if (mSessionId != LOCATION_CLIENT_SESSION_ID_INVALID)  {
         // force mSessionId to invalid so startTracking will start the sesssion
         // if hal deamon crashes and restarts in the middle of a session
@@ -2427,7 +2461,7 @@ void IpcListener::onReceive(const char* data, uint32_t length,
                     gnssLocation.bearingAccuracy    = location.bearingAccuracy;
                     gnssLocation.techMask           = location.techMask;
 
-                    mApiImpl.mLogger.log(gnssLocation);
+                    mApiImpl.mLogger.log(gnssLocation, mApiImpl.mCapsMask);
                 }
                 break;
             }
@@ -2521,7 +2555,7 @@ void IpcListener::onReceive(const char* data, uint32_t length,
                     if (mApiImpl.mGnssLocationCb) {
                         mApiImpl.mGnssLocationCb(gnssLocation);
                     }
-                    mApiImpl.mLogger.log(gnssLocation);
+                    mApiImpl.mLogger.log(gnssLocation, mApiImpl.mCapsMask);
                 }
                 break;
             }
@@ -2552,7 +2586,7 @@ void IpcListener::onReceive(const char* data, uint32_t length,
                         GnssLocation gnssLocation =
                             parseLocationInfo(pEngLocationsInfoIndMsg->engineLocationsInfo[i]);
                         engLocationsVector.push_back(gnssLocation);
-                        mApiImpl.mLogger.log(gnssLocation);
+                        mApiImpl.mLogger.log(gnssLocation, mApiImpl.mCapsMask);
                     }
 
                     if (mApiImpl.mEngLocationsCb) {

@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -180,6 +180,8 @@ Callback functions
 ******************************************************************************/
 static void onCapabilitiesCb(location_client::LocationCapabilitiesMask mask) {
     printf("<<< onCapabilitiesCb mask=0x%" PRIx64 "\n", mask);
+    printf("<<< onCapabilitiesCb mask string=%s",
+            LocationClientApi::capabilitiesToString(mask).c_str());
 }
 
 static void onResponseCb(location_client::LocationResponse response) {
