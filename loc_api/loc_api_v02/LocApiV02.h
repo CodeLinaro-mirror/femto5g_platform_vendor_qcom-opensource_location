@@ -72,16 +72,6 @@
 using Resender = std::function<void()>;
 using namespace loc_core;
 
-typedef struct {
-    uint32_t counter;
-    qmiLocSvSystemEnumT_v02 system;
-    qmiLocGnssSignalTypeMaskT_v02 gnssSignalType;
-    uint16_t gnssSvId;
-    qmiLocMeasFieldsValidMaskT_v02 validMask;
-    uint8_t cycleSlipCount;
-    uint8_t nHzMeasurement;
-} adrData;
-
 typedef uint64_t GpsSvMeasHeaderFlags;
 #define BIAS_GPSL1_VALID                0x00000001
 #define BIAS_GPSL1_UNC_VALID            0x00000002
@@ -177,6 +167,14 @@ typedef struct {
     std::vector<GnssBasicMeasurementsData> measurements;
 } GnssBasicMeasurementsInfo;
 
+struct MeasCacheInfo {
+    uint8_t  cycleSlipCount;
+    uint32_t refFCount;
+};
+
+typedef std::unordered_map<std::string, MeasCacheInfo> CycleSlipCountMap;
+typedef CycleSlipCountMap::iterator CycleSlipCountMapItr;
+
 /* This class derives from the LocApiBase class.
    The members of this class are responsible for converting
    the Loc API V02 data structures into Loc Adapter data structures.
@@ -195,6 +193,11 @@ private:
   bool mMeasurementsStarted;
   std::vector<Resender> mResenders;
   bool mMasterRegisterNotSupported;
+
+  CycleSlipCountMap mPrev1HzSlipCountMap;
+  CycleSlipCountMap mPrevNhzSlipCountMap;
+  CycleSlipCountMap mCurrentCycleSlipCountMap1Hz;
+  CycleSlipCountMap mCurrentCycleSlipCountMapNHz;
   GnssMeasurements*  mGnssMeasurements;
   int  mMsInWeek;
   bool mAgcIsPresent;
@@ -204,7 +207,6 @@ private:
   uint32_t mRefFCount;
   uint32_t mCounter;
   uint32_t mMinInterval;
-  std::vector<adrData>  mADRdata;
   timeBiases mTimeBiases;
   qmiLocPlatformPowerStateEnumT_v02 mPlatformPowerState;
   GnssSvType mPreferredSvSystemType;
