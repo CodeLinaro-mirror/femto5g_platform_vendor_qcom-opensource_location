@@ -514,6 +514,8 @@ enum PBLocationFlagsMask {
     PB_LOCATION_HAS_TIMESTAMP_BIT         = 256;
     // location has valid elapsedRealTime
     PB_LOCATION_HAS_ELAPSED_REAL_TIME_BIT    = 512;
+    // location has valid time uncertainty
+    PB_LOCATION_HAS_TIME_UNC_BIT             = 1024;
 }
 
 enum PBLocationTechnologyMask {
@@ -709,6 +711,8 @@ message PBLocation {
     uint64 elapsedRealTime = 13;
     /** boot timestamp uncertainty corresponding to GPS timestamp, in ns */
     uint64 elapsedRealTimeUnc = 14;
+    /** time uncertainty in msec */
+    float  timeUncMs = 15;
 }
 
 message PBLocationOptions {

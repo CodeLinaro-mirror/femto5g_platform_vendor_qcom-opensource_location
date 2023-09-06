@@ -1075,6 +1075,11 @@ void LocApiV02::injectPosition(const Location& location, bool onDemandCpi)
         injectPositionReq.vertConfidence = 68;
     }
 
+    if (LOCATION_HAS_TIME_UNC_BIT & location.flags) {
+        injectPositionReq.timeUnc_valid = 1;
+        injectPositionReq.timeUnc = location.timeUncMs;
+    }
+
     if (onDemandCpi) {
         injectPositionReq.onDemandCpi_valid = 1;
         injectPositionReq.onDemandCpi = 1;
@@ -1103,6 +1108,12 @@ void LocApiV02::injectPosition(const GnssLocationInfoNotification &locationInfo,
     if (location.timestamp > 0) {
         injectPositionReq.timestampUtc_valid = 1;
         injectPositionReq.timestampUtc = location.timestamp;
+    }
+
+    // time uncertainty
+    if (LOCATION_HAS_TIME_UNC_BIT & location.flags) {
+        injectPositionReq.timeUnc_valid = 1;
+        injectPositionReq.timeUnc = location.timeUncMs;
     }
 
     if (LOCATION_HAS_LAT_LONG_BIT & location.flags) {
@@ -1207,12 +1218,6 @@ void LocApiV02::injectPosition(const GnssLocationInfoNotification &locationInfo,
         injectPositionReq.velUncEnu[0] = locationInfo.eastVelocityStdDeviation;
         injectPositionReq.velUncEnu[1] = locationInfo.northVelocityStdDeviation;
         injectPositionReq.velUncEnu[2]  = locationInfo.upVelocityStdDeviation;
-    }
-
-    // time uncertainty
-    if (GNSS_LOCATION_INFO_TIME_UNC_BIT & locationInfo.flags) {
-        injectPositionReq.timeUnc_valid = 1;
-        injectPositionReq.timeUnc = locationInfo.timeUncMs;
     }
 
     // number of SV used info, this replaces expandedGnssSvUsedList as the payload

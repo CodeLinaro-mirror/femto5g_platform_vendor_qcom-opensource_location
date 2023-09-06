@@ -1073,6 +1073,7 @@ string GnssLocation::toString() const {
     out += FIELDVAL_DEC(protectVertical);
     out += FIELDVAL_DEC(elapsedRealTimeNs);
     out += FIELDVAL_DEC(elapsedRealTimeUncNs);
+    out += FIELDVAL_DEC(timeUncMs);
     uint32_t count = 0;
     for (auto dgnssId : dgnssStationId) {
         out += "dgnssStationId[";
