@@ -3525,6 +3525,14 @@ void LocApiV02 :: reportPosition (
                  locationExtended.dgnssDataAgeMsec,
                  locationExtended.dgnssRefStationId);
 
+        if (location_report_ptr->systemTick_valid &&
+                location_report_ptr->systemTickUnc_valid) {
+            locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_SYSTEM_TICK;
+            locationExtended.systemTick = location_report_ptr->systemTick;
+            locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_SYSTEM_TICK_UNC;
+            locationExtended.systemTickUnc = location_report_ptr->systemTickUnc;
+        }
+
         LocApiBase::reportPosition(location,
                                    locationExtended,
                                    (location_report_ptr->sessionStatus ==
@@ -3955,6 +3963,10 @@ void  LocApiV02 :: reportSvMeasurement (
     if (gnss_raw_measurement_ptr->refCountTicks_valid) {
         svMeasSetHead.flags |= GNSS_SV_MEAS_HEADER_HAS_REF_COUNT_TICKS;
         svMeasSetHead.refCountTicks = gnss_raw_measurement_ptr->refCountTicks;
+    }
+    if (gnss_raw_measurement_ptr->refCountTicksUnc_valid) {
+        svMeasSetHead.flags |= GNSS_SV_MEAS_HEADER_HAS_REF_COUNT_TICKS_UNC;
+        svMeasSetHead.refCountTicksUnc = gnss_raw_measurement_ptr->refCountTicksUnc;
     }
 
     // clock frequency
@@ -6430,7 +6442,6 @@ bool LocApiV02 :: convertGnssMeasurements (GnssMeasurementsData& measurementData
             (int64_t)(fmod(((double)gnss_measurement_info.svTimeSpeed.svTimeMs +
                   (double)gnss_measurement_info.svTimeSpeed.svTimeSubMs), 20) * 1e6);
         measurementData.receivedSvTimeUncertaintyNs = (int64_t)gpsTowUncNs;
-
         measurementData.flags |= (GNSS_MEASUREMENTS_DATA_STATE_BIT |
                                   GNSS_MEASUREMENTS_DATA_RECEIVED_SV_TIME_BIT |
                                   GNSS_MEASUREMENTS_DATA_RECEIVED_SV_TIME_UNCERTAINTY_BIT);
