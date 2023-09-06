@@ -197,7 +197,8 @@ enum GnssSvOptionsMask {
     GNSS_SV_OPTIONS_HAS_EPHEMER_BIT             = (1<<0),
     /** Almanac is available for this SV. <br/> */
     GNSS_SV_OPTIONS_HAS_ALMANAC_BIT             = (1<<1),
-    /** This SV is used in the position fix. <br/>   */
+    /** This SV is used in the position fix that has output
+     *  engine type set to LOC_OUTPUT_ENGINE_SPE. <br/> */
     GNSS_SV_OPTIONS_USED_IN_FIX_BIT             = (1<<2),
     /** This SV has valid GnssSv::carrierFrequencyHz. <br/> */
     GNSS_SV_OPTIONS_HAS_CARRIER_FREQUENCY_BIT   = (1<<3),

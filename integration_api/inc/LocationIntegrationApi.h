@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -104,20 +104,20 @@ enum LocConfigTypeEnum{
     CONFIG_BODY_TO_SENSOR_MOUNT_PARAMS = 8,
     /** Config various parameters for dead reckoning position
      *  engine. <br/> */
-    CONFIG_DEAD_RECKONING_ENGINE = 8,
+    CONFIG_DEAD_RECKONING_ENGINE = 9,
     /** Config minimum SV elevation angle setting used by the GNSS
      *  standard position engine (SPE).
      *  <br/> */
-    CONFIG_MIN_SV_ELEVATION = 9,
+    CONFIG_MIN_SV_ELEVATION = 10,
     /** Config the secondary band for configurations used by the GNSS
      *  standard position engine (SPE).
      *  <br/> */
-    CONFIG_CONSTELLATION_SECONDARY_BAND = 10,
+    CONFIG_CONSTELLATION_SECONDARY_BAND = 11,
     /** Config the output nmea sentence types. <br/> */
-    CONFIG_OUTPUT_NMEA_TYPES = 11,
+    CONFIG_OUTPUT_NMEA_TYPES = 12,
     /** Config the integrity risk level of the position engine.
      *  <br/> */
-    CONFIG_ENGINE_INTEGRITY_RISK = 12,
+    CONFIG_ENGINE_INTEGRITY_RISK = 13,
     /** Max config enum supported. <br/> */
     CONFIG_ENUM_MAX = 99,
 
