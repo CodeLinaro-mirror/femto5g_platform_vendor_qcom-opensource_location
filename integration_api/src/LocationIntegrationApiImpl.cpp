@@ -910,7 +910,7 @@ uint32_t LocationIntegrationApiImpl::configDeadReckoningEngineParams(
             mApiImpl->mDreConfigInfo.isValid = true;
             mApiImpl->mDreConfigInfo.dreConfig = mDreConfig;
             LocConfigDrEngineParamsReqMsg msg(mApiImpl->mSocketName,
-                                              mApiImpl->mDreConfigInfo.dreConfig,
+                                              mDreConfig,
                                               &mApiImpl->mPbufMsgConv);
             if (msg.serializeToProtobuf(pbStr)) {
                 mApiImpl->sendConfigMsgToHalDaemon(CONFIG_DEAD_RECKONING_ENGINE,
@@ -1287,6 +1287,7 @@ void LocationIntegrationApiImpl::processConfigRespCb(const LocAPIGenericRespMsg*
 // process queued reqs that are not able to sent to location hal daemon
 bool LocationIntegrationApiImpl::processQueuedReqs() {
     bool queueNotEmpty = (mQueuedMsg.size() > 0);
+
     while (mQueuedMsg.size() > 0) {
         ConfigMsg msgInfo = mQueuedMsg.front();
         mQueuedMsg.pop();
