@@ -1250,7 +1250,7 @@ LocationClientApiImpl::LocationClientApiImpl(CapabilitiesCb capabitiescb) :
     UTIL_READ_CONF(LOC_PATH_GPS_CONF, gConfigTable);
     LOC_LOGd("gDebug=%u", gDebug);
 
-    mMsgTask = new MsgTask("ClientApiImpl", false);
+    mMsgTask = new MsgTask("ClientApiImpl");
     // get pid to generate sokect name
     uint32_t pid = (uint32_t)getpid();
 

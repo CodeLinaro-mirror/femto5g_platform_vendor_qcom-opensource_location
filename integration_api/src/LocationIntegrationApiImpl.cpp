@@ -258,7 +258,7 @@ LocationIntegrationApiImpl::LocationIntegrationApiImpl(LocIntegrationCbs& integr
         return;
     }
 
-    mMsgTask = new MsgTask("IntegrationApiImpl", false);
+    mMsgTask = new MsgTask("IntegrationApiImpl");
     // get pid to generate sokect name
     uint32_t pid = (uint32_t)getpid();
 
