@@ -885,6 +885,9 @@ uint32_t LocationApiPbMsgConv::getPBMaskForLocationCallbacksMask(const uint32_t 
     if (locCbMask & E_LOC_CB_GNSS_MEAS_BIT) {
         pbLocCbMask |= PB_E_LOC_CB_GNSS_MEAS_BIT;
     }
+    if (locCbMask & E_LOC_CB_GNSS_NHZ_MEAS_BIT) {
+        pbLocCbMask |= PB_E_LOC_CB_GNSS_NHZ_MEAS_BIT;
+    }
     LocApiPb_LOGv("LocApiPB: locCbMask:%x, pbLocCbMask:%x", locCbMask, pbLocCbMask);
     return pbLocCbMask;
 }
@@ -1856,6 +1859,9 @@ uint32_t LocationApiPbMsgConv::getLocationCallbacksMaskFromPB(const uint32_t &pb
     }
     if (pbLocCbMask & PB_E_LOC_CB_GNSS_MEAS_BIT) {
         locCbMask |= E_LOC_CB_GNSS_MEAS_BIT;
+    }
+    if (pbLocCbMask & PB_E_LOC_CB_GNSS_NHZ_MEAS_BIT) {
+        locCbMask |= E_LOC_CB_GNSS_NHZ_MEAS_BIT;
     }
     LocApiPb_LOGv("LocApiPB: pbLocCbMask:%x, locCbMask:%x", pbLocCbMask, locCbMask);
     return locCbMask;

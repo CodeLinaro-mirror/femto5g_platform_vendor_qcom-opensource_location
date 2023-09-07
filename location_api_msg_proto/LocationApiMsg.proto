@@ -178,6 +178,8 @@ enum PBLocationCallbacksMask {
     PB_E_LOC_CB_SIMPLE_LOCATION_INFO_BIT   = 1024;
     /**< Register for GNSS Measurements */
     PB_E_LOC_CB_GNSS_MEAS_BIT              = 2048;
+    /**< Register for nHz GNSS Measurements */
+    PB_E_LOC_CB_GNSS_NHZ_MEAS_BIT           = 4096;
 }
 
 enum PBEngineInfoCallbacksMask {
