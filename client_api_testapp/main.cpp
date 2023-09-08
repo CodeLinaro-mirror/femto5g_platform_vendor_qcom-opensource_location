@@ -1674,7 +1674,7 @@ static bool checkForAutoStart(int argc, char *argv[]) {
                 });
         t.detach();
     }
-    if (pLcaClient) {
+    if (pLcaClient || pIntClient) {
         if (trackingType != NO_TRACKING && autoTestStartTimeMs != 0) {
             sem_wait(&semCompleted);
         }
