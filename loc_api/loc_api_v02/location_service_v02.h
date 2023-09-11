@@ -97,8 +97,8 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *THIS IS AN AUTO GENERATED FILE. DO NOT ALTER IN ANY WAY
  *====*====*====*====*====*====*====*====*====*====*====*====*====*====*====*/
 
-/* This file was generated with Tool version 6.14.7
-   It was generated on: Tue May 16 2023 (Spin 0)
+/* This file was generated with Tool version 6.14.9
+   It was generated on: Thu Mar 23 2023 (Spin 0)
    From IDL File: location_service_v02.idl */
 
 /** @defgroup loc_qmi_consts Constant values defined in the IDL */
@@ -3714,11 +3714,11 @@ typedef struct {
        - 0x00 (FALSE) -- Civic address is not needed \n
        - 0x01 (TRUE) -- Civic address is needed
 
-	Note: If the civic address is available with the AP, the AP shall inject
-	the same using the new QMI_LOC_INJECT_LOCATION_ CIVIC_ADDRESS command.
+    Note: If the civic address is available with the AP, the AP shall inject
+    the same using the new QMI_LOC_INJECT_LOCATION_ CIVIC_ADDRESS command.
 
         If the civic address is not available, the AP shall NOT use the new
-	QMI_LOC_INJECT_LOCATION_ CIVIC_ADDRESS command. The existing DBH injection API should
+    QMI_LOC_INJECT_LOCATION_ CIVIC_ADDRESS command. The existing DBH injection API should
         be used to inject hybrid location if available.
   */
 }qmiLocEventWifiReqIndMsgT_v02;  /* Message */
@@ -6046,7 +6046,7 @@ typedef struct {
   /**<   Each entry in the list contains the SV ID of a satellite
        used for calculating this position report. The following
        information is associated with each SV ID. \n
-	   Range: \n
+       Range: \n
       - GPS --     1 to 32 \n
       - GLONASS -- 65 to 96 \n
       - QZSS --    193 to 197 \n
@@ -13334,7 +13334,7 @@ typedef struct {
        - 0x01 (TRUE) -- GPS engine is in E911 mode \n
        - 0x00 (FALSE) -- GPS engine is not in E911 mode
 
-	   Note: e911Mode shall be set as TRUE for non-E911 Wi-Fi AP injections.
+       Note: e911Mode shall be set as TRUE for non-E911 Wi-Fi AP injections.
     */
 }qmiLocEventInjectWifiApDataReqIndMsgT_v02;  /* Message */
 /**
@@ -15881,7 +15881,7 @@ typedef struct {
   uint32_t toc;
   /**<   Clock data reference time of week.  \n
        - Units -- Seconds \n
-	   If source is ephemeris: \n
+       If source is ephemeris: \n
          - Value for GPS, QZSS, BDS, Galileo, and NavIC is decoded OTA in full GPS seconds. \n
          - Value for GLONASS is the same as GLONASS TOE in full GPS seconds. \n
        If source is XTRA: \n
@@ -15900,7 +15900,7 @@ typedef struct {
   uint32_t toe;
   /**<   Reference time of ephemeris. \n
        - Units -- Seconds \n
-	   If source is ephemeris: \n
+       If source is ephemeris: \n
          - Value for GPS, QZSS, Galileo, and BDS is decoded OTA. \n
          - Value for GLONASS corresponds to ephemeris Tb. \n
        If source is XTRA: \n
@@ -23943,7 +23943,7 @@ typedef struct {
         - Units -- Degrees \n
         - Range -- -90.0 to 90.0 \n
         Positive values indicate northern latitude.
-		Negative values indicate southern latitude.
+        Negative values indicate southern latitude.
    */
 
   /* Optional */
@@ -23953,8 +23953,8 @@ typedef struct {
   /**<   Latitude (specified in WGS84 datum).\n
         - Units -- Degrees \n
         - Range -- -180.0 to 180.0 \n
-		Positive values indicate eastern longitude.
-		Negative values indicate western longitude.
+        Positive values indicate eastern longitude.
+        Negative values indicate western longitude.
    */
 
   /* Optional */
@@ -23973,7 +23973,7 @@ typedef struct {
         - Units -- Percent (1 to 99)\n
         - 0, 101 to 255 -- Invalid value\n
         - If 100 is received, reinterpret to 99 \n
-		Note: This field must be specified with horizontal uncertainty.
+        Note: This field must be specified with horizontal uncertainty.
         If not specified when horUncCircular is set, the default value is 50.
    */
 
@@ -23983,8 +23983,8 @@ typedef struct {
   float altitudeWrtEllipsoid;
   /**<   Altitude with respect to the WGS84 ellipsoid.\n
         - Units -- Meters \n
-		- Positive -- Height \n
-		- Negative -- Depth
+        - Positive -- Height \n
+        - Negative -- Depth
    */
 
   /* Optional */
@@ -24010,12 +24010,12 @@ typedef struct {
   uint8_t vertConfidence;
   /**<   Vertical confidence, as defined by ETSI TS 101 109 (3GPP \hyperref[TS 03.32]{TS 03.32}). \n
         - Units -- Percent (0 to 99)\n
-		- 0 -- Invalid value \n
-		- 100 to 256 -- Not used \n
-		- If 100 is received, reinterpret to 99 \n
-		Note: This field must be specified with the vertical uncertainty.
+        - 0 -- Invalid value \n
+        - 100 to 256 -- Not used \n
+        - If 100 is received, reinterpret to 99 \n
+        Note: This field must be specified with the vertical uncertainty.
         If not specified, the default value is 50.
-	*/
+    */
 
   /* Optional */
   /*  Altitude Source */
@@ -26243,4 +26243,3 @@ qmi_idl_service_object_type loc_get_service_object_internal_v02
 }
 #endif
 #endif
-

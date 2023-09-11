@@ -2241,6 +2241,21 @@ typedef std::function<void(
 )> GnssNmeaCb;
 
 /** @brief
+    EngineNmeaCb is for receiving NMEA sentences when
+    LocationClientApi is in a positioning session. <br/>
+    @param engType: engine type that NMEA is derived from
+    @param timestamp: timestamp that NMEA sentence is
+                    generated. <br/>
+    @param nmea: nmea strings generated from position and SV
+           report. <br/>
+*/
+typedef std::function<void(
+    LocOutputEngineType engType,
+    uint64_t timestamp,
+    const std::string& nmea
+)> EngineNmeaCb;
+
+/** @brief
     GnssDataCb is for receiving GnssData, e.g.:
     jammer information when LocationClientApi is in a
     positioning session. <br/>
@@ -2336,7 +2351,15 @@ struct GnssReportCbs {
     GnssLocationCb gnssLocationCallback;
     /** Callback to receive GnssSv from modem GNSS engine. <br/> */
     GnssSvCb gnssSvCallback;
-    /** Callback to receive NMEA sentences. <br/> */
+    /** Callback to receive NMEA sentences. <br/>
+     *  NMEA will be generated from GnssSv and position report.
+     *  <br/>
+     *  When there are multiple engines running on the system,
+     *  position related NMEA sentences will be generated from the
+     *  fused position report. <br/>
+     *  When there is only SPE engine running on the system,
+     *  position related NMEA sentences will be generated from the
+     *  position report from modem GNSS engine report. <br/> */
     GnssNmeaCb gnssNmeaCallback;
     /** Callback to receive GnssData from modem GNSS engine.
      *  <br/> */
@@ -2384,6 +2407,16 @@ struct EngineReportCbs {
     /** Callback to receive disaster and crisis report from modem
      *  GNSS engine. <br/> */
     GnssDcReportCb gnssDcReportCallback;
+    /**
+     * Receive NMEA related to position report from all registered engines
+     * if those engines are configured to generate NMEA report via
+     * API configOutputNmeaTypes(NmeaTypesMask, GeodeticDatumType, LocReqEngineTypeMask)
+     * The SV report will come from GNSS engine.
+     * User should pick one nmea callback, either GnssNmeaCb or EngineNmeaCb
+     * to use. Don't register both at the same time, otherwise
+     * LOCATION_ERROR_INVALID_PARAMETER will be thrown.
+     * Recommend to use EngineNmeaCb. <br/> */
+    EngineNmeaCb engineNmeaCallback;
 };
 
 /**
