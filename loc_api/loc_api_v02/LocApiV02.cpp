@@ -4996,8 +4996,9 @@ void LocApiV02 :: reportEngineState (
                   resender();
               }
               mpLocApiV02->mResenders.clear();
-              mpLocApiV02->registerEventMask();
           }
+          // update the registration mask upon receiving Engine state
+          mpLocApiV02->registerEventMask();
       }
   };
 
