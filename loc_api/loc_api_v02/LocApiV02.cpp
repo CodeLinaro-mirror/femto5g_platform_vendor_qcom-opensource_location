@@ -352,7 +352,7 @@ LocApiV02 :: LocApiV02(LOC_API_ADAPTER_EVENT_MASK_T exMask,
     LocApiBase(exMask, context),
     clientHandle(LOC_CLIENT_INVALID_HANDLE_VALUE),
     mQmiMask(0), mInSession(false), mPowerMode(GNSS_POWER_MODE_DEFAULT),
-    mEngineOn(false), mMeasurementsStarted(false),
+    mEngineOn(false), mFirstMeasurementOfSessionReceived(false),
     mMasterRegisterNotSupported(false),
     mCounter(0), mMinInterval(1000),
     mGnssMeasurements(nullptr),
@@ -4986,6 +4986,14 @@ void LocApiV02 :: reportEngineState (
                  LocMsg(), mpLocApiV02(pLocApiV02), mEngineOn(engineOn) {}
       inline virtual void proc() const {
 
+          // During quick session stop/start, there is a chance of left
+          // over GNSS measurement from previous session gets received at
+          // current session, when this happens, we need to set
+          // mFirstMeasurementOfSessionReceived to false, so, this measurement
+          // will not be used to determine whether device is in full cycle or not
+          if (mpLocApiV02->mEngineOn != mEngineOn) {
+              mpLocApiV02->mFirstMeasurementOfSessionReceived = false;
+          }
           // Call registerEventMask so that if qmi mask has changed,
           // it will register the new qmi mask to the modem
           mpLocApiV02->mEngineOn = mEngineOn;
@@ -7575,17 +7583,22 @@ int LocApiV02 :: convertGnssClock (GnssMeasurementsClock& clock,
         gnss_measurement_info.numClockResets_valid) {
         newRefFCount = gnss_measurement_info.systemTimeExt.refFCount;
         newDiscCount = gnss_measurement_info.numClockResets;
-        if ((true == mMeasurementsStarted) ||
+        LOC_LOGv("mFirstMeasurementOfSessionReceived %d, session start: ref cnt %d, disc count %d,"
+                 "new: ref cnt %d, disc count %d, old: ref cnt %d, disc count %d",
+                 mFirstMeasurementOfSessionReceived, sessionStartRefFCount, sessionStartDiscCount,
+                 newRefFCount, newDiscCount, oldRefFCount, oldDiscCount);
+
+        if ((false == mFirstMeasurementOfSessionReceived) ||
             (oldDiscCount != newDiscCount) ||
             (newRefFCount <= oldRefFCount))
         {
-            if (true == mMeasurementsStarted) {
-                mMeasurementsStarted = false;
+            if (false == mFirstMeasurementOfSessionReceived) {
+                mFirstMeasurementOfSessionReceived = true;
                 sessionStartRefFCount = newRefFCount;
                 sessionStartDiscCount = newDiscCount;
                 mIsFullTracking = true;
             } else {
-                if ((sessionStartDiscCount != newDiscCount) ||
+                if ((newDiscCount != sessionStartDiscCount) ||
                     (newRefFCount <= sessionStartRefFCount)) {
                     mIsFullTracking = false;
                 } else {
@@ -7599,6 +7612,7 @@ int LocApiV02 :: convertGnssClock (GnssMeasurementsClock& clock,
         } else {
             mIsFullTracking = true;
         }
+
         oldDiscCount = newDiscCount;
         oldRefFCount = newRefFCount;
 
@@ -7779,7 +7793,8 @@ void LocApiV02 :: eventCb(locClientHandleType /*clientHandle*/,
       break;
 
     case QMI_LOC_EVENT_GNSS_MEASUREMENT_REPORT_IND_V02:
-      LOC_LOGd("GNSS Measurement Report");
+      LOC_LOGv("GNSS Measurement Report, engine on %d, in session %d",
+               mEngineOn, mInSession);
       if (mInSession) {
           reportGnssMeasurementData(*eventPayload.pGnssSvRawInfoEvent);
       }
@@ -11050,7 +11065,7 @@ LocApiV02::startTimeBasedTracking(const TrackingOptions& options, LocApiResponse
         loc_boot_kpi_marker("L - LocApiV02 startFix, tbf %d", options.minInterval);
     }
     mInSession = true;
-    mMeasurementsStarted = true;
+    mFirstMeasurementOfSessionReceived = false;
     registerEventMask();
     setOperationMode(options.mode);
 
