@@ -192,7 +192,7 @@ private:
   bool mInSession;
   GnssPowerMode mPowerMode;
   bool mEngineOn;
-  bool mMeasurementsStarted;
+  bool mFirstMeasurementOfSessionReceived;
   std::vector<Resender> mResenders;
   bool mMasterRegisterNotSupported;
   uint32_t mCounter;
