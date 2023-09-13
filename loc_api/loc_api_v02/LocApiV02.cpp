@@ -108,6 +108,7 @@ using namespace loc_core;
 
 /* the time, in seconds, to wait for user response for NI  */
 #define LOC_NI_NO_RESPONSE_TIME 20
+#define MEAS_STATUS_DONT_USE (0xFFC0000000000000)
 
 /* minimum number of measurements with
   mask QMI_LOC_MASK_MEAS_STATUS_GNSS_FRESH_MEAS_VALID */
@@ -5477,7 +5478,9 @@ void LocApiV02::reportGnssMeasurementData(
                 if ((gnss_measurement_report_ptr.svMeasurement[index].validMeasStatusMask &
                      QMI_LOC_MASK_MEAS_STATUS_GNSS_FRESH_MEAS_STAT_BIT_VALID_V02) &&
                     (gnss_measurement_report_ptr.svMeasurement[index].measurementStatus &
-                     QMI_LOC_MASK_MEAS_STATUS_GNSS_FRESH_MEAS_VALID_V02)) {
+                     QMI_LOC_MASK_MEAS_STATUS_GNSS_FRESH_MEAS_VALID_V02)&&
+                    !(gnss_measurement_report_ptr.svMeasurement[index].measurementStatus &
+                         MEAS_STATUS_DONT_USE)) {
                     mAgcIsPresent  &= convertGnssMeasurements(
                         gnss_measurement_report_ptr,
                         index, false, validDgnssMeas);
@@ -5509,7 +5512,9 @@ void LocApiV02::reportGnssMeasurementData(
                     if ((gnss_measurement_report_ptr.extSvMeasurement[index].validMeasStatusMask &
                          QMI_LOC_MASK_MEAS_STATUS_GNSS_FRESH_MEAS_STAT_BIT_VALID_V02) &&
                         (gnss_measurement_report_ptr.extSvMeasurement[index].measurementStatus &
-                         QMI_LOC_MASK_MEAS_STATUS_GNSS_FRESH_MEAS_VALID_V02)) {
+                         QMI_LOC_MASK_MEAS_STATUS_GNSS_FRESH_MEAS_VALID_V02)&&
+                        !(gnss_measurement_report_ptr.svMeasurement[index].measurementStatus &
+                         MEAS_STATUS_DONT_USE)) {
                         mAgcIsPresent &= convertGnssMeasurements(
                             gnss_measurement_report_ptr,
                             index, true, validDgnssMeas);
