@@ -199,6 +199,18 @@ struct MeasCacheInfo {
     uint32_t refFCount;
 };
 
+/** Indicate Gnss Constellation RF Band type <br/>   */
+enum GnssRfBand {
+    /**< Gnss RF Band Unknown <br/> */
+    GNSS_RF_BAND_UNKNOWN            = 0,
+    /**< Gnss L1 RF Band <br/> */
+    GNSS_RF_BAND_L1                 = 1,
+    /**< Gnss L2 RF Band <br/> */
+    GNSS_RF_BAND_L2                 = 2,
+    /**< Gnss L5 RF Band <br/> */
+    GNSS_RF_BAND_L5                 = 3,
+};
+
 typedef std::unordered_map<string, MeasCacheInfo> CycleSlipCountMap;
 typedef CycleSlipCountMap::iterator CycleSlipCountMapItr;
 
@@ -316,6 +328,9 @@ private:
   void convertOsnmaTreeNode(qmiLocOsnmaTreeNodeT_v02& out, mgpOsnmaTreeNodeT& in);
   void convertPublicKeyAndMerkleTreeStruct(qmiLocOsnmaPublicKeyMerkleTreeReqMsgT_v02& qmiOut,
           mgpOsnmaPublicKeyAndMerkleTreeStruct& in);
+  /* convert Agc status from QMI loc to loc eng format */
+  static AgcStatus convertQmiAgcStatusType(qmiLocAgcStatusEnumT_v02 qmiAgcStatus);
+
   /* If Confidence value is less than 68%, then scale the accuracy value to 68%
      confidence.*/
   void scaleAccuracyTo68PercentConfidence(const uint8_t confidenceValue,

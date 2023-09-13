@@ -15556,7 +15556,7 @@ typedef struct {
        */
 
   /* Optional */
-  /*  Automatic gain control(AGC) Status */
+  /*  Automatic gain control(AGC) Status*/
   uint8_t agcStatus_valid;  /**< Must be set to true if agcStatus is being passed */
   qmiLocAgcStatusEnumT_v02 agcStatus;
   /**<   Values: \n
