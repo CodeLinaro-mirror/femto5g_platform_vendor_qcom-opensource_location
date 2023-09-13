@@ -150,6 +150,7 @@ using namespace loc_core;
 
 #define FLP_BATCHING_MINIMUN_INTERVAL           (1000) // in msec
 #define FLP_BATCHING_MIN_TRIP_DISTANCE           1 // 1 meter
+#define MEAS_STATUS_DONT_USE (0xFFC0000000000000)
 
 template struct loc_core::LocApiResponseData<LocApiBatchData>;
 template struct loc_core::LocApiResponseData<LocApiGeofenceData>;
@@ -5347,7 +5348,9 @@ void LocApiV02::reportGnssMeasurementData(
                 if ((gnss_measurement_report_ptr.svMeasurement[index].validMeasStatusMask &
                      QMI_LOC_MASK_MEAS_STATUS_GNSS_FRESH_MEAS_STAT_BIT_VALID_V02) &&
                     (gnss_measurement_report_ptr.svMeasurement[index].measurementStatus &
-                     QMI_LOC_MASK_MEAS_STATUS_GNSS_FRESH_MEAS_VALID_V02)) {
+                         QMI_LOC_MASK_MEAS_STATUS_GNSS_FRESH_MEAS_VALID_V02) &&
+                     !(gnss_measurement_report_ptr.svMeasurement[index].measurementStatus &
+                         MEAS_STATUS_DONT_USE)) {
                     mAgcIsPresent &= convertGnssMeasurements(
                         gnss_measurement_report_ptr,
                         index, false, validDgnssMeas, validMlInference);
@@ -5372,7 +5375,9 @@ void LocApiV02::reportGnssMeasurementData(
                     if ((gnss_measurement_report_ptr.extSvMeasurement[index].validMeasStatusMask &
                          QMI_LOC_MASK_MEAS_STATUS_GNSS_FRESH_MEAS_STAT_BIT_VALID_V02) &&
                         (gnss_measurement_report_ptr.extSvMeasurement[index].measurementStatus &
-                         QMI_LOC_MASK_MEAS_STATUS_GNSS_FRESH_MEAS_VALID_V02)) {
+                            QMI_LOC_MASK_MEAS_STATUS_GNSS_FRESH_MEAS_VALID_V02) &&
+                        !(gnss_measurement_report_ptr.svMeasurement[index].measurementStatus &
+                            MEAS_STATUS_DONT_USE)) {
                         mAgcIsPresent &= convertGnssMeasurements(
                             gnss_measurement_report_ptr,
                             index, true, validDgnssMeas, validMlInference);
