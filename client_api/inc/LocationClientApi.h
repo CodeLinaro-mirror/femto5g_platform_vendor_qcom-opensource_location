@@ -1643,7 +1643,19 @@ enum GnssDataMask {
     /** Jammer Indicator is available. <br/>   */
     GNSS_DATA_JAMMER_IND_BIT = (1ULL << 0),
     /** AGC is available. <br/>   */
-    GNSS_DATA_AGC_BIT = (1ULL << 1)
+    GNSS_DATA_AGC_BIT = (1ULL << 1),
+};
+
+/** Indicate RF Automatic Gain Control Status <br/>   */
+enum AgcStatus {
+    /**< AGC status is unknown <br/> */
+    AGC_STATUS_UNKNOWN = 0,
+    /**< AGC status is No saturation <br/> */
+    AGC_STATUS_NO_SATURATION = 1,
+    /**< AGC status is Front end gain maximum saturation <br/> */
+    AGC_STATUS_FRONT_END_GAIN_MAXIMUM_SATURATION = 2,
+    /**< AGC status is Front end gain minimum saturation <br/> */
+    AGC_STATUS_FRONT_END_GAIN_MINIMUM_SATURATION = 3,
 };
 
 /** Specify the additional GNSS data that can be provided
@@ -1673,6 +1685,12 @@ struct GnssData {
     double        jammerInd[GNSS_MAX_NUMBER_OF_SIGNAL_TYPES];
     /** Automatic gain control metric, in unit of dB.  <br/>   */
     double        agc[GNSS_MAX_NUMBER_OF_SIGNAL_TYPES];
+    /** RF Automatic gain control status for L1 band.  <br/>   */
+    AgcStatus     agcStatusL1;
+    /** RF Automatic gain control status for L2 band.  <br/>   */
+    AgcStatus     agcStatusL2;
+    /** RF Automatic gain control status for L5 band.  <br/>   */
+    AgcStatus     agcStatusL5;
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
     string toString() const;
@@ -2059,6 +2077,12 @@ struct GnssMeasurements {
     std::vector<GnssMeasurementsData> measurements;
     /** NHz measurements indicator */
     bool isNhz;
+    /** RF Automatic gain control status for L1 band.  <br/>   */
+    AgcStatus     agcStatusL1;
+    /** RF Automatic gain control status for L2 band.  <br/>   */
+    AgcStatus     agcStatusL2;
+    /** RF Automatic gain control status for L5 band.  <br/>   */
+    AgcStatus     agcStatusL5;
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
     string toString() const;
