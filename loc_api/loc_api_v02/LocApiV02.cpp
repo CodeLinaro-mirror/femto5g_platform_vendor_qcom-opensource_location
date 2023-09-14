@@ -719,7 +719,6 @@ locClientEventMaskType LocApiV02 :: adjustLocClientEventMask(locClientEventMaskT
                                            QMI_LOC_EVENT_MASK_GNSS_NHZ_MEASUREMENT_REPORT_V02 |
                                            QMI_LOC_EVENT_MASK_GNSS_SV_POLYNOMIAL_REPORT_V02 |
                                            QMI_LOC_EVENT_MASK_EPHEMERIS_REPORT_V02 |
-                                           QMI_LOC_EVENT_MASK_NEXT_LS_INFO_REPORT_V02 |
                                            QMI_LOC_EVENT_MASK_LATENCY_INFORMATION_REPORT_V02 |
                                            QMI_LOC_EVENT_MASK_ENGINE_DEBUG_DATA_REPORT_V02;
         // clear GNSS_EVENT_REPORT mask because QMI_LOC_EVENT_MASK_FEATURE_STATUS_V02 is set
@@ -743,9 +742,10 @@ locClientEventMaskType LocApiV02 :: adjustLocClientEventMask(locClientEventMaskT
     if ((eQMI_LOC_POWER_STATE_SUSPENDED_V02 == mPlatformPowerState) ||
             (eQMI_LOC_POWER_STATE_SHUTDOWN_V02 == mPlatformPowerState) ||
                 (eQMI_LOC_POWER_STATE_DEEP_SLEEP_ENTRY_V02 == mPlatformPowerState)) {
-        // device in suspended/shutdown state, clear the engine state mask
+        // device in suspended/shutdown state, clear the engine state and leap second info mask
         // to avoid wake up
-        qmiMask &= ~QMI_LOC_EVENT_MASK_ENGINE_STATE_V02;
+        qmiMask &= ~(QMI_LOC_EVENT_MASK_ENGINE_STATE_V02 |
+                QMI_LOC_EVENT_MASK_NEXT_LS_INFO_REPORT_V02);
         syslog(LOG_INFO, "adjustLocClientEventMask, oldQmiMask=%" PRIu64 " "
                "qmiMask=%" PRIu64 " mInSession: %d, power state %d, retry queue empty %d",
                oldQmiMask, qmiMask, mInSession, mPlatformPowerState, mResenders.empty());
