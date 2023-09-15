@@ -700,9 +700,6 @@ locClientEventMaskType LocApiV02 :: adjustLocClientEventMask(locClientEventMaskT
             clearMask |= QMI_LOC_EVENT_MASK_GNSS_EVENT_REPORT_V02;
         }
         qmiMask = qmiMask & ~clearMask;
-    } else if (!mEngineOn) {
-        locClientEventMaskType clearMask = QMI_LOC_EVENT_MASK_NMEA_V02;
-        qmiMask = qmiMask & ~clearMask;
     }
 
     //Enable feature status report for master client
@@ -4823,9 +4820,11 @@ void LocApiV02 :: reportEngineState (
                   resender();
               }
               mpLocApiV02->mResenders.clear();
+              // update the registration mask upon receiving Engine state off
+              // as we have already flushed out the queue, and can un-register
+              // the ENGINE_STATE event
+              mpLocApiV02->registerEventMask();
           }
-          // update the registration mask upon receiving Engine state
-          mpLocApiV02->registerEventMask();
       }
   };
 
