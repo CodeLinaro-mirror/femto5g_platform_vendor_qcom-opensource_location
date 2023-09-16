@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -72,9 +72,6 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <loc_cfg.h>
 #include <LocIpc.h>
 #include <LocTimer.h>
-#ifdef POWERMANAGER_ENABLED
-#include <PowerEvtHandler.h>
-#endif
 #include <location_interface.h>
 #include <ILocationAPI.h>
 #include <LocationApiMsg.h>
@@ -201,10 +198,6 @@ public:
     // from IPC receiver
     void onListenerReady(bool externalApIpc);
 
-#ifdef POWERMANAGER_ENABLED
-    void onPowerEvent(PowerStateType powerState);
-#endif
-
     // other APIs
     void deleteClientbyName(const std::string name);
     void deleteEapClientByIds(int id1, int id2);
@@ -270,6 +263,7 @@ private:
     void onControlCollectiveResponseCallback(size_t count, LocationError *errs, uint32_t *ids);
     void onGnssConfigCallback(uint32_t sessionId, const GnssConfig& config);
     void onGnssEnergyConsumedCb(uint64_t totalEnergyConsumedSinceFirstBoot);
+    void onGnssSignalTypesCb(const GnssCapabNotification& gnssCapabNotification);
 
     // Callbacks for location api used service GTP WWAN fix request
     void onCapabilitiesCallback(LocationCapabilitiesMask mask);
@@ -301,6 +295,9 @@ private:
     void configEngineIntegrityRisk(const LocConfigEngineIntegrityRiskReqMsg* pMsg);
     void injectLocation(const LocIntApiInjectLocationMsg* pMsg);
     void configXtraParams(const LocConfigXtraReqMsg* pMsg);
+    void configMerkleTree(const LocConfigMerkleTreeReqMsg* pMsg);
+    void configOsnmaEnablement(const LocConfigOsnmaEnablementReqMsg* pMsg);
+    void registerGnssSignalTypesUpdate(const LocConfigRegisterGnssSignalTypesUpdateReqMsg* pReqMsg);
 
     // Location configuration API get/read requests
     void getGnssConfig(const LocAPIMsgHeader* pReqMsg,
@@ -352,11 +349,6 @@ private:
     void createOSFrameworkInstance();
     void destroyOSFrameworkInstance();
 
-#ifdef POWERMANAGER_ENABLED
-    // power event observer
-    PowerEvtHandler* mPowerEventObserver;
-#endif
-
     // singleton instance
     static LocationApiService *mInstance;
 
@@ -404,6 +396,9 @@ private:
 
     // LIA clients that register for xtra status update
     std::unordered_set<std::string> mClientsRegForXtraStatus;
+    // Location api interface to register Gnss signal types callback
+    ILocationAPI* mSignalTypesLocationApi;
+    LocationCallbacks mSignalTypesLocationApiCallbacks;
 };
 
 #endif //LOCATIONAPISERVICE_H

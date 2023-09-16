@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -186,6 +186,12 @@ const char* LocApiMsgString(ELocMsgID msgId) {
         return "E_INTAPI_CONFIG_OUTPUT_NMEA_TYPES_MSG_ID";
     case E_INTAPI_CONFIG_ENGINE_INTEGRITY_RISK_MSG_ID:
         return "E_INTAPI_CONFIG_ENGINE_INTEGRITY_RISK_MSG_ID";
+    case E_INTAPI_CONFIG_XTRA_PARAMS_MSG_ID:
+        return "E_INTAPI_CONFIG_XTRA_PARAMS_MSG_ID";
+    case E_INTAPI_CONFIG_MERKLE_TREE_MSG_ID:
+        return "E_INTAPI_CONFIG_MERKLE_TREE_MSG_ID";
+    case E_INTAPI_CONFIG_OSNMA_ENABLEMENT_MSG_ID:
+        return "E_INTAPI_CONFIG_OSNMA_ENABLEMENT_MSG_ID";
     case E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID:
         return "E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID";
     case E_INTAPI_GET_ROBUST_LOCATION_CONFIG_RESP_MSG_ID:
@@ -204,6 +210,18 @@ const char* LocApiMsgString(ELocMsgID msgId) {
         return "E_INTAPI_GET_CONSTELLATION_SECONDARY_BAND_CONFIG_RESP_MSG_ID";
     case E_INTAPI_INJECT_LOCATION_MSG_ID:
         return "E_INTAPI_INJECT_LOCATION_MSG_ID";
+    case E_INTAPI_GET_XTRA_STATUS_REQ_MSG_ID:
+        return "E_INTAPI_GET_XTRA_STATUS_REQ_MSG_ID";
+    case E_INTAPI_GET_XTRA_STATUS_RESP_MSG_ID:
+        return "E_INTAPI_GET_XTRA_STATUS_REQ_MSG_ID";
+    case E_INTAPI_REGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID:
+        return "E_INTAPI_REGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID";
+    case E_INTAPI_DEREGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID:
+        return "E_INTAPI_DEREGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID";
+    case E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_REQ_MSG_ID:
+        return "E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_REQ_MSG_ID";
+    case E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_RESP_MSG_ID:
+        return "E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_RESP_MSG_ID";
     default:
         return "unknown ELocMsgID";
     }
@@ -2482,6 +2500,7 @@ int LocConfigOutputNmeaTypesReqMsg::serializeToProtobuf(
     pbMsg.set_nmeatypesmask(pLocApiPbMsgConv->getPBMaskForNmeaTypesMask(mEnabledNmeaTypes));
     pbMsg.set_nmeadatumtype((mNmeaDatumType == GEODETIC_TYPE_PZ_90) ?
                             PB_GEODETIC_TYPE_PZ_90 : PB_GEODETIC_TYPE_WGS_84);
+    pbMsg.set_nmeareqengmask(pLocApiPbMsgConv->getPBMaskForLocReqEngineTypeMask(mNmeaReqEngMask));
 
     string pbStr;
     if (!pbMsg.SerializeToString(&pbStr)) {
@@ -2516,6 +2535,8 @@ LocConfigOutputNmeaTypesReqMsg::
             pLocApiPbMsgConv->getNmeaTypesMaskFromPB(pbMsg.nmeatypesmask());
     mNmeaDatumType = (pbMsg.nmeadatumtype() == PB_GEODETIC_TYPE_PZ_90) ?
             GEODETIC_TYPE_PZ_90 : GEODETIC_TYPE_WGS_84;
+    mNmeaReqEngMask = (LocReqEngineTypeMask)
+            pLocApiPbMsgConv->getLocReqEngineTypeMaskFromPB(pbMsg.nmeareqengmask());
 }
 
 // Convert LocConfigEngineIntegrityRiskReqMsg ->
@@ -2570,6 +2591,82 @@ LocConfigEngineIntegrityRiskReqMsg::LocConfigEngineIntegrityRiskReqMsg(
             pbConfigEngineIntegrityRiskReqMsg.engtype());
     mIntegrityRisk = pbConfigEngineIntegrityRiskReqMsg.integrityrisk();
     LOC_LOGd("LocApiPB: eng type %d, integrity risk %d", mEngType, mIntegrityRisk);
+}
+
+// Convert LocConfigMerkleTreeReqMsg ->
+// PBLocConfigMerkleTreeReqMsg
+int LocConfigMerkleTreeReqMsg::serializeToProtobuf(string& protoStr) {
+    PBLocAPIMsgHeader pLocApiMsgHdr;
+    PBLocConfigMerkleTreeReqMsg pbLocConfMsg;
+
+    if (nullptr == pLocApiPbMsgConv) {
+        LOC_LOGe("pLocApiPbMsgConv is null!");
+        return 0;
+    }
+    // string      mSocketName = 1;
+    pLocApiMsgHdr.set_msocketname(mSocketName);
+    // PBELocMsgID  msgId = 2;
+    pLocApiMsgHdr.set_msgid(pLocApiPbMsgConv->getPBEnumForELocMsgID(msgId));
+    // uint32   msgVersion = 3;
+    pLocApiMsgHdr.set_msgversion(msgVersion);
+    // string mMerkleTreeConfig = 1;
+    pbLocConfMsg.set_mmerkletreeconfig(mMerkleTreeConfig);
+
+    string pbStr;
+    if (!pbLocConfMsg.SerializeToString(&pbStr)) {
+        LOC_LOGe("SerializeToString on PBLocConfigMerkleTreeReqMsg failed!");
+        return 0;
+    }
+    // bytes       payload = 4;
+    pLocApiMsgHdr.set_payload(pbStr);
+
+    // uint32   payloadSize = 5;
+    pLocApiMsgHdr.set_payloadsize(sizeof(LocConfigMerkleTreeReqMsg));
+
+    if (!pLocApiMsgHdr.SerializeToString(&protoStr)) {
+        LOC_LOGe("SerializeToString on pLocApiMsgHdr failed!");
+        return 0;
+    }
+
+    return protoStr.size();
+}
+
+// Convert LocConfigOsnmaEnablementReqMsg ->
+// PBLocConfigOsnmaEnablementReqMsg
+int LocConfigOsnmaEnablementReqMsg::serializeToProtobuf(string& protoStr) {
+    PBLocAPIMsgHeader pLocApiMsgHdr;
+    PBLocConfigOsnmaEnablementReqMsg pbLocConfMsg;
+
+    if (nullptr == pLocApiPbMsgConv) {
+        LOC_LOGe("pLocApiPbMsgConv is null!");
+        return 0;
+    }
+    // string      mSocketName = 1;
+    pLocApiMsgHdr.set_msocketname(mSocketName);
+    // PBELocMsgID  msgId = 2;
+    pLocApiMsgHdr.set_msgid(pLocApiPbMsgConv->getPBEnumForELocMsgID(msgId));
+    // uint32   msgVersion = 3;
+    pLocApiMsgHdr.set_msgversion(msgVersion);
+    // bool mEnable = 1;
+    pbLocConfMsg.set_menable(mEnable);
+
+    string pbStr;
+    if (!pbLocConfMsg.SerializeToString(&pbStr)) {
+        LOC_LOGe("SerializeToString on PBLocConfigOsnmaEnablementReqMsg failed!");
+        return 0;
+    }
+    // bytes       payload = 4;
+    pLocApiMsgHdr.set_payload(pbStr);
+
+    // uint32   payloadSize = 5;
+    pLocApiMsgHdr.set_payloadsize(sizeof(LocConfigOsnmaEnablementReqMsg));
+
+    if (!pLocApiMsgHdr.SerializeToString(&protoStr)) {
+        LOC_LOGe("SerializeToString on pLocApiMsgHdr failed!");
+        return 0;
+    }
+
+    return protoStr.size();
 }
 
 /************************** XTRA *****************************************/
@@ -2707,7 +2804,6 @@ int LocConfigGetXtraStatusRespMsg::serializeToProtobuf(string& protoStr) {
 
     // uint32   payloadSize = 5;
     pLocApiMsgHdr.set_payloadsize(sizeof(LocConfigGetXtraStatusRespMsg));
-        LOC_LOGe("enter 7");
     if (!pLocApiMsgHdr.SerializeToString(&protoStr)) {
         LOC_LOGe("SerializeToString on pLocApiMsgHdr failed!");
         return 0;
@@ -3189,6 +3285,81 @@ int LocIntApiInjectLocationMsg::serializeToProtobuf(string& protoStr) {
     pbMsg.clear_location();
     return protoStr.size();
 }
+
+// Convert LocConfigRegisterGnssSignalTypesUpdateReqMsg ->
+// PBLocConfigRegisterGnssSignalTypesUpdateReqMsg
+int LocConfigRegisterGnssSignalTypesUpdateReqMsg::serializeToProtobuf(string& protoStr) {
+    PBLocAPIMsgHeader pLocApiMsgHdr;
+    PBLocConfigRegisterGnssSignalTypesUpdateReqMsg pbMsg;
+
+    if (nullptr == pLocApiPbMsgConv) {
+        LOC_LOGe("pLocApiPbMsgConv is null!");
+        return 0;
+    }
+    // string      mSocketName = 1;
+    pLocApiMsgHdr.set_msocketname(mSocketName);
+    // PBELocMsgID  msgId = 2;
+    pLocApiMsgHdr.set_msgid(pLocApiPbMsgConv->getPBEnumForELocMsgID(msgId));
+    // uint32   msgVersion = 3;
+    pLocApiMsgHdr.set_msgversion(msgVersion);
+
+    // bool mRegisterUpdate = 1;
+    pbMsg.set_mregisterupdate(mRegisterUpdate);
+
+    string pbStr;
+    if (!pbMsg.SerializeToString(&pbStr)) {
+        LOC_LOGe("SerializeToString failed!");
+        return 0;
+    }
+    // bytes       payload = 4;
+    pLocApiMsgHdr.set_payload(pbStr);
+    // uint32   payloadSize = 5;
+    pLocApiMsgHdr.set_payloadsize(sizeof(LocConfigRegisterGnssSignalTypesUpdateReqMsg));
+
+    if (!pLocApiMsgHdr.SerializeToString(&protoStr)) {
+        LOC_LOGe("SerializeToString on pLocApiMsgHdr failed!");
+        return 0;
+    }
+    return protoStr.size();
+}
+// Convert LocConfigRegisterGnssSignalTypesUpdateRespMsg ->
+// PBLocConfigRegisterGnssSignalTypesUpdateRespMsg
+int LocConfigRegisterGnssSignalTypesUpdateRespMsg::serializeToProtobuf(string& protoStr) {
+    PBLocAPIMsgHeader pLocApiMsgHdr;
+    PBLocConfigRegisterGnssSignalTypesUpdateRespMsg pbMsg;
+
+    if (nullptr == pLocApiPbMsgConv) {
+        LOC_LOGe("pLocApiPbMsgConv is null!");
+        return 0;
+    }
+    // string      mSocketName = 1;
+    pLocApiMsgHdr.set_msocketname(mSocketName);
+    // PBELocMsgID  msgId = 2;
+    pLocApiMsgHdr.set_msgid(pLocApiPbMsgConv->getPBEnumForELocMsgID(msgId));
+    // uint32   msgVersion = 3;
+    pLocApiMsgHdr.set_msgversion(msgVersion);
+
+    //GnssSignalTypeMask mSignalTypeMask = 1;
+    pbMsg.set_msignaltypemask(pLocApiPbMsgConv->getPBMaskForGnssSignalTypeMask(mSignalTypeMask));
+
+    string pbStr;
+    if (!pbMsg.SerializeToString(&pbStr)) {
+        LOC_LOGe("SerializeToString on pbMsg failed!");
+        return 0;
+    }
+    // bytes       payload = 4;
+    pLocApiMsgHdr.set_payload(pbStr);
+
+    // uint32   payloadSize = 5;
+    pLocApiMsgHdr.set_payloadsize(sizeof(LocConfigRegisterGnssSignalTypesUpdateRespMsg));
+
+    if (!pLocApiMsgHdr.SerializeToString(&protoStr)) {
+        LOC_LOGe("SerializeToString on pLocApiMsgHdr failed!");
+        return 0;
+    }
+    return protoStr.size();
+}
+
 
 // Convert LocAPIGetAntennaInfoMsg ->
 // PBLocAPIGetAntennaInfoMsg
@@ -3953,6 +4124,24 @@ LocConfigEngineRunStateReqMsg::LocConfigEngineRunStateReqMsg(const char* name,
     LOC_LOGd("LocApiPB: eng type %d, eng state %d", mEngType, mEngState);
 }
 
+// Decode PBLocConfigMerkleTreeReqMsg -> LocConfigMerkleTreeReqMsg
+LocConfigMerkleTreeReqMsg::LocConfigMerkleTreeReqMsg(
+        const char* name, const PBLocConfigMerkleTreeReqMsg &pbLocConfMsg,
+        const LocationApiPbMsgConv *pbMsgConv):
+    LocAPIMsgHeader(name, E_INTAPI_CONFIG_MERKLE_TREE_MSG_ID, pbMsgConv) {
+    mMerkleTreeConfig = pbLocConfMsg.mmerkletreeconfig();
+    LOC_LOGd("LocApiPB: merkle tree path: %s, ", mMerkleTreeConfig.c_str());
+}
+
+// Decode PBLocConfigOsnmaEnablementReqMsg -> LocConfigOsnmaEnablementReqMsg
+LocConfigOsnmaEnablementReqMsg::LocConfigOsnmaEnablementReqMsg(
+        const char* name, const PBLocConfigOsnmaEnablementReqMsg &pbLocConfMsg,
+        const LocationApiPbMsgConv *pbMsgConv):
+    LocAPIMsgHeader(name, E_INTAPI_CONFIG_OSNMA_ENABLEMENT_MSG_ID, pbMsgConv) {
+    mEnable = pbLocConfMsg.menable();
+    LOC_LOGd("LocApiPB: osnma enablement: %d, ", mEnable);
+}
+
 // Decode PBLocConfigGetRobustLocationConfigRespMsg -> LocConfigGetRobustLocationConfigRespMsg
 LocConfigGetRobustLocationConfigRespMsg::LocConfigGetRobustLocationConfigRespMsg(const char* name,
             const PBLocConfigGetRobustLocationConfigRespMsg &pbLocConfigGetRobustLocationRsp,
@@ -4021,6 +4210,16 @@ LocIntApiInjectLocationMsg::LocIntApiInjectLocationMsg(const char* name,
             LOC_LOGe("pb msg conv is null");
         }
     }
+}
+
+// Decode PBLocConfigRegisterGnssSignalTypesUpdateRespMsg ->
+// LocConfigRegisterGnssSignalTypesUpdateRespMsg
+LocConfigRegisterGnssSignalTypesUpdateRespMsg::LocConfigRegisterGnssSignalTypesUpdateRespMsg(
+        const char* name, const PBLocConfigRegisterGnssSignalTypesUpdateRespMsg &pbMsg,
+        const LocationApiPbMsgConv *pbMsgConv) :
+        LocAPIMsgHeader(name, E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_RESP_MSG_ID, pbMsgConv) {
+    mSignalTypeMask = pLocApiPbMsgConv->getPBMaskForGnssSignalTypeMask(pbMsg.msignaltypemask());
+    LOC_LOGd("supported GNSS signal type: %x", mSignalTypeMask);
 }
 
 // Decode PBLocAPIGetDebugRespMsg ->

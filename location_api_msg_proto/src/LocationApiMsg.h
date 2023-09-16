@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -333,6 +333,8 @@ enum ELocMsgID {
     E_INTAPI_CONFIG_ENGINE_INTEGRITY_RISK_MSG_ID = 213,
     E_INTAPI_INJECT_LOCATION_MSG_ID = 214,
     E_INTAPI_CONFIG_XTRA_PARAMS_MSG_ID = 215,
+    E_INTAPI_CONFIG_MERKLE_TREE_MSG_ID = 216,
+    E_INTAPI_CONFIG_OSNMA_ENABLEMENT_MSG_ID = 217,
 
     // integration API config retrieval request/response
     E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID  = 300,
@@ -352,6 +354,9 @@ enum ELocMsgID {
 
     E_INTAPI_REGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID = 310,
     E_INTAPI_DEREGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID = 311,
+
+    E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_REQ_MSG_ID = 312,
+    E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_RESP_MSG_ID = 313,
 };
 
 const char* LocApiMsgString(ELocMsgID msgId);
@@ -372,7 +377,8 @@ enum ELocationCallbacksOption {
     E_LOC_CB_GNSS_MEAS_BIT              = (1<<11), /**< Register for GNSS Measurements */
     E_LOC_CB_GNSS_NHZ_MEAS_BIT          = (1<<12), /**< Register for NHZ GNSS Measurements */
     E_LOC_CB_GNSS_DC_REPORT_BIT         = (1<<13), /**< Register for disaster and crisis reports */
-    E_LOC_CB_ANTENNA_INFO_BIT           = (1<<14)  /**< Register for Antenna Info */
+    E_LOC_CB_ANTENNA_INFO_BIT           = (1<<14), /**< Register for Antenna Info */
+    E_LOC_CB_ENGINE_NMEA_BIT            = (1<<15) /**< Register for Engine NMEA */
 };
 
 // Mask related to all info that are tied with a position session and need to be unsubscribed
@@ -384,7 +390,8 @@ enum ELocationCallbacksOption {
                                        E_LOC_CB_GNSS_NHZ_MEAS_BIT|\
                                        E_LOC_CB_ENGINE_LOCATIONS_INFO_BIT|\
                                        E_LOC_CB_SIMPLE_LOCATION_INFO_BIT |\
-                                       E_LOC_CB_GNSS_DC_REPORT_BIT)
+                                       E_LOC_CB_GNSS_DC_REPORT_BIT |\
+                                       E_LOC_CB_ENGINE_NMEA_BIT)
 
 #define LOCATION_BATCHING_SESSION_MASK (E_LOC_CB_BATCHING_BIT|\
                                         E_LOC_CB_BATCHING_STATUS_BIT)
@@ -406,6 +413,7 @@ struct LocAPINmeaSerializedPayload {
     uint32_t size;
     uint64_t timestamp;
     string nmea;
+    LocOutputEngineType locOutputEngType;
 };
 
 struct LocAPIBatchNotification {
@@ -1346,16 +1354,18 @@ struct LocConfigOutputNmeaTypesReqMsg: LocAPIMsgHeader
 {
     GnssNmeaTypesMask mEnabledNmeaTypes;
     GnssGeodeticDatumType mNmeaDatumType;
+    uint32_t mNmeaReqEngMask;
 
     inline LocConfigOutputNmeaTypesReqMsg(
             const char* name, GnssNmeaTypesMask enabledNmeaTypes,
-            GnssGeodeticDatumType nmeaDatumType,
+            GnssGeodeticDatumType nmeaDatumType, uint32_t nmeaReqEngMask,
             const LocationApiPbMsgConv *pbMsgConv) :
         LocAPIMsgHeader(name,
                         E_INTAPI_CONFIG_OUTPUT_NMEA_TYPES_MSG_ID,
                         pbMsgConv),
             mEnabledNmeaTypes(enabledNmeaTypes),
-            mNmeaDatumType(nmeaDatumType) { }
+            mNmeaDatumType(nmeaDatumType),
+            mNmeaReqEngMask(nmeaReqEngMask) { }
 
     LocConfigOutputNmeaTypesReqMsg(const char* name,
             const PBLocConfigOutputNmeaTypesReqMsg &pbMsg,
@@ -1397,6 +1407,36 @@ struct LocConfigXtraReqMsg: LocAPIMsgHeader
 
     LocConfigXtraReqMsg(const char* name, const PBLocConfigXtraReqMsg &pbConfigXtraMsg,
                         const LocationApiPbMsgConv *pbMsgConv);
+
+    int serializeToProtobuf(string& protoStr) override;
+};
+
+struct LocConfigMerkleTreeReqMsg: LocAPIMsgHeader {
+    std::string mMerkleTreeConfig;
+
+    inline LocConfigMerkleTreeReqMsg(const char* name, const std::string& merkleTreeConfig,
+            const LocationApiPbMsgConv *pbMsgConv) :
+        LocAPIMsgHeader(name, E_INTAPI_CONFIG_MERKLE_TREE_MSG_ID, pbMsgConv),
+        mMerkleTreeConfig(merkleTreeConfig) { }
+
+    LocConfigMerkleTreeReqMsg(const char* name,
+            const PBLocConfigMerkleTreeReqMsg &pbConfigMerkleTreeMsg,
+            const LocationApiPbMsgConv *pbMsgConv);
+
+    int serializeToProtobuf(string& protoStr) override;
+};
+
+struct LocConfigOsnmaEnablementReqMsg: LocAPIMsgHeader {
+    bool mEnable;
+
+    inline LocConfigOsnmaEnablementReqMsg(const char* name, bool enable,
+            const LocationApiPbMsgConv *pbMsgConv) :
+        LocAPIMsgHeader(name, E_INTAPI_CONFIG_OSNMA_ENABLEMENT_MSG_ID, pbMsgConv),
+        mEnable(enable) { }
+
+    LocConfigOsnmaEnablementReqMsg(const char* name,
+            const PBLocConfigOsnmaEnablementReqMsg &pbConfigOsnmaEnablementMsg,
+            const LocationApiPbMsgConv *pbMsgConv);
 
     int serializeToProtobuf(string& protoStr) override;
 };
@@ -1570,6 +1610,36 @@ struct LocIntApiInjectLocationMsg : LocAPIMsgHeader
     int serializeToProtobuf(string& protoStr) override;
 };
 
+struct LocConfigRegisterGnssSignalTypesUpdateReqMsg: LocAPIMsgHeader {
+    bool mRegisterUpdate;
+    inline LocConfigRegisterGnssSignalTypesUpdateReqMsg(const char* name,
+                                bool registerUpdate,
+                                const LocationApiPbMsgConv *pbMsgConv) :
+        LocAPIMsgHeader(name, E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_REQ_MSG_ID, pbMsgConv),
+        mRegisterUpdate(registerUpdate) { }
+    inline LocConfigRegisterGnssSignalTypesUpdateReqMsg(
+            const char* name, PBLocConfigRegisterGnssSignalTypesUpdateReqMsg& pbMsg,
+            const LocationApiPbMsgConv *pbMsgConv) :
+        LocAPIMsgHeader(name, E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_REQ_MSG_ID, pbMsgConv),
+        mRegisterUpdate(pbMsg.mregisterupdate()) { }
+
+    int serializeToProtobuf(string& protoStr) override;
+};
+
+struct LocConfigRegisterGnssSignalTypesUpdateRespMsg : LocAPIMsgHeader {
+    GnssSignalTypeMask mSignalTypeMask;
+
+    inline LocConfigRegisterGnssSignalTypesUpdateRespMsg(const char* name,
+                                GnssSignalTypeMask signalTypeMask,
+                                const LocationApiPbMsgConv *pbMsgConv) :
+        LocAPIMsgHeader(name, E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_RESP_MSG_ID, pbMsgConv),
+        mSignalTypeMask(signalTypeMask) { }
+    LocConfigRegisterGnssSignalTypesUpdateRespMsg(const char* name,
+                            const PBLocConfigRegisterGnssSignalTypesUpdateRespMsg &pbMsg,
+                            const LocationApiPbMsgConv *pbMsgConv);
+
+    int serializeToProtobuf(string& protoStr) override;
+};
 /**************** XTRA related section **********************/
 struct LocConfigGetXtraStatusReqMsg: LocAPIMsgHeader
 {

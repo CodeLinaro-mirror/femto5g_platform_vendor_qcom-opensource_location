@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -100,7 +100,8 @@ void LocHalDaemonClientHandler::updateSubscription(uint32_t mask) {
 
     // update optional callback - following four callbacks can be controlable
     // tracking
-    if (mSubscriptionMask & E_LOC_CB_TRACKING_BIT) {
+    if (mSubscriptionMask &
+            (E_LOC_CB_TRACKING_BIT | E_LOC_CB_SIMPLE_LOCATION_INFO_BIT)) {
         mCallbacks.trackingCb = [this](const Location& location) {
             onTrackingCb(location);
         };
@@ -172,6 +173,16 @@ void LocHalDaemonClientHandler::updateSubscription(uint32_t mask) {
     } else {
         mCallbacks.gnssNmeaCb = nullptr;
     }
+
+   // engine nmea
+    if (mSubscriptionMask & E_LOC_CB_ENGINE_NMEA_BIT) {
+        mCallbacks.engineNmeaCb = [this](GnssNmeaNotification notification) {
+            onEngineNmeaCb(notification);
+        };
+    } else {
+        mCallbacks.engineNmeaCb = nullptr;
+    }
+
 
     // data
     if (mSubscriptionMask & E_LOC_CB_GNSS_DATA_BIT) {
@@ -822,7 +833,7 @@ void LocHalDaemonClientHandler::onBatchingCb(size_t count, Location* location,
 
         // serialize locations in batch into ipc message payload
         LocAPIBatchingIndMsg msg(SERVICE_NAME, &mService->mPbufMsgConv);
-        LOC_LOGd("Batch count: %ul", (uint32_t)count);
+        LOC_LOGd("Batch count: %u", (uint32_t)count);
         msg.batchNotification.status = BATCHING_STATUS_POSITION_AVAILABE;
         msg.batchingMode = batchOptions.batchingMode;
         for (int i = 0; i < count; i++) {
@@ -885,10 +896,11 @@ void LocHalDaemonClientHandler::onGeofenceBreachCb(
         }
         // serialize GeofenceBreachNotification into ipc message payload
         LocAPIGeofenceBreachIndMsg msg(SERVICE_NAME, &mService->mPbufMsgConv);
-        LOC_LOGd("Gf Breach Notif count: %ul", gfBreachNotif.count);
+        LOC_LOGd("Gf Breach Notif count: %u, breachType: %d", gfBreachNotif.count,
+                gfBreachNotif.type);
         msg.gfBreachNotification.timestamp = gfBreachNotif.timestamp;
         msg.gfBreachNotification.location = gfBreachNotif.location;
-        msg.gfBreachNotification.type = gfBreachNotif.type;
+        msg.gfBreachNotification.type = parseClientGeofenceBreachType(gfBreachNotif.type);
         for (uint32_t i = 0; i < gfBreachNotif.count; i++) {
             msg.gfBreachNotification.id.push_back(clientIds[i]);
         }
@@ -1019,17 +1031,66 @@ void LocHalDaemonClientHandler::onGnssNmeaCb(GnssNmeaNotification notification) 
     LOC_LOGd("--< onGnssNmeaCb, client name %s, ipc valid %d, sub mask 0x%x",
              mName.c_str(), (nullptr != mIpcSender), mSubscriptionMask);
 
-    if ((nullptr != mIpcSender) && (mSubscriptionMask & E_LOC_CB_GNSS_NMEA_BIT)) {
-        LOC_LOGv("--< onGnssNmeaCb[%s] t=%" PRIu64" l=%zu nmea=%s",
+    if ((nullptr != mIpcSender) &&
+            (mSubscriptionMask & E_LOC_CB_GNSS_NMEA_BIT) &&
+            ((notification.locOutputEngType == LOC_OUTPUT_ENGINE_FUSED) || notification.isSvNmea)) {
+        LOC_LOGd("--< onGnssNmeaCb[%s] t=%" PRIu64" l=%zu engType=%u isSvNmea=%u nmea=%s",
                 mName.c_str(),
                 notification.timestamp,
                 notification.length,
+                notification.locOutputEngType,
+                notification.isSvNmea,
                 notification.nmea);
         // serialize nmea string into ipc message payload
         string nmeaStr(notification.nmea, notification.length);
         LocAPINmeaIndMsg msg(SERVICE_NAME, &mService->mPbufMsgConv);
         msg.gnssNmeaNotification.timestamp = notification.timestamp;
         msg.gnssNmeaNotification.nmea = nmeaStr;
+        msg.gnssNmeaNotification.locOutputEngType = notification.locOutputEngType;
+
+        string pbStr;
+        if (msg.serializeToProtobuf(pbStr)) {
+            bool rc = sendMessage(pbStr.c_str(), pbStr.size(), E_LOCAPI_NMEA_MSG_ID);
+            // purge this client if failed
+            if (!rc) {
+                LOC_LOGe("failed rc=%d purging client=%s", rc, mName.c_str());
+                mService->deleteClientbyName(mName);
+            }
+        } else {
+            LOC_LOGe("LocAPINmeaIndMsg serializeToProtobuf failed");
+        }
+    }
+}
+
+void LocHalDaemonClientHandler::onEngineNmeaCb(GnssNmeaNotification notification) {
+
+    std::lock_guard<std::recursive_mutex> lock(LocationApiService::mMutex);
+
+    LOC_LOGd("--< onEngineNmeaCb, client name %s, ipc valid %d, sub mask 0x%x",
+             mName.c_str(), (nullptr != mIpcSender), mSubscriptionMask);
+
+    if ((nullptr != mIpcSender) &&
+            (mSubscriptionMask & E_LOC_CB_ENGINE_NMEA_BIT) &&
+            (notification.isSvNmea ||
+            ((notification.locOutputEngType == LOC_OUTPUT_ENGINE_FUSED) &&
+            (mOptions.locReqEngTypeMask & LOC_REQ_ENGINE_FUSED_BIT)) ||
+            ((notification.locOutputEngType == LOC_OUTPUT_ENGINE_SPE) &&
+            (mOptions.locReqEngTypeMask & LOC_REQ_ENGINE_SPE_BIT)) ||
+            ((notification.locOutputEngType == LOC_OUTPUT_ENGINE_PPE) &&
+            (mOptions.locReqEngTypeMask & LOC_REQ_ENGINE_PPE_BIT)))) {
+        LOC_LOGd("--< onEngineNmeaCb[%s] t=%" PRIu64" l=%zu engType=%u isSvNmea=%u nmea=%s",
+                mName.c_str(),
+                notification.timestamp,
+                notification.length,
+                notification.locOutputEngType,
+                notification.isSvNmea,
+                notification.nmea);
+        // serialize nmea string into ipc message payload
+        string nmeaStr(notification.nmea, notification.length);
+        LocAPINmeaIndMsg msg(SERVICE_NAME, &mService->mPbufMsgConv);
+        msg.gnssNmeaNotification.timestamp = notification.timestamp;
+        msg.gnssNmeaNotification.nmea = nmeaStr;
+        msg.gnssNmeaNotification.locOutputEngType = notification.locOutputEngType;
 
         string pbStr;
         if (msg.serializeToProtobuf(pbStr)) {
@@ -1145,6 +1206,28 @@ void LocHalDaemonClientHandler::onDcReportCb(const GnssDcReportInfo& dcReportInf
             }
         } else {
             LOC_LOGe("LocAPIDcReportIndMsg serializeToProtobuf failed");
+        }
+    }
+}
+
+void LocHalDaemonClientHandler::onGnssSignalTypesCb(GnssSignalTypeMask signalType) {
+    std::lock_guard<std::recursive_mutex> lock(LocationApiService::mMutex);
+    LOC_LOGd("--< client name %s, ipc valid %d, supported GNSS signal types 0x%x",
+             mName.c_str(), (nullptr != mIpcSender), signalType);
+
+    if (nullptr != mIpcSender) {
+        string pbStr;
+        LocConfigRegisterGnssSignalTypesUpdateRespMsg msg(SERVICE_NAME, signalType,
+                &mService->mPbufMsgConv);
+        if (msg.serializeToProtobuf(pbStr)) {
+            bool rc = sendMessage(pbStr.c_str(), pbStr.size(), msg.msgId);
+            // purge this client if failed
+            if (!rc) {
+                LOC_LOGe("failed rc=%d purging client=%s", rc, mName.c_str());
+                mService->deleteClientbyName(mName);
+            }
+        } else {
+            LOC_LOGe("serializeToProtobuf failed, resp size: %d", pbStr.size());
         }
     }
 }
