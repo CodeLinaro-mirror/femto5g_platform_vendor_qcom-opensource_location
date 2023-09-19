@@ -575,6 +575,9 @@ enum GnssSignalTypeMask {
     GNSS_SIGNAL_BEIDOU_B2BI_BIT         = (1<<22),
     /** GNSS signal is of BEIDOU B2B_Q RF band. <br/>   */
     GNSS_SIGNAL_BEIDOU_B2BQ_BIT         = (1<<23),
+    /** GNSS signal is of NAVIC L1 RF band. <br/>   */
+    GNSS_SIGNAL_NAVIC_L1_BIT            = (1<<24),
+
 };
 
 /** Specify LocationClientApi function call processing status.
@@ -1636,6 +1639,8 @@ enum GnssSignalTypes {
     GNSS_SIGNAL_TYPE_BEIDOU_B2B_I = 20,
     /**  GNSS signal is of BEIDOU B2B_Q RF band.  <br/>   */
     GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q = 21,
+    /**  GNSS signal is of NAVIC L1 RF band.  <br/>   */
+    GNSS_SIGNAL_TYPE_NAVIC_L1 = 22,
     /** Maximum number of signal types. <br/>   */
     GNSS_MAX_NUMBER_OF_SIGNAL_TYPES
 };
