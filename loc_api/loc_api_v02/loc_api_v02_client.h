@@ -1225,6 +1225,10 @@ typedef union
    const qmiLocEventDcReportIndMsgT_v02* pDcReportIndMsg;
    /** Sent by the engine to inform disaster and crisis report
     QMI_LOC_EVENT_DC_REPORT_IND_V02 */
+
+   const qmiLocGnssBandsSupportedIndMsgT_v02* pGnssBandsSupportedIndMsg;
+   /** Sent by the engine to inform the supported bands and the preferred one
+    QMI_LOC_GNSS_BANDS_SUPPORTED_IND_V02 */
 }locClientEventIndUnionType;
 
 
