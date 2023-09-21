@@ -92,9 +92,8 @@ using std::vector;
 static bool     outputEnabled = true;
 static bool     detailedOutputEnabled = false;
 // debug events counter
-static uint32_t numLocationCb = 0;
-static uint32_t numGnssLocationCb = 0;
-static uint32_t numEngLocationCb = 0;
+static uint32_t numFixes = 0;
+static uint32_t numValidFixes = 0;
 static uint32_t numGnssSvCb = 0;
 static uint32_t numGnssNmeaCb = 0;
 static uint32_t numEngineNmeaCb = 0;
@@ -240,6 +239,16 @@ static uint64_t getTimestampMs() {
     return msec;
 }
 
+static void resetCounters() {
+    numFixes = 0;
+    numValidFixes = 0;
+    numGnssSvCb = 0;
+    numGnssNmeaCb = 0;
+    numEngineNmeaCb = 0;
+    numDataCb = 0;
+    numGnssMeasurementsCb = 0;
+}
+
 static void cleanupAfterAutoStart() {
     if (pLcaClient) {
         printf("calling stopPosition and delete LCA client\n");
@@ -261,7 +270,7 @@ static void cleanupAfterAutoStart() {
     // wait one second for stop request to reach hal daemon
     sleep(1);
 
-    printf("\n\n summary: received %d fixes\n", numEngLocationCb);
+    printf("\n\n summary: received %d fixes\n", numValidFixes);
 }
 
 /******************************************************************************
@@ -278,20 +287,31 @@ static void onResponseCb(location_client::LocationResponse response) {
 }
 
 static void onLocationCb(const location_client::Location& location) {
-    numLocationCb++;
-    if (!outputEnabled) {
-        return;
+    numFixes++;
+    // There is no sessionStatus for LCA Location. So check for horizontal accuracy of
+    // less than 20meters for a successful fix count.
+    if ((location.flags & LOCATION_HAS_ACCURACY_BIT) && (location.horizontalAccuracy <= 20)) {
+        numValidFixes++;
     }
-    if (detailedOutputEnabled) {
-        printf("<<< onLocationCb cnt=%u: %s\n", numLocationCb, location.toString().c_str());
-    } else {
-        printf("<<< onLocationCb cnt=%u: time=%" PRIu64" mask=0x%x lat=%f lon=%f alt=%f\n",
-               numLocationCb,
-               location.timestamp,
-               location.flags,
-               location.latitude,
-               location.longitude,
-               location.altitude);
+    if (outputEnabled) {
+        if (detailedOutputEnabled) {
+            printf("<<< onLocationCb cnt=(%u/%u): %s\n", numValidFixes, numFixes,
+                    location.toString().c_str());
+        } else {
+            printf("<<< onLocationCb cnt=(%u/%u): time=%" PRIu64" mask=0x%x lat=%f lon=%f alt=%f"
+                   " horzacc=%f\n",
+                   numValidFixes, numFixes,
+                   location.timestamp,
+                   location.flags,
+                   location.latitude,
+                   location.longitude,
+                   location.altitude,
+                   location.horizontalAccuracy);
+        }
+    }
+    if (numValidFixes >= fixCnt) {
+        printf("<<< onLocationCb: numValidFixes:%u exceeds fixCnt:%u\n", numValidFixes, fixCnt);
+        sem_post(&semCompleted);
     }
 }
 
@@ -348,55 +368,63 @@ static void onSingleShotLocationCb(const location_client::Location& location) {
 }
 
 static void onGnssLocationCb(const location_client::GnssLocation& location) {
-    numGnssLocationCb++;
-    if (!outputEnabled) {
-        return;
+    numFixes++;
+    if (LOC_SESS_SUCCESS == location.sessionStatus) {
+        numValidFixes++;
     }
-    if (detailedOutputEnabled) {
-        printf("<<< onGnssLocationCb cnt=%u: %s\n", numGnssLocationCb, location.toString().c_str());
-    } else {
-        printf("<<< onGnssLocationCb cnt=%u: time=%" PRIu64" mask=0x%x lat=%f lon=%f alt=%f\n",
-                numGnssLocationCb,
-                location.timestamp,
-                location.flags,
-                location.latitude,
-                location.longitude,
-                location.altitude);
+    if (outputEnabled) {
+        if (detailedOutputEnabled) {
+            printf("<<< onGnssLocationCb cnt=(%u/%u): %s\n", numValidFixes, numFixes,
+                    location.toString().c_str());
+        } else {
+            printf("<<< onGnssLocationCb cnt=(%u/%u): time=%" PRIu64" mask=0x%x lat=%f lon=%f "
+                   "alt=%f\n",
+                    numValidFixes, numFixes,
+                    location.timestamp,
+                    location.flags,
+                    location.latitude,
+                    location.longitude,
+                    location.altitude);
+        }
+    }
+    if (numValidFixes >= fixCnt) {
+        printf("<<< onGnssLocationCb: numValidFixes:%u exceeds fixCnt:%u\n", numValidFixes, fixCnt);
+        sem_post(&semCompleted);
     }
 }
 
 static void onEngLocationsCb(const std::vector<location_client::GnssLocation>& locations) {
-    if (!outputEnabled) {
-        return;
-    }
-
     for (auto gnssLocation : locations) {
-        if (detailedOutputEnabled) {
-            printf("<<< onEngLocationsCb cnt=%u: %s\n", numEngLocationCb,
-                   gnssLocation.toString().c_str());
-        } else {
-            printf("<<< onEngLocationsCb cnt=%u: time=%" PRIu64" mask=0x%x lat=%f lon=%f alt=%f\n"
-                   "info mask=0x%" PRIx64 ", nav solution maks = 0x%x, eng type %d, eng mask 0x%x, "
-                   "session status %d\n",
-                   numEngLocationCb,
-                   gnssLocation.timestamp,
-                   gnssLocation.flags,
-                   gnssLocation.latitude,
-                   gnssLocation.longitude,
-                   gnssLocation.altitude,
-                   gnssLocation.gnssInfoFlags,
-                   gnssLocation.navSolutionMask,
-                   gnssLocation.locOutputEngType,
-                   gnssLocation.locOutputEngMask,
-                   gnssLocation.sessionStatus);
+        if (outputEnabled) {
+            if (detailedOutputEnabled) {
+                printf("<<< onEngLocationsCb cnt=%u: %s\n", numFixes,
+                       gnssLocation.toString().c_str());
+            } else {
+                printf("<<< onEngLocationsCb cnt=%u: time=%" PRIu64" mask=0x%x lat=%f lon=%f \n"
+                       "alt=%f info mask=0x%" PRIx64 ", nav solution maks = 0x%x, eng type %d, "
+                       "eng mask 0x%x, session status %d\n",
+                       numFixes,
+                       gnssLocation.timestamp,
+                       gnssLocation.flags,
+                       gnssLocation.latitude,
+                       gnssLocation.longitude,
+                       gnssLocation.altitude,
+                       gnssLocation.gnssInfoFlags,
+                       gnssLocation.navSolutionMask,
+                       gnssLocation.locOutputEngType,
+                       gnssLocation.locOutputEngMask,
+                       gnssLocation.sessionStatus);
+            }
         }
         if (gnssLocation.sessionStatus == LOC_SESS_SUCCESS &&
             gnssLocation.locOutputEngType == LOC_OUTPUT_ENGINE_FUSED) {
-            numEngLocationCb++;
+            numValidFixes++;
         }
     }
+    printf("<<< onEngLocationsCb cnt:(%u/%u)", numValidFixes, numFixes);
 
-    if (numEngLocationCb >= fixCnt) {
+    if (numValidFixes >= fixCnt) {
+        printf("<<< onEngLocationsCb: numValidFixes:%u exceeds fixCnt:%u\n", numValidFixes, fixCnt);
         sem_post(&semCompleted);
     }
 }
@@ -481,11 +509,10 @@ static void onEngineNmeaCb(LocOutputEngineType engType,
                            uint64_t timestamp,
                            const std::string& nmea) {
     numEngineNmeaCb++;
-    if (!outputEnabled) {
-        return;
-    }
-    printf("<<< onEngineNmeaCb cnt=%u engine type=%u time=%" PRIu64" nmea=%s",
+    if (outputEnabled) {
+        printf("<<< onEngineNmeaCb cnt=%u engine type=%u time=%" PRIu64" nmea=%s",
             numEngineNmeaCb, engType, timestamp, nmea.c_str());
+    }
     if (routeToNMEAPort && openPort()) {
                 sendNMEAToTty(nmea);
     }
@@ -520,7 +547,6 @@ static void onGnssMeasurementsCb(const location_client::GnssMeasurements& gnssMe
 }
 
 static void onGnssDcReportCb(const location_client::GnssDcReport & dcReport) {
-
     if (detailedOutputEnabled) {
         printf("<<< DC report %s\n", dcReport.toString().c_str());
     } else {
@@ -1513,7 +1539,9 @@ static bool checkForAutoStart(int argc, char *argv[]) {
              case 'l':
                  printf("fix cnt: %s\n", optarg);
                  fixCnt = atoi(optarg);
-                 trackingType = ENGINE_REPORT_TRACKING;
+                 if (trackingType == NO_TRACKING) {
+                    trackingType = ENGINE_REPORT_TRACKING;
+                 }
                  break;
             case 'i':
                  printf("interval: %s\n", optarg);
@@ -1558,6 +1586,7 @@ static bool checkForAutoStart(int argc, char *argv[]) {
                              "duration %d seconds\n",
                              intervalmsec, distance, duration);
                      autoTestStartBatchingTimeMs = getTimestampMs();
+                     resetCounters();
                      pLcaClient->startRoutineBatchingSession(intervalmsec, distance,
                              onBatchingCb, onResponseCb);
                      std::thread t([duration] {
@@ -1611,6 +1640,7 @@ static bool checkForAutoStart(int argc, char *argv[]) {
                 exit(1);
             }
 
+            resetCounters();
             if (trackingType == SIMPLE_REPORT_TRACKING) {
                 pLcaClient->startPositionSession(interval, 0, onLocationCb, onResponseCb);
             } else if (trackingType == DETAILED_REPORT_TRACKING) {
@@ -2463,6 +2493,7 @@ int main(int argc, char *argv[]) {
                     setupEngineReportCbs(reportType, enginecbs);
                     printf("tbf %d, reprot type 0x%x, engine mask 0x%x\n",
                            tbfMsec, reportType, reqEngMask);
+                    resetCounters();
                     retVal = pLcaClient->startPositionSession(100, reqEngMask,
                                                               enginecbs, onResponseCb);
                 }
@@ -2477,6 +2508,7 @@ int main(int argc, char *argv[]) {
                     getTrackingParams(buf, &reportType, &tbfMsec, nullptr);
                     reportcbs = {};
                     setupGnssReportCbs(reportType, reportcbs);
+                    resetCounters();
                     retVal = pLcaClient->startPositionSession(tbfMsec, reportcbs, onResponseCb);
                 }
                 break;
@@ -2499,6 +2531,7 @@ int main(int argc, char *argv[]) {
                     }
                     printf("start routine batching with interval %d msec, distance %d meters\n",
                            intervalmsec, distance);
+                    resetCounters();
                     retVal = pLcaClient->startRoutineBatchingSession(intervalmsec, distance,
                                                                      onBatchingCb, onResponseCb);
                 }
@@ -2516,6 +2549,7 @@ int main(int argc, char *argv[]) {
                     pLcaClient = new LocationClientApi(onCapabilitiesCb);
                 }
                 if (pLcaClient) {
+                    resetCounters();
                     retVal = pLcaClient->startPositionSession(2000, reportcbs, onResponseCb);
                 }
                 break;
@@ -2534,6 +2568,7 @@ int main(int argc, char *argv[]) {
                 if (pLcaClient) {
                     int i = 0;
                     do {
+                        resetCounters();
                         if (i%2 == 0) {
                             pLcaClient->startPositionSession(2000, reportcbs, onResponseCb);
                         } else {
