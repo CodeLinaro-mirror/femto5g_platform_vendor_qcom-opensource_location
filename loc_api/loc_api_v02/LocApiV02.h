@@ -249,7 +249,7 @@ private:
   /*convert GnssMeasurement type from QMI LOC to loc eng format*/
   bool convertGnssMeasurements (
       const qmiLocEventGnssSvMeasInfoIndMsgT_v02& gnss_measurement_report_ptr,
-      int index, bool isExt, bool validDgnssSvMeas);
+      int index, bool isExt, bool validDgnssSvMeas, bool validMlInference);
 
   /* Convert APN Type mask */
   static qmiLocApnTypeMaskT_v02 convertLocApnTypeMask(LocApnTypeMask mask);

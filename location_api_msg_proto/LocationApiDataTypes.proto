@@ -79,8 +79,8 @@ enum LocationApiDataTypesVersion {
     LOCAPI_DATA_TYPES_VER_MAJOR = 1;
     // Minor - New features / API addition, new message/elemtent addition.
     // Bump the last byte of version i.e. x.2 to x.3
-    // Minor version 33: Add ENGINE_RUN_STATE_PAUSE_RETAIN
-    LOCAPI_DATA_TYPES_VER_MINOR = 33;
+    // Minor version 35: Add ML feature capability
+    LOCAPI_DATA_TYPES_VER_MINOR = 35;
 }
 
 // ============================================================================
@@ -712,6 +712,8 @@ enum PBLocationCapabilitiesMask {
     /** This mask indicates supports SV Ephemeris for tightly coupled external
      * PPE engines. This is a Standalone Feature..  <br/>   */
     PB_LOCATION_CAPABILITIES_QWES_SV_EPHEMERIS_BIT             = 0x10000000;
+    /** This mask indicates support fot PR meas ML inference <br/>   */
+    PB_LOCATION_CAPABILITIES_QWES_NLOS_ML20                    = 0x20000000;
 }
 
 enum PBGnssDataMask {
@@ -1573,6 +1575,13 @@ message PBXtraConfigParams {
     uint32 xtraIntegrityDownloadIntervalMinute = 10;
     // To indicate if Diag logging to be enabled for XTRA
     uint32 xtraDaemonDiagLoggingStatus = 11;
+    // URL of NTS KE Server. if provided, shall be complete and
+    // shall include the port number. Max of 128 bytes,
+    // including null-terminating byte will be supported.
+    // Valid NTS KE server URL should start with "https://".
+    // If not specified, then device will use
+    // default URL of https://nts.xtracloud.net:4460.
+    string ntsKeServerURL = 12;
 };
 
 enum PBXtraStatusUpdateType {
