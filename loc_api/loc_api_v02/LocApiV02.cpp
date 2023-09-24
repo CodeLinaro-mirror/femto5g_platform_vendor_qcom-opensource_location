@@ -4422,6 +4422,12 @@ void LocApiV02::populateFeatureStatusReport
     } else {
         featureMap[LOCATION_QWES_FEATURE_TYPE_DGNSS] = false;
     }
+    if (featureStatusReport & QMI_LOC_FEATURE_STATUS_NLOS_ML20_V02) {
+        featureMap[LOCATION_QWES_FEATURE_NLOS_ML20] = true;
+    } else {
+        featureMap[LOCATION_QWES_FEATURE_NLOS_ML20] = false;
+    }
+
 }
 
 void LocApiV02::reportSvEphemeris (
@@ -5456,7 +5462,7 @@ void LocApiV02::reportGnssMeasurementData(
     // check whether we have valid dgnss measurement
     bool validDgnssMeas = false;
     if ((gnss_measurement_report_ptr.dgnssSvMeasurement_valid) &&
-        (gnss_measurement_report_ptr.dgnssSvMeasurement_len != 0)){
+        (gnss_measurement_report_ptr.dgnssSvMeasurement_len != 0)) {
         uint32_t totalSvMeasLen = 0;
         if (gnss_measurement_report_ptr.svMeasurement_valid) {
             totalSvMeasLen = gnss_measurement_report_ptr.svMeasurement_len;
@@ -5466,6 +5472,22 @@ void LocApiV02::reportGnssMeasurementData(
         }
         if (totalSvMeasLen == gnss_measurement_report_ptr.dgnssSvMeasurement_len) {
             validDgnssMeas = true;
+        }
+    }
+
+    // check whether we have valid ML inference Data
+    bool validMlInference = false;
+    if ((gnss_measurement_report_ptr.mlInferSvMeasurement_valid) &&
+        (gnss_measurement_report_ptr.mlInferSvMeasurement_len != 0)) {
+        uint32_t totalSvMeasLen = 0;
+        if (gnss_measurement_report_ptr.svMeasurement_valid) {
+            totalSvMeasLen = gnss_measurement_report_ptr.svMeasurement_len;
+            if (gnss_measurement_report_ptr.extSvMeasurement_valid) {
+                totalSvMeasLen += gnss_measurement_report_ptr.extSvMeasurement_len;
+            }
+        }
+        if (totalSvMeasLen == gnss_measurement_report_ptr.mlInferSvMeasurement_len) {
+            validMlInference = true;
         }
     }
 
@@ -5492,7 +5514,7 @@ void LocApiV02::reportGnssMeasurementData(
                      QMI_LOC_MASK_MEAS_STATUS_GNSS_FRESH_MEAS_VALID_V02)) {
                     mAgcIsPresent &= convertGnssMeasurements(
                         gnss_measurement_report_ptr,
-                        index, false, validDgnssMeas);
+                        index, false, validDgnssMeas, validMlInference);
                     mGnssMeasurements->gnssMeasNotification.count++;
                 } else {
                     LOC_LOGv("Measurements are stale, do not report");
@@ -5524,7 +5546,7 @@ void LocApiV02::reportGnssMeasurementData(
                          QMI_LOC_MASK_MEAS_STATUS_GNSS_FRESH_MEAS_VALID_V02)) {
                         mAgcIsPresent &= convertGnssMeasurements(
                             gnss_measurement_report_ptr,
-                            index, true, validDgnssMeas);
+                            index, true, validDgnssMeas, validMlInference);
                         mGnssMeasurements->gnssMeasNotification.count++;
                     }
                     else {
@@ -6665,8 +6687,9 @@ void LocApiV02::processGnssBandsSupportedInd(
 
     if (pGnssBandsSupportedIndMsg->gnssSupportedSignals_valid) {
         GnssCapabNotification gnssCapabNotification = {};
-         gnssCapabNotification.gnssSupportedSignals =
-                pGnssBandsSupportedIndMsg->gnssSupportedSignals;
+        gnssCapabNotification.gnssSupportedSignals =
+                convertQmiGnssSignalType(pGnssBandsSupportedIndMsg->gnssSupportedSignals);
+        LOC_LOGd("supported signals in hal: 0x%x", gnssCapabNotification.gnssSupportedSignals);
 
         if (pGnssBandsSupportedIndMsg->gnssSupportedSignals_valid) {
             for (qmiLocGnssSignalTypeMaskT_v02 sig = QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L1CA_V02;
@@ -6834,7 +6857,7 @@ void LocApiV02::wifiStatusInformSync()
 /*convert GnssMeasurement type from QMI LOC to loc eng format*/
 bool LocApiV02 :: convertGnssMeasurements(
     const qmiLocEventGnssSvMeasInfoIndMsgT_v02& gnss_measurement_report_ptr,
-    int index, bool isExt, bool validDgnssSvMeas)
+    int index, bool isExt, bool validDgnssSvMeas, bool validMlInference)
 {
     bool bAgcIsPresent = false;
     const qmiLocSVMeasurementStructT_v02 &gnss_measurement_info = isExt ?
@@ -6965,6 +6988,21 @@ bool LocApiV02 :: convertGnssMeasurements(
                 dgnss_sv_meas_ptr->prCorrMeters;
         svMeas.dgnssSvMeas.prrCorrMetersPerSec =
                 dgnss_sv_meas_ptr->prrCorrMetersPerSec;
+    }
+
+    // Populate ML Inference data for GNSS HAL sturctures
+    if (validMlInference) {
+        int mlInferenceIndex = index;
+        // Adjust index to support ML inference for Extended Meas
+        if (isExt) {
+            mlInferenceIndex += gnss_measurement_report_ptr.svMeasurement_len;
+        }
+        if (gnss_measurement_report_ptr.mlInferSvMeasurement[mlInferenceIndex].mlInfer_valid) {
+            svMeas.mlInferSvMeasurement.prMlInferValid =
+                gnss_measurement_report_ptr.mlInferSvMeasurement[mlInferenceIndex].mlInfer_valid;
+            svMeas.mlInferSvMeasurement.prMlInfer =
+                gnss_measurement_report_ptr.mlInferSvMeasurement[mlInferenceIndex].mlInfer;
+        }
     }
 
     if (!isExt) {
@@ -12282,75 +12320,71 @@ GnssSignalTypeMask LocApiV02::convertQmiGnssSignalType(
         qmiLocGnssSignalTypeMaskT_v02 qmiGnssSignalType) {
     GnssSignalTypeMask gnssSignalType = (GnssSignalTypeMask)0;
 
-    switch (qmiGnssSignalType) {
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L1CA_V02:
-        gnssSignalType = GNSS_SIGNAL_GPS_L1CA;
-        break;
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L1C_V02:
-        gnssSignalType = GNSS_SIGNAL_GPS_L1C;
-        break;
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L2C_L_V02:
-        gnssSignalType = GNSS_SIGNAL_GPS_L2;
-        break;
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L5_Q_V02:
-        gnssSignalType = GNSS_SIGNAL_GPS_L5;
-        break;
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GLONASS_G1_V02:
-        gnssSignalType = GNSS_SIGNAL_GLONASS_G1;
-        break;
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GLONASS_G2_V02:
-        gnssSignalType = GNSS_SIGNAL_GLONASS_G2;
-        break;
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GALILEO_E1_C_V02:
-        gnssSignalType = GNSS_SIGNAL_GALILEO_E1;
-        break;
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GALILEO_E5A_Q_V02:
-        gnssSignalType = GNSS_SIGNAL_GALILEO_E5A;
-        break;
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GALILEO_E5B_Q_V02:
-        gnssSignalType = GNSS_SIGNAL_GALILEO_E5B;
-        break;
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B1_I_V02:
-        gnssSignalType = GNSS_SIGNAL_BEIDOU_B1I;
-        break;
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B1C_V02:
-        gnssSignalType = GNSS_SIGNAL_BEIDOU_B1C;
-        break;
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2_I_V02:
-        gnssSignalType = GNSS_SIGNAL_BEIDOU_B2I;
-        break;
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2A_I_V02:
-        gnssSignalType = GNSS_SIGNAL_BEIDOU_B2AI;
-        break;
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_I_V02:
-        gnssSignalType = GNSS_SIGNAL_BEIDOU_B2BI;
-        break;
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q_V02:
-        gnssSignalType = GNSS_SIGNAL_BEIDOU_B2BQ;
-        break;
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1CA_V02:
-        gnssSignalType = GNSS_SIGNAL_QZSS_L1CA;
-        break;
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1S_V02:
-        gnssSignalType =  GNSS_SIGNAL_QZSS_L1S;
-        break;
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L2C_L_V02:
-        gnssSignalType = GNSS_SIGNAL_QZSS_L2;
-        break;
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L5_Q_V02:
-        gnssSignalType = GNSS_SIGNAL_QZSS_L5;
-        break;
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_SBAS_L1_CA_V02:
-        gnssSignalType = GNSS_SIGNAL_SBAS_L1;
-        break;
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_NAVIC_L5_V02:
-        gnssSignalType = GNSS_SIGNAL_NAVIC_L5;
-        break;
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2A_Q_V02:
-        gnssSignalType = GNSS_SIGNAL_BEIDOU_B2AQ;
-        break;
-    default:
-        break;
+    if (qmiGnssSignalType & QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L1CA_V02) {
+        gnssSignalType |= GNSS_SIGNAL_GPS_L1CA;
+    }
+    if (qmiGnssSignalType & QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L1C_V02) {
+        gnssSignalType |= GNSS_SIGNAL_GPS_L1C;
+    }
+    if (qmiGnssSignalType & QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L2C_L_V02) {
+        gnssSignalType |= GNSS_SIGNAL_GPS_L2;
+    }
+    if (qmiGnssSignalType & QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L5_Q_V02) {
+        gnssSignalType |= GNSS_SIGNAL_GPS_L5;
+    }
+    if (qmiGnssSignalType & QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GLONASS_G1_V02) {
+        gnssSignalType |= GNSS_SIGNAL_GLONASS_G1;
+    }
+    if (qmiGnssSignalType & QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GLONASS_G2_V02) {
+        gnssSignalType |= GNSS_SIGNAL_GLONASS_G2;
+    }
+    if (qmiGnssSignalType & QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GALILEO_E1_C_V02) {
+        gnssSignalType |= GNSS_SIGNAL_GALILEO_E1;
+    }
+    if (qmiGnssSignalType & QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GALILEO_E5A_Q_V02) {
+        gnssSignalType |= GNSS_SIGNAL_GALILEO_E5A;
+    }
+    if (qmiGnssSignalType & QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GALILEO_E5B_Q_V02) {
+        gnssSignalType |= GNSS_SIGNAL_GALILEO_E5B;
+    }
+    if (qmiGnssSignalType & QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B1_I_V02) {
+        gnssSignalType |= GNSS_SIGNAL_BEIDOU_B1I;
+    }
+    if (qmiGnssSignalType & QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B1C_V02) {
+        gnssSignalType |= GNSS_SIGNAL_BEIDOU_B1C;
+    }
+    if (qmiGnssSignalType & QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2_I_V02) {
+        gnssSignalType |= GNSS_SIGNAL_BEIDOU_B2I;
+    }
+    if (qmiGnssSignalType & QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2A_I_V02) {
+        gnssSignalType |= GNSS_SIGNAL_BEIDOU_B2AI;
+    }
+    if (qmiGnssSignalType & QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_I_V02) {
+        gnssSignalType |= GNSS_SIGNAL_BEIDOU_B2BI;
+    }
+    if (qmiGnssSignalType & QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q_V02) {
+        gnssSignalType |= GNSS_SIGNAL_BEIDOU_B2BQ;
+    }
+    if (qmiGnssSignalType & QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1CA_V02) {
+        gnssSignalType |= GNSS_SIGNAL_QZSS_L1CA;
+    }
+    if (qmiGnssSignalType & QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1S_V02) {
+        gnssSignalType |=  GNSS_SIGNAL_QZSS_L1S;
+    }
+    if (qmiGnssSignalType & QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L2C_L_V02) {
+        gnssSignalType |= GNSS_SIGNAL_QZSS_L2;
+    }
+    if (qmiGnssSignalType & QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L5_Q_V02) {
+        gnssSignalType |= GNSS_SIGNAL_QZSS_L5;
+    }
+    if (qmiGnssSignalType & QMI_LOC_MASK_GNSS_SIGNAL_TYPE_SBAS_L1_CA_V02) {
+        gnssSignalType |= GNSS_SIGNAL_SBAS_L1;
+    }
+    if (qmiGnssSignalType & QMI_LOC_MASK_GNSS_SIGNAL_TYPE_NAVIC_L5_V02) {
+        gnssSignalType |= GNSS_SIGNAL_NAVIC_L5;
+    }
+    if (qmiGnssSignalType & QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2A_Q_V02) {
+        gnssSignalType |= GNSS_SIGNAL_BEIDOU_B2AQ;
     }
 
     return gnssSignalType;
