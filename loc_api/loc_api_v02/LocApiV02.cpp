@@ -6777,6 +6777,9 @@ bool LocApiV02 :: convertGnssMeasurements(
     svMeas.svTimeSpeed.dopplerShift = gnss_measurement_info.svTimeSpeed.dopplerShift;
     svMeas.svTimeSpeed.dopplerShiftUnc = gnss_measurement_info.svTimeSpeed.dopplerShiftUnc;
 
+    svMeas.dopplerAccelValid = gnss_measurement_info.svTimeSpeed.dopplerAccel_valid;
+    svMeas.dopplerAccel = gnss_measurement_info.svTimeSpeed.dopplerAccel;
+
     svMeas.validMeasStatusMask = gnss_measurement_info.validMeasStatusMask;
     qmiLocSvMeasStatusMaskT_v02 measStatus = gnss_measurement_info.measurementStatus;
     svMeas.measurementStatus = GNSS_LOC_MEAS_STATUS_NULL;
