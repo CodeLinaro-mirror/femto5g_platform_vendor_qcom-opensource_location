@@ -322,6 +322,12 @@ ELocMsgID LocationApiPbMsgConv::getEnumForPBELocMsgID(const PBELocMsgID &pbLocMs
         case PB_E_INTAPI_DEREGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID:
             eLocMsgId = E_INTAPI_DEREGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID;
             break;
+        case PB_E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_REQ_MSG_ID:
+            eLocMsgId = E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_REQ_MSG_ID;
+            break;
+        case PB_E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_RESP_MSG_ID:
+            eLocMsgId = E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_RESP_MSG_ID;
+            break;
         default:
             break;
     }
@@ -1091,6 +1097,12 @@ PBELocMsgID LocationApiPbMsgConv::getPBEnumForELocMsgID(const ELocMsgID &eLocMsg
         case E_INTAPI_DEREGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID:
             pbLocMsgId = PB_E_INTAPI_DEREGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID;
             break;
+        case E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_REQ_MSG_ID:
+            pbLocMsgId = PB_E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_REQ_MSG_ID;
+            break;
+        case E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_RESP_MSG_ID:
+            pbLocMsgId = PB_E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_RESP_MSG_ID;
+            break;
         default:
             break;
     }
@@ -1488,6 +1500,9 @@ uint64_t LocationApiPbMsgConv::getPBMaskForLocationCapabilitiesMask(
     }
     if (locCapabMask & LOCATION_CAPABILITIES_QWES_SV_EPHEMERIS_BIT) {
         pbLocCapabMask |= PB_LOCATION_CAPABILITIES_QWES_SV_EPHEMERIS_BIT;
+    }
+    if (locCapabMask & LOCATION_CAPABILITIES_NLOS_ML20) {
+        pbLocCapabMask |= PB_LOCATION_CAPABILITIES_QWES_NLOS_ML20;
     }
     LOC_LOGi("LocApiPB: locCapabMask:0x%" PRIx64", pbLocCapabMask:0x%" PRIx64,
             locCapabMask, pbLocCapabMask);
@@ -2547,6 +2562,9 @@ uint64_t LocationApiPbMsgConv::getLocationCapabilitiesMaskFromPB(
     }
     if (pbLocCapabMask & PB_LOCATION_CAPABILITIES_QWES_SV_EPHEMERIS_BIT) {
         locCapabMask |= LOCATION_CAPABILITIES_QWES_SV_EPHEMERIS_BIT;
+    }
+    if (pbLocCapabMask & PB_LOCATION_CAPABILITIES_QWES_NLOS_ML20) {
+        locCapabMask |= LOCATION_CAPABILITIES_NLOS_ML20;
     }
     LOC_LOGi("LocApiPB: pbLocCapabMask:0x%" PRIx64", locCapabMask:0x%" PRIx64,
             pbLocCapabMask, locCapabMask);
@@ -3763,6 +3781,7 @@ int LocationApiPbMsgConv::convertXtraConfigParamsToPB(
         LOC_LOGv("add %s", xtraParams.ntpServerURLs[index]);
     }
 
+    pbXtraParams->set_ntskeserverurl(xtraParams.ntsKeServerURL);
     // conversion routine for debug level
     pbXtraParams->set_xtradaemondebugloglevel(
             getPBEnumForDebugLogLevel(xtraParams.xtraDaemonDebugLogLevel));
@@ -3771,6 +3790,9 @@ int LocationApiPbMsgConv::convertXtraConfigParamsToPB(
             xtraParams.xtraIntegrityDownloadEnable);
     pbXtraParams->set_xtraintegritydownloadintervalminute(
             xtraParams.xtraIntegrityDownloadIntervalMinute);
+    pbXtraParams->set_xtradaemondiagloggingstatus(
+            xtraParams.xtraDaemonDiagLoggingStatus);
+
     return 0;
 }
 
@@ -3799,6 +3821,9 @@ int LocationApiPbMsgConv::pbConvertToXtraConfig(const PBXtraConfigParams &pbXtra
         LOC_LOGv("ntp server url: %d %s", index, xtraParams.ntpServerURLs[index]);
     }
     xtraParams.ntpServerURLsCount = pbXtraParams.ntpserverurls_size();
+    strlcpy(xtraParams.ntsKeServerURL, pbXtraParams.ntskeserverurl().c_str(),
+            sizeof(xtraParams.ntsKeServerURL));
+    LOC_LOGv("nts ke server url: %s", xtraParams.ntsKeServerURL);
 
     xtraParams.xtraDaemonDebugLogLevel =
             getDebugLogLevelFromPB(pbXtraParams.xtradaemondebugloglevel());
@@ -3806,6 +3831,8 @@ int LocationApiPbMsgConv::pbConvertToXtraConfig(const PBXtraConfigParams &pbXtra
     xtraParams.xtraIntegrityDownloadEnable = pbXtraParams.xtraintegritydownloadenable();
     xtraParams.xtraIntegrityDownloadIntervalMinute =
             pbXtraParams.xtraintegritydownloadintervalminute();
+    xtraParams.xtraDaemonDiagLoggingStatus =
+            pbXtraParams.xtradaemondiagloggingstatus();
     return 0;
 }
 

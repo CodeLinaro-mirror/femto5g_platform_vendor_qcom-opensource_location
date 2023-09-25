@@ -263,6 +263,7 @@ private:
     void onControlCollectiveResponseCallback(size_t count, LocationError *errs, uint32_t *ids);
     void onGnssConfigCallback(uint32_t sessionId, const GnssConfig& config);
     void onGnssEnergyConsumedCb(uint64_t totalEnergyConsumedSinceFirstBoot);
+    void onGnssSignalTypesCb(const GnssCapabNotification& gnssCapabNotification);
 
     // Callbacks for location api used service GTP WWAN fix request
     void onCapabilitiesCallback(LocationCapabilitiesMask mask);
@@ -296,6 +297,7 @@ private:
     void configXtraParams(const LocConfigXtraReqMsg* pMsg);
     void configMerkleTree(const LocConfigMerkleTreeReqMsg* pMsg);
     void configOsnmaEnablement(const LocConfigOsnmaEnablementReqMsg* pMsg);
+    void registerGnssSignalTypesUpdate(const LocConfigRegisterGnssSignalTypesUpdateReqMsg* pReqMsg);
 
     // Location configuration API get/read requests
     void getGnssConfig(const LocAPIMsgHeader* pReqMsg,
@@ -394,6 +396,9 @@ private:
 
     // LIA clients that register for xtra status update
     std::unordered_set<std::string> mClientsRegForXtraStatus;
+    // Location api interface to register Gnss signal types callback
+    ILocationAPI* mSignalTypesLocationApi;
+    LocationCallbacks mSignalTypesLocationApiCallbacks;
 };
 
 #endif //LOCATIONAPISERVICE_H

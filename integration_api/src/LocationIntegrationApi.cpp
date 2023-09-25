@@ -836,17 +836,17 @@ bool ntpUrlHasPortNum(const char* ntpURL, int length) {
     }
 }
 
-// sanity check whether XTRA server URL is valid or not
+// sanity check whether server URL is valid or not
 // 1: starts with "https://"
-// 2: has a port number "https://path3.xtracloud.net:443/xtra3Mgrcej.bin"
-bool isValidXtraUrl(string url) {
+// 2: has a port number, like "https://nts.xtracloud.net:4460"
+bool isValidUrl(string& url) {
     int startPos = -1, endPos = url.length();
     while (++startPos < endPos && isspace(url[startPos]));
     while (--endPos >= 0 && isspace(url[endPos]));
     string trimUrl = url.substr(startPos, endPos - startPos + 1);
 
     if (trimUrl.length() == 0) {
-        LOC_LOGe("empty xtra url");
+        LOC_LOGe("empty url");
         return false;
     }
 
@@ -857,7 +857,7 @@ bool isValidXtraUrl(string url) {
     }
 
     size_t posHost = strlen("https://");
-    size_t posPath = trimUrl.find('/', posHost);
+    size_t posPath = trimUrl.length();
     if (posPath == string::npos) {
         LOC_LOGe("invalid url %s", trimUrl.c_str());
         return false;
@@ -880,6 +880,15 @@ bool isValidXtraUrl(string url) {
     return true;
 }
 
+// sanity check whether XTRA server URL is valid or not
+// 1: starts with "https://"
+// 2: has a port number "https://path3.xtracloud.net:443/xtra3Mgrcej.bin"
+bool isValidXtraUrl(string& url) {
+    size_t posPath = url.rfind('/');
+    string trimUrl = url.substr(0, posPath);
+    return isValidUrl(trimUrl);
+}
+
 bool LocationIntegrationApi::configXtraParams(bool enable, XtraConfigParams* configParams) {
     bool validparam = false;
     ::XtraConfigParams halConfigParams = {};
@@ -896,7 +905,7 @@ bool LocationIntegrationApi::configXtraParams(bool enable, XtraConfigParams* con
         }
 
         LOC_LOGd("xtra params,enable %d, download:%d %d, retry %d %d, debug: %d"
-                 "ca path: %s, xtra server: %s %s %s, ntp server %s %s %s",
+                 "ca path: %s, xtra server: %s %s %s, ntp server %s %s %s, nts ke server %s",
                  enable, configParams->xtraDownloadIntervalMinute,
                  configParams->xtraDownloadTimeoutSec,
                  configParams->xtraDownloadRetryIntervalMinute,
@@ -905,7 +914,8 @@ bool LocationIntegrationApi::configXtraParams(bool enable, XtraConfigParams* con
                  configParams->xtraCaPath.c_str(),
                  configParams->xtraServerURLs[0].c_str(), configParams->xtraServerURLs[1].c_str(),
                  configParams->xtraServerURLs[2].c_str(), configParams->ntpServerURLs[0].c_str(),
-                 configParams->ntpServerURLs[1].c_str(), configParams->ntpServerURLs[2].c_str());
+                 configParams->ntpServerURLs[1].c_str(), configParams->ntpServerURLs[2].c_str(),
+                 configParams->ntsKeServerURL.c_str());
 
         halConfigParams.xtraDownloadIntervalMinute =
                 configParams->xtraDownloadIntervalMinute;
@@ -959,8 +969,15 @@ bool LocationIntegrationApi::configXtraParams(bool enable, XtraConfigParams* con
             halConfigParams.xtraIntegrityDownloadIntervalMinute =
                     configParams->xtraIntegrityDownloadIntervalMinute;
         }
+        // NTS KE Server URL
+        if (isValidUrl(configParams->ntsKeServerURL)) {
+            strlcpy(halConfigParams.ntsKeServerURL, configParams->ntsKeServerURL.c_str(),
+                    sizeof(halConfigParams.ntsKeServerURL));
+        }
         halConfigParams.xtraDaemonDebugLogLevel =
                 getHalLogLevel(configParams->xtraDaemonDebugLogLevel);
+        halConfigParams.xtraDaemonDiagLoggingStatus =
+                configParams->xtraDaemonDiagLoggingStatus;
 
         validparam = true;
     } while (0);
@@ -998,9 +1015,19 @@ bool LocationIntegrationApi::configMerkleTree(const char * merkleTreeXml, int xm
         return false;
     }
 }
+
 bool LocationIntegrationApi::configOsnmaEnablement(bool isEnabled) {
     if (mApiImpl) {
         return (mApiImpl->configOsnmaEnablement(isEnabled) == 0);
+    } else {
+        LOC_LOGe ("NULL mApiImpl");
+        return false;
+    }
+}
+
+bool LocationIntegrationApi::registerGnssSignalTypesUpdate(bool registerUpdate) {
+    if (mApiImpl) {
+        return (mApiImpl->registerGnssSignalTypesUpdate(registerUpdate) == 0);
     } else {
         LOC_LOGe ("NULL mApiImpl");
         return false;

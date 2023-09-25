@@ -237,6 +237,9 @@ LocationCapabilitiesMask LocationClientApiImpl::parseCapabilitiesMask(
     if (::LOCATION_CAPABILITIES_QWES_QDR3 & mask) {
         capsMask |=  LOCATION_CAPS_QWES_QDR3;
     }
+    if (::LOCATION_CAPABILITIES_NLOS_ML20 & mask) {
+        capsMask |=  LOCATION_CAPS_NLOS_ML20;
+    }
     LOC_LOGd ("parseCapabilitiesMask LocCapabMask =0x%" PRIx64 " LCA mask 0x%" PRIx64,
             mask, capsMask);
     return capsMask;
