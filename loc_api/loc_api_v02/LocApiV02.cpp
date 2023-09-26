@@ -2507,6 +2507,11 @@ locClientEventMaskType LocApiV02 :: convertLocClientEventMask(
       eventMask |= QMI_LOC_EVENT_MASK_GNSS_BANDS_SUPPORTED_V02;
   }
 
+  if ((eventMask & QMI_LOC_EVENT_MASK_GNSS_MEASUREMENT_REPORT_V02) ||
+        (eventMask & QMI_LOC_EVENT_MASK_GNSS_NHZ_MEASUREMENT_REPORT_V02)) {
+      eventMask |= QMI_LOC_EVENT_MASK_ENGINE_STATE_V02;
+  }
+
   return eventMask;
 }
 
@@ -4971,8 +4976,7 @@ void LocApiV02 :: reportEngineState (
     const qmiLocEventEngineStateIndMsgT_v02 *engine_state_ptr)
 {
 
-  LOC_LOGV("%s:%d]: state = %d\n", __func__, __LINE__,
-                 engine_state_ptr->engineState);
+  LOC_LOGi("gnss state = %d", engine_state_ptr->engineState);
 
   struct MsgUpdateEngineState : public LocMsg {
       LocApiV02* mpLocApiV02;
