@@ -628,7 +628,16 @@ locClientEventMaskType LocApiV02 :: adjustMaskIfNoSessionOrEngineOff(locClientEv
                                            QMI_LOC_EVENT_MASK_UNPROPAGATED_POSITION_REPORT_V02 |
                                            QMI_LOC_EVENT_MASK_GNSS_SV_INFO_V02 |
                                            QMI_LOC_EVENT_MASK_NMEA_V02 |
+                                           QMI_LOC_EVENT_MASK_NI_NOTIFY_VERIFY_REQ_V02 |
+                                           QMI_LOC_EVENT_MASK_INJECT_POSITION_REQ_V02 |
                                            QMI_LOC_EVENT_MASK_ENGINE_STATE_V02 |
+                                           QMI_LOC_EVENT_MASK_WIFI_REQ_V02 |
+                                           QMI_LOC_EVENT_MASK_GEOFENCE_GEN_ALERT_V02 |
+                                           QMI_LOC_EVENT_MASK_GDT_UPLOAD_BEGIN_REQ_V02 |
+                                           QMI_LOC_EVENT_MASK_GDT_UPLOAD_END_REQ_V02 |
+                                           QMI_LOC_EVENT_MASK_FDCL_SERVICE_REQ_V02 |
+                                           QMI_LOC_EVENT_MASK_DC_REPORT_V02 |
+                                           QMI_LOC_EVENT_MASK_ENGINE_LOCK_STATE_V02 |
                                            QMI_LOC_EVENT_MASK_GNSS_MEASUREMENT_REPORT_V02 |
                                            QMI_LOC_EVENT_MASK_GNSS_NHZ_MEASUREMENT_REPORT_V02 |
                                            QMI_LOC_EVENT_MASK_GNSS_SV_POLYNOMIAL_REPORT_V02 |
