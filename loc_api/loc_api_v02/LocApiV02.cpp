@@ -724,7 +724,6 @@ locClientEventMaskType LocApiV02 :: adjustLocClientEventMask(locClientEventMaskT
                                            QMI_LOC_EVENT_MASK_GNSS_NHZ_MEASUREMENT_REPORT_V02 |
                                            QMI_LOC_EVENT_MASK_GNSS_SV_POLYNOMIAL_REPORT_V02 |
                                            QMI_LOC_EVENT_MASK_EPHEMERIS_REPORT_V02 |
-                                           QMI_LOC_EVENT_MASK_NEXT_LS_INFO_REPORT_V02 |
                                            QMI_LOC_EVENT_MASK_LATENCY_INFORMATION_REPORT_V02 |
                                            QMI_LOC_EVENT_MASK_ENGINE_DEBUG_DATA_REPORT_V02;
         // clear GNSS_EVENT_REPORT mask because QMI_LOC_EVENT_MASK_FEATURE_STATUS_V02 is set
@@ -748,9 +747,10 @@ locClientEventMaskType LocApiV02 :: adjustLocClientEventMask(locClientEventMaskT
     if ((eQMI_LOC_POWER_STATE_SUSPENDED_V02 == mPlatformPowerState) ||
             (eQMI_LOC_POWER_STATE_SHUTDOWN_V02 == mPlatformPowerState) ||
                 (eQMI_LOC_POWER_STATE_DEEP_SLEEP_ENTRY_V02 == mPlatformPowerState)) {
-        // device in suspended/shutdown state, clear the engine state mask
+        // device in suspended/shutdown state, clear the engine state and leap second info mask
         // to avoid wake up
-        qmiMask &= ~QMI_LOC_EVENT_MASK_ENGINE_STATE_V02;
+        qmiMask &= ~(QMI_LOC_EVENT_MASK_ENGINE_STATE_V02 |
+                QMI_LOC_EVENT_MASK_NEXT_LS_INFO_REPORT_V02);
         syslog(LOG_INFO, "adjustLocClientEventMask, oldQmiMask=%" PRIu64 " "
                "qmiMask=%" PRIu64 " mInSession: %d, power state %d, retry queue empty %d",
                oldQmiMask, qmiMask, mInSession, mPlatformPowerState, mResenders.empty());
@@ -4422,6 +4422,12 @@ void LocApiV02::populateFeatureStatusReport
     } else {
         featureMap[LOCATION_QWES_FEATURE_TYPE_DGNSS] = false;
     }
+    if (featureStatusReport & QMI_LOC_FEATURE_STATUS_NLOS_ML20_V02) {
+        featureMap[LOCATION_QWES_FEATURE_NLOS_ML20] = true;
+    } else {
+        featureMap[LOCATION_QWES_FEATURE_NLOS_ML20] = false;
+    }
+
 }
 
 void LocApiV02::reportSvEphemeris (
@@ -4990,8 +4996,9 @@ void LocApiV02 :: reportEngineState (
                   resender();
               }
               mpLocApiV02->mResenders.clear();
-              mpLocApiV02->registerEventMask();
           }
+          // update the registration mask upon receiving Engine state
+          mpLocApiV02->registerEventMask();
       }
   };
 
@@ -5456,7 +5463,7 @@ void LocApiV02::reportGnssMeasurementData(
     // check whether we have valid dgnss measurement
     bool validDgnssMeas = false;
     if ((gnss_measurement_report_ptr.dgnssSvMeasurement_valid) &&
-        (gnss_measurement_report_ptr.dgnssSvMeasurement_len != 0)){
+        (gnss_measurement_report_ptr.dgnssSvMeasurement_len != 0)) {
         uint32_t totalSvMeasLen = 0;
         if (gnss_measurement_report_ptr.svMeasurement_valid) {
             totalSvMeasLen = gnss_measurement_report_ptr.svMeasurement_len;
@@ -5466,6 +5473,22 @@ void LocApiV02::reportGnssMeasurementData(
         }
         if (totalSvMeasLen == gnss_measurement_report_ptr.dgnssSvMeasurement_len) {
             validDgnssMeas = true;
+        }
+    }
+
+    // check whether we have valid ML inference Data
+    bool validMlInference = false;
+    if ((gnss_measurement_report_ptr.mlInferSvMeasurement_valid) &&
+        (gnss_measurement_report_ptr.mlInferSvMeasurement_len != 0)) {
+        uint32_t totalSvMeasLen = 0;
+        if (gnss_measurement_report_ptr.svMeasurement_valid) {
+            totalSvMeasLen = gnss_measurement_report_ptr.svMeasurement_len;
+            if (gnss_measurement_report_ptr.extSvMeasurement_valid) {
+                totalSvMeasLen += gnss_measurement_report_ptr.extSvMeasurement_len;
+            }
+        }
+        if (totalSvMeasLen == gnss_measurement_report_ptr.mlInferSvMeasurement_len) {
+            validMlInference = true;
         }
     }
 
@@ -5492,7 +5515,7 @@ void LocApiV02::reportGnssMeasurementData(
                      QMI_LOC_MASK_MEAS_STATUS_GNSS_FRESH_MEAS_VALID_V02)) {
                     mAgcIsPresent &= convertGnssMeasurements(
                         gnss_measurement_report_ptr,
-                        index, false, validDgnssMeas);
+                        index, false, validDgnssMeas, validMlInference);
                     mGnssMeasurements->gnssMeasNotification.count++;
                 } else {
                     LOC_LOGv("Measurements are stale, do not report");
@@ -5524,7 +5547,7 @@ void LocApiV02::reportGnssMeasurementData(
                          QMI_LOC_MASK_MEAS_STATUS_GNSS_FRESH_MEAS_VALID_V02)) {
                         mAgcIsPresent &= convertGnssMeasurements(
                             gnss_measurement_report_ptr,
-                            index, true, validDgnssMeas);
+                            index, true, validDgnssMeas, validMlInference);
                         mGnssMeasurements->gnssMeasNotification.count++;
                     }
                     else {
@@ -6835,7 +6858,7 @@ void LocApiV02::wifiStatusInformSync()
 /*convert GnssMeasurement type from QMI LOC to loc eng format*/
 bool LocApiV02 :: convertGnssMeasurements(
     const qmiLocEventGnssSvMeasInfoIndMsgT_v02& gnss_measurement_report_ptr,
-    int index, bool isExt, bool validDgnssSvMeas)
+    int index, bool isExt, bool validDgnssSvMeas, bool validMlInference)
 {
     bool bAgcIsPresent = false;
     const qmiLocSVMeasurementStructT_v02 &gnss_measurement_info = isExt ?
@@ -6966,6 +6989,21 @@ bool LocApiV02 :: convertGnssMeasurements(
                 dgnss_sv_meas_ptr->prCorrMeters;
         svMeas.dgnssSvMeas.prrCorrMetersPerSec =
                 dgnss_sv_meas_ptr->prrCorrMetersPerSec;
+    }
+
+    // Populate ML Inference data for GNSS HAL sturctures
+    if (validMlInference) {
+        int mlInferenceIndex = index;
+        // Adjust index to support ML inference for Extended Meas
+        if (isExt) {
+            mlInferenceIndex += gnss_measurement_report_ptr.svMeasurement_len;
+        }
+        if (gnss_measurement_report_ptr.mlInferSvMeasurement[mlInferenceIndex].mlInfer_valid) {
+            svMeas.mlInferSvMeasurement.prMlInferValid =
+                gnss_measurement_report_ptr.mlInferSvMeasurement[mlInferenceIndex].mlInfer_valid;
+            svMeas.mlInferSvMeasurement.prMlInfer =
+                gnss_measurement_report_ptr.mlInferSvMeasurement[mlInferenceIndex].mlInfer;
+        }
     }
 
     if (!isExt) {
