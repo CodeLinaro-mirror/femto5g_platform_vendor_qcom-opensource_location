@@ -318,6 +318,8 @@ enum ELocationCapabilitiesMask {
     /** This mask indicates QDR3_C license bundle is enabled.
      *  This bundle includes features for SV Polynomial. <br/> */
     LOCATION_CAPS_QWES_QDR3                         = (1<<17),
+    /** This mask indicates PR meas ML inference is present  <br/> */
+    LOCATION_CAPS_NLOS_ML20                         = (1<<18),
 };
 
 /**
