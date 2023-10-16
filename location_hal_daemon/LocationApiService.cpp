@@ -71,9 +71,6 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <LocationApiMsg.h>
 #include <gps_extended_c.h>
 
-#ifdef POWERMANAGER_ENABLED
-#include <PowerEvtHandler.h>
-#endif
 #include <LocHalDaemonClientHandler.h>
 #include <LocationApiService.h>
 #include <location_interface.h>
@@ -88,6 +85,8 @@ using namespace std;
 typedef void* (getLocationInterface)();
 typedef void  (createOSFramework)();
 typedef void  (destroyOSFramework)();
+
+typedef int (initGnssPowerHandler)();
 
 /******************************************************************************
 LocationApiService - static members
@@ -195,10 +194,9 @@ LocationApiService::LocationApiService(const configParamToRead & configParamRead
     mSingleFixLocationApi(nullptr),
     mSingleFixTrackingSessionId(0),
     mSingleFixLocationApiCallbacks{},
-    mSingleFixLastLocation{}
-#ifdef POWERMANAGER_ENABLED
-    ,mPowerEventObserver(nullptr)
-#endif
+    mSingleFixLastLocation{},
+    mSignalTypesLocationApi(nullptr),
+    mSignalTypesLocationApiCallbacks{}
     {
 
     LOC_LOGd("AutoStartGnss=%u", mAutoStartGnss);
@@ -232,14 +230,15 @@ LocationApiService::LocationApiService(const configParamToRead & configParamRead
     LOC_LOGd("-->enable=%u", mLocationControlId);
     // this is a unique id assigned to this daemon - will be used when disable
 
-#ifdef POWERMANAGER_ENABLED
-    // register power event handler
-    mPowerEventObserver = PowerEvtHandler::getPwrEvtHandler(this);
-    if (nullptr == mPowerEventObserver) {
-        LOC_LOGe("Failed to regiseter Powerevent handler");
-        return;
+    void* libHandle = nullptr;
+    initGnssPowerHandler* initGnssPwrHdlrFn = (initGnssPowerHandler*) dlGetSymFromLib(
+            libHandle, "libgnsspowerhandler.so", "initGnssPowerHandler");
+    if (nullptr != initGnssPwrHdlrFn) {
+        int retVal = (*initGnssPwrHdlrFn)();
+        LOC_LOGi("Init Powerevent handler ret:%d", retVal);
+    } else {
+        LOC_LOGi("Load Powerevent handler library failed!");
     }
-#endif
 
     // Create OSFramework and IzatManager instance
     createOSFrameworkInstance();
@@ -704,7 +703,7 @@ void LocationApiService::processClientMsg(const char* data, uint32_t length) {
         case E_INTAPI_CONFIG_XTRA_PARAMS_MSG_ID : {
             PBLocConfigXtraReqMsg pbLocConf;
             if (0 == pbLocConf.ParseFromString(pbLocApiMsg.payload())) {
-                LOC_LOGe("Failed to parse pbLocConfEngineIntegrityRisk from payload!!");
+                LOC_LOGe("Failed to parse PBLocConfigXtraReqMsg from payload!!");
                 return;
             }
             LocConfigXtraReqMsg msg(sockName.c_str(), pbLocConf, &mPbufMsgConv);
@@ -789,6 +788,18 @@ void LocationApiService::processClientMsg(const char* data, uint32_t length) {
         case E_INTAPI_DEREGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID: {
             deregisterXtraStatusUpdate(
                     (const LocConfigDeregisterXtraStatusUpdateReqMsg*) &locApiMsg);
+            break;
+        }
+
+        case E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_REQ_MSG_ID: {
+            PBLocConfigRegisterGnssSignalTypesUpdateReqMsg pbMsg;
+            if (0 == pbMsg.ParseFromString(pbLocApiMsg.payload())) {
+                LOC_LOGe("Failed to parse registerGnssSignalTypesUpdateReqMsg from payload!!");
+                return;
+            }
+            LocConfigRegisterGnssSignalTypesUpdateReqMsg msg(sockName.c_str(), pbMsg,
+                    &mPbufMsgConv);
+            registerGnssSignalTypesUpdate(&msg);
             break;
         }
 
@@ -1103,6 +1114,54 @@ void LocationApiService::deregisterXtraStatusUpdate(
             pClient->onControlResponseCb(LOCATION_ERROR_SUCCESS,
                                          E_INTAPI_DEREGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID);
         }
+    }
+}
+
+void LocationApiService::registerGnssSignalTypesUpdate(
+            const LocConfigRegisterGnssSignalTypesUpdateReqMsg * pReqMsg) {
+    LOC_LOGi(">--registerGnssSignalTypesUpdate, client %s, registerUpdate %d",
+            pReqMsg->mSocketName, pReqMsg->mRegisterUpdate);
+
+    std::lock_guard<std::recursive_mutex> lock(mMutex);
+    if (pReqMsg->mRegisterUpdate) { // register
+        if (mSignalTypesLocationApi == nullptr) {
+            // set callback functions for Location API
+            mSignalTypesLocationApiCallbacks.size = sizeof(mSignalTypesLocationApiCallbacks);
+
+            // mandatory callback
+            mSignalTypesLocationApiCallbacks.capabilitiesCb = [this](
+                    LocationCapabilitiesMask mask) {
+                onCapabilitiesCallback(mask);
+            };
+            mSignalTypesLocationApiCallbacks.responseCb = [this](LocationError err, uint32_t id) {
+                onResponseCb(err, id);
+            };
+            mSignalTypesLocationApiCallbacks.collectiveResponseCb =
+                [this](size_t count, LocationError* errs, uint32_t* ids) {
+                    onCollectiveResponseCallback(count, errs, ids);
+                };
+            mSignalTypesLocationApiCallbacks.gnssSignalTypesCb =
+                [this](const GnssCapabNotification& gnssCapNotif) {//TODO
+                    onGnssSignalTypesCb(gnssCapNotif);
+                };
+            mSignalTypesLocationApi = LocationAPI::createInstance(mSignalTypesLocationApiCallbacks);
+        } else {
+            mSignalTypesLocationApiCallbacks.gnssSignalTypesCb =
+                [this](const GnssCapabNotification& gnssCapNotif) {//TODO
+                    onGnssSignalTypesCb(gnssCapNotif);
+                };
+            mSignalTypesLocationApi->updateCallbacks(mSignalTypesLocationApiCallbacks);
+        }
+    } else { // unregister
+        if (mSignalTypesLocationApi) {
+            mSignalTypesLocationApiCallbacks.gnssSignalTypesCb = nullptr;
+            mSignalTypesLocationApi->updateCallbacks(mSignalTypesLocationApiCallbacks);
+        }
+    }
+    // trigger LocConfigCb to conform with LIA API uniform
+    LocHalDaemonClientHandler* pClient = getClient(pReqMsg->mSocketName);
+    if (pClient) {
+        pClient->onControlResponseCb(LOCATION_ERROR_SUCCESS, pReqMsg->msgId);
     }
 }
 
@@ -1516,10 +1575,12 @@ void LocationApiService::configOutputNmeaTypes(const LocConfigOutputNmeaTypesReq
     }
     std::lock_guard<std::recursive_mutex> lock(mMutex);
 
-    LOC_LOGi(">-- client %s, mEnabledNmeaTypes 0x%x, mNmeaDatumType %d",
-             pMsg->mSocketName, pMsg->mEnabledNmeaTypes, pMsg->mNmeaDatumType);
+    LOC_LOGi(">-- client %s, mEnabledNmeaTypes 0x%x, mNmeaDatumType %d, mLocReqEngMask 0x%x",
+             pMsg->mSocketName, pMsg->mEnabledNmeaTypes, pMsg->mNmeaDatumType,
+             pMsg->mNmeaReqEngMask);
     uint32_t sessionId = mLocationControlApi->configOutputNmeaTypes(pMsg->mEnabledNmeaTypes,
-                                                                    pMsg->mNmeaDatumType);
+                                                                    pMsg->mNmeaDatumType,
+                                               (LocReqEngineTypeMask)pMsg->mNmeaReqEngMask);
     addConfigRequestToMap(sessionId, pMsg);
 }
 
@@ -1619,7 +1680,7 @@ void LocationApiService::injectLocation(
     std::lock_guard<std::recursive_mutex> lock(mMutex);
     LocHalDaemonClientHandler* pClient = getClient(pMsg->mSocketName);
     if (!pClient) {
-        LOC_LOGe(">-- invlalid client=%s", pMsg->mSocketName);
+        LOC_LOGe(">-- invalid client=%s", pMsg->mSocketName);
         return;
     }
 
@@ -1741,6 +1802,16 @@ void LocationApiService::onCollectiveResponseCallback(
         size_t count, LocationError *errs, uint32_t *ids) {
 }
 
+void LocationApiService::onGnssSignalTypesCb(const GnssCapabNotification& gnssCapabNotification) {
+    std::lock_guard<std::recursive_mutex> lock(mMutex);
+    uint32_t signalType = gnssCapabNotification.gnssSupportedSignals;
+    LOC_LOGd("--< supported GNSS signal types: 0x%x", signalType);
+    for (auto each : mClients) {
+        // deliver the GNSS signal types to registered client
+        each.second->onGnssSignalTypesCb(signalType);
+    }
+}
+
 void LocationApiService::onGtpWwanTrackingCallback(Location location) {
     std::lock_guard<std::recursive_mutex> lock(mMutex);
     LOC_LOGd("--< onGtpWwanTrackingCallback optIn=%u loc flags=0x%x", mOptInTerrestrialService,
@@ -1791,19 +1862,6 @@ void LocationApiService::onGnssLocationInfoCb(const GnssLocationInfoNotification
     // stop the tracking session
     stopTrackingSessionForSingleFixes();
 }
-
-/******************************************************************************
-LocationApiService - power event handlers
-******************************************************************************/
-#ifdef POWERMANAGER_ENABLED
-void LocationApiService::onPowerEvent(PowerStateType powerState) {
-    std::lock_guard<std::recursive_mutex> lock(mMutex);
-    LOC_LOGd("--< onPowerEvent %d", powerState);
-    mPowerState = powerState;
-    /*GnssAdapter handles session management for suspend/resume power events*/
-    mLocationControlApi->powerStateEvent(powerState);
-}
-#endif
 
 /******************************************************************************
 LocationApiService - on query callback from location engines
