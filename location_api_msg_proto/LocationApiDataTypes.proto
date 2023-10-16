@@ -79,8 +79,8 @@ enum LocationApiDataTypesVersion {
     LOCAPI_DATA_TYPES_VER_MAJOR = 1;
     // Minor - New features / API addition, new message/elemtent addition.
     // Bump the last byte of version i.e. x.2 to x.3
-    // Minor version 40: Support RTK parameter Reporting to LCA
-    LOCAPI_DATA_TYPES_VER_MINOR = 40;
+    // Minor version 41: Add AGC status in GnssMeasurements and GnssData notification
+    LOCAPI_DATA_TYPES_VER_MINOR = 41;
 }
 
 // ============================================================================
@@ -550,6 +550,13 @@ enum PBGnssMeasurementsMultipathIndicator {
     PB_GNSS_MEASUREMENTS_MULTIPATH_INDICATOR_UNKNOWN = 0;
     PB_GNSS_MEASUREMENTS_MULTIPATH_INDICATOR_PRESENT = 1;
     PB_GNSS_MEASUREMENTS_MULTIPATH_INDICATOR_NOT_PRESENT = 2;
+}
+
+enum PBAgcStatus {
+    PB_AGC_STATUS_UNKNOWN = 0;
+    PB_AGC_STATUS_NO_SATURATION = 1;
+    PB_AGC_STATUS_FRONT_END_GAIN_MAXIMUM_SATURATION = 2;
+    PB_AGC_STATUS_FRONT_END_GAIN_MINIMUM_SATURATION = 3;
 }
 
 enum PBLocApiGnssAidingDataSvMask {
@@ -1218,6 +1225,12 @@ message PBGnssDataNotification {
     repeated double     jammerInd = 3;
     // Automatic gain control.
     repeated double     agc = 4;
+    // RF Automatic gain control status for L1 band
+    PBAgcStatus agcStatusL1 = 5;
+    // RF Automatic gain control status for L2 band
+    PBAgcStatus agcStatusL2 = 6;
+    // RF Automatic gain control status for L5 band
+    PBAgcStatus agcStatusL5 = 7;
 }
 
 message PBGnssMeasurementsNotification {
@@ -1228,6 +1241,12 @@ message PBGnssMeasurementsNotification {
     PBGnssMeasurementsClock clock = 2;
     // NHz measurments indicator
     bool isNhz = 3;
+    // RF Automatic gain control status for L1 band
+    PBAgcStatus agcStatusL1 = 4;
+    // RF Automatic gain control status for L2 band
+    PBAgcStatus agcStatusL2 = 5;
+    // RF Automatic gain control status for L5 band
+    PBAgcStatus agcStatusL5 = 6;
 }
 
 message PBLocApiGnssSystemTimeStructType {
