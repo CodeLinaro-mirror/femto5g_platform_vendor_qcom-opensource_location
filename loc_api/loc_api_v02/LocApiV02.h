@@ -90,8 +90,6 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \
     if (st != eLOC_CLIENT_SUCCESS || \
         eQMI_LOC_SUCCESS_V02 != ind.status) { \
-        LOC_LOGE ("%s:%d]: Error : st = %d, ind.status = %d", \
-                  __func__, __LINE__,  st, ind.status); \
         rv = false; \
     }
 
