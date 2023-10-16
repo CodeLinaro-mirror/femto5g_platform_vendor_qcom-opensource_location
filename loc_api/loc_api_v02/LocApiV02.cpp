@@ -4245,7 +4245,11 @@ void LocApiV02::populateFeatureStatusReport
     } else {
         featureMap[LOCATION_QWES_FEATURE_NLOS_ML20] = false;
     }
-
+    if (featureStatusReport & QMI_LOC_FEATURE_STATUS_GNSS_NHZ_V02) {
+        featureMap[LOCATION_QWES_FEATURE_STATUS_GNSS_NHZ] = true;
+    } else {
+        featureMap[LOCATION_QWES_FEATURE_STATUS_GNSS_NHZ] = false;
+    }
 }
 
 void LocApiV02::reportSvEphemeris (
