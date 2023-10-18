@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -598,6 +598,11 @@ public:
     uint32_t getNmeaTypesMaskFromPB(const uint32_t &pbNmeaTypesMask) const;
     uint32_t getPBMaskForNmeaTypesMask(const uint32_t& nmeaTypesMask) const;
 
+    // LocReqEngineTypeMask to PBLocReqEngineTypeMask
+    uint32_t getPBMaskForLocReqEngineTypeMask(const uint32_t &locReqEngTypeMask) const;
+    // PBLocReqEngineTypeMask to LocReqEngineTypeMask
+    uint32_t getLocReqEngineTypeMaskFromPB(const uint32_t &pbLocReqEngTypeMask) const;
+
     // **** helper function for enum conversion from normal format to protobuf enums.
     PBBatchingMode getPBEnumForBatchingMode(const BatchingMode &batchMode) const;
     PBLocationError getPBEnumForLocationError(const LocationError &locErr) const;
@@ -614,6 +619,8 @@ public:
             const XtraStatusUpdateType &xtraStatusUpdateType) const;
     XtraDataStatus getXtraDataStatusFromPB(const PBXtraDataStatus &pbXtraDataStatus) const;
     PBXtraDataStatus getPBEnumForXtraDataStatus(const XtraDataStatus &xtraDataStatus) const;
+    // GnssSignalTypeMask to PBGnssSignalTypeMask
+    uint32_t getPBMaskForGnssSignalTypeMask(const uint32_t &gnssSignalTypeMask) const;
 
 private:
     bool mPbDebugLogEnabled;
@@ -695,8 +702,6 @@ private:
     // **** helper function for mask conversion to protobuf masks
     // LeverArmTypeMask to PBLIALeverArmTypeMask
     uint32_t getPBMaskForLeverArmTypeMask(const uint32_t &leverArmTypeMask) const;
-    // LocReqEngineTypeMask to PBLocReqEngineTypeMask
-    uint32_t getPBMaskForLocReqEngineTypeMask(const uint32_t &locReqEngTypeMask) const;
     // GnssConfigRobustLocationValidMask to PBGnssConfigRobustLocationValidMask
     uint32_t getPBMaskForGnssCfgRobustLocValidMask(
             const uint32_t &gnssCfgRobustLocValidMask) const;
@@ -741,8 +746,6 @@ private:
             const uint32_t &gnssGloTimeStructTypeFlags) const;
     // GnssSvOptionsMask to PBLocApiGnssSvOptionsMask
     uint32_t getPBMaskForGnssSvOptionsMask(const uint32_t &gnssSvOptMask) const;
-    // GnssSignalTypeMask to PBGnssSignalTypeMask
-    uint32_t getPBMaskForGnssSignalTypeMask(const uint32_t &gnssSignalTypeMask) const;
     // GeofenceBreachTypeMask to PBGeofenceBreachTypeMask
     uint32_t getPBMaskForGeofenceBreachTypeMask(const uint32_t &gfBreachTypeMask) const;
     // DeadReckoningEngineConfigValidMask to PBDeadReckoningEngineConfigValidMask
@@ -789,8 +792,6 @@ private:
     uint64_t getGnssSvTypesMaskFromPB(const uint64_t &pbGnssSvTypesMask) const;
     // PBLocApiGnssAidingDataSvMask to GnssAidingDataSvMask
     uint32_t getGnssAidingDataSvMaskFromPB(const uint32_t &pbGnssAidDataSvMask) const;
-    // PBLocReqEngineTypeMask to LocReqEngineTypeMask
-    uint32_t getLocReqEngineTypeMaskFromPB(const uint32_t &pbLocReqEngTypeMask) const;
     // PBLocationSystemInfoMask to LocationSystemInfoMask
     uint32_t getLocationSystemInfoMaskFromPB(const uint32_t &pbLocSysInfoMask) const;
     // PBGnssDataMask to GnssDataMask

@@ -218,6 +218,10 @@ const char* LocApiMsgString(ELocMsgID msgId) {
         return "E_INTAPI_REGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID";
     case E_INTAPI_DEREGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID:
         return "E_INTAPI_DEREGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID";
+    case E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_REQ_MSG_ID:
+        return "E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_REQ_MSG_ID";
+    case E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_RESP_MSG_ID:
+        return "E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_RESP_MSG_ID";
     default:
         return "unknown ELocMsgID";
     }
@@ -2496,6 +2500,7 @@ int LocConfigOutputNmeaTypesReqMsg::serializeToProtobuf(
     pbMsg.set_nmeatypesmask(pLocApiPbMsgConv->getPBMaskForNmeaTypesMask(mEnabledNmeaTypes));
     pbMsg.set_nmeadatumtype((mNmeaDatumType == GEODETIC_TYPE_PZ_90) ?
                             PB_GEODETIC_TYPE_PZ_90 : PB_GEODETIC_TYPE_WGS_84);
+    pbMsg.set_nmeareqengmask(pLocApiPbMsgConv->getPBMaskForLocReqEngineTypeMask(mNmeaReqEngMask));
 
     string pbStr;
     if (!pbMsg.SerializeToString(&pbStr)) {
@@ -2530,6 +2535,8 @@ LocConfigOutputNmeaTypesReqMsg::
             pLocApiPbMsgConv->getNmeaTypesMaskFromPB(pbMsg.nmeatypesmask());
     mNmeaDatumType = (pbMsg.nmeadatumtype() == PB_GEODETIC_TYPE_PZ_90) ?
             GEODETIC_TYPE_PZ_90 : GEODETIC_TYPE_WGS_84;
+    mNmeaReqEngMask = (LocReqEngineTypeMask)
+            pLocApiPbMsgConv->getLocReqEngineTypeMaskFromPB(pbMsg.nmeareqengmask());
 }
 
 // Convert LocConfigEngineIntegrityRiskReqMsg ->
@@ -2797,7 +2804,6 @@ int LocConfigGetXtraStatusRespMsg::serializeToProtobuf(string& protoStr) {
 
     // uint32   payloadSize = 5;
     pLocApiMsgHdr.set_payloadsize(sizeof(LocConfigGetXtraStatusRespMsg));
-        LOC_LOGe("enter 7");
     if (!pLocApiMsgHdr.SerializeToString(&protoStr)) {
         LOC_LOGe("SerializeToString on pLocApiMsgHdr failed!");
         return 0;
@@ -3279,6 +3285,81 @@ int LocIntApiInjectLocationMsg::serializeToProtobuf(string& protoStr) {
     pbMsg.clear_location();
     return protoStr.size();
 }
+
+// Convert LocConfigRegisterGnssSignalTypesUpdateReqMsg ->
+// PBLocConfigRegisterGnssSignalTypesUpdateReqMsg
+int LocConfigRegisterGnssSignalTypesUpdateReqMsg::serializeToProtobuf(string& protoStr) {
+    PBLocAPIMsgHeader pLocApiMsgHdr;
+    PBLocConfigRegisterGnssSignalTypesUpdateReqMsg pbMsg;
+
+    if (nullptr == pLocApiPbMsgConv) {
+        LOC_LOGe("pLocApiPbMsgConv is null!");
+        return 0;
+    }
+    // string      mSocketName = 1;
+    pLocApiMsgHdr.set_msocketname(mSocketName);
+    // PBELocMsgID  msgId = 2;
+    pLocApiMsgHdr.set_msgid(pLocApiPbMsgConv->getPBEnumForELocMsgID(msgId));
+    // uint32   msgVersion = 3;
+    pLocApiMsgHdr.set_msgversion(msgVersion);
+
+    // bool mRegisterUpdate = 1;
+    pbMsg.set_mregisterupdate(mRegisterUpdate);
+
+    string pbStr;
+    if (!pbMsg.SerializeToString(&pbStr)) {
+        LOC_LOGe("SerializeToString failed!");
+        return 0;
+    }
+    // bytes       payload = 4;
+    pLocApiMsgHdr.set_payload(pbStr);
+    // uint32   payloadSize = 5;
+    pLocApiMsgHdr.set_payloadsize(sizeof(LocConfigRegisterGnssSignalTypesUpdateReqMsg));
+
+    if (!pLocApiMsgHdr.SerializeToString(&protoStr)) {
+        LOC_LOGe("SerializeToString on pLocApiMsgHdr failed!");
+        return 0;
+    }
+    return protoStr.size();
+}
+// Convert LocConfigRegisterGnssSignalTypesUpdateRespMsg ->
+// PBLocConfigRegisterGnssSignalTypesUpdateRespMsg
+int LocConfigRegisterGnssSignalTypesUpdateRespMsg::serializeToProtobuf(string& protoStr) {
+    PBLocAPIMsgHeader pLocApiMsgHdr;
+    PBLocConfigRegisterGnssSignalTypesUpdateRespMsg pbMsg;
+
+    if (nullptr == pLocApiPbMsgConv) {
+        LOC_LOGe("pLocApiPbMsgConv is null!");
+        return 0;
+    }
+    // string      mSocketName = 1;
+    pLocApiMsgHdr.set_msocketname(mSocketName);
+    // PBELocMsgID  msgId = 2;
+    pLocApiMsgHdr.set_msgid(pLocApiPbMsgConv->getPBEnumForELocMsgID(msgId));
+    // uint32   msgVersion = 3;
+    pLocApiMsgHdr.set_msgversion(msgVersion);
+
+    //GnssSignalTypeMask mSignalTypeMask = 1;
+    pbMsg.set_msignaltypemask(pLocApiPbMsgConv->getPBMaskForGnssSignalTypeMask(mSignalTypeMask));
+
+    string pbStr;
+    if (!pbMsg.SerializeToString(&pbStr)) {
+        LOC_LOGe("SerializeToString on pbMsg failed!");
+        return 0;
+    }
+    // bytes       payload = 4;
+    pLocApiMsgHdr.set_payload(pbStr);
+
+    // uint32   payloadSize = 5;
+    pLocApiMsgHdr.set_payloadsize(sizeof(LocConfigRegisterGnssSignalTypesUpdateRespMsg));
+
+    if (!pLocApiMsgHdr.SerializeToString(&protoStr)) {
+        LOC_LOGe("SerializeToString on pLocApiMsgHdr failed!");
+        return 0;
+    }
+    return protoStr.size();
+}
+
 
 // Convert LocAPIGetAntennaInfoMsg ->
 // PBLocAPIGetAntennaInfoMsg
@@ -4129,6 +4210,16 @@ LocIntApiInjectLocationMsg::LocIntApiInjectLocationMsg(const char* name,
             LOC_LOGe("pb msg conv is null");
         }
     }
+}
+
+// Decode PBLocConfigRegisterGnssSignalTypesUpdateRespMsg ->
+// LocConfigRegisterGnssSignalTypesUpdateRespMsg
+LocConfigRegisterGnssSignalTypesUpdateRespMsg::LocConfigRegisterGnssSignalTypesUpdateRespMsg(
+        const char* name, const PBLocConfigRegisterGnssSignalTypesUpdateRespMsg &pbMsg,
+        const LocationApiPbMsgConv *pbMsgConv) :
+        LocAPIMsgHeader(name, E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_RESP_MSG_ID, pbMsgConv) {
+    mSignalTypeMask = pLocApiPbMsgConv->getPBMaskForGnssSignalTypeMask(pbMsg.msignaltypemask());
+    LOC_LOGd("supported GNSS signal type: %x", mSignalTypeMask);
 }
 
 // Decode PBLocAPIGetDebugRespMsg ->
