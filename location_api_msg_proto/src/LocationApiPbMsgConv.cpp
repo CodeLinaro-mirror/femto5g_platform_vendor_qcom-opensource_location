@@ -548,9 +548,11 @@ LocEngineRunState LocationApiPbMsgConv::getEnumForPBLocEngineRunState(
         locEngRunState = LOC_ENGINE_RUN_STATE_PAUSE;
     } else if (pbLocEngRunState == PB_LOC_ENGINE_RUN_STATE_RESUME) {
         locEngRunState = LOC_ENGINE_RUN_STATE_RESUME;
+    } else if (pbLocEngRunState == PB_LOC_ENGINE_RUN_STATE_PAUSE_RETAIN) {
+        locEngRunState = LOC_ENGINE_RUN_STATE_PAUSE_RETAIN;
     }
 
-    LocApiPb_LOGv("LocApiPB: pbEngineRunState:%d, llocEngRunState:%d",
+    LocApiPb_LOGv("LocApiPB: pbEngineRunState:%d, locEngRunState:%d",
             pbLocEngRunState, locEngRunState);
     return locEngRunState;
 }
@@ -565,6 +567,8 @@ uint32_t LocationApiPbMsgConv::getPBEnumForLocEngineRunState(
         pbEngineRunState = PB_LOC_ENGINE_RUN_STATE_PAUSE;
     } else if (locEngineRunState ==LOC_ENGINE_RUN_STATE_RESUME) {
         pbEngineRunState = PB_LOC_ENGINE_RUN_STATE_RESUME;
+    } else if (locEngineRunState ==LOC_ENGINE_RUN_STATE_PAUSE_RETAIN) {
+        pbEngineRunState = PB_LOC_ENGINE_RUN_STATE_PAUSE_RETAIN;
     }
     LocApiPb_LOGd("LocApiPB: locEngineRunState: %d, pbEngineRunState: %d",
                   locEngineRunState, pbEngineRunState);
@@ -1500,6 +1504,9 @@ uint64_t LocationApiPbMsgConv::getPBMaskForLocationCapabilitiesMask(
     }
     if (locCapabMask & LOCATION_CAPABILITIES_QWES_SV_EPHEMERIS_BIT) {
         pbLocCapabMask |= PB_LOCATION_CAPABILITIES_QWES_SV_EPHEMERIS_BIT;
+    }
+    if (locCapabMask & LOCATION_CAPABILITIES_NLOS_ML20) {
+        pbLocCapabMask |= PB_LOCATION_CAPABILITIES_QWES_NLOS_ML20;
     }
     LOC_LOGi("LocApiPB: locCapabMask:0x%" PRIx64", pbLocCapabMask:0x%" PRIx64,
             locCapabMask, pbLocCapabMask);
@@ -2559,6 +2566,9 @@ uint64_t LocationApiPbMsgConv::getLocationCapabilitiesMaskFromPB(
     }
     if (pbLocCapabMask & PB_LOCATION_CAPABILITIES_QWES_SV_EPHEMERIS_BIT) {
         locCapabMask |= LOCATION_CAPABILITIES_QWES_SV_EPHEMERIS_BIT;
+    }
+    if (pbLocCapabMask & PB_LOCATION_CAPABILITIES_QWES_NLOS_ML20) {
+        locCapabMask |= LOCATION_CAPABILITIES_NLOS_ML20;
     }
     LOC_LOGi("LocApiPB: pbLocCapabMask:0x%" PRIx64", locCapabMask:0x%" PRIx64,
             pbLocCapabMask, locCapabMask);
@@ -3775,6 +3785,7 @@ int LocationApiPbMsgConv::convertXtraConfigParamsToPB(
         LOC_LOGv("add %s", xtraParams.ntpServerURLs[index]);
     }
 
+    pbXtraParams->set_ntskeserverurl(xtraParams.ntsKeServerURL);
     // conversion routine for debug level
     pbXtraParams->set_xtradaemondebugloglevel(
             getPBEnumForDebugLogLevel(xtraParams.xtraDaemonDebugLogLevel));
@@ -3783,6 +3794,9 @@ int LocationApiPbMsgConv::convertXtraConfigParamsToPB(
             xtraParams.xtraIntegrityDownloadEnable);
     pbXtraParams->set_xtraintegritydownloadintervalminute(
             xtraParams.xtraIntegrityDownloadIntervalMinute);
+    pbXtraParams->set_xtradaemondiagloggingstatus(
+            xtraParams.xtraDaemonDiagLoggingStatus);
+
     return 0;
 }
 
@@ -3811,6 +3825,9 @@ int LocationApiPbMsgConv::pbConvertToXtraConfig(const PBXtraConfigParams &pbXtra
         LOC_LOGv("ntp server url: %d %s", index, xtraParams.ntpServerURLs[index]);
     }
     xtraParams.ntpServerURLsCount = pbXtraParams.ntpserverurls_size();
+    strlcpy(xtraParams.ntsKeServerURL, pbXtraParams.ntskeserverurl().c_str(),
+            sizeof(xtraParams.ntsKeServerURL));
+    LOC_LOGv("nts ke server url: %s", xtraParams.ntsKeServerURL);
 
     xtraParams.xtraDaemonDebugLogLevel =
             getDebugLogLevelFromPB(pbXtraParams.xtradaemondebugloglevel());
@@ -3818,6 +3835,8 @@ int LocationApiPbMsgConv::pbConvertToXtraConfig(const PBXtraConfigParams &pbXtra
     xtraParams.xtraIntegrityDownloadEnable = pbXtraParams.xtraintegritydownloadenable();
     xtraParams.xtraIntegrityDownloadIntervalMinute =
             pbXtraParams.xtraintegritydownloadintervalminute();
+    xtraParams.xtraDaemonDiagLoggingStatus =
+            pbXtraParams.xtradaemondiagloggingstatus();
     return 0;
 }
 

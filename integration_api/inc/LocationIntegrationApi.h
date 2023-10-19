@@ -27,7 +27,6 @@
  */
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
-
 Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -196,6 +195,17 @@ enum LocIntegrationEngineRunState {
     /** Request the position engine to be put into resume state.
      *  <br/> */
     LOC_INT_ENGINE_RUN_STATE_RESUME   = 2,
+    /** Request the selected position engine to be put into pause state
+     *  while retaining of any useful state data.
+     *  This engine run state is currently applicable to QDR engine only.
+     *  It is strongly advised to link this state to a vehicle state in which
+     *  the vehicle is expected to be stationary at the time of invocation of API
+     *  and subsequently, until the state is changed to Running.
+     *  For QDR, transition out of PAUSE_RETAIN happens
+     *  when either the state is changed to RESUME state via same command OR
+     *  when the device taken through suspend/resume or reboot power-state cycles.
+     *  <br/> */
+    LOC_INT_ENGINE_RUN_STATE_PAUSE_RETAIN   = 3,
 };
 
 /**
@@ -882,6 +892,28 @@ struct XtraConfigParams {
 
     /** Level of debug log messages that will be logged. <br/> */
     DebugLogLevel xtraDaemonDebugLogLevel;
+
+    /** URL of NTS KE Server. <br/>
+     *
+     *  The URL, if provided, shall be complete and shall include
+     *  the port number. <br/>
+     *
+     *  Max of 128 bytes, including null-terminating byte will be
+     *  supported. <br/>
+     *
+     *  Valid NTS KE server URL should start with "https://".
+     *  <br/>
+     *
+     *  If NTS KE server URL is not specified, then device will use
+     *  the default URL of https://nts.xtracloud.net:4460. <br/>
+     */
+    std::string ntsKeServerURL;
+
+    /** To set the diag logging status for XTRA. <br/>
+     *
+     * 0 to disable diag logging <br/>
+     * 1 to enable diag logging <br/> */
+    uint32_t xtraDaemonDiagLoggingStatus;
 };
 
 class LocationIntegrationApiImpl;

@@ -587,8 +587,10 @@ bool LocationIntegrationApi::configEngineRunState(LocIntegrationEngineType engTy
             halEngState = LOC_ENGINE_RUN_STATE_PAUSE;
         } else if (engState == LOC_INT_ENGINE_RUN_STATE_RESUME) {
             halEngState = LOC_ENGINE_RUN_STATE_RESUME;
+        } else if (engState == LOC_INT_ENGINE_RUN_STATE_PAUSE_RETAIN) {
+            halEngState = LOC_ENGINE_RUN_STATE_PAUSE_RETAIN;
         } else {
-             LOC_LOGe("unknown engine state %d", engState);
+            LOC_LOGe("unknown engine state %d", engState);
             return false;
         }
         return (mApiImpl->configEngineRunState(halEngType, halEngState) == 0);
@@ -815,7 +817,12 @@ bool LocationIntegrationApi::injectLocation(const location_client::Location& lca
     return halLogLevel;
 }
 
-bool ntpUrlHasPortNum(const char* ntpURL, int length) {
+// check valid ntp url
+// return, -1 if invalid url, 0 if empty and 1 if valid.
+int ntpUrlHasPortNum(const char* ntpURL, int length) {
+    if (0 == length) {
+        return 0;
+    }
     int index = length-1;
 
     // check for port number at the end of URL
@@ -830,54 +837,68 @@ bool ntpUrlHasPortNum(const char* ntpURL, int length) {
     };
 
     if ((index >= 5) && (index < (length-1)) && ntpURL[index] == ':') {
-        return true;
+        return 1;
     } else {
-        return false;
+        return -1;
     }
 }
 
-// sanity check whether XTRA server URL is valid or not
+// sanity check whether server URL is valid or not
 // 1: starts with "https://"
-// 2: has a port number "https://path3.xtracloud.net:443/xtra3Mgrcej.bin"
-bool isValidXtraUrl(string url) {
+// 2: has a port number, like "https://nts.xtracloud.net:4460"
+// return, -1 if invalid url, 0 if empty and 1 if valid.
+int isValidUrl(string& url) {
     int startPos = -1, endPos = url.length();
+    if (0 == endPos) {
+        return 0;
+    }
     while (++startPos < endPos && isspace(url[startPos]));
     while (--endPos >= 0 && isspace(url[endPos]));
     string trimUrl = url.substr(startPos, endPos - startPos + 1);
 
     if (trimUrl.length() == 0) {
-        LOC_LOGe("empty xtra url");
-        return false;
+        LOC_LOGe("invalid input url - only spaces");
+        return -1;
     }
 
     int retval = strncasecmp(trimUrl.c_str(), "https://", sizeof("https://")-1);
     if (retval != 0) {
         LOC_LOGe("url %s does not start with https://", trimUrl.c_str());
-        return false;
+        return -1;
     }
 
     size_t posHost = strlen("https://");
-    size_t posPath = trimUrl.find('/', posHost);
+    size_t posPath = trimUrl.length();
     if (posPath == string::npos) {
         LOC_LOGe("invalid url %s", trimUrl.c_str());
-        return false;
+        return -1;
     }
 
     string hostname = trimUrl.substr(posHost, posPath - posHost);
     size_t posPort = hostname.find(':');
     if (posPort == string::npos) {
         LOC_LOGe("invalid url %s contains no port", trimUrl.c_str());
-        return false;
+        return -1;
     }
     for (size_t index = posPort+1; index < hostname.size(); index++) {
         char digit = hostname[index];
         if (digit < '0' || digit > '9') {
             LOC_LOGe("url %s contains invalid port", trimUrl.c_str());
-            return false;
+            return -1;
         }
     }
 
-    return true;
+    return 1;
+}
+
+// sanity check whether XTRA server URL is valid or not
+// 1: starts with "https://"
+// 2: has a port number "https://path3.xtracloud.net:443/xtra3Mgrcej.bin"
+// return, -1 if invalid url, 0 if empty and 1 if valid.
+int isValidXtraUrl(string& url) {
+    size_t posPath = url.rfind('/');
+    string trimUrl = url.substr(0, posPath);
+    return isValidUrl(trimUrl);
 }
 
 bool LocationIntegrationApi::configXtraParams(bool enable, XtraConfigParams* configParams) {
@@ -896,7 +917,7 @@ bool LocationIntegrationApi::configXtraParams(bool enable, XtraConfigParams* con
         }
 
         LOC_LOGd("xtra params,enable %d, download:%d %d, retry %d %d, debug: %d"
-                 "ca path: %s, xtra server: %s %s %s, ntp server %s %s %s",
+                 "ca path: %s, xtra server: %s %s %s, ntp server %s %s %s, nts ke server %s",
                  enable, configParams->xtraDownloadIntervalMinute,
                  configParams->xtraDownloadTimeoutSec,
                  configParams->xtraDownloadRetryIntervalMinute,
@@ -905,7 +926,8 @@ bool LocationIntegrationApi::configXtraParams(bool enable, XtraConfigParams* con
                  configParams->xtraCaPath.c_str(),
                  configParams->xtraServerURLs[0].c_str(), configParams->xtraServerURLs[1].c_str(),
                  configParams->xtraServerURLs[2].c_str(), configParams->ntpServerURLs[0].c_str(),
-                 configParams->ntpServerURLs[1].c_str(), configParams->ntpServerURLs[2].c_str());
+                 configParams->ntpServerURLs[1].c_str(), configParams->ntpServerURLs[2].c_str(),
+                 configParams->ntsKeServerURL.c_str());
 
         halConfigParams.xtraDownloadIntervalMinute =
                 configParams->xtraDownloadIntervalMinute;
@@ -932,7 +954,10 @@ bool LocationIntegrationApi::configXtraParams(bool enable, XtraConfigParams* con
         uint32_t totalValidXtraServerURL = 0;
         for (int index = 0; index < 3; index++) {
             // check for valid server URL
-            if (isValidXtraUrl(configParams->xtraServerURLs[index]) == true) {
+            int xtraUrlValidity = isValidXtraUrl(configParams->xtraServerURLs[index]);
+            if (xtraUrlValidity < 0) {
+                return false;
+            } else if (xtraUrlValidity > 0) {
                 strlcpy(halConfigParams.xtraServerURLs[totalValidXtraServerURL++],
                         configParams->xtraServerURLs[index].c_str(),
                         sizeof(halConfigParams.xtraServerURLs[index]));
@@ -945,7 +970,10 @@ bool LocationIntegrationApi::configXtraParams(bool enable, XtraConfigParams* con
             // check for valid server URL
             const char * ntpServerURL = configParams->ntpServerURLs[index].c_str();
             int length = configParams->ntpServerURLs[index].size();
-            if (ntpUrlHasPortNum(ntpServerURL, length) == true) {
+            int ntpUrlValidity = ntpUrlHasPortNum(ntpServerURL, length);
+            if (ntpUrlValidity < 0) {
+                return false;
+            } else if (ntpUrlValidity > 0) {
                 strlcpy(halConfigParams.ntpServerURLs[totalValidNtpServerURL++],
                         configParams->ntpServerURLs[index].c_str(),
                         sizeof(halConfigParams.ntpServerURLs[index]));
@@ -959,8 +987,18 @@ bool LocationIntegrationApi::configXtraParams(bool enable, XtraConfigParams* con
             halConfigParams.xtraIntegrityDownloadIntervalMinute =
                     configParams->xtraIntegrityDownloadIntervalMinute;
         }
+        // NTS KE Server URL
+        int ntsKeValidity = isValidUrl(configParams->ntsKeServerURL);
+        if (ntsKeValidity > 0) {
+            strlcpy(halConfigParams.ntsKeServerURL, configParams->ntsKeServerURL.c_str(),
+                    sizeof(halConfigParams.ntsKeServerURL));
+        } else if (ntsKeValidity < 0) {
+            break;
+        }
         halConfigParams.xtraDaemonDebugLogLevel =
                 getHalLogLevel(configParams->xtraDaemonDebugLogLevel);
+        halConfigParams.xtraDaemonDiagLoggingStatus =
+                configParams->xtraDaemonDiagLoggingStatus;
 
         validparam = true;
     } while (0);

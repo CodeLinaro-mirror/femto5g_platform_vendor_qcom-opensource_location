@@ -90,8 +90,6 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 \
     if (st != eLOC_CLIENT_SUCCESS || \
         eQMI_LOC_SUCCESS_V02 != ind.status) { \
-        LOC_LOGE ("%s:%d]: Error : st = %d, ind.status = %d", \
-                  __func__, __LINE__,  st, ind.status); \
         rv = false; \
     }
 
@@ -192,7 +190,7 @@ private:
   bool mInSession;
   GnssPowerMode mPowerMode;
   bool mEngineOn;
-  bool mMeasurementsStarted;
+  bool mFirstMeasurementOfSessionReceived;
   std::vector<Resender> mResenders;
   bool mMasterRegisterNotSupported;
   uint32_t mCounter;
@@ -249,7 +247,7 @@ private:
   /*convert GnssMeasurement type from QMI LOC to loc eng format*/
   bool convertGnssMeasurements (
       const qmiLocEventGnssSvMeasInfoIndMsgT_v02& gnss_measurement_report_ptr,
-      int index, bool isExt, bool validDgnssSvMeas);
+      int index, bool isExt, bool validDgnssSvMeas, bool validMlInference);
 
   /* Convert APN Type mask */
   static qmiLocApnTypeMaskT_v02 convertLocApnTypeMask(LocApnTypeMask mask);
