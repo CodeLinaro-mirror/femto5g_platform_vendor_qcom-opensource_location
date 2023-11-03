@@ -194,8 +194,8 @@ private:
     void onCollectiveResponseCallback(size_t count, LocationError *errs, uint32_t *ids);
 
     void onTrackingCb(const Location& location);
-    void onBatchingCb(size_t count, Location* location, BatchingOptions batchOptions);
-    void onBatchingStatusCb(BatchingStatusInfo batchingStatus,
+    void onBatchingCb(size_t count, Location* location, const BatchingOptions& batchOptions);
+    void onBatchingStatusCb(const BatchingStatusInfo& batchingStatus,
             std::list<uint32_t>& listOfCompletedTrips);
     void onGnssLocationInfoCb(const GnssLocationInfoNotification& gnssLocationInfoNotification);
     void onGeofenceBreachCb(const GeofenceBreachNotification& geofenceBreachNotification);
@@ -203,11 +203,11 @@ private:
                               GnssLocationInfoNotification* engLocationsInfoNotification);
     void onGnssNiCb(uint32_t id, GnssNiNotification gnssNiNotification);
     void onGnssSvCb(const GnssSvNotification &gnssSvNotification);
-    void onGnssNmeaCb(GnssNmeaNotification);
-    void onEngineNmeaCb(GnssNmeaNotification);
+    void onGnssNmeaCb(const GnssNmeaNotification&);
+    void onEngineNmeaCb(const GnssNmeaNotification&);
     void onGnssDataCb(const GnssDataNotification& gnssDataNotification);
     void onGnssMeasurementsCb(const GnssMeasurementsNotification &gnssMeasurementsNotification);
-    void onLocationSystemInfoCb(LocationSystemInfo systemInfo);
+    void onLocationSystemInfoCb(const LocationSystemInfo& systemInfo);
     void onDcReportCb(const GnssDcReportInfo& dcReportInfo);
     void onLocationApiDestroyCompleteCb();
     void onAntennaInfoCb(std::vector<GnssAntennaInformation>& gnssAntennaInformations);

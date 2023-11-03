@@ -137,7 +137,7 @@ class TrackingSessCbHandler {
             if (engineReportCbs.engineNmeaCallback) {
                 mCallbackOptions.engineNmeaCb =
                 [pClientApiImpl, engineNmeaCallback = engineReportCbs.engineNmeaCallback](
-                        ::GnssNmeaNotification n) {
+                        const ::GnssNmeaNotification& n) {
                     uint64_t timestamp = n.timestamp;
                     LocOutputEngineType locOutputEngType = (LocOutputEngineType)n.locOutputEngType;
                     std::string nmea(n.nmea);
@@ -207,7 +207,7 @@ void TrackingSessCbHandler::initializeCommonCbs(LocationClientApiImpl *pClientAp
     }
     if (gnssNmeaCallback) {
         mCallbackOptions.gnssNmeaCb =
-                [pClientApiImpl, gnssNmeaCallback](::GnssNmeaNotification n) {
+                [pClientApiImpl, gnssNmeaCallback](const ::GnssNmeaNotification& n) {
             uint64_t timestamp = n.timestamp;
             LocOutputEngineType locOutputEngType = (LocOutputEngineType)n.locOutputEngType;
             std::string nmea(n.nmea);
@@ -424,7 +424,7 @@ bool LocationClientApi::startTripBatchingSession(uint32_t minInterval, uint32_t 
     }
 
     callbacksOption.batchingCb = [batchingCb] (size_t count, ::Location* location,
-            BatchingOptions batchingOptions) {
+            const BatchingOptions& batchingOptions) {
         std::vector<Location> locationVector;
         BatchingStatus status = ((count != 0 )? BATCHING_STATUS_ACTIVE : BATCHING_STATUS_INACTIVE);
         LOC_LOGd("Batch count : %zu", count);
@@ -435,7 +435,7 @@ bool LocationClientApi::startTripBatchingSession(uint32_t minInterval, uint32_t 
         batchingCb(locationVector, status);
     };
 
-    callbacksOption.batchingStatusCb = [batchingCb](BatchingStatusInfo batchingSt,
+    callbacksOption.batchingStatusCb = [batchingCb](const BatchingStatusInfo& batchingSt,
             std::list<uint32_t>& listOfcompletedTrips) {
         if (BATCHING_STATUS_TRIP_COMPLETED == batchingSt.batchingStatus) {
             std::vector<Location> locationVector;
@@ -484,7 +484,7 @@ bool LocationClientApi::startRoutineBatchingSession(uint32_t minInterval, uint32
     }
 
     callbacksOption.batchingCb = [batchingCb](size_t count, ::Location* location,
-            BatchingOptions batchingOptions) {
+            const BatchingOptions& batchingOptions) {
         std::vector<Location> locationVector;
         BatchingStatus status = BATCHING_STATUS_INACTIVE;
         LOC_LOGd("Batch count : %zu", count);
