@@ -697,10 +697,10 @@ void LocationApiService::deleteClient(LocAPIClientDeregisterReqMsg *pMsg) {
 
     std::lock_guard<std::recursive_mutex> lock(mMutex);
     std::string clientname(pMsg->mSocketName);
-    deleteClientbyName(clientname);
+    deleteClientbyName(clientname, false);
 }
 
-void LocationApiService::deleteClientbyName(const std::string clientname) {
+void LocationApiService::deleteClientbyName(const std::string clientname, bool forceRemove) {
     LOC_LOGi(">-- deleteClient client=%s", clientname.c_str());
 
     // delete this client from property db
@@ -712,7 +712,7 @@ void LocationApiService::deleteClientbyName(const std::string clientname) {
     }
     mClients.erase(clientname);
     mTerrestrialFixReqs.erase(clientname);
-    pClient->cleanup();
+    pClient->cleanup(forceRemove);
 }
 
 void LocationApiService::deleteEapClientByIds(int serviceId, int instanceId) {

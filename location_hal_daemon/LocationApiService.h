@@ -179,7 +179,7 @@ public:
 #endif
 
     // other APIs
-    void deleteClientbyName(const std::string name);
+    void deleteClientbyName(const std::string name, bool forceRemove = true);
     void deleteEapClientByIds(int id1, int id2);
 
     static std::recursive_mutex mMutex;
