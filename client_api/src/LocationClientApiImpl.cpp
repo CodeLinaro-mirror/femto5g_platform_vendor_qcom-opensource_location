@@ -1313,12 +1313,16 @@ void LocationClientApiImpl::destroy() {
                          mApiImpl->mClientIdGenerator, mApiImpl->mClientId);
             }
 #endif //FEATURE_EXTERNAL_AP
+            usleep(50000); //give 50ms for socket clean up
+
             delete mApiImpl;
         }
         LocationClientApiImpl* mApiImpl;
     };
 
     mMsgTask->sendMsg(new (nothrow) DestroyReq(this));
+    usleep(100000); //100ms for handling onReceive() messages
+
 }
 
 /******************************************************************************
