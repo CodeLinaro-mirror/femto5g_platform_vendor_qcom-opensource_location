@@ -185,7 +185,7 @@ public:
 #endif
 
     // other APIs
-    void deleteClientbyName(const std::string name);
+    void deleteClientbyName(const std::string name, bool forceRemove = true);
     void deleteEapClientByIds(int id1, int id2);
 
     // protobuf conversion util class

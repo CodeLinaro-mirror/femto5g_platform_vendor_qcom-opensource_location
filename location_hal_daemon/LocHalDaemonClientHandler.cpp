@@ -444,7 +444,7 @@ void LocHalDaemonClientHandler::pingTest() {
     }
 }
 
-void LocHalDaemonClientHandler::cleanup() {
+void LocHalDaemonClientHandler::cleanup(bool forceRemove) {
     // please do not attempt to hold the lock, as the caller of this function
     // already holds the lock
 
@@ -452,7 +452,7 @@ void LocHalDaemonClientHandler::cleanup() {
     // remote client that is no longer reachable
     mIpcSender = nullptr;
 
-    if (0 != remove(mName.c_str())) {
+    if (forceRemove && 0 != remove(mName.c_str())) {
         LOC_LOGw("<-- failed to remove file %s error %s", mName.c_str(), strerror(errno));
     }
 
