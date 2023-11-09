@@ -183,61 +183,61 @@ GnssMeasurementsDataFlagsMask LocationClientApiImpl::parseMeasurementsDataMask(
 LocationCapabilitiesMask LocationClientApiImpl::parseCapabilitiesMask(
         ::LocationCapabilitiesMask mask) {
     LocationCapabilitiesMask capsMask = 0;
-    if (::LOCATION_CAPABILITIES_TIME_BASED_TRACKING_BIT & mask) {
+    if (LOCATION_CAPABILITIES_TIME_BASED_TRACKING_BIT & mask) {
         capsMask |= LOCATION_CAPS_TIME_BASED_TRACKING_BIT;
     }
-    if (::LOCATION_CAPABILITIES_TIME_BASED_BATCHING_BIT & mask) {
+    if (LOCATION_CAPABILITIES_TIME_BASED_BATCHING_BIT & mask) {
         capsMask |=  LOCATION_CAPS_TIME_BASED_BATCHING_BIT;
     }
-    if (::LOCATION_CAPABILITIES_DISTANCE_BASED_TRACKING_BIT & mask) {
+    if (LOCATION_CAPABILITIES_DISTANCE_BASED_TRACKING_BIT & mask) {
         capsMask |=  LOCATION_CAPS_DISTANCE_BASED_TRACKING_BIT;
     }
-    if (::LOCATION_CAPABILITIES_DISTANCE_BASED_BATCHING_BIT & mask) {
+    if (LOCATION_CAPABILITIES_DISTANCE_BASED_BATCHING_BIT & mask) {
         capsMask |=  LOCATION_CAPS_DISTANCE_BASED_BATCHING_BIT;
     }
-    if (::LOCATION_CAPABILITIES_GEOFENCE_BIT & mask) {
+    if (LOCATION_CAPABILITIES_GEOFENCE_BIT & mask) {
         capsMask |=  LOCATION_CAPS_GEOFENCE_BIT;
     }
-    if (::LOCATION_CAPABILITIES_OUTDOOR_TRIP_BATCHING_BIT & mask) {
+    if (LOCATION_CAPABILITIES_OUTDOOR_TRIP_BATCHING_BIT & mask) {
         capsMask |=  LOCATION_CAPS_OUTDOOR_TRIP_BATCHING_BIT;
     }
-    if (::LOCATION_CAPABILITIES_GNSS_MEASUREMENTS_BIT & mask) {
+    if (LOCATION_CAPABILITIES_GNSS_MEASUREMENTS_BIT & mask) {
         capsMask |=  LOCATION_CAPS_GNSS_MEASUREMENTS_BIT;
     }
-    if (::LOCATION_CAPABILITIES_CONSTELLATION_ENABLEMENT_BIT & mask) {
+    if (LOCATION_CAPABILITIES_CONSTELLATION_ENABLEMENT_BIT & mask) {
         capsMask |=  LOCATION_CAPS_CONSTELLATION_ENABLEMENT_BIT;
     }
-    if (::LOCATION_CAPABILITIES_QWES_CARRIER_PHASE_BIT & mask) {
+    if (LOCATION_CAPABILITIES_QWES_CARRIER_PHASE_BIT & mask) {
         capsMask |=  LOCATION_CAPS_CARRIER_PHASE_BIT;
     }
-    if (::LOCATION_CAPABILITIES_QWES_SV_POLYNOMIAL_BIT & mask) {
+    if (LOCATION_CAPABILITIES_QWES_SV_POLYNOMIAL_BIT & mask) {
         capsMask |=  LOCATION_CAPS_SV_POLYNOMIAL_BIT;
     }
-    if (::LOCATION_CAPABILITIES_QWES_GNSS_SINGLE_FREQUENCY & mask) {
+    if (LOCATION_CAPABILITIES_QWES_GNSS_SINGLE_FREQUENCY & mask) {
         capsMask |=  LOCATION_CAPS_QWES_GNSS_SINGLE_FREQUENCY;
     }
-    if (::LOCATION_CAPABILITIES_QWES_GNSS_MULTI_FREQUENCY & mask) {
+    if (LOCATION_CAPABILITIES_QWES_GNSS_MULTI_FREQUENCY & mask) {
         capsMask |=  LOCATION_CAPS_QWES_GNSS_MULTI_FREQUENCY;
     }
-    if (::LOCATION_CAPABILITIES_QWES_VPE & mask) {
+    if (LOCATION_CAPABILITIES_QWES_VPE & mask) {
         capsMask |=  LOCATION_CAPS_QWES_VPE;
     }
-    if (::LOCATION_CAPABILITIES_QWES_CV2X_LOCATION_BASIC & mask) {
+    if (LOCATION_CAPABILITIES_QWES_CV2X_LOCATION_BASIC & mask) {
         capsMask |=  LOCATION_CAPS_QWES_CV2X_LOCATION_BASIC;
     }
-    if (::LOCATION_CAPABILITIES_QWES_CV2X_LOCATION_PREMIUM & mask) {
+    if (LOCATION_CAPABILITIES_QWES_CV2X_LOCATION_PREMIUM & mask) {
         capsMask |=  LOCATION_CAPS_QWES_CV2X_LOCATION_PREMIUM;
     }
-    if (::LOCATION_CAPABILITIES_QWES_PPE & mask) {
+    if (LOCATION_CAPABILITIES_QWES_PPE & mask) {
         capsMask |=  LOCATION_CAPS_QWES_PPE;
     }
-    if (::LOCATION_CAPABILITIES_QWES_QDR2 & mask) {
+    if (LOCATION_CAPABILITIES_QWES_QDR2 & mask) {
         capsMask |=  LOCATION_CAPS_QWES_QDR2;
     }
-    if (::LOCATION_CAPABILITIES_QWES_QDR3 & mask) {
+    if (LOCATION_CAPABILITIES_QWES_QDR3 & mask) {
         capsMask |=  LOCATION_CAPS_QWES_QDR3;
     }
-    if (::LOCATION_CAPABILITIES_NLOS_ML20 & mask) {
+    if (LOCATION_CAPABILITIES_NLOS_ML20 & mask) {
         capsMask |=  LOCATION_CAPS_NLOS_ML20;
     }
     LOC_LOGd ("parseCapabilitiesMask LocCapabMask =0x%" PRIx64 " LCA mask 0x%" PRIx64,
@@ -248,16 +248,16 @@ LocationCapabilitiesMask LocationClientApiImpl::parseCapabilitiesMask(
 uint16_t LocationClientApiImpl::parseYearOfHw(::LocationCapabilitiesMask mask) {
     uint16_t yearOfHw = 2015;
 
-    if (::LOCATION_CAPABILITIES_GNSS_MEASUREMENTS_BIT & mask) {
+    if (LOCATION_CAPABILITIES_GNSS_MEASUREMENTS_BIT & mask) {
         yearOfHw++; // 2016
-        if (::LOCATION_CAPABILITIES_DEBUG_DATA_BIT & mask) {
+        if (LOCATION_CAPABILITIES_DEBUG_DATA_BIT & mask) {
             yearOfHw++; // 2017
-            if (::LOCATION_CAPABILITIES_CONSTELLATION_ENABLEMENT_BIT & mask ||
-                ::LOCATION_CAPABILITIES_AGPM_BIT & mask) {
+            if (LOCATION_CAPABILITIES_CONSTELLATION_ENABLEMENT_BIT & mask ||
+                LOCATION_CAPABILITIES_AGPM_BIT & mask) {
                 yearOfHw++; // 2018
-                if (::LOCATION_CAPABILITIES_PRIVACY_BIT & mask) {
+                if (LOCATION_CAPABILITIES_PRIVACY_BIT & mask) {
                     yearOfHw++; // 2019
-                    if (::LOCATION_CAPABILITIES_MEASUREMENTS_CORRECTION_BIT & mask) {
+                    if (LOCATION_CAPABILITIES_MEASUREMENTS_CORRECTION_BIT & mask) {
                         yearOfHw++; // 2020
                     }
                 }
@@ -1483,6 +1483,9 @@ LocationClientApiImpl::LocationClientApiImpl(capabilitiesCallback capabilitiescb
         return;
     }
 
+    LOC_LOGd("create sender socket %s", mSocketName);
+    locUtilWaitForDir(SOCKET_LOC_CLIENT_DIR);
+
     // establish an udp ipc sender to the hal daemon
     mIpcSender = LocIpc::getLocIpcLocalSender(SOCKET_TO_LOCATION_HAL_DAEMON);
     if (nullptr == mIpcSender) {
@@ -1966,6 +1969,9 @@ uint32_t LocationClientApiImpl::startBatchingSync(BatchingOptions& batchOptions)
     if (!mHalRegistered) {
         mBatchingOptions = batchOptions;
         LOC_LOGe(">>> startBatching - Not registered yet");
+        if (mLocationCbs.responseCb) {
+            mLocationCbs.responseCb(::LOCATION_ERROR_SYSTEM_NOT_READY, 0);
+        }
         return 0;
     }
     if (LOCATION_CLIENT_SESSION_ID_INVALID == mSessionId) {
@@ -2907,7 +2913,6 @@ void LocationClientApiImpl::pingTest(PingTestCb pingTestCallback) {
 
 void LocationClientApiImpl::invokePositionSessionResponseCb(LocationError errCode) {
     if (mPositionSessionResponseCbPending) {
-        parseLocationError(errCode);
         if (nullptr != mLocationCbs.responseCb) {
             mLocationCbs.responseCb(errCode, 0);
         }
