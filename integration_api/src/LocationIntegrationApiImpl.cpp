@@ -1236,7 +1236,7 @@ uint32_t LocationIntegrationApiImpl::configXtraParams(bool enable,
             LocConfigXtraReqMsg msg(mApiImpl->mSocketName, mEnable, mConfigParams,
                                     &mApiImpl->mPbufMsgConv);
             if (msg.serializeToProtobuf(pbStr)) {
-                mApiImpl->sendConfigMsgToHalDaemon(CONFIG_XTRA_PARAMS, pbStr.c_str());
+                mApiImpl->sendConfigMsgToHalDaemon(CONFIG_XTRA_PARAMS, pbStr);
             } else {
                 LOC_LOGe("serializeToProtobuf failed");
             }
