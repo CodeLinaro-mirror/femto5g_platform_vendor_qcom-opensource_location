@@ -1656,13 +1656,13 @@ void LocationClientApiImpl::updateCallbacksSync(LocationCallbacks& callbacks) {
     }
 }
 
-uint32_t LocationClientApiImpl::startTracking(TrackingOptions& option) {
+uint32_t LocationClientApiImpl::startTracking(const TrackingOptions& option) {
     struct StartTrackingReq : public LocMsg {
         StartTrackingReq(LocationClientApiImpl* apiImpl, const TrackingOptions& option) :
                 mApiImpl(apiImpl), mOptions(option) {}
         virtual ~StartTrackingReq() {}
         void proc() const {
-            mApiImpl->startTrackingSync(const_cast<TrackingOptions&>(mOptions));
+            mApiImpl->startTrackingSync(mOptions);
         }
 
         LocationClientApiImpl* mApiImpl;
@@ -1672,7 +1672,7 @@ uint32_t LocationClientApiImpl::startTracking(TrackingOptions& option) {
     return mClientId;
 }
 
-uint32_t LocationClientApiImpl::startTrackingSync(TrackingOptions& option) {
+uint32_t LocationClientApiImpl::startTrackingSync(const TrackingOptions& option) {
     // check if option is updated
     bool isOptionUpdated = false;
 
@@ -1714,7 +1714,7 @@ uint32_t LocationClientApiImpl::startTrackingSync(TrackingOptions& option) {
     } else if (isOptionUpdated) {
         // update a tracking session, mLocationOptions
         // will be updated in updateTrackingOptionsSync
-        updateTrackingOptionsSync(const_cast<TrackingOptions&>(option), true);
+        updateTrackingOptionsSync(option, true);
     } else {
         LOC_LOGd(">>> StartTrackingReq - no change in option");
         invokePositionSessionResponseCb(LOCATION_ERROR_SUCCESS);
@@ -1724,7 +1724,7 @@ uint32_t LocationClientApiImpl::startTrackingSync(TrackingOptions& option) {
 
 // updateTrackingOptions is called from Android HIDL clients and must be purely used
 // to only update parameters of an ongoing session, and not start a new session.
-void LocationClientApiImpl::updateTrackingOptions(uint32_t id, TrackingOptions& options) {
+void LocationClientApiImpl::updateTrackingOptions(uint32_t id, const TrackingOptions& options) {
     struct UpdateTrackingReq : public LocMsg {
         UpdateTrackingReq(LocationClientApiImpl* apiImpl, const TrackingOptions& options) :
                 mApiImpl(apiImpl), mUpdatedOptions(options) {}
@@ -1895,7 +1895,7 @@ void LocationClientApiImpl::clearSubscriptions(LocationCallbackType cbTypeToClea
     }
 }
 
-void LocationClientApiImpl::updateTrackingOptionsSync(TrackingOptions& option,
+void LocationClientApiImpl::updateTrackingOptionsSync(const TrackingOptions& option,
         bool clearSubscriptions) {
 
     LOC_LOGd(">>> updateTrackingOptionsSync,sessionId=%d, "
@@ -1948,13 +1948,13 @@ void LocationClientApiImpl::updateTrackingOptionsSync(TrackingOptions& option,
     mLocationOptions = option;
 }
 
-uint32_t LocationClientApiImpl::startBatching(BatchingOptions& batchOptions) {
+uint32_t LocationClientApiImpl::startBatching(const BatchingOptions& batchOptions) {
     struct StartBatchingReq : public LocMsg {
         StartBatchingReq(LocationClientApiImpl* apiImpl, const BatchingOptions& batchOptions) :
                 mApiImpl(apiImpl), mBatchOptions(batchOptions) {}
         virtual ~StartBatchingReq() {}
         void proc() const {
-            mApiImpl->startBatchingSync(const_cast<BatchingOptions&>(mBatchOptions));
+            mApiImpl->startBatchingSync(mBatchOptions);
         }
 
         LocationClientApiImpl* mApiImpl;
@@ -1965,7 +1965,7 @@ uint32_t LocationClientApiImpl::startBatching(BatchingOptions& batchOptions) {
 }
 
 //Batching
-uint32_t LocationClientApiImpl::startBatchingSync(BatchingOptions& batchOptions) {
+uint32_t LocationClientApiImpl::startBatchingSync(const BatchingOptions& batchOptions) {
     if (!mHalRegistered) {
         mBatchingOptions = batchOptions;
         LOC_LOGe(">>> startBatching - Not registered yet");
@@ -1992,7 +1992,7 @@ uint32_t LocationClientApiImpl::startBatchingSync(BatchingOptions& batchOptions)
             LOC_LOGe("LocAPIStartBatchingReqMsg serializeToProtobuf failed");
         }
     } else {
-        updateBatchingOptions(mBatchingId, const_cast<BatchingOptions&>(batchOptions));
+        updateBatchingOptions(mBatchingId, batchOptions);
     }
     return 0;
 }
@@ -2056,7 +2056,8 @@ void LocationClientApiImpl::stopBatching(uint32_t id) {
     mMsgTask.sendMsg(new (nothrow) StopBatchingReq(this));
 }
 
-void LocationClientApiImpl::updateBatchingOptions(uint32_t id, BatchingOptions& batchOptions) {
+void LocationClientApiImpl::updateBatchingOptions(uint32_t id,
+        const BatchingOptions& batchOptions) {
 
     if ((mBatchingOptions.minInterval != batchOptions.minInterval) ||
             (mBatchingOptions.minDistance != batchOptions.minDistance) ||
