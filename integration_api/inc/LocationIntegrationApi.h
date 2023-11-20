@@ -981,7 +981,30 @@ public:
         the constellation configuration to device default. <br/>
 
         Empty blacklistedSvList will be interpreted as to not
-        disable any constellation and to not blacklist any SV. <br/>
+        disable any constellation and not to blacklist any SV, which
+        means all SVs from all constellations are allowed to be used
+        by SPE. <br/>
+
+        For example, if client wants to disable data demod for all
+        SBAS SVs, client need to specify SBAS to be blacklisted by
+        adding (GNSS_CONSTELLATION_TYPE_SBAS, 0) to param
+        blacklistedSvList. Another example, if client wants to
+        enable only GPS and GAL constellations to be used by SPE,
+        then client needs to specify all the other constellations
+        defined in GnssConstellationType as to be blacklisted, this
+        means adding (GNSS_CONSTELLATION_TYPE_QZSS, 0),
+        (GNSS_CONSTELLATION_TYPE_BEIDOU, 0),
+        (GNSS_CONSTELLATION_TYPE_SBAS, 0) and
+        (GNSS_CONSTELLATION_TYPE_NAVIC, 0) to param
+        blacklistedSvList. <br/>
+
+        For blacklist one or more SVs in one constellation,
+        if client only wants to disale sv id 1 from GPS
+        constellation, then client needs to add
+        (GNSS_CONSTELLATION_TYPE_GPS, 1) to param blacklistedSvList.
+        By doing this, all other SVs in GPS constellation whose SV
+        id is not 1 and all SVs in non-GPS consteallations are
+        allowed to be used by SPE. <br/>
 
         @return true, if request is successfully processed as
                 requested. When returning true, LocConfigCb() will
