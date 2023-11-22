@@ -11187,6 +11187,7 @@ LocApiV02::stopTimeBasedTracking(LocApiResponse* adapterResponse)
     sendMsg(new LocApiMsg([this, adapterResponse] () {
 
     LOC_LOGD("stopTimeBasedTracking enter");
+    loc_boot_kpi_marker("L - LocApiV02 stop Fix session");
     LocationError err = LOCATION_ERROR_SUCCESS;
 
     locClientStatusEnumType status;
