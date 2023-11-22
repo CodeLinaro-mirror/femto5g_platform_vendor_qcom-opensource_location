@@ -1483,6 +1483,9 @@ LocationClientApiImpl::LocationClientApiImpl(capabilitiesCallback capabilitiescb
         return;
     }
 
+    LOC_LOGd("create sender socket %s", mSocketName);
+    locUtilWaitForDir(SOCKET_LOC_CLIENT_DIR);
+
     // establish an udp ipc sender to the hal daemon
     mIpcSender = LocIpc::getLocIpcLocalSender(SOCKET_TO_LOCATION_HAL_DAEMON);
     if (nullptr == mIpcSender) {
