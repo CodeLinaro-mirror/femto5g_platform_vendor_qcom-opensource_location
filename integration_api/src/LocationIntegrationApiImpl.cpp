@@ -71,6 +71,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <log_util.h>
 #include <gps_extended_c.h>
 #include <inttypes.h>
+#include <loc_misc_utils.h>
 
 static uint32_t sXtraTestEnabled = 0;
 static uint32_t sSleepTime = 800000;
@@ -338,6 +339,8 @@ LocationIntegrationApiImpl::LocationIntegrationApiImpl(LocIntegrationCbs& integr
     }
 
     LOC_LOGd("create sender socket: %s", mSocketName);
+    locUtilWaitForDir(SOCKET_LOC_CLIENT_DIR);
+
     // establish an ipc sender to the hal daemon
     mIpcSender = LocIpc::getLocIpcLocalSender(SOCKET_TO_LOCATION_HAL_DAEMON);
     if (mIpcSender == nullptr) {

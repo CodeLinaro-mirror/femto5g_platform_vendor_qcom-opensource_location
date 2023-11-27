@@ -1483,6 +1483,9 @@ LocationClientApiImpl::LocationClientApiImpl(capabilitiesCallback capabilitiescb
         return;
     }
 
+    LOC_LOGd("create sender socket %s", mSocketName);
+    locUtilWaitForDir(SOCKET_LOC_CLIENT_DIR);
+
     // establish an udp ipc sender to the hal daemon
     mIpcSender = LocIpc::getLocIpcLocalSender(SOCKET_TO_LOCATION_HAL_DAEMON);
     if (nullptr == mIpcSender) {
@@ -1966,6 +1969,9 @@ uint32_t LocationClientApiImpl::startBatchingSync(BatchingOptions& batchOptions)
     if (!mHalRegistered) {
         mBatchingOptions = batchOptions;
         LOC_LOGe(">>> startBatching - Not registered yet");
+        if (mLocationCbs.responseCb) {
+            mLocationCbs.responseCb(::LOCATION_ERROR_SYSTEM_NOT_READY, 0);
+        }
         return 0;
     }
     if (LOCATION_CLIENT_SESSION_ID_INVALID == mSessionId) {
@@ -2907,7 +2913,6 @@ void LocationClientApiImpl::pingTest(PingTestCb pingTestCallback) {
 
 void LocationClientApiImpl::invokePositionSessionResponseCb(LocationError errCode) {
     if (mPositionSessionResponseCbPending) {
-        parseLocationError(errCode);
         if (nullptr != mLocationCbs.responseCb) {
             mLocationCbs.responseCb(errCode, 0);
         }

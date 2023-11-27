@@ -7175,8 +7175,6 @@ int LocApiV02 :: convertGnssClock (GnssMeasurementsClock& clock,
     static uint32_t oldDiscCount = 0;
     static uint32_t newDiscCount = 0;
     static uint32_t localDiscCount = 0;
-    static uint32_t sessionStartRefFCount = 0;
-    static uint32_t sessionStartDiscCount = 0;
     int msInWeek = -1;
 
     // size
@@ -7185,40 +7183,32 @@ int LocApiV02 :: convertGnssClock (GnssMeasurementsClock& clock,
     // flag initiation
     GnssMeasurementsClockFlagsMask flags = 0;
 
-    if (gnss_measurement_info.systemTimeExt_valid &&
-        gnss_measurement_info.numClockResets_valid) {
+    if (gnss_measurement_info.systemTimeExt_valid && gnss_measurement_info.numClockResets_valid) {
         newRefFCount = gnss_measurement_info.systemTimeExt.refFCount;
         newDiscCount = gnss_measurement_info.numClockResets;
-        LOC_LOGa("mFirstMeasurementOfSessionReceived %d, session start: ref cnt %d, disc count %d,"
+        LOC_LOGa("mFirstMeasurementOfSessionReceived %d,"
                  "new: ref cnt %d, disc count %d, old: ref cnt %d, disc count %d",
-                 mFirstMeasurementOfSessionReceived, sessionStartRefFCount, sessionStartDiscCount,
+                 mFirstMeasurementOfSessionReceived,
                  newRefFCount, newDiscCount, oldRefFCount, oldDiscCount);
 
-        if ((false == mFirstMeasurementOfSessionReceived) ||
-            (oldDiscCount != newDiscCount) ||
-            (newRefFCount <= oldRefFCount))
-        {
-            if (false == mFirstMeasurementOfSessionReceived) {
-                mFirstMeasurementOfSessionReceived = true;
-                sessionStartRefFCount = newRefFCount;
-                sessionStartDiscCount = newDiscCount;
-                mIsFullTracking = true;
-            } else {
-                if ((newDiscCount != sessionStartDiscCount) ||
-                    (newRefFCount <= sessionStartRefFCount)) {
-                    mIsFullTracking = false;
-                } else {
-                    mIsFullTracking = true;
-                }
-            }
-            // do not increment in full power mode
-            if (GNSS_POWER_MODE_M1 != mPowerMode) {
-                localDiscCount++;
-            }
-        } else {
-            mIsFullTracking = true;
+        mIsFullTracking = true;
+        if ((true == mFirstMeasurementOfSessionReceived) &&
+                (newDiscCount != oldDiscCount)) {
+            mIsFullTracking = false;
         }
 
+        // refFCount roll over, increment local clock dist count to signal this
+        if (newRefFCount <= oldRefFCount) {
+           localDiscCount++;
+        } else if ((false == mFirstMeasurementOfSessionReceived) ||
+                   (newDiscCount != oldDiscCount)) {
+            // do not increment in full power mode
+           if (GNSS_POWER_MODE_M1 != mPowerMode) {
+               localDiscCount++;
+           }
+        }
+
+        mFirstMeasurementOfSessionReceived = true;
         oldDiscCount = newDiscCount;
         oldRefFCount = newRefFCount;
 
@@ -11025,6 +11015,7 @@ LocApiV02::stopTimeBasedTracking(LocApiResponse* adapterResponse)
     sendMsg(new LocApiMsg([this, adapterResponse] () {
 
     LOC_LOGD("stopTimeBasedTracking enter");
+    loc_boot_kpi_marker("L - LocApiV02 stop Fix session");
     LocationError err = LOCATION_ERROR_SUCCESS;
 
     locClientStatusEnumType status;
