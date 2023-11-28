@@ -339,7 +339,7 @@ LocationIntegrationApiImpl::LocationIntegrationApiImpl(LocIntegrationCbs& integr
     }
 
     LOC_LOGd("create sender socket: %s", mSocketName);
-    locUtilWaitForDir(SOCKET_LOC_CLIENT_DIR);
+    locUtilWaitForDir(SOCKET_LOC_CLIENT_DIR, "gps");
 
     // establish an ipc sender to the hal daemon
     mIpcSender = LocIpc::getLocIpcLocalSender(SOCKET_TO_LOCATION_HAL_DAEMON);
