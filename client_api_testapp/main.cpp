@@ -27,9 +27,9 @@
  *
  */
 /*
-Changes from Qualcomm Innovation Center are provided under the following license:
+Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
 
-Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -99,6 +99,7 @@ static uint32_t numGnssSvCb = 0;
 static uint32_t numGnssNmeaCb = 0;
 static uint32_t numDataCb         = 0;
 static uint32_t numGnssMeasurementsCb = 0;
+static uint32_t numGnssEphemerisCb = 0;
 
 static LocationClientApi* pLcaClient = nullptr;
 static location_integration::LocationIntegrationApi* pIntClient = nullptr;
@@ -114,6 +115,7 @@ enum ReportType {
     DATA_REPORT     = 1 << 3,
     MEAS_REPORT     = 1 << 4,
     NHZ_MEAS_REPORT = 1 << 5,
+    EPHEMERIS_REPORT   = 1 << 8,
 };
 
 enum TrackingSessionType {
@@ -353,6 +355,12 @@ static void onGetSecondaryBandConfigCb(const ConstellationSet& secondaryBandDisa
     for (GnssConstellationType disabledSecondaryBand : secondaryBandDisablementSet) {
         printf("<<< disabled secondary band for constellation %d\n", disabledSecondaryBand);
     }
+}
+
+static void onGnssEphemerisCb(const location_client::GnssEphemeris& ephInfo) {
+    numGnssEphemerisCb++;
+    printf("<<< onGnssEphemerisCb  cnt=%u Constellation=%d \n", numGnssEphemerisCb,
+            ephInfo.gnssConstellation);
 }
 
 static void printHelp() {
@@ -634,7 +642,7 @@ static bool checkForAutoStart(int argc, char *argv[]) {
     uint32_t aidingDataMask = 0;
     int interval = 100;
     LocReqEngineTypeMask reqEngMask = (LocReqEngineTypeMask) 0x7;
-    uint32_t reportType = 0xff;
+    uint32_t reportType = 0x1fd;
     TrackingSessionType trackingType = NO_TRACKING;
 
     //Specifying the expected options
@@ -775,6 +783,10 @@ static bool checkForAutoStart(int argc, char *argv[]) {
                     reportcbs.gnssNHzMeasurementsCallback =
                             GnssMeasurementsCb(onGnssMeasurementsCb);
                 }
+                if (reportType & EPHEMERIS_REPORT) {
+                    reportcbs.gnssEphReportCallback =
+                            GnssEphReportCb(onGnssEphemerisCb);
+                }
                 pLcaClient->startPositionSession(interval, reportcbs, onResponseCb);
             } else if (reqEngMask != 0) {
                 EngineReportCbs reportcbs;
@@ -796,6 +808,10 @@ static bool checkForAutoStart(int argc, char *argv[]) {
                 if (reportType & NHZ_MEAS_REPORT) {
                     reportcbs.gnssNHzMeasurementsCallback =
                             GnssMeasurementsCb(onGnssMeasurementsCb);
+                }
+                if (reportType & EPHEMERIS_REPORT) {
+                    reportcbs.gnssEphReportCallback =
+                            GnssEphReportCb(onGnssEphemerisCb);
                 }
                 pLcaClient->startPositionSession(interval, reqEngMask,
                                                        reportcbs, onResponseCb);
@@ -830,7 +846,8 @@ int main(int argc, char *argv[]) {
     reportcbs.gnssLocationCallback = GnssLocationCb(onGnssLocationCb);
     reportcbs.gnssSvCallback = GnssSvCb(onGnssSvCb);
     reportcbs.gnssNmeaCallback = GnssNmeaCb(onGnssNmeaCb);
-
+    reportcbs.gnssEphReportCallback =
+                            GnssEphReportCb(onGnssEphemerisCb);
     // callbacks
     EngineReportCbs enginecbs;
     enginecbs.engLocationsCallback = EngineLocationsCb(onEngLocationsCb);
@@ -839,6 +856,8 @@ int main(int argc, char *argv[]) {
     enginecbs.gnssMeasurementsCallback = GnssMeasurementsCb(onGnssMeasurementsCb);
     enginecbs.gnssNHzMeasurementsCallback = GnssMeasurementsCb(onGnssMeasurementsCb);
     enginecbs.gnssDataCallback = GnssDataCb(onGnssDataCb);
+    enginecbs.gnssEphReportCallback =
+                            GnssEphReportCb(onGnssEphemerisCb);
 
     // create location integratin API
     LocIntegrationCbs intCbs;
