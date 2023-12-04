@@ -11062,7 +11062,7 @@ void LocApiV02::convertQmiBlacklistedSvConfigToGnssConfig(
 }
 
 void LocApiV02::configPrecisePositioning(uint32_t featureId, bool enable,
-        std::string appHash, LocApiResponse* adapterResponse) {
+        const std::string& appHash, LocApiResponse* adapterResponse) {
     sendMsg(new LocApiMsg([this, featureId, enable, appHash, adapterResponse] () {
         LocationError err = LOCATION_ERROR_SUCCESS;
 
