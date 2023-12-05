@@ -11,4 +11,10 @@ PRODUCT_PACKAGES += libloc_socket
 PRODUCT_PACKAGES += liblocation_api_msg
 PRODUCT_PACKAGES += liblocation_integration_api
 PRODUCT_PACKAGES += liblocation_client_api
+
+PRODUCT_PACKAGES += commonapi4someip.ini
+PRODUCT_PACKAGES += vsomeip-client.json
+PRODUCT_PACKAGES += libLocIdlAPI-proxy
+PRODUCT_PACKAGES += libLocIdlAPI-someip
+PRODUCT_PACKAGES += LocIdlAPIClient
 endif#BOARD_VENDOR_QCOM_GPS_LOC_API_HARDWARE

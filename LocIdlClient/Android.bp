@@ -1,0 +1,106 @@
+prebuilt_etc {
+    name: "commonapi4someip.ini",
+    vendor: true,
+    src: "src/commonapi4someip.ini",
+}
+
+prebuilt_etc {
+    name: "vsomeip-client.json",
+    vendor: true,
+    src: "src/vsomeip-client.json",
+}
+
+gen_core_stub_srcs = [
+    "src-gen/core/v0/com/qualcomm/qti/location/*Stub*.cpp"
+]
+gen_core_proxy_srcs = [
+    "src-gen/core/v0/com/qualcomm/qti/location/*Proxy.cpp"
+]
+
+gen_someip_srcs = [
+    "src-gen/someip/v0/com/qualcomm/qti/location/*.cpp"
+]
+
+cc_defaults {
+    name: "locSomeip_defaults",
+    vendor: true,
+
+    cppflags: [
+        "-std=c++11",
+        "-fexceptions",
+        "-Wno-attributes",
+        "-Wno-unused-variable",
+        "-Wno-unused-parameter"
+    ],
+
+    shared_libs: [
+        "libvsomeip3",
+        "libvsomeip3-cfg",
+        "libvsomeip3-e2e",
+        "libvsomeip3-sd",
+        "libCommonAPI-SomeIP",
+        "libCommonAPI",
+        "liblog",
+        "libdl",
+    ],
+
+    rtti: true,
+}
+
+cc_library_headers {
+    name: "libLocIdlAPI-proxy_headers",
+    export_include_dirs: [
+       "src-gen/someip",
+       "src-gen/core",
+    ],
+    vendor: true,
+}
+
+
+cc_library_shared {
+    name: "libLocIdlAPI-someip",
+    vendor: true,
+    srcs: gen_someip_srcs,
+    defaults: [
+        "locSomeip_defaults"
+    ],
+    local_include_dirs: [
+       "src-gen/someip",
+       "src-gen/core",
+    ]
+}
+
+cc_library_shared {
+    name: "libLocIdlAPI-proxy",
+    vendor: true,
+    srcs: gen_core_proxy_srcs,
+    defaults: [
+        "locSomeip_defaults"
+    ],
+    local_include_dirs: [
+       "src-gen/someip",
+       "src-gen/core",
+    ]
+}
+
+cc_binary {
+    name: "LocIdlAPIClient",
+    defaults: ["locSomeip_defaults"],
+
+    srcs: [
+        "src/LocIdlAPIClient.cpp",
+    ],
+    local_include_dirs: [
+       "src",
+    ],
+    shared_libs: [
+       "libLocIdlAPI-someip",
+       "libLocIdlAPI-proxy",
+    ],
+
+    header_libs: [
+       "libgptp_headers",
+       "libLocIdlAPI-proxy_headers",
+    ],
+}
+
