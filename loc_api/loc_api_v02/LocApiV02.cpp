@@ -87,6 +87,10 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <loc_cfg.h>
 #include <LocContext.h>
 
+#ifdef PTP_SUPPORTED
+#include <gptp_helper.h>
+#endif
+
 using namespace std;
 using namespace loc_core;
 
@@ -120,6 +124,7 @@ using namespace loc_core;
 #define WEEK_MSECS              (60*60*24*7*1000LL)
 #define DAY_MSECS               (60*60*24*1000LL)
 #define NSEC_IN_MSEC            (1000000LL)
+#define MSEC_IN_ONE_SEC         (1000ULL)
 
 /* Num days elapsed since GLONASS started from GPS start day 1980->1996 */
 #define GPS_GLONASS_DAYS_DIFF    5838
@@ -363,7 +368,8 @@ LocApiV02 :: LocApiV02(LOC_API_ADAPTER_EVENT_MASK_T exMask,
     mPlatformPowerState(eQMI_LOC_POWER_STATE_UNKNOWN_V02),
     mIsFullTracking(true),
     mPreferredSignalType(QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L1CA_V02),
-    mQesdkFeatureMask(0)
+    mQesdkFeatureMask(0),
+    mIsGptpInitialized(false)
 {
   // initialize loc_sync_req interface
   loc_sync_req_init();
@@ -391,6 +397,14 @@ LocApiV02 :: ~LocApiV02()
         free(mGnssMeasurements);
         mGnssMeasurements = nullptr;
     }
+
+#ifdef PTP_SUPPORTED
+         if (mIsGptpInitialized) {
+             mIsGptpInitialized = false;
+             gptpDeinit();
+         }
+#endif
+
 }
 
 LocApiBase* getLocApi(LOC_API_ADAPTER_EVENT_MASK_T exMask,
@@ -587,7 +601,6 @@ LocApiV02 :: open(LOC_API_ADAPTER_EVENT_MASK_T mask)
     mMask = newMask;
     registerEventMask();
   }
-
   LOC_LOGd("clientHandle = %p Exit mMask: 0x%" PRIx64 " mQmiMask: 0x%" PRIx64 "",
            clientHandle, mMask, mQmiMask);
 
@@ -5423,13 +5436,29 @@ void LocApiV02::reportGnssMeasurementData(
         if (gnss_measurement_report_ptr.refCountTicks_valid &&
             gnss_measurement_report_ptr.refCountTicksUnc_valid) {
             /* deal with Qtimer for ElapsedRealTimeNanos */
-            elapsedRealTime = ElapsedRealtimeEstimator::getElapsedRealtimeQtimer(
+            elapsedRealTime = RealtimeEstimator::getElapsedRealtimeQtimer(
                     gnss_measurement_report_ptr.refCountTicks);
 
             /* Uncertainty on HLOS time is 0, so the uncertainty of the difference
             is the uncertainty of the Qtimer in the modem
             Note that gnss_measurement_report_ptr.refCountTicksUncis in msec */
             unc = gnss_measurement_report_ptr.refCountTicksUnc * 1000000;
+#ifdef PTP_SUPPORTED
+            uint64_t elapsedgPTPTime = 0;
+            /* deal with gPTP time */
+            /* Fill PTP time corresponding to Time of generation of meas packet */
+            if (mIsGptpInitialized) {
+                bool gotMPQTickPtpTime = gptpGetPtpTimeFromQTimeTickCount(&elapsedgPTPTime,
+                        gnss_measurement_report_ptr.refCountTicks);
+                if (gotMPQTickPtpTime) {
+                    mGnssMeasurements->gnssMeasNotification.clock.flags |=
+                            GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_GPTP_TIME_BIT;
+                    mGnssMeasurements->gnssMeasNotification.clock.elapsedgPTPTime =
+                            elapsedgPTPTime;
+                    mGnssMeasurements->gnssMeasNotification.clock.elapsedgPTPTimeUnc = unc;
+                }
+            }
+#endif
         } else {
             //If Qtimer isn't valid, estimate the elapsedRealTime
             GnssMeasurementsNotification& in = mGnssMeasurements->gnssMeasNotification;
@@ -10784,6 +10813,17 @@ LocApiV02::startTimeBasedTracking(const TrackingOptions& options, LocApiResponse
         adapterResponse->returnToSender(err);
     }
     }));
+
+#ifdef PTP_SUPPORTED
+    if (false == mIsGptpInitialized) {
+        if (gptpInit()) {
+            mIsGptpInitialized = true;
+            LOC_LOGd(" GPTP initialization success ");
+        } else {
+            LOC_LOGe(" GPTP initialization failed ");
+        }
+    }
+#endif
 }
 
 void LocApiV02::configConstellationMultiBand(const GnssSvTypeConfig& secondaryBandConfig,

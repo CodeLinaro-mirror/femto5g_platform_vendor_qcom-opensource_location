@@ -228,9 +228,11 @@ private:
   qmiLocGnssSignalTypeMaskT_v02 mPreferredSignalType;
   referenceSignalTypeForIsb mReferenceSignalTypeForIsb;
   ModemGnssQesdkFeatureMask mQesdkFeatureMask;
+  // GPTP inititialization
+  bool mIsGptpInitialized;
 
   // Below two member variables are for elapsedRealTime calculation
-  ElapsedRealtimeEstimator mMeasElapsedRealTimeCal;
+  RealtimeEstimator mMeasElapsedRealTimeCal;
   GnssMeasurementsNotification m1HzMeasurementsNotify;
 
   /* Convert event mask from loc eng to loc_api_v02 format */
