@@ -859,6 +859,16 @@ GnssLocation LocationClientApiImpl::parseLocationInfo(
         flags |= LCA_GNSS_LOCATION_INFO_DGNSS_STATION_ID_BIT;
     }
 
+    if (LDT_GNSS_LOCATION_INFO_GPTP_TIME_BIT & halLocationInfo.flags) {
+        flags |= LCA_GNSS_LOCATION_INFO_GPTP_TIME_BIT;
+        locationInfo.elapsedgPTPTime  =  halLocationInfo.elapsedgPTPTime;
+    }
+
+    if (LDT_GNSS_LOCATION_INFO_GPTP_TIME_UNC_BIT & halLocationInfo.flags) {
+        flags |= LCA_GNSS_LOCATION_INFO_GPTP_TIME_UNC_BIT;
+        locationInfo.elapsedgPTPTimeUnc =  halLocationInfo.elapsedgPTPTimeUnc;
+    }
+
     locationInfo.gnssInfoFlags = (GnssLocationInfoFlagMask)flags;
     locationInfo.altitudeMeanSeaLevel = halLocationInfo.altitudeMeanSeaLevel;
     locationInfo.pdop = halLocationInfo.pdop;
@@ -1123,6 +1133,10 @@ GnssMeasurements LocationClientApiImpl::parseGnssMeasurements(
     gnssMeasurements.clock.driftUncertaintyNsps = halGnssMeasurements.clock.driftUncertaintyNsps;
     gnssMeasurements.clock.hwClockDiscontinuityCount =
             halGnssMeasurements.clock.hwClockDiscontinuityCount;
+    gnssMeasurements.clock.elapsedRealTime = halGnssMeasurements.clock.elapsedRealTime;
+    gnssMeasurements.clock.elapsedRealTimeUnc = halGnssMeasurements.clock.elapsedRealTimeUnc;
+    gnssMeasurements.clock.elapsedgPTPTime = halGnssMeasurements.clock.elapsedgPTPTime;
+    gnssMeasurements.clock.elapsedgPTPTimeUnc = halGnssMeasurements.clock.elapsedgPTPTimeUnc;
     gnssMeasurements.isNhz = halGnssMeasurements.isNhz;
 
     return gnssMeasurements;
