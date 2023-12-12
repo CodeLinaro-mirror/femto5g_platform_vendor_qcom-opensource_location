@@ -112,7 +112,7 @@ void LocHalDaemonClientHandler::updateSubscription(uint32_t mask) {
     // batching
     if (mSubscriptionMask & E_LOC_CB_BATCHING_BIT) {
         mCallbacks.batchingCb = [this](size_t count, Location* location,
-                BatchingOptions batchingOptions) {
+                const BatchingOptions& batchingOptions) {
             onBatchingCb(count, location, batchingOptions);
         };
     } else {
@@ -120,7 +120,7 @@ void LocHalDaemonClientHandler::updateSubscription(uint32_t mask) {
     }
     // batchingStatus
     if (mSubscriptionMask & E_LOC_CB_BATCHING_STATUS_BIT) {
-        mCallbacks.batchingStatusCb = [this](BatchingStatusInfo batchingStatus,
+        mCallbacks.batchingStatusCb = [this](const BatchingStatusInfo& batchingStatus,
                 std::list<uint32_t>& listOfCompletedTrips) {
             onBatchingStatusCb(batchingStatus, listOfCompletedTrips);
         };
@@ -167,7 +167,7 @@ void LocHalDaemonClientHandler::updateSubscription(uint32_t mask) {
 
     // nmea
     if (mSubscriptionMask & E_LOC_CB_GNSS_NMEA_BIT) {
-        mCallbacks.gnssNmeaCb = [this](GnssNmeaNotification notification) {
+        mCallbacks.gnssNmeaCb = [this](const GnssNmeaNotification& notification) {
             onGnssNmeaCb(notification);
         };
     } else {
@@ -176,7 +176,7 @@ void LocHalDaemonClientHandler::updateSubscription(uint32_t mask) {
 
    // engine nmea
     if (mSubscriptionMask & E_LOC_CB_ENGINE_NMEA_BIT) {
-        mCallbacks.engineNmeaCb = [this](GnssNmeaNotification notification) {
+        mCallbacks.engineNmeaCb = [this](const GnssNmeaNotification& notification) {
             onEngineNmeaCb(notification);
         };
     } else {
@@ -214,7 +214,7 @@ void LocHalDaemonClientHandler::updateSubscription(uint32_t mask) {
 
     // system info
     if (mSubscriptionMask & E_LOC_CB_SYSTEM_INFO_BIT) {
-        mCallbacks.locationSystemInfoCb = [this](LocationSystemInfo notification) {
+        mCallbacks.locationSystemInfoCb = [this](const LocationSystemInfo& notification) {
             onLocationSystemInfoCb(notification);
         };
     } else {
@@ -447,7 +447,7 @@ void LocHalDaemonClientHandler::getAntennaInfo() {
     }
 }
 
-void LocHalDaemonClientHandler::cleanup() {
+void LocHalDaemonClientHandler::cleanup(bool forceRemove) {
     // please do not attempt to hold the lock, as the caller of this function
     // already holds the lock
 
@@ -455,7 +455,7 @@ void LocHalDaemonClientHandler::cleanup() {
     // remote client that is no longer reachable
     mIpcSender = nullptr;
 
-    if (0 != remove(mName.c_str())) {
+    if (forceRemove && 0 != remove(mName.c_str())) {
         LOC_LOGw("<-- failed to remove file %s error %s", mName.c_str(), strerror(errno));
     }
 
@@ -822,7 +822,7 @@ void LocHalDaemonClientHandler::onTrackingCb(const Location& location) {
 }
 
 void LocHalDaemonClientHandler::onBatchingCb(size_t count, Location* location,
-        BatchingOptions batchOptions) {
+        const BatchingOptions& batchOptions) {
     std::lock_guard<std::recursive_mutex> lock(LocationApiService::mMutex);
     LOC_LOGd("--< onBatchingCb, client name %s", mName.c_str());
 
@@ -854,7 +854,7 @@ void LocHalDaemonClientHandler::onBatchingCb(size_t count, Location* location,
     }
 }
 
-void LocHalDaemonClientHandler::onBatchingStatusCb(BatchingStatusInfo batchingStatus,
+void LocHalDaemonClientHandler::onBatchingStatusCb(const BatchingStatusInfo& batchingStatus,
                 std::list<uint32_t>& listOfCompletedTrips) {
     std::lock_guard<std::recursive_mutex> lock(LocationApiService::mMutex);
     LOC_LOGd("--< onBatchingStatusCb");
@@ -1024,7 +1024,7 @@ void LocHalDaemonClientHandler::onGnssSvCb(const GnssSvNotification &notificatio
     }
 }
 
-void LocHalDaemonClientHandler::onGnssNmeaCb(GnssNmeaNotification notification) {
+void LocHalDaemonClientHandler::onGnssNmeaCb(const GnssNmeaNotification& notification) {
 
     std::lock_guard<std::recursive_mutex> lock(LocationApiService::mMutex);
 
@@ -1062,7 +1062,7 @@ void LocHalDaemonClientHandler::onGnssNmeaCb(GnssNmeaNotification notification) 
     }
 }
 
-void LocHalDaemonClientHandler::onEngineNmeaCb(GnssNmeaNotification notification) {
+void LocHalDaemonClientHandler::onEngineNmeaCb(const GnssNmeaNotification& notification) {
 
     std::lock_guard<std::recursive_mutex> lock(LocationApiService::mMutex);
 
@@ -1165,7 +1165,7 @@ void LocHalDaemonClientHandler::onGnssMeasurementsCb(
     }
 }
 
-void LocHalDaemonClientHandler::onLocationSystemInfoCb(LocationSystemInfo notification) {
+void LocHalDaemonClientHandler::onLocationSystemInfoCb(const LocationSystemInfo& notification) {
 
     std::lock_guard<std::recursive_mutex> lock(LocationApiService::mMutex);
     LOC_LOGd("--< onLocationSystemInfoCb, client name %s, ipc valid %d, sub mask 0x%x",
