@@ -234,6 +234,9 @@ enum GnssLocationInfoFlagMask { // Recommend use LCAGnssLocationInfoFlagMask by 
     /** GnssLocation has valid GnssLocation::sprotectVertical.
      *  <br/> */
     GNSS_LOCATION_INFO_PROTECT_VERTICAL_BIT             = (1ULL<<38),
+    /** GnssLocation has valid GnssLocation::dgnssStationId.
+     *  <br/> */
+    GNSS_LOCATION_INFO_DGNSS_STATION_ID_BIT             = (1ULL<<39),
 };
 // DEPRECATION - BACKWARD COMPATIBILITY SECTION
 class Geofence;
@@ -1345,9 +1348,9 @@ enum LocSessionStatus {
  *  <br/>
  */
 struct GnssLocation : public Location {
-    /** Bitwise OR of GnssLocationInfoFlagMask for param
+    /** Bitwise OR of LCAGnssLocationInfoFlagMask for param
      *  validity. <br/>   */
-    GnssLocationInfoFlagMask gnssInfoFlags;
+    LCAGnssLocationInfoFlagMask gnssInfoFlags;
     /** Altitude wrt mean sea level, in unit of meters. <br/>   */
     float altitudeMeanSeaLevel;
     /** Position dilusion of precision, range: 0 (highest accuracy)
@@ -1492,7 +1495,7 @@ struct GnssLocation : public Location {
 
     /* Default constructor to initalize GnssLocation structure */
     inline GnssLocation() :
-            Location({}), gnssInfoFlags((GnssLocationInfoFlagMask)0),
+            Location({}), gnssInfoFlags(0),
             altitudeMeanSeaLevel(0.0f), pdop(0.0f), hdop(0.0f),
             vdop(0.0f), gdop(0.0f), tdop(0.0f), magneticDeviation(0.0f),
             horReliability(LOCATION_RELIABILITY_NOT_SET),
