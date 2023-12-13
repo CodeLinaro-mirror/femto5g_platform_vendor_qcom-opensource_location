@@ -754,7 +754,7 @@ GnssLocation LocationClientApiImpl::parseLocationInfo(
 
     GnssLocation locationInfo = {};
     parseLocation(halLocationInfo.location, locationInfo);
-    uint64_t flags = 0;
+    LCAGnssLocationInfoFlagMask flags = 0;
 
     if (LDT_GNSS_LOCATION_INFO_ALTITUDE_MEAN_SEA_LEVEL_BIT & halLocationInfo.flags) {
         flags |= LCA_GNSS_LOCATION_INFO_ALTITUDE_MEAN_SEA_LEVEL_BIT;
@@ -889,7 +889,7 @@ GnssLocation LocationClientApiImpl::parseLocationInfo(
         flags |= LCA_GNSS_LOCATION_INFO_DGNSS_STATION_ID_BIT;
     }
 
-    locationInfo.gnssInfoFlags = (GnssLocationInfoFlagMask)flags;
+    locationInfo.gnssInfoFlags = flags;
     locationInfo.altitudeMeanSeaLevel = halLocationInfo.altitudeMeanSeaLevel;
     locationInfo.pdop = halLocationInfo.pdop;
     locationInfo.hdop = halLocationInfo.hdop;
