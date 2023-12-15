@@ -25,6 +25,7 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
 /** Changes from Qualcomm Technologies, Inc. are provided under the following license:
  *  Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  *  SPDX-License-Identifier: BSD-3-Clause-Clear */
@@ -158,6 +159,24 @@ typedef struct {
     GnssMeasurementsCodeType codeType;
 } referenceSignalTypeForIsb;
 
+typedef struct {
+    /* bitwise OR of GnssMeasurementsClockFlagsBits */
+    GnssMeasurementsClockFlagsMask flags;
+    int64_t timeNs;
+    int64_t fullBiasNs;
+} GnssBasicClockInfo;
+
+typedef struct {
+    int16_t svId;
+    GnssSignalTypeMask gnssSignalType;
+} GnssBasicMeasurementsData;
+
+typedef struct {
+    /* clock info */
+    GnssBasicClockInfo clock;
+    std::vector<GnssBasicMeasurementsData> measurements;
+} GnssBasicMeasurementsInfo;
+
 /* This class derives from the LocApiBase class.
    The members of this class are responsible for converting
    the Loc API V02 data structures into Loc Adapter data structures.
@@ -192,6 +211,7 @@ private:
   bool mIsFullTracking;
   qmiLocGnssSignalTypeMaskT_v02 mPreferredSignalType;
   GnssMeasurementsNotification m1HzMeasurementsNotify;
+  GnssBasicMeasurementsInfo m1HzMeasurementsInfo;
 
   /* Convert event mask from loc eng to loc_api_v02 format */
   static locClientEventMaskType convertLocClientEventMask(LOC_API_ADAPTER_EVENT_MASK_T mask);
@@ -328,14 +348,14 @@ private:
 
   void reportSvMeasurementInternal();
 
-  inline void resetSvMeasurementReport() {
+  inline void resetSvMeasurementReport(){
       if (mGnssMeasurements) {
           memset(mGnssMeasurements, 0, sizeof(GnssMeasurements));
           mGnssMeasurements->size = sizeof(GnssMeasurements);
           mGnssMeasurements->gnssSvMeasurementSet.size = sizeof(GnssSvMeasurementSet);
           mGnssMeasurements->gnssSvMeasurementSet.isNhz = false;
           mGnssMeasurements->gnssSvMeasurementSet.svMeasSetHeader.size =
-               sizeof(GnssSvMeasurementHeader);
+              sizeof(GnssSvMeasurementHeader);
       }
       memset(&mTimeBiases, 0, sizeof(mTimeBiases));
       mMsInWeek = -1;
@@ -376,7 +396,7 @@ private:
                                  GnssSignalTypeMask gnssSignalTypeMask);
 
   bool isTOAValid(const qmiLocEventPositionReportIndMsgT_v02 *location_report_ptr,
-          const GnssMeasurementsNotification *pOneHzMeasurements);
+          const GnssBasicMeasurementsInfo *pOneHzMeasurements);
 
   void processGnssBandsSupportedInd(
             const qmiLocGnssBandsSupportedIndMsgT_v02* pGnssBandsSupportedIndMsg);
