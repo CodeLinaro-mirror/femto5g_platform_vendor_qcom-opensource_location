@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -376,7 +376,7 @@ LocApiV02 :: LocApiV02(LOC_API_ADAPTER_EVENT_MASK_T exMask,
   // initialize loc_sync_req interface
   loc_sync_req_init();
   mADRdata.clear();
-  memset(&m1HzMeasurementsNotify, 0, sizeof(m1HzMeasurementsNotify));
+  m1HzMeasurementsInfo = {};
 
   UTIL_READ_CONF(LOC_PATH_GPS_CONF, gps_conf_param_table);
 
@@ -2813,17 +2813,20 @@ enum loc_api_adapter_err LocApiV02 :: convertErr(
 bool LocApiV02::isMeasurementRefreshForSv(uint16_t gnssSvId,
         GnssSignalTypeMask gnssSignalTypeMask)
 {
-    for (int i = 0; i < m1HzMeasurementsNotify.count; i++) {
-        if (m1HzMeasurementsNotify.measurements[i].svId == gnssSvId &&
-                m1HzMeasurementsNotify.measurements[i].gnssSignalType == gnssSignalTypeMask) {
-            return true;
+    if (m1HzMeasurementsInfo.measurements.size() > 0) {
+        for (auto measurement : m1HzMeasurementsInfo.measurements) {
+            if (measurement.svId == gnssSvId &&
+                    measurement.gnssSignalType == gnssSignalTypeMask) {
+                return true;
+            }
         }
     }
+
     return false;
 }
 
 bool LocApiV02::isTOAValid(const qmiLocEventPositionReportIndMsgT_v02 *location_report_ptr,
-        const GnssMeasurementsNotification *pOneHzMeasurements)
+        const GnssBasicMeasurementsInfo *pOneHzMeasurements)
 {
     if (nullptr == location_report_ptr ||
         nullptr == pOneHzMeasurements) {
@@ -3197,7 +3200,7 @@ void LocApiV02 :: reportPosition (
 
         bool updateMeaAvailForPVTArray = !unpropagatedPosition &&
                 mQmiMask & QMI_LOC_EVENT_MASK_GNSS_MEASUREMENT_REPORT_V02 &&
-                isTOAValid(location_report_ptr, &m1HzMeasurementsNotify);
+                isTOAValid(location_report_ptr, &m1HzMeasurementsInfo);
 
         if (((location_report_ptr->expandedGnssSvUsedList_valid) &&
                 (location_report_ptr->expandedGnssSvUsedList_len != 0)) ||
@@ -5666,8 +5669,21 @@ void LocApiV02::reportGnssMeasurementData(
     if (gnss_measurement_report_ptr.maxMessageNum == gnss_measurement_report_ptr.seqNum &&
             !mGnssMeasurements->gnssSvMeasurementSet.isNhz) {
         LOC_LOGv("saved m1HzMeasurementsNotify");
-        m1HzMeasurementsNotify = mGnssMeasurements->gnssMeasNotification;
+        // Copy only required information
+        GnssMeasurementsNotification &measInfo = mGnssMeasurements->gnssMeasNotification;
+        m1HzMeasurementsInfo.clock.flags = measInfo.clock.flags;
+        m1HzMeasurementsInfo.clock.timeNs = measInfo.clock.timeNs;
+        m1HzMeasurementsInfo.clock.fullBiasNs = measInfo.clock.fullBiasNs;
+        // Clear previous measurement data.
+        m1HzMeasurementsInfo.measurements.clear();
+        for (int meas = 0; (meas < measInfo.count) && (meas < GNSS_MEASUREMENTS_MAX); meas++) {
+            GnssBasicMeasurementsData measurement = {};
+            measurement.svId = measInfo.measurements[meas].svId;
+            measurement.gnssSignalType = measInfo.measurements[meas].gnssSignalType;
+            m1HzMeasurementsInfo.measurements.push_back(std::move(measurement));
+        }
     }
+
 
     if (gnss_measurement_report_ptr.maxMessageNum == gnss_measurement_report_ptr.seqNum &&
         maxSubSeqNum == subSeqNum) {
