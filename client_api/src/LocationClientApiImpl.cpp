@@ -1339,7 +1339,7 @@ public:
 
             virtual ~onHalServiceStatusChangeHandler() {}
             void proc() const {
-                LOC_LOGi("LocIpcQrtrWatcher:: HAL Daemon service status %d", mStatus);
+                LOC_LOGi("LocIpcQrtrWatcher:: HAL Daemon service status %d", (int)mStatus);
                 if (LocIpcQrtrWatcher::ServiceStatus::UP == mStatus) {
                     auto sender = mWatcher.mIpcSender.lock();
                     if (nullptr != sender && sender->copyDestAddrFrom(mRefSender)) {
