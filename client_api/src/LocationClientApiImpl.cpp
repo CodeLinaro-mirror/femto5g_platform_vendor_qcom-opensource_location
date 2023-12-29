@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -328,6 +328,16 @@ void LocationClientApiImpl::parseLocation(const ::Location &halLocation, Locatio
         flags |= LOCATION_HAS_ELAPSED_REAL_TIME_UNC_BIT;
     }
 #endif
+
+    if (::LOCATION_HAS_GPTP_TIME_BIT & halLocation.flags) {
+        flags |= LOCATION_HAS_GPTP_TIME_BIT;
+        location.elapsedgPTPTime  =  halLocation.elapsedgPTPTime;
+    }
+
+    if (::LOCATION_HAS_GPTP_TIME_UNC_BIT & halLocation.flags) {
+        flags |= LOCATION_HAS_GPTP_TIME_UNC_BIT;
+        location.elapsedgPTPTimeUnc =  halLocation.elapsedgPTPTimeUnc;
+    }
     location.flags = (LocationFlagsMask)flags;
 
     flags = 0;
@@ -857,16 +867,6 @@ GnssLocation LocationClientApiImpl::parseLocationInfo(
 
     if (LDT_GNSS_LOCATION_INFO_DGNSS_STATION_ID_BIT & halLocationInfo.flags) {
         flags |= LCA_GNSS_LOCATION_INFO_DGNSS_STATION_ID_BIT;
-    }
-
-    if (LDT_GNSS_LOCATION_INFO_GPTP_TIME_BIT & halLocationInfo.flags) {
-        flags |= LCA_GNSS_LOCATION_INFO_GPTP_TIME_BIT;
-        locationInfo.elapsedgPTPTime  =  halLocationInfo.elapsedgPTPTime;
-    }
-
-    if (LDT_GNSS_LOCATION_INFO_GPTP_TIME_UNC_BIT & halLocationInfo.flags) {
-        flags |= LCA_GNSS_LOCATION_INFO_GPTP_TIME_UNC_BIT;
-        locationInfo.elapsedgPTPTimeUnc =  halLocationInfo.elapsedgPTPTimeUnc;
     }
 
     locationInfo.gnssInfoFlags = (GnssLocationInfoFlagMask)flags;
