@@ -4245,7 +4245,11 @@ void LocApiV02::populateFeatureStatusReport
     } else {
         featureMap[LOCATION_QWES_FEATURE_NLOS_ML20] = false;
     }
-
+    if (featureStatusReport & QMI_LOC_FEATURE_STATUS_GNSS_NHZ_V02) {
+        featureMap[LOCATION_QWES_FEATURE_STATUS_GNSS_NHZ] = true;
+    } else {
+        featureMap[LOCATION_QWES_FEATURE_STATUS_GNSS_NHZ] = false;
+    }
 }
 
 void LocApiV02::reportSvEphemeris (
@@ -11062,7 +11066,7 @@ void LocApiV02::convertQmiBlacklistedSvConfigToGnssConfig(
 }
 
 void LocApiV02::configPrecisePositioning(uint32_t featureId, bool enable,
-        std::string appHash, LocApiResponse* adapterResponse) {
+        const std::string& appHash, LocApiResponse* adapterResponse) {
     sendMsg(new LocApiMsg([this, featureId, enable, appHash, adapterResponse] () {
         LocationError err = LOCATION_ERROR_SUCCESS;
 
