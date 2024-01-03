@@ -28,7 +28,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -79,8 +79,8 @@ enum LocationApiDataTypesVersion {
     LOCAPI_DATA_TYPES_VER_MAJOR = 1;
     // Minor - New features / API addition, new message/elemtent addition.
     // Bump the last byte of version i.e. x.2 to x.3
-    // Minor version 36: Support GPTP time in Position and Measurement
-    LOCAPI_DATA_TYPES_VER_MINOR = 36;
+    // Minor version 37: Support GPTP time in Basic Position report
+    LOCAPI_DATA_TYPES_VER_MINOR = 37;
 }
 
 // ============================================================================
@@ -243,8 +243,6 @@ enum PBGnssLocationInfoExtFlagMask {
     PB_GNSS_LOCATION_INFO_PROTECT_CROSS_TRACK_BIT = 0x10; // valid protection level cross track
     PB_GNSS_LOCATION_INFO_PROTECT_VERTICAL_BIT    = 0x20; // valid protection level vertical
     PB_GNSS_LOCATION_INFO_DGNSS_STATION_ID_MASK_BIT = 0x40; // valid dgnss station id info
-    PB_GNSS_LOCATION_INFO_GPTP_TIME_BIT           = 0x80; // valid GPTPT time info
-    PB_GNSS_LOCATION_INFO_GPTP_TIME_UNC_BIT       = 0x100; // valid GPTPT time uncertainity info
 };
 
 enum PBGnssLocationNavSolutionMask {
@@ -582,6 +580,10 @@ enum PBLocationFlagsMask {
     PB_LOCATION_HAS_ELAPSED_REAL_TIME_BIT    = 0x0200;
     // location has valid time uncertainty
     PB_LOCATION_HAS_TIME_UNC_BIT             = 0x0400;
+    // location has valid GPTP time
+    PB_LOCATION_HAS_GPTP_TIME_BIT            = 0x0800;
+    // location has valid GPTP Uncertainty
+    PB_LOCATION_HAS_GPTP_TIME_UNC_BIT        = 0x1000;
 }
 
 enum PBLocationTechnologyMask {
@@ -867,6 +869,10 @@ message PBLocation {
     uint64 elapsedRealTimeUnc = 14;
     /** time uncertainty in msec */
     float  timeUncMs = 15;
+    // GPTP time field in nano seconds
+    uint64 elapsedgPTPTime  = 16;
+    // GPTP time Unc
+    uint64 elapsedgPTPTimeUnc = 17;
 }
 
 message PBLocationOptions {
@@ -1193,10 +1199,6 @@ message PBGnssLocationInfoNotification {
     float    protectVertical = 46;
     // dgnss station id, validity is set via extFlags
     repeated uint32 dgnssStationId = 47;
-    // GPTP time field in nano seconds
-    uint64 elapsedgPTPTime  = 48;
-    // GPTP time Unc
-    uint64 elapsedgPTPTimeUnc = 49;
 }
 
 message PBGnssDataNotification {
