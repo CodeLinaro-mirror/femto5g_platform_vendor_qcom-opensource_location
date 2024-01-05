@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -381,6 +381,10 @@ enum LocationFlagsMask {
     LOCATION_HAS_ELAPSED_REAL_TIME_UNC_BIT = (1<<10),
     /** Location has valid Location::timeUncMs. <br/>   */
     LOCATION_HAS_TIME_UNC_BIT          = (1<<11),
+    /** GnssLocation has valid Location::elapsedgPTPTime. <br/> */
+    LOCATION_HAS_GPTP_TIME_BIT         = (1<<12),
+    /** GnssLocation has valid Location::elapsedgPTPTimeUnc. <br/> */
+    LOCATION_HAS_GPTP_TIME_UNC_BIT     = (1<<13),
 };
 
 /**
@@ -744,10 +748,6 @@ typedef uint64_t LCAGnssLocationInfoFlagMask;
 #define LCA_GNSS_LOCATION_INFO_PROTECT_VERTICAL_BIT                         (1ULL<<38)
     /** GnssLocation has valid GnssLocation::dgnssStationId. <br/> */
 #define LCA_GNSS_LOCATION_INFO_DGNSS_STATION_ID_BIT                         (1ULL<<39)
-    /** GnssLocation has valid GnssLocation::elapsedgPTPTime. <br/> */
-#define LCA_GNSS_LOCATION_INFO_GPTP_TIME_BIT                                (1ULL<<40)
-    /** GnssLocation has valid GnssLocation::elapsedgPTPTimeUnc. <br/> */
-#define LCA_GNSS_LOCATION_INFO_GPTP_TIME_UNC_BIT                            (1ULL<<41)
 
 /** Specify the reliability level of
  *  GnssLocation::horReliability and
@@ -1233,6 +1233,21 @@ struct Location {
      *  presence of LOCATION_HAS_TIME_UNC_BIT in
      *  location::flags before retrieving this field. <br/> */
     float timeUncMs;
+    /** GPTP time field corresponding to source time ticks. Used for
+     *  time sync between different systems
+     *  Unit Nanoseconds <br/>
+     *  This field may not always be available. Please check for the
+     *  presence of LOCATION_HAS_GPTP_TIME_BIT in
+     *  location::flags before retrieving this field. <br/>
+     */
+    uint64_t elapsedgPTPTime;
+    /** Uncertainty for elapsed PTP time field
+     *  Unit Nanoseconds <br/>
+     *  This field may not always be available. Please check for the
+     *  presence of LOCATION_HAS_GPTP_TIME_UNC_BIT in
+     *  location::flags before retrieving this field. <br/>
+     */
+    uint64_t elapsedgPTPTimeUnc;
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
     string toString() const;
@@ -1474,14 +1489,6 @@ struct GnssLocation : public Location {
      *  - Other values reserved. <br/>
      */
     std::vector<uint16_t> dgnssStationId;
-    /** GPTP time field corresponding to source time ticks
-     *  Unit Nanoseconds <br/>
-     */
-    uint64_t elapsedgPTPTime;
-    /** GPTP time Uncertainty
-     *  Unit Nanoseconds <br/>
-     */
-    uint64_t elapsedgPTPTimeUnc;
 
     /* Default constructor to initalize GnssLocation structure */
     inline GnssLocation() :
@@ -1510,8 +1517,7 @@ struct GnssLocation : public Location {
             drSolutionStatusMask((DrSolutionStatusMask)0),
             altitudeAssumed(false), sessionStatus(LOC_SESS_FAILURE),
             integrityRiskUsed(0), protectAlongTrack(0.0f),
-            protectCrossTrack(0.0f), protectVertical(0.0f),
-            elapsedgPTPTime(0ULL), elapsedgPTPTimeUnc(0ULL) {
+            protectCrossTrack(0.0f), protectVertical(0.0f) {
     }
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
@@ -2013,14 +2019,32 @@ struct GnssMeasurementsClock {
     /** HW clock discontinuity count - incremented
      *  for each discontinuity in HW clock. <br/>   */
     uint32_t hwClockDiscontinuityCount;
-    /** elapsed time since boot, in unit of nonoseconds <br/> */
+    /** Elapsed time since boot <br/>
+     *  In unit of nano-seconds.<br/>
+     *  This field may not always be available. Please check for the
+     *  presence of GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_BIT in
+     *  GnssMeasurementsClock::flags before retrieving this field. <br/> */
     uint64_t elapsedRealTime;
-    /** uncertainty of elapsedRealTime, in unit of nonoseconds <br/> */
+    /** Uncertainty of elapsedRealTime <br/>
+     *  In unit of nano-seconds.<br/>
+     *  This field may not always be available. Please check for the
+     *  presence of GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_UNC_BIT in
+     *  GnssMeasurementsClock::flags before retrieving this field. <br/>   */
     uint64_t elapsedRealTimeUnc;
-    /** gPTP since boot, in unit of nonoseconds <br/>
-     *  Unit - Nanoseconds */
+    /** GPTP time field corresponding to source time ticks. Used for
+     *  time sync between different systems
+     *  Unit Nanoseconds <br/>
+     *  This field may not always be available. Please check for the
+     *  presence of GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_GPTP_TIME_BIT in
+     *  GnssMeasurementsClock::flags before retrieving this field. <br/>
+     */
     uint64_t elapsedgPTPTime;
-    /** uncertainty of elapsedgPTPTime, in unit of nonoseconds <br/> */
+    /** Uncertainty for elapsed PTP time field
+     *  Unit Nanoseconds <br/>
+     *  This field may not always be available. Please check for the
+     *  presence of GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_GPTP_TIME_UNC_BIT in
+     *  GnssMeasurementsClock::flags before retrieving this field. <br/>
+     */
     uint64_t elapsedgPTPTimeUnc;
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
