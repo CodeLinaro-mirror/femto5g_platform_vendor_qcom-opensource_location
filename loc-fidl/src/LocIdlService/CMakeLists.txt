@@ -87,7 +87,7 @@ else()
 #    pkg_check_modules(DBus REQUIRED dbus-1>=1.4)
 endif()
 
-SYSR_INCLUDE_DIR(gps-utils)
+SYSR_INCLUDE_DIR(qcom-gps-utils)
 SYSR_INCLUDE_DIR(location-client-api)
 SYSR_INCLUDE_DIR(open-avb)
 SYSR_INCLUDE_DIR(location-integration-api)
