@@ -54,6 +54,10 @@ using namespace location_client;
 static bool capabilitiesReceived = false;
 static uint32_t numGnssLocationCb = 0;
 static uint32_t numGnssDataCb = 0;
+static uint32_t posCount = 0;
+static uint32_t latentPosCount = 0;
+/** Latency threshold for Position reports in msec */
+#define MAX_POSITION_LATENCY   20
 
 static void onConfigResponseCb(location_integration::LocConfigTypeEnum      requestType,
                                location_integration::LocIntegrationResponse response) {
@@ -73,6 +77,20 @@ class LocationTrackingSessCbHandler {
                         //Convert Location report from LCA to FIDL format
                         LocIdlAPI::IDLLocationReport idlLocRpt =
                                 pClientApiService->parseLocationReport(n);
+                        posCount++;
+                        struct timespec curBootTime = {};
+                        clock_gettime(CLOCK_BOOTTIME, &curBootTime);
+                        int64_t curBootTimeNs = ((int64_t)curBootTime.tv_sec * 1000000000) +
+                                (int64_t)curBootTime.tv_nsec;
+                        int64_t latencyMs = (curBootTimeNs - n.elapsedRealTimeNs)/1000000;
+                        if (latencyMs > MAX_POSITION_LATENCY) {
+                              latentPosCount++;
+                        }
+                        if (posCount % 600 == 0) {
+                            LOC_LOGe("%"PRId64" out of %"PRId64" Position samples are"
+                                     " latent by 20 msec",
+                                    latentPosCount, posCount);
+                        }
                         pClientApiService->mService->fireLocationReportEvent(idlLocRpt);
                     };
                 }
@@ -456,6 +474,8 @@ void LocIdlAPIService::stopPositionSession
 ) const
 {
     mLcaInstance->stopPositionSession();
+    posCount = 0;
+    latentPosCount = 0;
     reply();
 }
 
