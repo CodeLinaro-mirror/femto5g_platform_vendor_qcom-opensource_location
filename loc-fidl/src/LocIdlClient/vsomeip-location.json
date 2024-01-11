@@ -3,7 +3,7 @@
     "netmask" : "255.255.0.0",
     "logging" :
     {
-        "level" : "verbose",
+        "level" : "debug",
         "console" : "true",
         "file" : { "enable" : "false", "path" : "/var/log/vsomeip.log" },
         "dlt" : "false"
@@ -11,7 +11,7 @@
     "applications" :
     [
         {
-            "name" : "service-sample",
+            "name" : "location-fidl-service",
             "id" : "0x1277"
         }
     ],
@@ -28,7 +28,8 @@
         }
     ],
     "max-payload-size-unreliable" : "15000",
-    "routing" : "service-sample",
+    "routing" : "location-fidl-service",
+    "network" : "vlan_ivss",
     "service-discovery" :
     {
         "enable" : "true",
