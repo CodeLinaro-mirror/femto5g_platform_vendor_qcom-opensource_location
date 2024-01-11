@@ -323,7 +323,7 @@ bool LocIdlAPIService::registerWithFIDLService()
 
     std::string domain = "local";
     std::string instance = "com.qualcomm.qti.location.LocIdlAPI";
-    std::string connection = "service-sample";
+    std::string connection = "location-fidl-service";
 
     mService = std::make_shared<LocIdlAPIStubImpl>(this);
 
