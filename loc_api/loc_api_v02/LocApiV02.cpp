@@ -152,6 +152,10 @@ using namespace loc_core;
 #define FLP_BATCHING_MIN_TRIP_DISTANCE           1 // 1 meter
 #define MEAS_STATUS_DONT_USE (0xFFC0000000000000)
 
+#define MAX_REFOUNT_DIFF_FOR_1HZ (1100)
+#define MAX_REFOUNT_DIFF_FOR_NHZ (110)
+
+
 template struct loc_core::LocApiResponseData<LocApiBatchData>;
 template struct loc_core::LocApiResponseData<LocApiGeofenceData>;
 template struct loc_core::LocApiResponseData<LocGpsLocation>;
@@ -373,8 +377,11 @@ LocApiV02 :: LocApiV02(LOC_API_ADAPTER_EVENT_MASK_T exMask,
 {
   // initialize loc_sync_req interface
   loc_sync_req_init();
-  mADRdata.clear();
   m1HzMeasurementsInfo = {};
+  mPrev1HzSlipCountMap.clear();
+  mPrevNhzSlipCountMap.clear();
+  mCurrentCycleSlipCountMap1Hz.clear();
+  mCurrentCycleSlipCountMapNHz.clear();
 
   UTIL_READ_CONF(LOC_PATH_GPS_CONF, gps_conf_param_table);
 
@@ -5699,22 +5706,14 @@ void LocApiV02 ::reportSvMeasurementInternal() {
             /* If we can get AGC from QMI LOC there is no need to get it from NMEA */
             mMsInWeek = -1;
         }
-        // now remove all the elements in the vector which are not for current epoch
-        if (mADRdata.size() > 0) {
-            auto front = mADRdata.begin();
-            for (auto back = mADRdata.end(); front != back;) {
-                // Remove only either 1Hz or Nhz, not both
-                if ((mCounter != front->counter) &&
-                        (front->nHzMeasurement == mGnssMeasurements->gnssSvMeasurementSet.isNhz)) {
-                    --back;
-                    swap(*front, *back);
-                } else {
-                    front++;
-                }
-            }
-            if (front != mADRdata.end()) {
-                mADRdata.erase(front, mADRdata.end());
-            }
+        if (mGnssMeasurements->gnssSvMeasurementSet.isNhz) {
+            mPrevNhzSlipCountMap = mCurrentCycleSlipCountMapNHz;
+            //Clear current epoch data
+            mCurrentCycleSlipCountMapNHz.clear();
+        } else {
+            mPrev1HzSlipCountMap = mCurrentCycleSlipCountMap1Hz;
+            //Clear current epoch data
+            mCurrentCycleSlipCountMap1Hz.clear();
         }
 
         mGnssMeasurements->gnssSvMeasurementSet.svMeasCount = mGnssMeasurements->gnssMeasNotification.count;
@@ -6969,76 +6968,60 @@ bool LocApiV02 :: convertGnssMeasurements(
     // accumulatedDeltaRangeState
     measurementData.adrStateMask = GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_UNKNOWN;
     measurementData.flags |= GNSS_MEASUREMENTS_DATA_ADR_STATE_BIT;
+    measurementData.adrStateMask |= GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_RESET_BIT;
 
     if ((gnss_measurement_info.validMask & QMI_LOC_SV_CARRIER_PHASE_VALID_V02) &&
         (gnss_measurement_info.carrierPhase != 0.0)) {
         measurementData.adrStateMask = GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_VALID_BIT;
 
-        bool bFound = false;
-        adrData tempAdrData;
-        vector<adrData>::iterator it;
-        // check the prior epoch
-        // first see if info for this satellite exists in the vector (from prior epoch)
-        for (it = mADRdata.begin(); it != mADRdata.end(); ++it) {
-            tempAdrData = *it;
-            if (gnss_measurement_report_ptr.system == tempAdrData.system &&
-                ((gnss_measurement_report_ptr.gnssSignalType_valid &&
-                (gnss_measurement_report_ptr.gnssSignalType == tempAdrData.gnssSignalType)) ||
-                 (!gnss_measurement_report_ptr.gnssSignalType_valid &&
-                    (0 == tempAdrData.gnssSignalType))) &&
-                (gnss_measurement_info.gnssSvId == tempAdrData.gnssSvId) &&
-                (gnss_measurement_report_ptr.nHzMeasurement == tempAdrData.nHzMeasurement)) {
-                bFound = true;
-                break;
+        uint8_t svIdFound = 1;
+        int32_t refCountDiff = 0;
+        stringstream ss;
+        ss << gnss_measurement_report_ptr.gnssSignalType;
+        ss << "-";
+        ss << gnss_measurement_info.gnssSvId;
+        CycleSlipCountMapItr iter;
+        CycleSlipCountMap &prevCntMapToUse = gnss_measurement_report_ptr.nHzMeasurement ? \
+                mPrevNhzSlipCountMap : mPrev1HzSlipCountMap;
+        int32_t maxRefCntDiff = gnss_measurement_report_ptr.nHzMeasurement ? \
+                MAX_REFOUNT_DIFF_FOR_NHZ : MAX_REFOUNT_DIFF_FOR_1HZ;
+
+        iter = prevCntMapToUse.find(ss.str());
+        if (iter == prevCntMapToUse.end()) {
+            svIdFound = 0;
+        } else {
+            // found the SV ID with previous nhz data base
+            // Consider it as not available, if the abs(difference from prev FCount)
+            // is > 110 msec for Nhz
+            refCountDiff = gnss_measurement_report_ptr.systemTimeExt.refFCount -
+                    iter->second.refFCount;
+            if (refCountDiff > maxRefCntDiff) {
+                svIdFound = 0;
+                LOC_LOGi("svID: %d refCountDiff: %d > %d , Not consider it",
+                       gnss_measurement_info.gnssSvId, refCountDiff, maxRefCntDiff);
             }
         }
-        measurementData.adrStateMask |= GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_RESET_BIT;
-        if (bFound) {
-            if (tempAdrData.validMask & QMI_LOC_SV_CARRIER_PHASE_VALID_V02) {
-                // let's make sure this is prior measurement
-                if (mMinInterval <= 1000 &&
-                    (tempAdrData.counter == (mCounter - 1))) {
-                    // at this point prior epoch does have carrier phase valid
-                    measurementData.adrStateMask &=
-                            ~GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_RESET_BIT;
-                    if (tempAdrData.validMask & QMI_LOC_SV_CYCLESLIP_COUNT_VALID_V02 &&
-                        gnss_measurement_info.validMask & QMI_LOC_SV_CYCLESLIP_COUNT_VALID_V02) {
-                        LOC_LOGa("cycle slip count is valid for both current and prior epochs");
-                        if (tempAdrData.cycleSlipCount != gnss_measurement_info.cycleSlipCount) {
-                            LOC_LOGa("cycle slip count for current epoch (%d)"
-                                     " is different than the last epoch(%d)",
-                                     gnss_measurement_info.cycleSlipCount,
-                                     tempAdrData.cycleSlipCount);
-                            measurementData.adrStateMask |=
-                                    GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_CYCLE_SLIP_BIT;
-                        }
-                    }
-                }
-            }
-            // now update the current satellite info to the vector
-            tempAdrData.counter = mCounter;
-            tempAdrData.validMask = gnss_measurement_info.validMask;
-            tempAdrData.cycleSlipCount = gnss_measurement_info.cycleSlipCount;
-            tempAdrData.nHzMeasurement = gnss_measurement_report_ptr.nHzMeasurement;
-            *it = tempAdrData;
-        } else {
-            // set cycle slip bit if it is not found in the previous epoch
+
+        measurementData.adrStateMask &=
+                ~GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_RESET_BIT;
+
+        if ((gnss_measurement_info.validMask & QMI_LOC_SV_CYCLESLIP_COUNT_VALID_V02) && svIdFound &&
+            (iter->second.cycleSlipCount != gnss_measurement_info.cycleSlipCount)) {
+            measurementData.adrStateMask |=
+                    GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_CYCLE_SLIP_BIT;
+        } else if (!svIdFound) {
             measurementData.adrStateMask |=
                     GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_CYCLE_SLIP_BIT;
 
-            // now add the current satellite info to the vector
-            tempAdrData.counter = mCounter;
-            tempAdrData.system = gnss_measurement_report_ptr.system;
-            if (gnss_measurement_report_ptr.gnssSignalType_valid) {
-                tempAdrData.gnssSignalType = gnss_measurement_report_ptr.gnssSignalType;
-            } else {
-                tempAdrData.gnssSignalType = 0;
-            }
-            tempAdrData.gnssSvId = gnss_measurement_info.gnssSvId;
-            tempAdrData.validMask = gnss_measurement_info.validMask;
-            tempAdrData.cycleSlipCount = gnss_measurement_info.cycleSlipCount;
-            tempAdrData.nHzMeasurement = gnss_measurement_report_ptr.nHzMeasurement;
-            mADRdata.push_back(tempAdrData);
+        }
+        MeasCacheInfo measInfo = {};
+        measInfo.cycleSlipCount = gnss_measurement_info.cycleSlipCount;
+        measInfo.refFCount = gnss_measurement_report_ptr.systemTimeExt.refFCount;
+
+        if (gnss_measurement_report_ptr.nHzMeasurement) {
+            mCurrentCycleSlipCountMapNHz[ss.str()] = measInfo;
+        } else {
+            mCurrentCycleSlipCountMap1Hz[ss.str()] = measInfo;
         }
 
         if (validMeasStatus & QMI_LOC_MASK_MEAS_STATUS_LP_VALID_V02) {
