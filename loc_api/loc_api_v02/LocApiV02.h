@@ -214,9 +214,11 @@ private:
   std::string mPackageName[eQMI_LOC_R3_V02+1];
   ModemGnssQesdkFeatureMask mQesdkFeatureMask;
   bool mIsFullTracking;
+  // GPTP inititialization
+  bool mIsGptpInitialized;
 
   // Below two member variables are for elapsedRealTime calculation
-  ElapsedRealtimeEstimator mMeasElapsedRealTimeCal;
+  RealtimeEstimator mMeasElapsedRealTimeCal;
   GnssMeasurementsNotification m1HzMeasurementsNotify;
 
   /* Convert event mask from loc eng to loc_api_v02 format */

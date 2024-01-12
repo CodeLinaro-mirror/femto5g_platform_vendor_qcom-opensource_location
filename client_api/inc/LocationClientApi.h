@@ -744,6 +744,10 @@ typedef uint64_t LCAGnssLocationInfoFlagMask;
 #define LCA_GNSS_LOCATION_INFO_PROTECT_VERTICAL_BIT                         (1ULL<<38)
     /** GnssLocation has valid GnssLocation::dgnssStationId. <br/> */
 #define LCA_GNSS_LOCATION_INFO_DGNSS_STATION_ID_BIT                         (1ULL<<39)
+    /** GnssLocation has valid GnssLocation::elapsedgPTPTime. <br/> */
+#define LCA_GNSS_LOCATION_INFO_GPTP_TIME_BIT                                (1ULL<<40)
+    /** GnssLocation has valid GnssLocation::elapsedgPTPTimeUnc. <br/> */
+#define LCA_GNSS_LOCATION_INFO_GPTP_TIME_UNC_BIT                            (1ULL<<41)
 
 /** Specify the reliability level of
  *  GnssLocation::horReliability and
@@ -1463,13 +1467,21 @@ struct GnssLocation : public Location {
      *  risk, in unit of meter. <br/>
      */
     float    protectVertical;
-    /**<   List of DGNSS station IDs providing corrections. <br/>
-       Range:   <br/>
-       - SBAS --  120 to 158 and 183 to 191. <br/>
-       - Monitoring station -- 1000-2023 (Station ID biased by 1000).<br/>
-       - Other values reserved. <br/>
-    */
+    /** List of DGNSS station IDs providing corrections.
+     *  Range:
+     *  - SBAS --  120 to 158 and 183 to 191.
+     *  - Monitoring station -- 1000-2023 (Station ID biased by 1000).
+     *  - Other values reserved. <br/>
+     */
     std::vector<uint16_t> dgnssStationId;
+    /** GPTP time field corresponding to source time ticks
+     *  Unit Nanoseconds <br/>
+     */
+    uint64_t elapsedgPTPTime;
+    /** GPTP time Uncertainty
+     *  Unit Nanoseconds <br/>
+     */
+    uint64_t elapsedgPTPTimeUnc;
 
     /* Default constructor to initalize GnssLocation structure */
     inline GnssLocation() :
@@ -1498,7 +1510,8 @@ struct GnssLocation : public Location {
             drSolutionStatusMask((DrSolutionStatusMask)0),
             altitudeAssumed(false), sessionStatus(LOC_SESS_FAILURE),
             integrityRiskUsed(0), protectAlongTrack(0.0f),
-            protectCrossTrack(0.0f), protectVertical(0.0f) {
+            protectCrossTrack(0.0f), protectVertical(0.0f),
+            elapsedgPTPTime(0ULL), elapsedgPTPTimeUnc(0ULL) {
     }
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
@@ -1854,6 +1867,18 @@ enum GnssMeasurementsClockFlagsMask {
     /** GnssMeasurementsClock has valid
      *  GnssMeasurementsClock::hwClockDiscontinuityCount. <br/>   */
     GNSS_MEASUREMENTS_CLOCK_FLAGS_HW_CLOCK_DISCONTINUITY_COUNT_BIT  = (1<<8),
+    /** GnssMeasurementsClock has valid
+     *  elapsedRealTime <br/>   */
+    GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_BIT             = (1<<9),
+    /** GnssMeasurementsClock has valid
+     *  elapsedRealTimeUnc. <br/>   */
+    GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_UNC_BIT         = (1<<10),
+    /** GnssMeasurementsClock has valid
+     *  elapsedgPTPTime <br/>   */
+    GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_GPTP_TIME_BIT             = (1<<11),
+    /** GnssMeasurementsClock has valid
+     *  elapsedgPTPTimeUnc. <br/>   */
+    GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_GPTP_TIME_UNC_BIT         = (1<<12),
 };
 
 /** Specify the SV pseudo range and carrier phase measurement
@@ -1988,6 +2013,15 @@ struct GnssMeasurementsClock {
     /** HW clock discontinuity count - incremented
      *  for each discontinuity in HW clock. <br/>   */
     uint32_t hwClockDiscontinuityCount;
+    /** elapsed time since boot, in unit of nonoseconds <br/> */
+    uint64_t elapsedRealTime;
+    /** uncertainty of elapsedRealTime, in unit of nonoseconds <br/> */
+    uint64_t elapsedRealTimeUnc;
+    /** gPTP since boot, in unit of nonoseconds <br/>
+     *  Unit - Nanoseconds */
+    uint64_t elapsedgPTPTime;
+    /** uncertainty of elapsedgPTPTime, in unit of nonoseconds <br/> */
+    uint64_t elapsedgPTPTimeUnc;
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
     string toString() const;
