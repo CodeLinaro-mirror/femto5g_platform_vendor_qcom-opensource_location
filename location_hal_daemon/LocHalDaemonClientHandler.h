@@ -124,7 +124,7 @@ public:
     }
 
     static shared_ptr<LocIpcSender> createSender(const string socket);
-    void cleanup();
+    void cleanup(bool forceRemove = true);
 
     // public APIs
     void updateSubscription(uint32_t mask);
