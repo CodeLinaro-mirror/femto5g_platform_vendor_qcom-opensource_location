@@ -141,18 +141,18 @@ public:
     // Tracking
     virtual void updateCallbacks(LocationCallbacks&) override;
 
-    virtual uint32_t startTracking(TrackingOptions&) override;
+    virtual uint32_t startTracking(const TrackingOptions&) override;
 
     virtual void stopTracking(uint32_t id) override;
 
-    virtual void updateTrackingOptions(uint32_t id, TrackingOptions&) override;
+    virtual void updateTrackingOptions(uint32_t id, const TrackingOptions&) override;
 
     //Batching
-    virtual uint32_t startBatching(BatchingOptions&) override;
+    virtual uint32_t startBatching(const BatchingOptions&) override;
 
     virtual void stopBatching(uint32_t id) override;
 
-    virtual void updateBatchingOptions(uint32_t id, BatchingOptions&) override;
+    virtual void updateBatchingOptions(uint32_t id, const BatchingOptions&) override;
 
     virtual void getBatchedLocations(uint32_t id, size_t count) override;
 
@@ -190,8 +190,8 @@ public:
             locationSystemInfoCallback locationSystemInfoCb,
             responseCallback responseCb);
 
-    uint32_t startTrackingSync(TrackingOptions&);
-    uint32_t startBatchingSync(BatchingOptions&);
+    uint32_t startTrackingSync(const TrackingOptions&);
+    uint32_t startBatchingSync(const BatchingOptions&);
     void updateCallbacksSync(LocationCallbacks& callbacks);
 
     void addGeofences(const LocationCallbacks& callbacksOption,
@@ -266,7 +266,7 @@ private:
 
     inline LocationCapabilitiesMask getCapabilities() {return mCapsMask;}
     void capabilitesCallback(ELocMsgID  msgId, const void* msgData);
-    void updateTrackingOptionsSync(TrackingOptions& option, bool clearSubscriptions);
+    void updateTrackingOptionsSync(const TrackingOptions& option, bool clearSubscriptions);
     bool checkGeofenceMap(size_t count, uint32_t* ids);
     void addGeofenceMap(Geofence& geofence);
     void eraseGeofenceMap(size_t count, uint32_t* ids);

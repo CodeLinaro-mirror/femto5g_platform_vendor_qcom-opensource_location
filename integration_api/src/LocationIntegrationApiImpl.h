@@ -168,7 +168,7 @@ public:
     virtual uint32_t configDeadReckoningEngineParams(
             const ::DeadReckoningEngineConfig& dreConfig) override;
     virtual uint32_t* gnssUpdateConfig(const GnssConfig& config) override;
-    virtual uint32_t gnssDeleteAidingData(GnssAidingData& data) override;
+    virtual uint32_t gnssDeleteAidingData(const GnssAidingData& data) override;
     virtual uint32_t configMinGpsWeek(uint16_t minGpsWeek) override;
     virtual void odcpiInject(const ::Location& location) override;
 

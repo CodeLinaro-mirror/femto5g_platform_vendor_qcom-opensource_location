@@ -75,6 +75,9 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <sstream>
 #include <dlfcn.h>
 #include <loc_misc_utils.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <pwd.h>
 
 static uint32_t gDebug = 0;
 static uint32_t gSleepTime = 800000;
@@ -1483,6 +1486,9 @@ LocationClientApiImpl::LocationClientApiImpl(capabilitiesCallback capabilitiescb
         return;
     }
 
+    LOC_LOGd("create sender socket %s", mSocketName);
+    locUtilWaitForDir(SOCKET_LOC_CLIENT_DIR, "gps");
+
     // establish an udp ipc sender to the hal daemon
     mIpcSender = LocIpc::getLocIpcLocalSender(SOCKET_TO_LOCATION_HAL_DAEMON);
     if (nullptr == mIpcSender) {
@@ -1536,6 +1542,7 @@ void LocationClientApiImpl::destroy(locationApiDestroyCompleteCallback destroyCo
             if (mDestroyCompleteCb) {
                 (mDestroyCompleteCb) ();
             }
+            usleep(50000); //give 50ms for socket clean up
 
             delete mApiImpl;
         }
@@ -1544,6 +1551,7 @@ void LocationClientApiImpl::destroy(locationApiDestroyCompleteCallback destroyCo
     };
 
     mMsgTask.sendMsg(new (nothrow) DestroyReq(this, destroyCompleteCb));
+    usleep(100000); //100ms for handling onReceive() messages
 }
 
 /******************************************************************************
@@ -1653,13 +1661,13 @@ void LocationClientApiImpl::updateCallbacksSync(LocationCallbacks& callbacks) {
     }
 }
 
-uint32_t LocationClientApiImpl::startTracking(TrackingOptions& option) {
+uint32_t LocationClientApiImpl::startTracking(const TrackingOptions& option) {
     struct StartTrackingReq : public LocMsg {
         StartTrackingReq(LocationClientApiImpl* apiImpl, const TrackingOptions& option) :
                 mApiImpl(apiImpl), mOptions(option) {}
         virtual ~StartTrackingReq() {}
         void proc() const {
-            mApiImpl->startTrackingSync(const_cast<TrackingOptions&>(mOptions));
+            mApiImpl->startTrackingSync(mOptions);
         }
 
         LocationClientApiImpl* mApiImpl;
@@ -1669,7 +1677,7 @@ uint32_t LocationClientApiImpl::startTracking(TrackingOptions& option) {
     return mClientId;
 }
 
-uint32_t LocationClientApiImpl::startTrackingSync(TrackingOptions& option) {
+uint32_t LocationClientApiImpl::startTrackingSync(const TrackingOptions& option) {
     // check if option is updated
     bool isOptionUpdated = false;
 
@@ -1711,7 +1719,7 @@ uint32_t LocationClientApiImpl::startTrackingSync(TrackingOptions& option) {
     } else if (isOptionUpdated) {
         // update a tracking session, mLocationOptions
         // will be updated in updateTrackingOptionsSync
-        updateTrackingOptionsSync(const_cast<TrackingOptions&>(option), true);
+        updateTrackingOptionsSync(option, true);
     } else {
         LOC_LOGd(">>> StartTrackingReq - no change in option");
         invokePositionSessionResponseCb(LOCATION_ERROR_SUCCESS);
@@ -1721,7 +1729,7 @@ uint32_t LocationClientApiImpl::startTrackingSync(TrackingOptions& option) {
 
 // updateTrackingOptions is called from Android HIDL clients and must be purely used
 // to only update parameters of an ongoing session, and not start a new session.
-void LocationClientApiImpl::updateTrackingOptions(uint32_t id, TrackingOptions& options) {
+void LocationClientApiImpl::updateTrackingOptions(uint32_t id, const TrackingOptions& options) {
     struct UpdateTrackingReq : public LocMsg {
         UpdateTrackingReq(LocationClientApiImpl* apiImpl, const TrackingOptions& options) :
                 mApiImpl(apiImpl), mUpdatedOptions(options) {}
@@ -1892,7 +1900,7 @@ void LocationClientApiImpl::clearSubscriptions(LocationCallbackType cbTypeToClea
     }
 }
 
-void LocationClientApiImpl::updateTrackingOptionsSync(TrackingOptions& option,
+void LocationClientApiImpl::updateTrackingOptionsSync(const TrackingOptions& option,
         bool clearSubscriptions) {
 
     LOC_LOGd(">>> updateTrackingOptionsSync,sessionId=%d, "
@@ -1945,13 +1953,13 @@ void LocationClientApiImpl::updateTrackingOptionsSync(TrackingOptions& option,
     mLocationOptions = option;
 }
 
-uint32_t LocationClientApiImpl::startBatching(BatchingOptions& batchOptions) {
+uint32_t LocationClientApiImpl::startBatching(const BatchingOptions& batchOptions) {
     struct StartBatchingReq : public LocMsg {
         StartBatchingReq(LocationClientApiImpl* apiImpl, const BatchingOptions& batchOptions) :
                 mApiImpl(apiImpl), mBatchOptions(batchOptions) {}
         virtual ~StartBatchingReq() {}
         void proc() const {
-            mApiImpl->startBatchingSync(const_cast<BatchingOptions&>(mBatchOptions));
+            mApiImpl->startBatchingSync(mBatchOptions);
         }
 
         LocationClientApiImpl* mApiImpl;
@@ -1962,10 +1970,13 @@ uint32_t LocationClientApiImpl::startBatching(BatchingOptions& batchOptions) {
 }
 
 //Batching
-uint32_t LocationClientApiImpl::startBatchingSync(BatchingOptions& batchOptions) {
+uint32_t LocationClientApiImpl::startBatchingSync(const BatchingOptions& batchOptions) {
     if (!mHalRegistered) {
         mBatchingOptions = batchOptions;
         LOC_LOGe(">>> startBatching - Not registered yet");
+        if (mLocationCbs.responseCb) {
+            mLocationCbs.responseCb(::LOCATION_ERROR_SYSTEM_NOT_READY, 0);
+        }
         return 0;
     }
     if (LOCATION_CLIENT_SESSION_ID_INVALID == mSessionId) {
@@ -1986,7 +1997,7 @@ uint32_t LocationClientApiImpl::startBatchingSync(BatchingOptions& batchOptions)
             LOC_LOGe("LocAPIStartBatchingReqMsg serializeToProtobuf failed");
         }
     } else {
-        updateBatchingOptions(mBatchingId, const_cast<BatchingOptions&>(batchOptions));
+        updateBatchingOptions(mBatchingId, batchOptions);
     }
     return 0;
 }
@@ -2050,7 +2061,8 @@ void LocationClientApiImpl::stopBatching(uint32_t id) {
     mMsgTask.sendMsg(new (nothrow) StopBatchingReq(this));
 }
 
-void LocationClientApiImpl::updateBatchingOptions(uint32_t id, BatchingOptions& batchOptions) {
+void LocationClientApiImpl::updateBatchingOptions(uint32_t id,
+        const BatchingOptions& batchOptions) {
 
     if ((mBatchingOptions.minInterval != batchOptions.minInterval) ||
             (mBatchingOptions.minDistance != batchOptions.minDistance) ||
@@ -2664,7 +2676,7 @@ void LocationClientApiImpl::processGetDebugRespCb(const LocAPIGetDebugRespMsg* p
     for (uint32_t i = 0; i < pRespMsg->mDebugReport.mSatelliteInfo.size(); i++) {
         mpDebugReport->mSatelliteInfo[i] = pRespMsg->mDebugReport.mSatelliteInfo[i];
     }
-    notify();
+    notify(); //for the wait in getDebugReport
 }
 
 uint32_t LocationClientApiImpl::getAntennaInfo(AntennaInfoCallback* cb) {
@@ -2907,7 +2919,6 @@ void LocationClientApiImpl::pingTest(PingTestCb pingTestCallback) {
 
 void LocationClientApiImpl::invokePositionSessionResponseCb(LocationError errCode) {
     if (mPositionSessionResponseCbPending) {
-        parseLocationError(errCode);
         if (nullptr != mLocationCbs.responseCb) {
             mLocationCbs.responseCb(errCode, 0);
         }
