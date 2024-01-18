@@ -165,7 +165,7 @@ void printMeasurement(const LocIdlAPI::IDLGnssMeasurements& gnssMeasurements)
             cout <<"carrierFrequencyHz "<< measData[idx].getCarrierFrequencyHz()  << endl;
 
             cout <<"carrierCycles "<< measData[idx].getCarrierCycles() << endl;
-            cout <<"carrierPhaseUncertainty "<< measData[idx].getCarrierPhase() << endl;
+            cout <<"carrierPhase "<< measData[idx].getCarrierPhase() << endl;
             cout <<"carrierPhaseUncertainty "<< measData[idx].getCarrierPhaseUncertainty() << endl;
             cout <<"multipathIndicator "<< measData[idx].getMultipathIndicator() << endl;
             cout <<"signalToNoiseRatioDb "<< measData[idx].getSignalToNoiseRatioDb() << endl;
@@ -236,7 +236,7 @@ void printPosResport(const LocIdlAPI::IDLLocationReport &_locationReport)
     }
 
     if (verbose) {
-        cout << "-------" << endl;
+        cout << "-------" << fixed << setprecision(8) << endl;
         cout << "TimeStamp      " << location.getTimestamp() << endl;
         cout << "Latitude       " << location.getLatitude() << endl;
         cout << "Longitude      " << location.getLongitude() << endl;
@@ -379,16 +379,13 @@ void printGnssData(const LocIdlAPI::IDLGnssData& gnssData)
    vector<uint32_t> dataMask = gnssData.getGnssDataMask();
    vector<double> jammerInd = gnssData.getJammerInd();
    vector<double> agc = gnssData.getAgc();
-   static unsigned int dataCount;
-
-   dataCount += 1;
 
    if (verbose) {
-       cout << "GNSSDATA, " << endl;
+       cout << "Type, SignalType, Mask, JammeInd, Agc" << endl;
        cout << "-------" << endl;
-       for  (int i = 0; i < dataMask.size(); i++) {
-           cout << "Mask " << dataMask[i] << " " << "JammeInd "
-                "" << jammerInd[i] << " " << "Agc " << agc[i] << endl;
+       for  (int i = 0; i < (dataMask.size() - 1); i++) {
+           cout << "GNSSDATA, " << i << " , "<< dataMask[i] << " , "
+                "" << jammerInd[i] << " , " << agc[i] << endl;
        }
        cout << "-------" << endl;
    }
