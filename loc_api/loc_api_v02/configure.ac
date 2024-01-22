@@ -80,6 +80,15 @@ if (test "x${with_glib}" = "xyes"); then
         AC_SUBST(GLIB_LIBS)
 fi
 
+AC_ARG_ENABLE([ptp],
+        [  --enable-ptp    enable ptp],
+        [case "${enableval}" in
+            yes) ptp=true ;;
+            no)  ptp=false ;;
+            *) AC_MSG_ERROR([bad value ${enableval} for --enable-ptp]) ;;
+        esac],[ptp=false])
+AM_CONDITIONAL(PTP_SUPPORTED, [test x$ptp = xtrue])
+
 AM_CONDITIONAL(USE_GLIB, test "x${with_glib}" = "xyes")
 
 AC_CONFIG_FILES([ \
