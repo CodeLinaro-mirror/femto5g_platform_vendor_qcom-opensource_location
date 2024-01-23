@@ -1870,6 +1870,13 @@ uint32_t LocationApiPbMsgConv::getPBMaskForGnssLocationInfoExtFlagMask(
         pbGnssLocInfoFlagMask |= PB_GNSS_LOCATION_INFO_DGNSS_STATION_ID_MASK_BIT;
     }
 
+    if (gnssLocInfoFlagMask & LDT_GNSS_LOCATION_INFO_GPTP_TIME_BIT) {
+        pbGnssLocInfoFlagMask |= PB_GNSS_LOCATION_INFO_GPTP_TIME_BIT;
+    }
+    if (gnssLocInfoFlagMask & LDT_GNSS_LOCATION_INFO_GPTP_TIME_UNC_BIT) {
+        pbGnssLocInfoFlagMask |= PB_GNSS_LOCATION_INFO_GPTP_TIME_UNC_BIT;
+    }
+
     return pbGnssLocInfoFlagMask;
 }
 
@@ -2216,6 +2223,18 @@ uint32_t LocationApiPbMsgConv::getPBMaskForGnssMeasurementsClockFlagsMask(
     if (gnssMeasClockFlagsMask & GNSS_MEASUREMENTS_CLOCK_FLAGS_HW_CLOCK_DISCONTINUITY_COUNT_BIT) {
         pbGnssMeasClockFlagsMask |=
                 PB_GNSS_MEASUREMENTS_CLOCK_FLAGS_HW_CLOCK_DISCONTINUITY_COUNT_BIT;
+    }
+    if (gnssMeasClockFlagsMask & GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_BIT) {
+        pbGnssMeasClockFlagsMask |= PB_GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_BIT;
+    }
+    if (gnssMeasClockFlagsMask & GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_UNC_BIT) {
+        pbGnssMeasClockFlagsMask |= PB_GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_UNC_BIT;
+    }
+    if (gnssMeasClockFlagsMask & GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_GPTP_TIME_BIT) {
+        pbGnssMeasClockFlagsMask |= PB_GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_GPTP_TIME_BIT;
+    }
+    if (gnssMeasClockFlagsMask & GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_GPTP_TIME_UNC_BIT) {
+        pbGnssMeasClockFlagsMask |= PB_GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_GPTP_TIME_UNC_BIT;
     }
     LocApiPb_LOGv("LocApiPB: gnssMeasClockFlagsMask:%x, pbGnssMeasClockFlagsMask:%x",
             gnssMeasClockFlagsMask, pbGnssMeasClockFlagsMask);
@@ -3016,6 +3035,18 @@ uint32_t LocationApiPbMsgConv::getGnssMeasurementsClockFlagsMaskFromPB(
             PB_GNSS_MEASUREMENTS_CLOCK_FLAGS_HW_CLOCK_DISCONTINUITY_COUNT_BIT) {
         gnssMeasClockFlgMask |= GNSS_MEASUREMENTS_CLOCK_FLAGS_HW_CLOCK_DISCONTINUITY_COUNT_BIT;
     }
+    if (pbGnssMeasClockFlgMask & PB_GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_BIT) {
+        gnssMeasClockFlgMask |= GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_BIT;
+    }
+    if (pbGnssMeasClockFlgMask & PB_GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_UNC_BIT) {
+        gnssMeasClockFlgMask |= GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_UNC_BIT;
+    }
+    if (pbGnssMeasClockFlgMask & PB_GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_GPTP_TIME_BIT) {
+        gnssMeasClockFlgMask |= GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_GPTP_TIME_BIT;
+    }
+    if (pbGnssMeasClockFlgMask & PB_GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_GPTP_TIME_UNC_BIT) {
+        gnssMeasClockFlgMask |= GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_GPTP_TIME_UNC_BIT;
+    }
     LocApiPb_LOGv("LocApiPB: pbGnssMeasClockFlgMask:%x, gnssMeasClockFlgMask:%x",
             pbGnssMeasClockFlgMask, gnssMeasClockFlgMask);
     return gnssMeasClockFlgMask;
@@ -3237,6 +3268,12 @@ uint64_t LocationApiPbMsgConv::getGnssLocationInfoFlagMaskFromPB(
     }
     if (pbGnssLocInfoExtFlagMask & PB_GNSS_LOCATION_INFO_DGNSS_STATION_ID_MASK_BIT) {
         gnssLocInfoFlagMask |= LDT_GNSS_LOCATION_INFO_DGNSS_STATION_ID_BIT;
+    }
+    if (pbGnssLocInfoExtFlagMask & PB_GNSS_LOCATION_INFO_GPTP_TIME_BIT ) {
+        gnssLocInfoFlagMask |= LDT_GNSS_LOCATION_INFO_GPTP_TIME_BIT;
+    }
+    if (pbGnssLocInfoExtFlagMask & PB_GNSS_LOCATION_INFO_GPTP_TIME_UNC_BIT ) {
+        gnssLocInfoFlagMask |= LDT_GNSS_LOCATION_INFO_GPTP_TIME_UNC_BIT;
     }
     LocApiPb_LOGv("LocApiPB: pbGnssLocInfoFlagMask:0x%x, pbGnssLocInfoExtFlagMask:0x%x, "
                   "gnssLocInfoFlagMask:0x%" PRIu64"", pbGnssLocInfoFlagMask,
@@ -4361,6 +4398,10 @@ int LocationApiPbMsgConv::convertGnssLocInfoNotifToPB(
     for (uint32_t iter = 0; iter < gnssLocInfoNotif.numOfDgnssStationId; iter++) {
         pbGnssLocInfoNotif->add_dgnssstationid(gnssLocInfoNotif.dgnssStationId[iter]);
     }
+    // uint64 elapsedgPTPTime  = 48;
+    pbGnssLocInfoNotif->set_elapsedgptptime(gnssLocInfoNotif.elapsedgPTPTime);
+    // uint64 elapsedgPTPTimeUnc  = 49;
+    pbGnssLocInfoNotif->set_elapsedgptptimeunc(gnssLocInfoNotif.elapsedgPTPTimeUnc);
 
     LocApiPb_LOGv("LocApiPB: gnssLocInfoNotif - GLocInfoFlgMask:%" PRIu64", pdop:%f, hdop:%f, "
             "vdop:%f",
@@ -4862,14 +4903,25 @@ int LocationApiPbMsgConv::convertGnssMeasClockToPB(const GnssMeasurementsClock &
     pbGnssMeasClock->set_driftuncertaintynsps(gnssMeasClock.driftUncertaintyNsps);
     // uint32 hwClockDiscontinuityCount= 10;
     pbGnssMeasClock->set_hwclockdiscontinuitycount(gnssMeasClock.hwClockDiscontinuityCount);
+    // uint64 elapsedRealTime = 11;
+    pbGnssMeasClock->set_elapsedrealtime(gnssMeasClock.elapsedRealTime);
+    // uint64 elapsedRealTimeUnc = 12;
+    pbGnssMeasClock->set_elapsedrealtimeunc(gnssMeasClock.elapsedRealTimeUnc);
+    // uint64 elapsedgPTPTime = 13;
+    pbGnssMeasClock->set_elapsedgptptime(gnssMeasClock.elapsedgPTPTime);
+    // uint64 elapsedgPTPTimeUnc = 14;
+    pbGnssMeasClock->set_elapsedgptptimeunc(gnssMeasClock.elapsedgPTPTimeUnc);
 
     LOC_LOGv("LocApiPB: gnssMeasClock - GnssMeasClockFlags:%x, leapSecond:%u, TimeNs:%" PRIu64\
         "TimeUnc:%lf FullBiasNs:%" PRIu64" BiasNs:%lf, BiasUncNs:%lf, DriftNs:%lf, DriftUncNs:%lf"
-        "HwDiscCnt:%u",
+        "HwDiscCnt:%u, elapsedRealTime:%" PRIu64" elapsedRealTimeUnc: %" PRIu64\
+        "elapsedgPTPTime:%" PRIu64" elapsedgPTPTimeUnc: %" PRIu64,
         gnssMeasClock.flags, gnssMeasClock.leapSecond, gnssMeasClock.timeNs,
         gnssMeasClock.timeUncertaintyNs, gnssMeasClock.fullBiasNs, gnssMeasClock.biasNs,
         gnssMeasClock.biasUncertaintyNs, gnssMeasClock.driftNsps,
-        gnssMeasClock.driftUncertaintyNsps, gnssMeasClock.hwClockDiscontinuityCount);
+        gnssMeasClock.driftUncertaintyNsps, gnssMeasClock.hwClockDiscontinuityCount,
+        gnssMeasClock.elapsedRealTime, gnssMeasClock.elapsedRealTimeUnc,
+        gnssMeasClock.elapsedgPTPTime, gnssMeasClock.elapsedgPTPTimeUnc);
     return 0;
 }
 
@@ -5540,6 +5592,11 @@ int LocationApiPbMsgConv::pbConvertToGnssLocInfoNotif(
     }
     gnssLocInfoNotif.numOfDgnssStationId = i;
 
+    // uint64 elapsedgPTPTime  = 48;
+    gnssLocInfoNotif.elapsedgPTPTime = pbGnssLocInfoNotif.elapsedgptptime();
+    // uint64 elapsedgPTPTimeUnc  = 49;
+    gnssLocInfoNotif.elapsedgPTPTimeUnc = pbGnssLocInfoNotif.elapsedgptptimeunc();
+
     LOC_LOGv("LocApiPB: pbGnssLocInfoNotif -GLocInfoFlgMask:0x%" PRIx64 ", pdop:%f, "
             "hdop:%f, vdop:%f",
             gnssLocInfoNotif.flags, gnssLocInfoNotif.pdop, gnssLocInfoNotif.hdop,
@@ -6109,14 +6166,25 @@ int LocationApiPbMsgConv::pbConvertToGnssMeasurementsClock(
     gnssMeasClock.driftUncertaintyNsps = pbGnssMeasClock.driftuncertaintynsps();
     // uint32 hwClockDiscontinuityCount= 10;
     gnssMeasClock.hwClockDiscontinuityCount = pbGnssMeasClock.hwclockdiscontinuitycount();
+    // uint64 elapsedRealTime = 11;
+    gnssMeasClock.elapsedRealTime = pbGnssMeasClock.elapsedrealtime();
+    // uint64 elapsedRealTimeUnc = 12;
+    gnssMeasClock.elapsedRealTimeUnc = pbGnssMeasClock.elapsedrealtimeunc();
+    // uint64 elapsedgPTPTime = 13;
+    gnssMeasClock.elapsedgPTPTime = pbGnssMeasClock.elapsedgptptime();
+    // uint64 elapsedgPTPTimeUnc = 14;
+    gnssMeasClock.elapsedgPTPTimeUnc = pbGnssMeasClock.elapsedgptptimeunc();
 
     LOC_LOGv("LocApiPB: pbGnssMeasClock - GnssMeasClockFlags:%x, leapSecond:%u, TimeNs:%" PRIu64\
         "TimeUnc:%lf FullBiasNs:%" PRIu64" BiasNs:%lf, BiasUncNs:%lf, DriftNs:%lf, DriftUncNs:%lf"
-        "HwDiscCnt:%u",
+        "HwDiscCnt:%u, elapsedRealTime:%" PRIu64" elapsedRealTimeUnc:%" PRIu64\
+        "elapsedRealTime:%" PRIu64" elapsedRealTimeUnc:%" PRIu64,
         gnssMeasClock.flags, gnssMeasClock.leapSecond, gnssMeasClock.timeNs,
         gnssMeasClock.timeUncertaintyNs, gnssMeasClock.fullBiasNs, gnssMeasClock.biasNs,
         gnssMeasClock.biasUncertaintyNs, gnssMeasClock.driftNsps,
-        gnssMeasClock.driftUncertaintyNsps, gnssMeasClock.hwClockDiscontinuityCount);
+        gnssMeasClock.driftUncertaintyNsps, gnssMeasClock.hwClockDiscontinuityCount,
+        gnssMeasClock.elapsedRealTime, gnssMeasClock.elapsedRealTimeUnc,
+        gnssMeasClock.elapsedgPTPTime, gnssMeasClock.elapsedgPTPTimeUnc);
 
     return 0;
 }
