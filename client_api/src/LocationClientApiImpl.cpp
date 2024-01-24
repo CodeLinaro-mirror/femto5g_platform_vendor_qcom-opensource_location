@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -328,6 +328,16 @@ void LocationClientApiImpl::parseLocation(const ::Location &halLocation, Locatio
         flags |= LOCATION_HAS_ELAPSED_REAL_TIME_UNC_BIT;
     }
 #endif
+
+    if (::LOCATION_HAS_GPTP_TIME_BIT & halLocation.flags) {
+        flags |= LOCATION_HAS_GPTP_TIME_BIT;
+        location.elapsedgPTPTime  =  halLocation.elapsedgPTPTime;
+    }
+
+    if (::LOCATION_HAS_GPTP_TIME_UNC_BIT & halLocation.flags) {
+        flags |= LOCATION_HAS_GPTP_TIME_UNC_BIT;
+        location.elapsedgPTPTimeUnc =  halLocation.elapsedgPTPTimeUnc;
+    }
     location.flags = (LocationFlagsMask)flags;
 
     flags = 0;
@@ -371,7 +381,7 @@ void LocationClientApiImpl::parseLocation(const ::Location &halLocation, Locatio
 }
 
 Location LocationClientApiImpl::parseLocation(const ::Location &halLocation) {
-    Location location;
+    Location location = {};
     parseLocation(halLocation, location);
     return location;
 }
@@ -379,7 +389,8 @@ Location LocationClientApiImpl::parseLocation(const ::Location &halLocation) {
 GnssLocationSvUsedInPosition LocationClientApiImpl::parseLocationSvUsedInPosition(
         const ::GnssLocationSvUsedInPosition &halSv) {
 
-    GnssLocationSvUsedInPosition clientSv;
+    GnssLocationSvUsedInPosition clientSv = {};
+
     clientSv.gpsSvUsedIdsMask = halSv.gpsSvUsedIdsMask;
     clientSv.gloSvUsedIdsMask = halSv.gloSvUsedIdsMask;
     clientSv.galSvUsedIdsMask = halSv.galSvUsedIdsMask;
@@ -474,7 +485,7 @@ void LocationClientApiImpl::parseGnssMeasUsageInfo(
 
     if (halLocationInfo.numOfMeasReceived) {
         for (int idx = 0; idx < halLocationInfo.numOfMeasReceived; idx++) {
-            GnssMeasUsageInfo measUsageInfo;
+            GnssMeasUsageInfo measUsageInfo = {};
 
             measUsageInfo.gnssSignalType = parseGnssSignalType(
                     halLocationInfo.measUsageInfo[idx].gnssSignalType);
@@ -641,8 +652,7 @@ GnssSystemTimeStructType LocationClientApiImpl::parseGnssTime(
 GnssGloTimeStructType LocationClientApiImpl::parseGloTime(
         const ::GnssGloTimeStructType &halGloTime) {
 
-    GnssGloTimeStructType   gloTime;
-    memset(&gloTime, 0, sizeof(gloTime));
+    GnssGloTimeStructType   gloTime = {};
     uint32_t gloTimeFlags = 0;
 
     if (::GNSS_CLO_DAYS_VALID & halGloTime.validityMask) {
@@ -681,8 +691,7 @@ GnssGloTimeStructType LocationClientApiImpl::parseGloTime(
 
 GnssSystemTime LocationClientApiImpl::parseSystemTime(const ::GnssSystemTime &halSystemTime) {
 
-    GnssSystemTime systemTime;
-    memset(&systemTime, 0x0, sizeof(GnssSystemTime));
+    GnssSystemTime systemTime = {};
 
     switch (halSystemTime.gnssSystemTimeSrc) {
         case ::GNSS_LOC_SV_SYSTEM_GPS:
@@ -722,7 +731,7 @@ GnssSystemTime LocationClientApiImpl::parseSystemTime(const ::GnssSystemTime &ha
 GnssLocation LocationClientApiImpl::parseLocationInfo(
         const ::GnssLocationInfoNotification &halLocationInfo) {
 
-    GnssLocation locationInfo;
+    GnssLocation locationInfo = {};
     parseLocation(halLocationInfo.location, locationInfo);
     uint64_t flags = 0;
 
@@ -948,7 +957,7 @@ GnssLocation LocationClientApiImpl::parseLocationInfo(
 }
 
 GnssSv LocationClientApiImpl::parseGnssSv(const ::GnssSv &halGnssSv) {
-    GnssSv gnssSv;
+    GnssSv gnssSv = {};
 
     gnssSv.svId = halGnssSv.svId;
     switch (halGnssSv.type) {
@@ -1029,7 +1038,7 @@ GnssSv LocationClientApiImpl::parseGnssSv(const ::GnssSv &halGnssSv) {
 
 GnssData LocationClientApiImpl::parseGnssData(const ::GnssDataNotification &halGnssData) {
 
-    GnssData gnssData;
+    GnssData gnssData = {};
 
     for (int sig = GNSS_LOC_SIGNAL_TYPE_GPS_L1CA;
          sig < GNSS_LOC_MAX_NUMBER_OF_SIGNAL_TYPES; sig++) {
@@ -1123,6 +1132,10 @@ GnssMeasurements LocationClientApiImpl::parseGnssMeasurements(
     gnssMeasurements.clock.driftUncertaintyNsps = halGnssMeasurements.clock.driftUncertaintyNsps;
     gnssMeasurements.clock.hwClockDiscontinuityCount =
             halGnssMeasurements.clock.hwClockDiscontinuityCount;
+    gnssMeasurements.clock.elapsedRealTime = halGnssMeasurements.clock.elapsedRealTime;
+    gnssMeasurements.clock.elapsedRealTimeUnc = halGnssMeasurements.clock.elapsedRealTimeUnc;
+    gnssMeasurements.clock.elapsedgPTPTime = halGnssMeasurements.clock.elapsedgPTPTime;
+    gnssMeasurements.clock.elapsedgPTPTimeUnc = halGnssMeasurements.clock.elapsedgPTPTimeUnc;
     gnssMeasurements.isNhz = halGnssMeasurements.isNhz;
 
     return gnssMeasurements;

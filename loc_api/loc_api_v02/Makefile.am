@@ -8,6 +8,11 @@ AM_CFLAGS = \
     -D__func__=__PRETTY_FUNCTION__ \
     -DTARGET_USES_QCOM_BSP
 
+if PTP_SUPPORTED
+AM_CFLAGS += -I$(WORKSPACE)/external/open-avb/lib/libgptp \
+             -DPTP_SUPPORTED
+endif
+
 libloc_api_v02_la_SOURCES = \
     LocApiV02.cpp \
     loc_api_v02_log.cpp \
@@ -27,6 +32,10 @@ endif
 
 libloc_api_v02_la_CXXFLAGS = -std=c++0x
 libloc_api_v02_la_LIBADD = -lstdc++ -ldl -lutils $(QMIFW_LIBS) $(GPSUTILS_LIBS) $(LOCCORE_LIBS)
+
+if PTP_SUPPORTED
+libloc_api_v02_la_LIBADD += -lgptp
+endif
 
 library_include_HEADERS = \
     location_service_v02.h \
