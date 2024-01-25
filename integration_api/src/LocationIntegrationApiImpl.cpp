@@ -339,7 +339,7 @@ LocationIntegrationApiImpl::LocationIntegrationApiImpl(LocIntegrationCbs& integr
     }
 
     LOC_LOGd("create sender socket: %s", mSocketName);
-    locUtilWaitForDir(SOCKET_LOC_CLIENT_DIR);
+    locUtilWaitForDir(SOCKET_LOC_CLIENT_DIR, "gps");
 
     // establish an ipc sender to the hal daemon
     mIpcSender = LocIpc::getLocIpcLocalSender(SOCKET_TO_LOCATION_HAL_DAEMON);
@@ -385,12 +385,15 @@ void LocationIntegrationApiImpl::destroy() {
                 lock_guard<mutex> lock(mMutex);
                 mApiImpl->mClientRunning = false;
             }
+            usleep(50000); //give 50ms for socket clean up
+
             delete mApiImpl;
         }
         LocationIntegrationApiImpl* mApiImpl;
     };
 
     mMsgTask.sendMsg(new (nothrow) DestroyReq(this));
+    usleep(100000); //100ms for handling onReceive() messages
 }
 
 bool LocationIntegrationApiImpl::integrationClientAllowed() {
