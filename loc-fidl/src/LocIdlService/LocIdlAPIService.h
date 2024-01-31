@@ -142,6 +142,13 @@ public:
     ) const;
 
     void onPowerEvent(IDLPowerStateType powerEvent);
+    void injectMapMatchedFeedbackData
+    (
+        const std::shared_ptr<CommonAPI::ClientId> client,
+        LocIdlAPI::MapMatchingFeedbackData& mapData,
+        LocIdlAPIStub::injectMapMatchedFeedbackDataReply_t reply
+    ) const;
+
 
 #ifdef POWER_DAEMON_MGR_ENABLED
     LocIdlPowerEvtHandler* mPowerEventObserver;

@@ -687,6 +687,36 @@ void LocIdlAPIService::LIAconfigConstellations
     }
 }
 
+void LocIdlAPIService::injectMapMatchedFeedbackData
+(
+    const std::shared_ptr<CommonAPI::ClientId> client,
+    LocIdlAPI::MapMatchingFeedbackData& mapData,
+    LocIdlAPIStub::injectMapMatchedFeedbackDataReply_t reply
+) const
+{
+    location_integration::mapMatchedFeedbackData mmfData = {};
+
+    mmfData.validityMask = mapData.getValidityMask();
+    mmfData.utcTimestampMs = mapData.getUtcTimestampMs();
+    mmfData.mapMatchedLatitudeDifference = mapData.getMapMatchedLatitudeDifference();
+    mmfData.mapMatchedLongitudeDifference = mapData.getMapMatchedLongitudeDifference();
+    mmfData.isTunnel = mapData.getIsTunnel();
+    mmfData.bearing = mapData.getBearing();
+    mmfData.altitude = mapData.getAltitude();
+    mmfData.horizontalAccuracy = mapData.getHorizontalAccuracy();
+    mmfData.altitudeAccuracy = mapData.getAltitudeAccuracy();
+    mmfData.bearingAccuracy = mapData.getBearingAccuracy();
+
+    if (mLIAInstance) {
+        bool retVal = mLIAInstance->injectMapMatchedData(mmfData);
+        if (retVal) {
+            reply(LocIdlAPI::IDLLocationResponse::IDL_LOC_RESP_SUCCESS);
+        } else {
+            reply(LocIdlAPI::IDLLocationResponse::IDL_LOC_RESP_UNKOWN_FAILURE);
+        }
+    }
+}
+
 int main() {
     LocIdlAPIService *pLCAService = LocIdlAPIService::getInstance();
     if (pLCAService) {

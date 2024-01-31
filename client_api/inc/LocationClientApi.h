@@ -464,7 +464,9 @@ enum GnssLocationNavSolutionMask {
     LOCATION_NAV_CORRECTION_RTK_FIXED_BIT  = (1<<7),
     /** Only SBAS corrected SVs was used to calculate
         GnssLocation. <br/> */
-    LOCATION_NAV_CORRECTION_ONLY_SBAS_CORRECTED_SV_USED_BIT = (1<<8)
+    LOCATION_NAV_CORRECTION_ONLY_SBAS_CORRECTED_SV_USED_BIT = (1<<8),
+     /** MMF Aiding used to calculate GnssLocation */
+    LOCATION_NAV_MMF_AIDED_POSITION  = (1<<9)
 };
 
 /** Specify the valid fields in
@@ -1349,7 +1351,11 @@ enum DrSolutionStatusMask {
     DR_SOLUTION_STATUS_WARNING_USER_DYNAMICS_INSUFFICIENT  = (1<<14),
     /** DRE solution dis-engaged due to inconsistent
       *  factory data <br/> */
-    DR_SOLUTION_STATUS_WARNING_FACTORY_DATA_INCONSISTENT   = (1<<15)
+    DR_SOLUTION_STATUS_WARNING_FACTORY_DATA_INCONSISTENT   = (1<<15),
+    /** No recent map matching feedback data */
+    DR_SOLUTION_STATUS_WARNING_MMF_UNAVAILABLE             = (1<<16),
+    /** Map matching feedback is available but not usable */
+    DR_SOLUTION_STATUS_WARNING_MMF_NOT_USABLE              = (1<<17)
 };
 
 /** Specify the location info received by client via

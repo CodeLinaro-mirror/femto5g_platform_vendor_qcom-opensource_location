@@ -240,6 +240,10 @@ uint32_t parseIDLNavSolutionMask
         idlNavSolMask |= LocIdlAPI::IDLLocationReportNavSolutionMask::\
                          IDL_NAV_CORR_ONLY_SBAS_CORR_SV_USED;
     }
+    if (LOCATION_NAV_MMF_AIDED_POSITION & navSolMask) {
+        idlNavSolMask |= LocIdlAPI::IDLLocationReportNavSolutionMask::\
+                         LRNSM_NAV_CORR_MMF_AIDED;
+    }
     return idlNavSolMask;
 }
 
@@ -743,6 +747,14 @@ uint64_t parseIDLDrSolStatusMask
     if (DR_SOLUTION_STATUS_WARNING_FACTORY_DATA_INCONSISTENT & drSolutionStatusMask) {
         idlDrSolMask |= LocIdlAPI::IDLDrSolutionStatusMask::\
                 IDL_DR_SOLUTION_STATUS_WARNING_FACTORY_DATA_INCONSISTENT;
+    }
+    if (DR_SOLUTION_STATUS_WARNING_MMF_UNAVAILABLE & drSolutionStatusMask) {
+        idlDrSolMask |= LocIdlAPI::IDLDrSolutionStatusMask::\
+                DSSM_WARNING_MMF_UNAVAILABLE;
+    }
+    if (DR_SOLUTION_STATUS_WARNING_MMF_NOT_USABLE  & drSolutionStatusMask) {
+        idlDrSolMask |= LocIdlAPI::IDLDrSolutionStatusMask::\
+                DSSM_WARNING_MMF_NOT_USABLE;
     }
     return idlDrSolMask;
 }
