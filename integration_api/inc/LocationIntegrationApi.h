@@ -27,7 +27,7 @@
  */
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
-Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -255,6 +255,7 @@ struct GnssSvIdInfo {
     /** constellation for the sv <br/>  */
     GnssConstellationType constellation;
     /** sv id range for the constellation: <br/>
+     * GPS SV id range: 1 to 32 <br/>
      * GLONASS SV id range: 65 to 96 <br/>
      * QZSS SV id range: 193 to 197 <br/>
      * BDS SV id range: 201 to 263 <br/>
@@ -957,12 +958,6 @@ public:
         position engine (SPE).
         <br/>
 
-        Please also note that GPS constellation can not be disabled
-        and GPS SV can not be blacklisted. So, if GPS constellation
-        is specified to be disabled or GPS SV is specified to be
-        blacklisted in the blacklistedSvList, those will be ignored.
-        <br/>
-
         Client should wait for the command to finish, e.g.: via
         LocConfigCb() received before issuing a second
         configConstellations() command. Behavior is not defined if
@@ -993,6 +988,8 @@ public:
         then client needs to specify all the other constellations
         defined in GnssConstellationType as to be blacklisted, this
         means adding (GNSS_CONSTELLATION_TYPE_QZSS, 0),
+        (GNSS_CONSTELLATION_TYPE_GPS, 0),
+        (GNSS_CONSTELLATION_TYPE_GLONASS, 0),
         (GNSS_CONSTELLATION_TYPE_BEIDOU, 0),
         (GNSS_CONSTELLATION_TYPE_SBAS, 0) and
         (GNSS_CONSTELLATION_TYPE_NAVIC, 0) to param
@@ -1722,7 +1719,7 @@ public:
         Inject location <br/>
 
         The LIA client should only call this API as per defined use
-        cases. If the LIA client doesn’t follow the defined use case
+        cases. If the LIA client doesn't follow the defined use case
         and instead calling injectLocation randomly, it may cause
         poor performance of the GNSS engine and break the defined
         use case. <br/>
