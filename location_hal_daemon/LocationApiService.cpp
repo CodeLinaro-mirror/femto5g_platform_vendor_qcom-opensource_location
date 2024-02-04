@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -841,10 +841,10 @@ void LocationApiService::deleteClient(LocAPIClientDeregisterReqMsg *pMsg) {
 
     std::lock_guard<std::recursive_mutex> lock(mMutex);
     std::string clientname(pMsg->mSocketName);
-    deleteClientbyName(clientname);
+    deleteClientbyName(clientname, false);
 }
 
-void LocationApiService::deleteClientbyName(const std::string clientname) {
+void LocationApiService::deleteClientbyName(const std::string clientname, bool forceRemove) {
     LOC_LOGi(">-- deleteClient client=%s", clientname.c_str());
 
     // delete this client from property db
@@ -867,7 +867,7 @@ void LocationApiService::deleteClientbyName(const std::string clientname) {
     mSingleFixReqMap.erase(clientname);
     stopTrackingSessionForSingleFixes();
 
-    pClient->cleanup();
+    pClient->cleanup(forceRemove);
 }
 
 void LocationApiService::deleteEapClientByIds(int serviceId, int instanceId) {
@@ -1942,6 +1942,10 @@ void LocationApiService::performMaintenance() {
     }
 
     for (auto client : clientsToCheck) {
+        if ((client.first.compare(0, sizeof(SOCKET_LOC_CLIENT_DIR)-1, SOCKET_LOC_CLIENT_DIR))) {
+            LOC_LOGd(" Skipping EAP client %s", client.first.c_str());
+            continue;
+        }
         string pbStr;
         bool messageSent = false;
         LocAPIPingTestReqMsg msg(SERVICE_NAME, &mPbufMsgConv);
@@ -1951,7 +1955,8 @@ void LocationApiService::performMaintenance() {
         } else {
             LOC_LOGe("LocAPIPingTestReqMsg serializeToProtobuf failed");
         }
-        LOC_LOGd("send ping message returned %d for client %s", messageSent, client.first.c_str());
+        LOC_LOGd("send ping message returned %d for client %s",
+                messageSent, client.first.c_str());
         if (messageSent == false) {
             LOC_LOGe("--< ping failed for client %s", client.first.c_str());
             deleteClientbyName(client.first);

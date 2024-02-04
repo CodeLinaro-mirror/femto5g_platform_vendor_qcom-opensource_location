@@ -28,7 +28,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -1214,7 +1214,11 @@ DECLARE_TBL(GnssMeasurementsClockFlagsMask) = {
     {GNSS_MEASUREMENTS_CLOCK_FLAGS_BIAS_UNCERTAINTY_BIT, "BIAS_UNC"},
     {GNSS_MEASUREMENTS_CLOCK_FLAGS_DRIFT_BIT, "DRIFT"},
     {GNSS_MEASUREMENTS_CLOCK_FLAGS_DRIFT_UNCERTAINTY_BIT, "DRIFT_UNC"},
-    {GNSS_MEASUREMENTS_CLOCK_FLAGS_HW_CLOCK_DISCONTINUITY_COUNT_BIT, "HW_CLK_DISCONTINUITY_CNT"}
+    {GNSS_MEASUREMENTS_CLOCK_FLAGS_HW_CLOCK_DISCONTINUITY_COUNT_BIT, "HW_CLK_DISCONTINUITY_CNT"},
+    {GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_BIT, "ELAPSED_REAL_TIME"},
+    {GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_UNC_BIT, "ELAPSED_REAL_TIME_UNC"},
+    {GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_GPTP_TIME_BIT, "ELAPSED_GPTP_TIME"},
+    {GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_GPTP_TIME_UNC_BIT, "ELAPSED_GPTP_TIME_UNC"}
 };
 // LeapSecondSysInfoMask
 DECLARE_TBL(LeapSecondSysInfoMask) = {
@@ -1406,6 +1410,8 @@ string Location::toString() const {
     out += FIELDVAL_DEC(speedAccuracy);
     out += FIELDVAL_DEC(bearingAccuracy);
     out += FIELDVAL_MASK(techMask, LocationTechnologyMask_tbl);
+    out += FIELDVAL_DEC(elapsedgPTPTime);
+    out += FIELDVAL_DEC(elapsedgPTPTimeUnc);
 
     return out;
 }
@@ -1564,6 +1570,10 @@ string GnssMeasurementsClock::toString() const {
     out += FIELDVAL_DEC(driftNsps);
     out += FIELDVAL_DEC(driftUncertaintyNsps);
     out += FIELDVAL_DEC(hwClockDiscontinuityCount);
+    out += FIELDVAL_DEC(elapsedRealTime);
+    out += FIELDVAL_DEC(elapsedRealTimeUnc);
+    out += FIELDVAL_DEC(elapsedgPTPTime);
+    out += FIELDVAL_DEC(elapsedgPTPTimeUnc);
 
     return out;
 }
