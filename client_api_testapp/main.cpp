@@ -30,7 +30,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -1553,6 +1553,10 @@ static bool checkForAutoStart(int argc, char *argv[]) {
              case 'l':
                  printf("fix cnt: %s\n", optarg);
                  fixCnt = atoi(optarg);
+                 if (fixCnt <= 0) {
+                     fixCnt = 1;
+                     printf("setting fixCnt to %d", fixCnt);
+                 }
                  if (trackingType == NO_TRACKING) {
                     trackingType = ENGINE_REPORT_TRACKING;
                  }
@@ -1560,6 +1564,10 @@ static bool checkForAutoStart(int argc, char *argv[]) {
             case 'i':
                  printf("interval: %s\n", optarg);
                  interval = atoi(optarg);
+                 if (interval <= 0) {
+                     interval = 1000;
+                     printf("setting interval to %d", interval);
+                 }
                  if (trackingType == NO_TRACKING) {
                      trackingType = ENGINE_REPORT_TRACKING;
                  }
@@ -1567,10 +1575,18 @@ static bool checkForAutoStart(int argc, char *argv[]) {
              case 't':
                  printf("tiemout: %s\n", optarg);
                  autoTestTimeoutSec = atoi(optarg);
+                 if (autoTestTimeoutSec <= 0) {
+                     autoTestTimeoutSec = 30;
+                     printf("setting autoTestTimeoutSec to %d", autoTestTimeoutSec);
+                 }
                  break;
              case 'r' :
                  printf("report type: %s\n", optarg);
                  reportType = atoi(optarg);
+                 if (reportType <= 0) {
+                     reportType = 1;
+                     printf("setting reportType to %d", reportType);
+                 }
                  break;
              case 'U' :
                  printf("route to NMEA port: %s\n", optarg);
