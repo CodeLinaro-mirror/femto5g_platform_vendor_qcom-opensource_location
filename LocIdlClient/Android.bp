@@ -34,10 +34,10 @@ cc_defaults {
     ],
 
     shared_libs: [
-        "libvsomeip3",
-        "libvsomeip3-cfg",
-        "libvsomeip3-e2e",
-        "libvsomeip3-sd",
+        "libvsomeip",
+        "libvsomeip_cfg",
+        "libvsomeip_e2e",
+        "libvsomeip_sd",
         "libCommonAPI-SomeIP",
         "libCommonAPI",
         "liblog",
