@@ -791,10 +791,10 @@ uint32_t LocationIntegrationApiImpl::configPositionAssistedClockEstimator(bool e
 }
 
 uint32_t LocationIntegrationApiImpl::gnssDeleteAidingData(
-        GnssAidingData& aidingData) {
+        const GnssAidingData& aidingData) {
     struct DeleteAidingDataReq : public LocMsg {
         DeleteAidingDataReq(LocationIntegrationApiImpl* apiImpl,
-                            GnssAidingData& aidingData) :
+                            const GnssAidingData& aidingData) :
                 mApiImpl(apiImpl),
                 mAidingData(aidingData) {}
         virtual ~DeleteAidingDataReq() {}

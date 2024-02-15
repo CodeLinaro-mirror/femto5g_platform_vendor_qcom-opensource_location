@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -328,6 +328,16 @@ void LocationClientApiImpl::parseLocation(const ::Location &halLocation, Locatio
         flags |= LOCATION_HAS_ELAPSED_REAL_TIME_UNC_BIT;
     }
 #endif
+
+    if (::LOCATION_HAS_GPTP_TIME_BIT & halLocation.flags) {
+        flags |= LOCATION_HAS_GPTP_TIME_BIT;
+        location.elapsedgPTPTime  =  halLocation.elapsedgPTPTime;
+    }
+
+    if (::LOCATION_HAS_GPTP_TIME_UNC_BIT & halLocation.flags) {
+        flags |= LOCATION_HAS_GPTP_TIME_UNC_BIT;
+        location.elapsedgPTPTimeUnc =  halLocation.elapsedgPTPTimeUnc;
+    }
     location.flags = (LocationFlagsMask)flags;
 
     flags = 0;
@@ -371,7 +381,7 @@ void LocationClientApiImpl::parseLocation(const ::Location &halLocation, Locatio
 }
 
 Location LocationClientApiImpl::parseLocation(const ::Location &halLocation) {
-    Location location;
+    Location location = {};
     parseLocation(halLocation, location);
     return location;
 }
@@ -379,7 +389,8 @@ Location LocationClientApiImpl::parseLocation(const ::Location &halLocation) {
 GnssLocationSvUsedInPosition LocationClientApiImpl::parseLocationSvUsedInPosition(
         const ::GnssLocationSvUsedInPosition &halSv) {
 
-    GnssLocationSvUsedInPosition clientSv;
+    GnssLocationSvUsedInPosition clientSv = {};
+
     clientSv.gpsSvUsedIdsMask = halSv.gpsSvUsedIdsMask;
     clientSv.gloSvUsedIdsMask = halSv.gloSvUsedIdsMask;
     clientSv.galSvUsedIdsMask = halSv.galSvUsedIdsMask;
@@ -474,7 +485,7 @@ void LocationClientApiImpl::parseGnssMeasUsageInfo(
 
     if (halLocationInfo.numOfMeasReceived) {
         for (int idx = 0; idx < halLocationInfo.numOfMeasReceived; idx++) {
-            GnssMeasUsageInfo measUsageInfo;
+            GnssMeasUsageInfo measUsageInfo = {};
 
             measUsageInfo.gnssSignalType = parseGnssSignalType(
                     halLocationInfo.measUsageInfo[idx].gnssSignalType);
@@ -641,8 +652,7 @@ GnssSystemTimeStructType LocationClientApiImpl::parseGnssTime(
 GnssGloTimeStructType LocationClientApiImpl::parseGloTime(
         const ::GnssGloTimeStructType &halGloTime) {
 
-    GnssGloTimeStructType   gloTime;
-    memset(&gloTime, 0, sizeof(gloTime));
+    GnssGloTimeStructType   gloTime = {};
     uint32_t gloTimeFlags = 0;
 
     if (::GNSS_CLO_DAYS_VALID & halGloTime.validityMask) {
@@ -681,8 +691,7 @@ GnssGloTimeStructType LocationClientApiImpl::parseGloTime(
 
 GnssSystemTime LocationClientApiImpl::parseSystemTime(const ::GnssSystemTime &halSystemTime) {
 
-    GnssSystemTime systemTime;
-    memset(&systemTime, 0x0, sizeof(GnssSystemTime));
+    GnssSystemTime systemTime = {};
 
     switch (halSystemTime.gnssSystemTimeSrc) {
         case ::GNSS_LOC_SV_SYSTEM_GPS:
@@ -722,7 +731,7 @@ GnssSystemTime LocationClientApiImpl::parseSystemTime(const ::GnssSystemTime &ha
 GnssLocation LocationClientApiImpl::parseLocationInfo(
         const ::GnssLocationInfoNotification &halLocationInfo) {
 
-    GnssLocation locationInfo;
+    GnssLocation locationInfo = {};
     parseLocation(halLocationInfo.location, locationInfo);
     uint64_t flags = 0;
 
@@ -948,7 +957,7 @@ GnssLocation LocationClientApiImpl::parseLocationInfo(
 }
 
 GnssSv LocationClientApiImpl::parseGnssSv(const ::GnssSv &halGnssSv) {
-    GnssSv gnssSv;
+    GnssSv gnssSv = {};
 
     gnssSv.svId = halGnssSv.svId;
     switch (halGnssSv.type) {
@@ -1029,7 +1038,7 @@ GnssSv LocationClientApiImpl::parseGnssSv(const ::GnssSv &halGnssSv) {
 
 GnssData LocationClientApiImpl::parseGnssData(const ::GnssDataNotification &halGnssData) {
 
-    GnssData gnssData;
+    GnssData gnssData = {};
 
     for (int sig = GNSS_LOC_SIGNAL_TYPE_GPS_L1CA;
          sig < GNSS_LOC_MAX_NUMBER_OF_SIGNAL_TYPES; sig++) {
@@ -1123,6 +1132,10 @@ GnssMeasurements LocationClientApiImpl::parseGnssMeasurements(
     gnssMeasurements.clock.driftUncertaintyNsps = halGnssMeasurements.clock.driftUncertaintyNsps;
     gnssMeasurements.clock.hwClockDiscontinuityCount =
             halGnssMeasurements.clock.hwClockDiscontinuityCount;
+    gnssMeasurements.clock.elapsedRealTime = halGnssMeasurements.clock.elapsedRealTime;
+    gnssMeasurements.clock.elapsedRealTimeUnc = halGnssMeasurements.clock.elapsedRealTimeUnc;
+    gnssMeasurements.clock.elapsedgPTPTime = halGnssMeasurements.clock.elapsedgPTPTime;
+    gnssMeasurements.clock.elapsedgPTPTimeUnc = halGnssMeasurements.clock.elapsedgPTPTimeUnc;
     gnssMeasurements.isNhz = halGnssMeasurements.isNhz;
 
     return gnssMeasurements;
@@ -1339,7 +1352,7 @@ public:
 
             virtual ~onHalServiceStatusChangeHandler() {}
             void proc() const {
-                LOC_LOGi("LocIpcQrtrWatcher:: HAL Daemon service status %d", mStatus);
+                LOC_LOGi("LocIpcQrtrWatcher:: HAL Daemon service status %d", (int)mStatus);
                 if (LocIpcQrtrWatcher::ServiceStatus::UP == mStatus) {
                     auto sender = mWatcher.mIpcSender.lock();
                     if (nullptr != sender && sender->copyDestAddrFrom(mRefSender)) {
@@ -1661,13 +1674,13 @@ void LocationClientApiImpl::updateCallbacksSync(LocationCallbacks& callbacks) {
     }
 }
 
-uint32_t LocationClientApiImpl::startTracking(TrackingOptions& option) {
+uint32_t LocationClientApiImpl::startTracking(const TrackingOptions& option) {
     struct StartTrackingReq : public LocMsg {
         StartTrackingReq(LocationClientApiImpl* apiImpl, const TrackingOptions& option) :
                 mApiImpl(apiImpl), mOptions(option) {}
         virtual ~StartTrackingReq() {}
         void proc() const {
-            mApiImpl->startTrackingSync(const_cast<TrackingOptions&>(mOptions));
+            mApiImpl->startTrackingSync(mOptions);
         }
 
         LocationClientApiImpl* mApiImpl;
@@ -1677,7 +1690,7 @@ uint32_t LocationClientApiImpl::startTracking(TrackingOptions& option) {
     return mClientId;
 }
 
-uint32_t LocationClientApiImpl::startTrackingSync(TrackingOptions& option) {
+uint32_t LocationClientApiImpl::startTrackingSync(const TrackingOptions& option) {
     // check if option is updated
     bool isOptionUpdated = false;
 
@@ -1719,7 +1732,7 @@ uint32_t LocationClientApiImpl::startTrackingSync(TrackingOptions& option) {
     } else if (isOptionUpdated) {
         // update a tracking session, mLocationOptions
         // will be updated in updateTrackingOptionsSync
-        updateTrackingOptionsSync(const_cast<TrackingOptions&>(option), true);
+        updateTrackingOptionsSync(option, true);
     } else {
         LOC_LOGd(">>> StartTrackingReq - no change in option");
         invokePositionSessionResponseCb(LOCATION_ERROR_SUCCESS);
@@ -1729,7 +1742,7 @@ uint32_t LocationClientApiImpl::startTrackingSync(TrackingOptions& option) {
 
 // updateTrackingOptions is called from Android HIDL clients and must be purely used
 // to only update parameters of an ongoing session, and not start a new session.
-void LocationClientApiImpl::updateTrackingOptions(uint32_t id, TrackingOptions& options) {
+void LocationClientApiImpl::updateTrackingOptions(uint32_t id, const TrackingOptions& options) {
     struct UpdateTrackingReq : public LocMsg {
         UpdateTrackingReq(LocationClientApiImpl* apiImpl, const TrackingOptions& options) :
                 mApiImpl(apiImpl), mUpdatedOptions(options) {}
@@ -1900,7 +1913,7 @@ void LocationClientApiImpl::clearSubscriptions(LocationCallbackType cbTypeToClea
     }
 }
 
-void LocationClientApiImpl::updateTrackingOptionsSync(TrackingOptions& option,
+void LocationClientApiImpl::updateTrackingOptionsSync(const TrackingOptions& option,
         bool clearSubscriptions) {
 
     LOC_LOGd(">>> updateTrackingOptionsSync,sessionId=%d, "
@@ -1953,13 +1966,13 @@ void LocationClientApiImpl::updateTrackingOptionsSync(TrackingOptions& option,
     mLocationOptions = option;
 }
 
-uint32_t LocationClientApiImpl::startBatching(BatchingOptions& batchOptions) {
+uint32_t LocationClientApiImpl::startBatching(const BatchingOptions& batchOptions) {
     struct StartBatchingReq : public LocMsg {
         StartBatchingReq(LocationClientApiImpl* apiImpl, const BatchingOptions& batchOptions) :
                 mApiImpl(apiImpl), mBatchOptions(batchOptions) {}
         virtual ~StartBatchingReq() {}
         void proc() const {
-            mApiImpl->startBatchingSync(const_cast<BatchingOptions&>(mBatchOptions));
+            mApiImpl->startBatchingSync(mBatchOptions);
         }
 
         LocationClientApiImpl* mApiImpl;
@@ -1970,7 +1983,7 @@ uint32_t LocationClientApiImpl::startBatching(BatchingOptions& batchOptions) {
 }
 
 //Batching
-uint32_t LocationClientApiImpl::startBatchingSync(BatchingOptions& batchOptions) {
+uint32_t LocationClientApiImpl::startBatchingSync(const BatchingOptions& batchOptions) {
     if (!mHalRegistered) {
         mBatchingOptions = batchOptions;
         LOC_LOGe(">>> startBatching - Not registered yet");
@@ -1997,7 +2010,7 @@ uint32_t LocationClientApiImpl::startBatchingSync(BatchingOptions& batchOptions)
             LOC_LOGe("LocAPIStartBatchingReqMsg serializeToProtobuf failed");
         }
     } else {
-        updateBatchingOptions(mBatchingId, const_cast<BatchingOptions&>(batchOptions));
+        updateBatchingOptions(mBatchingId, batchOptions);
     }
     return 0;
 }
@@ -2061,7 +2074,8 @@ void LocationClientApiImpl::stopBatching(uint32_t id) {
     mMsgTask.sendMsg(new (nothrow) StopBatchingReq(this));
 }
 
-void LocationClientApiImpl::updateBatchingOptions(uint32_t id, BatchingOptions& batchOptions) {
+void LocationClientApiImpl::updateBatchingOptions(uint32_t id,
+        const BatchingOptions& batchOptions) {
 
     if ((mBatchingOptions.minInterval != batchOptions.minInterval) ||
             (mBatchingOptions.minDistance != batchOptions.minDistance) ||
