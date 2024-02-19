@@ -530,6 +530,20 @@ void regSigHandler()
 
 void subscribeGnssResports()
 {
+
+    myProxy->getProxyStatusEvent().subscribe([&] (const CommonAPI::AvailabilityStatus status) {
+        switch (status) {
+        case CommonAPI::AvailabilityStatus::UNKNOWN:
+            std::cout << "Unkown" << endl;
+            break;
+        case CommonAPI::AvailabilityStatus::NOT_AVAILABLE:
+            std::cout << "NOT_AVAILABLE" << endl;
+            break;
+        case CommonAPI::AvailabilityStatus::AVAILABLE:
+            std::cout << "AVAILABLE" << endl;
+            break;
+        }
+    });
     // Subscribe for receiving values
     myProxy->getGnssCapabilitiesMaskAttribute().getChangedEvent().subscribe(
         [&](const uint32_t &val) {
