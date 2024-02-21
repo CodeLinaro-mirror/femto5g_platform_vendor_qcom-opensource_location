@@ -1089,6 +1089,8 @@ string GnssLocation::toString() const {
         out += to_string(dgnssId);
         count++;
     }
+    out += FIELDVAL_DEC(baseLineLength);
+    out += FIELDVAL_DEC(ageMsecOfCorrections);
     return out;
 }
 

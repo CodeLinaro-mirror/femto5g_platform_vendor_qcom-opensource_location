@@ -673,6 +673,8 @@ private:
     // BodyToSensorMountParams to PBLIABodyToSensorMountParams
     int convertBodyToSensorMountParamsToPB(const BodyToSensorMountParams &bodyToSensorMntParams,
             PBLIABodyToSensorMountParams *pbBodyToSensorMntParams) const;
+    uint32_t getPBMaskForGnssLocationInfoExtFlagMask(
+        const uint64_t &gnssLocInfoFlagMask) const;
 
     // HAL to PB EPH functions
     PBGnssEphAction getPBEphAction (const GnssEphAction& ephAction) const;
@@ -819,7 +821,8 @@ private:
     // PBGnssMeasurementsAdrStateMask to GnssMeasurementsAdrStateMask
     uint32_t getGnssMeasurementsAdrStateMaskFromPB(const uint32_t &pbGnssMeasAdrStateMask) const;
     // PBGnssLocationInfoFlagMask to GnssLocationInfoFlagMask
-    uint32_t getGnssLocationInfoFlagMaskFromPB(const uint32_t &pbGnssLocInfoFlagMask) const;
+    uint64_t getGnssLocationInfoFlagMaskFromPB(const uint32_t &pbGnssLocInfoFlagMask,
+                                               const uint32_t &pbGnssLocInfoExtFlagMask) const;
     // PBGnssLocationNavSolutionMask to GnssLocationNavSolutionMask
     uint32_t getGnssLocationNavSolutionMaskFromPB(const uint32_t &pbGnssLocNavSoln) const;
     // PBLocApiDrCalibrationStatusMask to DrCalibrationStatusMask

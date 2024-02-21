@@ -623,6 +623,7 @@ static GnssSystemTime parseSystemTime(const ::GnssSystemTime &halSystemTime) {
 static GnssLocation parseLocationInfo(const ::GnssLocationInfoNotification &halLocationInfo) {
 
     GnssLocation locationInfo;
+    memset(&locationInfo, 0, sizeof(locationInfo));
     parseLocation(halLocationInfo.location, locationInfo);
     uint64_t flags = 0;
 
@@ -761,6 +762,16 @@ static GnssLocation parseLocationInfo(const ::GnssLocationInfoNotification &halL
 
     if (::GNSS_LOCATION_INFO_DGNSS_STATION_ID_BIT & halLocationInfo.flags) {
         flags |= GNSS_LOCATION_INFO_DGNSS_STATION_ID_BIT;
+    }
+
+    if (::GNSS_LOCATION_INFO_BASE_LINE_LENGTH_BIT & halLocationInfo.flags) {
+        flags |= GNSS_LOCATION_INFO_BASE_LINE_LENGTH_BIT;
+        locationInfo.baseLineLength = halLocationInfo.baseLineLength;
+    }
+
+    if (::GNSS_LOCATION_INFO_AGE_OF_CORRECTION_BIT & halLocationInfo.flags) {
+        flags |= GNSS_LOCATION_INFO_AGE_OF_CORRECTION_BIT;
+        locationInfo.ageMsecOfCorrections = halLocationInfo.ageMsecOfCorrections;
     }
 
     locationInfo.gnssInfoFlags = (GnssLocationInfoFlagMask)flags;

@@ -603,6 +603,10 @@ enum GnssLocationInfoFlagMask {
     GNSS_LOCATION_INFO_PROTECT_VERTICAL_BIT             = (1ULL<<38),
     /** GnssLocation has valid GnssLocation::dgnssStationId. <br/> */
     GNSS_LOCATION_INFO_DGNSS_STATION_ID_BIT             = (1ULL<<39),
+    /** GnssLocation has valid GnssLocation::baseLineLength. <br/> */
+    GNSS_LOCATION_INFO_BASE_LINE_LENGTH_BIT             = (1ULL<<40),
+    /** GnssLocation has valid GnssLocation::ageMsecOfCorrections. <br/> */
+    GNSS_LOCATION_INFO_AGE_OF_CORRECTION_BIT            = (1ULL<<41),
 };
 
 /** Specify the reliability level of
@@ -1255,6 +1259,15 @@ struct GnssLocation : public Location {
        - Other values reserved. <br/>
     */
     std::vector<uint16_t> dgnssStationId;
+
+    /** Distance between the base station and the receiver
+     *  Unit- meters */
+    double baseLineLength;
+
+    /** Difference in time between the fix timestamp using the
+     *  correction and the time of the correction
+     *  Unit - milli-seconds */
+    uint64_t ageMsecOfCorrections;
 
     /* Default constructor to initalize GnssLocation structure */
     inline GnssLocation() :
