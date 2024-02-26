@@ -79,8 +79,8 @@ enum LocationApiDataTypesVersion {
     LOCAPI_DATA_TYPES_VER_MAJOR = 1;
     // Minor - New features / API addition, new message/elemtent addition.
     // Bump the last byte of version i.e. x.2 to x.3
-    // Minor version 38: Support Ephemeris Data Reporting to LCA
-    LOCAPI_DATA_TYPES_VER_MINOR = 38;
+    // Minor version 39: Support to add NAVIC L1 signal type
+    LOCAPI_DATA_TYPES_VER_MINOR = 39;
 }
 
 // ============================================================================
@@ -150,6 +150,8 @@ enum PBGnssSignalTypeMask {
     PB_GNSS_SIGNAL_BEIDOU_B2BI_BIT         = 0x00400000;
     /** BEIDOU B2B_Q RF Band */
     PB_GNSS_SIGNAL_BEIDOU_B2BQ_BIT         = 0x00800000;
+    /** NAVIC L1 RF Band */
+    PB_GNSS_SIGNAL_NAVIC_L1_BIT            = 0x01000000;
 }
 
 enum PBLocApiGnss_LocSvSystemEnumType {
