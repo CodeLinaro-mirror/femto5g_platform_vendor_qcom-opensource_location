@@ -3325,6 +3325,11 @@ void LocApiV02 :: reportPosition (
                      location.gpsLocation.longitude, location.gpsLocation.accuracy);
             sessStatus = LOC_SESS_FAILURE;
         }
+        // Filling report rate for SPE reports
+        if (mMinInterval) {
+            locationExtended.posReportingInterval = mMinInterval;
+            locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_REPORT_INTERVAL;
+        }
 
         LocApiBase::reportPosition(location,
                                    locationExtended,
