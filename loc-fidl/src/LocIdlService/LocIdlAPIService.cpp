@@ -60,6 +60,12 @@ static uint32_t latentPosCount = 0;
 #define MAX_POSITION_LATENCY   20
 #define IDL_MAX_RETRY 5
 
+/** Keep cont of number of start session requests, this variable
+ *  shall be incremented on each startSession and decremented on
+ *  every stop Session, Stop session request shall be sent to LCA
+ *  only if this variable is 0 */
+static uint32_t numControlRequests = 0;
+
 static void onConfigResponseCb(location_integration::LocConfigTypeEnum      requestType,
                                location_integration::LocIntegrationResponse response) {
      LOC_LOGd("<<< onConfigResponseCb, type %d, err %d\n", requestType, response);
@@ -241,7 +247,8 @@ LocIdlAPIService::LocIdlAPIService():
 #ifdef POWER_DAEMON_MGR_ENABLED
         mPowerEventObserver(nullptr),
 #endif
-        mLcaIdlConverter(new LocLcaIdlConverter())
+        mLcaIdlConverter(new LocLcaIdlConverter()),
+        mGnssReportMask(0)
 {
 
 }
@@ -464,17 +471,44 @@ void LocIdlAPIService::startPositionSession
         LocIdlAPIStub::startPositionSessionReply_t reply
 ) const
 {
-    LOC_LOGe("==== startPositionSession Fused %u 0X%X ",
-            intervalInMs, gnssReportCallbackMask);
+    struct StartFusedPosMsg : public LocMsg {
+        const LocIdlAPIService* mLCAService;
+        const std::shared_ptr<CommonAPI::ClientId> mClient;
+        uint32_t mIntervalInMs;
+        uint32_t mGnssReportCbMask;
+        LocIdlAPIStub::startPositionSession1Reply_t mReply;
+        inline StartFusedPosMsg(const LocIdlAPIService* LCAService,
+                const std::shared_ptr<CommonAPI::ClientId> client,
+                uint32_t intervalInMs,
+                uint32_t gnssReportCallbackMask,
+                LocIdlAPIStub::startPositionSession1Reply_t reply) :
+            LocMsg(),
+            mLCAService(LCAService),
+            mClient(client),
+            mIntervalInMs(intervalInMs),
+            mGnssReportCbMask(gnssReportCallbackMask),
+            mReply(reply){};
+        inline virtual void proc() const {
+            numControlRequests++;
+            mLCAService->mGnssReportMask |= mGnssReportCbMask;
 
-    LocationTrackingSessCbHandler cbHandler(this, gnssReportCallbackMask);
-    ResponseCb rspCb = [client, reply] (::LocationResponse response) {
-            LOC_LOGd("==== responseCb %d", response);
-            //convert response from LCA to FIDL format
-            LocIdlAPI::IDLLocationResponse resp = mInstance->parseIDLResponse(response);
-            reply(resp);
+            LOC_LOGi("==== startPositionSession intervalMs %u GnssReportCbMask 0X%X"
+                     " LCAReportMask 0X%X numControlRequests %u", mIntervalInMs, mGnssReportCbMask,
+                     mLCAService->mGnssReportMask, numControlRequests);
+            LocationTrackingSessCbHandler cbHandler(mLCAService, mLCAService->mGnssReportMask);
+            ResponseCb rspCb = [client=mClient, reply=mReply] (::LocationResponse response) {
+                LOC_LOGd("==== responseCb %d", response);
+                //convert response from LCA to FIDL format
+                LocIdlAPI::IDLLocationResponse resp = mInstance->parseIDLResponse(response);
+                reply(resp);
+            };
+
+            mLCAService->mLcaInstance->startPositionSession(mIntervalInMs,
+                    cbHandler.getLocationCbs(), rspCb);
+        }
     };
-    mLcaInstance->startPositionSession(intervalInMs, cbHandler.getLocationCbs(), rspCb);
+    mMsgTask->sendMsg(new StartFusedPosMsg(this, client, intervalInMs,
+            gnssReportCallbackMask, reply));
 }
 
 /* Process Engine specific Position request */
@@ -507,14 +541,15 @@ void LocIdlAPIService::startPositionSession
             mEngReportCallbackMask(engReportCallbackMask),
             mReply(reply){};
         inline virtual void proc() const {
-            LOC_LOGe("==== startPositionSession Engine Specific %u 0X%X 0X%X ",
+            numControlRequests++;
+            LOC_LOGi("==== startPositionSession Engine Specific %u 0X%X 0X%X ",
                     mIntervalInMs, mLocReqEngMask, mEngReportCallbackMask);
             LocationTrackingSessCbHandler cbHandler(mLCAService, mLocReqEngMask,
                     mEngReportCallbackMask);
             ResponseCb rspCb = [client=mClient, reply=mReply] (::LocationResponse response) {
                 LOC_LOGd("==== responseCb %d", response);
                 //convert response from LCA to FIDL format
-            LocIdlAPI::IDLLocationResponse resp = mInstance->parseIDLResponse(response);
+                LocIdlAPI::IDLLocationResponse resp = mInstance->parseIDLResponse(response);
                 reply(resp);
             };
 
@@ -536,10 +571,30 @@ void LocIdlAPIService::stopPositionSession
     LocIdlAPIStub::stopPositionSessionReply_t reply
 ) const
 {
-    mLcaInstance->stopPositionSession();
-    posCount = 0;
-    latentPosCount = 0;
-    reply();
+    struct StopPosMsg : public LocMsg {
+        const LocIdlAPIService* mLCAService;
+        const std::shared_ptr<CommonAPI::ClientId> mClient;
+        LocIdlAPIStub::stopPositionSessionReply_t mReply;
+        inline StopPosMsg(const LocIdlAPIService* LCAService,
+                const std::shared_ptr<CommonAPI::ClientId> client,
+                LocIdlAPIStub::stopPositionSessionReply_t reply) :
+            LocMsg(),
+            mLCAService(LCAService),
+            mClient(client),
+            mReply(reply){};
+        inline virtual void proc() const {
+            numControlRequests--;
+            if (!numControlRequests) {
+                LOC_LOGd(" Sending STOP Session request !!");
+                mLCAService->mLcaInstance->stopPositionSession();
+                posCount = 0;
+                latentPosCount = 0;
+                mLCAService->mGnssReportMask = 0;
+            }
+            mReply();
+       }
+    };
+    mMsgTask->sendMsg(new StopPosMsg(this, client, reply));
 }
 
 void LocIdlAPIService::LIAdeleteAidingData
@@ -570,6 +625,7 @@ void LocIdlAPIService::LIAconfigConstellations
     LocIdlAPIStub::configConstellationsReply_t reply
 ) const
 {
+
     LOC_LOGd(" ");
     location_integration::LocConfigBlacklistedSvIdList svList;
     for (int i = 0; i < svListSrc.size(); i++) {
