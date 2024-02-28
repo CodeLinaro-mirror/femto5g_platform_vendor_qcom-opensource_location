@@ -6667,13 +6667,11 @@ bool LocApiV02 :: convertGnssMeasurements (
         measurementData.adrUncertaintyMeters = 0.0;
     }
 
-    // accumulatedDeltaRangeState
-    measurementData.adrStateMask = GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_UNKNOWN;
     measurementData.flags |= GNSS_MEASUREMENTS_DATA_ADR_STATE_BIT;
-    measurementData.adrStateMask |= GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_RESET_BIT;
     if ((gnss_measurement_info.validMask & QMI_LOC_SV_CARRIER_PHASE_VALID_V02) &&
         (gnss_measurement_info.carrierPhase != 0.0)) {
-        measurementData.adrStateMask = GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_VALID_BIT;
+        measurementData.adrStateMask = (GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_VALID_BIT |
+                GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_RESET_BIT);
 
         uint8_t svIdFound = 1;
         int32_t refCountDiff = 0;
@@ -6702,10 +6700,10 @@ bool LocApiV02 :: convertGnssMeasurements (
                        gnss_measurement_info.gnssSvId, refCountDiff, maxRefCntDiff);
             }
         }
-
-        measurementData.adrStateMask &=
-                ~GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_RESET_BIT;
-
+        if (svIdFound) {
+            measurementData.adrStateMask &=
+                    ~GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_RESET_BIT;
+        }
         if ((gnss_measurement_info.validMask & QMI_LOC_SV_CYCLESLIP_COUNT_VALID_V02) && svIdFound &&
             (iter->second.cycleSlipCount != gnss_measurement_info.cycleSlipCount)) {
             measurementData.adrStateMask |=
@@ -6732,6 +6730,8 @@ bool LocApiV02 :: convertGnssMeasurements (
                     GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_HALF_CYCLE_RESOLVED_BIT;
         }
         LOC_LOGv("adrStateMask = 0x%02x", measurementData.adrStateMask);
+    } else {
+        measurementData.adrStateMask = GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_UNKNOWN;
     }
 
     // multipath_indicator
