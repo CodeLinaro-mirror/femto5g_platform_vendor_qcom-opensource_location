@@ -28,7 +28,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -79,8 +79,8 @@ enum LocationApiDataTypesVersion {
     LOCAPI_DATA_TYPES_VER_MAJOR = 1;
     // Minor - New features / API addition, new message/elemtent addition.
     // Bump the last byte of version i.e. x.2 to x.3
-    // Minor version 35: Add ML feature capability
-    LOCAPI_DATA_TYPES_VER_MINOR = 35;
+    // Minor version 37: Support GPTP time in Basic Position report
+    LOCAPI_DATA_TYPES_VER_MINOR = 37;
 }
 
 // ============================================================================
@@ -294,15 +294,19 @@ enum PBGnssGloTimeStructTypeFlags {
 
 enum PBGnssMeasurementsClockFlagsMask {
     PB_GNSS_MEASUREMENTS_CLOCK_FLAGS_INVALID                          = 0;
-    PB_GNSS_MEASUREMENTS_CLOCK_FLAGS_LEAP_SECOND_BIT                  = 1;
-    PB_GNSS_MEASUREMENTS_CLOCK_FLAGS_TIME_BIT                         = 2;
-    PB_GNSS_MEASUREMENTS_CLOCK_FLAGS_TIME_UNCERTAINTY_BIT             = 4;
-    PB_GNSS_MEASUREMENTS_CLOCK_FLAGS_FULL_BIAS_BIT                    = 8;
-    PB_GNSS_MEASUREMENTS_CLOCK_FLAGS_BIAS_BIT                         = 16;
-    PB_GNSS_MEASUREMENTS_CLOCK_FLAGS_BIAS_UNCERTAINTY_BIT             = 32;
-    PB_GNSS_MEASUREMENTS_CLOCK_FLAGS_DRIFT_BIT                        = 64;
-    PB_GNSS_MEASUREMENTS_CLOCK_FLAGS_DRIFT_UNCERTAINTY_BIT            = 128;
-    PB_GNSS_MEASUREMENTS_CLOCK_FLAGS_HW_CLOCK_DISCONTINUITY_COUNT_BIT = 256;
+    PB_GNSS_MEASUREMENTS_CLOCK_FLAGS_LEAP_SECOND_BIT                  = 0x1;
+    PB_GNSS_MEASUREMENTS_CLOCK_FLAGS_TIME_BIT                         = 0x2;
+    PB_GNSS_MEASUREMENTS_CLOCK_FLAGS_TIME_UNCERTAINTY_BIT             = 0x4;
+    PB_GNSS_MEASUREMENTS_CLOCK_FLAGS_FULL_BIAS_BIT                    = 0x8;
+    PB_GNSS_MEASUREMENTS_CLOCK_FLAGS_BIAS_BIT                         = 0x10;
+    PB_GNSS_MEASUREMENTS_CLOCK_FLAGS_BIAS_UNCERTAINTY_BIT             = 0x20;
+    PB_GNSS_MEASUREMENTS_CLOCK_FLAGS_DRIFT_BIT                        = 0x40;
+    PB_GNSS_MEASUREMENTS_CLOCK_FLAGS_DRIFT_UNCERTAINTY_BIT            = 0x80;
+    PB_GNSS_MEASUREMENTS_CLOCK_FLAGS_HW_CLOCK_DISCONTINUITY_COUNT_BIT = 0x100;
+    PB_GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_BIT            = 0x200;
+    PB_GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_UNC_BIT        = 0x400;
+    PB_GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_GPTP_TIME_BIT            = 0x800;
+    PB_GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_GPTP_TIME_UNC_BIT        = 0x1000;
 }
 
 enum PBLocApiGnssSystemTimeStructTypeFlags {
@@ -576,6 +580,10 @@ enum PBLocationFlagsMask {
     PB_LOCATION_HAS_ELAPSED_REAL_TIME_BIT    = 0x0200;
     // location has valid time uncertainty
     PB_LOCATION_HAS_TIME_UNC_BIT             = 0x0400;
+    // location has valid GPTP time
+    PB_LOCATION_HAS_GPTP_TIME_BIT            = 0x0800;
+    // location has valid GPTP Uncertainty
+    PB_LOCATION_HAS_GPTP_TIME_UNC_BIT        = 0x1000;
 }
 
 enum PBLocationTechnologyMask {
@@ -861,6 +869,10 @@ message PBLocation {
     uint64 elapsedRealTimeUnc = 14;
     /** time uncertainty in msec */
     float  timeUncMs = 15;
+    // GPTP time field in nano seconds
+    uint64 elapsedgPTPTime  = 16;
+    // GPTP time Unc
+    uint64 elapsedgPTPTimeUnc = 17;
 }
 
 message PBLocationOptions {
@@ -940,6 +952,10 @@ message PBGnssMeasurementsClock {
     double driftNsps = 8;
     double driftUncertaintyNsps = 9;
     uint32 hwClockDiscontinuityCount= 10;
+    uint64 elapsedRealTime = 11;
+    uint64 elapsedRealTimeUnc = 12;
+    uint64 elapsedgPTPTime = 13;
+    uint64 elapsedgPTPTimeUnc = 14;
 }
 
 message PBGnssMeasurementsData {
