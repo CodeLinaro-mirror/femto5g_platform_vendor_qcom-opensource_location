@@ -28,7 +28,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -137,7 +137,7 @@ class TrackingSessCbHandler {
             if (engineReportCbs.engineNmeaCallback) {
                 mCallbackOptions.engineNmeaCb =
                 [pClientApiImpl, engineNmeaCallback = engineReportCbs.engineNmeaCallback](
-                        ::GnssNmeaNotification n) {
+                        const ::GnssNmeaNotification& n) {
                     uint64_t timestamp = n.timestamp;
                     LocOutputEngineType locOutputEngType = (LocOutputEngineType)n.locOutputEngType;
                     std::string nmea(n.nmea);
@@ -207,7 +207,7 @@ void TrackingSessCbHandler::initializeCommonCbs(LocationClientApiImpl *pClientAp
     }
     if (gnssNmeaCallback) {
         mCallbackOptions.gnssNmeaCb =
-                [pClientApiImpl, gnssNmeaCallback](::GnssNmeaNotification n) {
+                [pClientApiImpl, gnssNmeaCallback](const ::GnssNmeaNotification& n) {
             uint64_t timestamp = n.timestamp;
             LocOutputEngineType locOutputEngType = (LocOutputEngineType)n.locOutputEngType;
             std::string nmea(n.nmea);
@@ -424,7 +424,7 @@ bool LocationClientApi::startTripBatchingSession(uint32_t minInterval, uint32_t 
     }
 
     callbacksOption.batchingCb = [batchingCb] (size_t count, ::Location* location,
-            BatchingOptions batchingOptions) {
+            const BatchingOptions& batchingOptions) {
         std::vector<Location> locationVector;
         BatchingStatus status = ((count != 0 )? BATCHING_STATUS_ACTIVE : BATCHING_STATUS_INACTIVE);
         LOC_LOGd("Batch count : %zu", count);
@@ -435,7 +435,7 @@ bool LocationClientApi::startTripBatchingSession(uint32_t minInterval, uint32_t 
         batchingCb(locationVector, status);
     };
 
-    callbacksOption.batchingStatusCb = [batchingCb](BatchingStatusInfo batchingSt,
+    callbacksOption.batchingStatusCb = [batchingCb](const BatchingStatusInfo& batchingSt,
             std::list<uint32_t>& listOfcompletedTrips) {
         if (BATCHING_STATUS_TRIP_COMPLETED == batchingSt.batchingStatus) {
             std::vector<Location> locationVector;
@@ -484,7 +484,7 @@ bool LocationClientApi::startRoutineBatchingSession(uint32_t minInterval, uint32
     }
 
     callbacksOption.batchingCb = [batchingCb](size_t count, ::Location* location,
-            BatchingOptions batchingOptions) {
+            const BatchingOptions& batchingOptions) {
         std::vector<Location> locationVector;
         BatchingStatus status = BATCHING_STATUS_INACTIVE;
         LOC_LOGd("Batch count : %zu", count);
@@ -1410,6 +1410,8 @@ string Location::toString() const {
     out += FIELDVAL_DEC(speedAccuracy);
     out += FIELDVAL_DEC(bearingAccuracy);
     out += FIELDVAL_MASK(techMask, LocationTechnologyMask_tbl);
+    out += FIELDVAL_DEC(elapsedgPTPTime);
+    out += FIELDVAL_DEC(elapsedgPTPTimeUnc);
 
     return out;
 }
@@ -1484,8 +1486,6 @@ string GnssLocation::toString() const {
         out += to_string(dgnssId);
         count++;
     }
-    out += FIELDVAL_DEC(elapsedgPTPTime);
-    out += FIELDVAL_DEC(elapsedgPTPTimeUnc);
     return out;
 }
 
