@@ -31,7 +31,10 @@ LOCAL_HEADER_LIBRARIES := \
     libloc_core_headers \
     libgps.utils_headers \
     libloc_pla_headers \
-    liblocation_api_headers
+    liblocation_api_headers \
+    libqmi_common_headers \
+    libqmi_cci_headers
+
 LOCAL_CFLAGS += $(GNSS_CFLAGS)
 
 ifeq ($(TARGET_KERNEL_VERSION),$(filter $(TARGET_KERNEL_VERSION),3.18 4.4 4.9))
