@@ -1536,6 +1536,7 @@ void LocationClientApiImpl::destroy(locationApiDestroyCompleteCallback destroyCo
             if (mDestroyCompleteCb) {
                 (mDestroyCompleteCb) ();
             }
+            usleep(50000); //give 50ms for socket clean up
 
             delete mApiImpl;
         }
@@ -1544,6 +1545,7 @@ void LocationClientApiImpl::destroy(locationApiDestroyCompleteCallback destroyCo
     };
 
     mMsgTask.sendMsg(new (nothrow) DestroyReq(this, destroyCompleteCb));
+    usleep(100000); //100ms for handling onReceive() messages
 }
 
 /******************************************************************************
@@ -2664,7 +2666,7 @@ void LocationClientApiImpl::processGetDebugRespCb(const LocAPIGetDebugRespMsg* p
     for (uint32_t i = 0; i < pRespMsg->mDebugReport.mSatelliteInfo.size(); i++) {
         mpDebugReport->mSatelliteInfo[i] = pRespMsg->mDebugReport.mSatelliteInfo[i];
     }
-    notify();
+    notify(); //for the wait in getDebugReport
 }
 
 uint32_t LocationClientApiImpl::getAntennaInfo(AntennaInfoCallback* cb) {
