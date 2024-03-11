@@ -382,12 +382,15 @@ void LocationIntegrationApiImpl::destroy() {
                 lock_guard<mutex> lock(mMutex);
                 mApiImpl->mClientRunning = false;
             }
+            usleep(50000); //give 50ms for socket clean up
+
             delete mApiImpl;
         }
         LocationIntegrationApiImpl* mApiImpl;
     };
 
     mMsgTask.sendMsg(new (nothrow) DestroyReq(this));
+    usleep(100000); //100ms for handling onReceive() messages
 }
 
 bool LocationIntegrationApiImpl::integrationClientAllowed() {
