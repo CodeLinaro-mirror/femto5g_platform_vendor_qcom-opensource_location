@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -105,11 +105,6 @@ LCAReportLoggerUtil::LCAReportLoggerUtil():
         if (nullptr == mLogMeas) {
             LOC_LOGw("DiagIface mLogMeas is null");
         }
-        mLogGeofenceBreach = (LogGeofenceBreach)dlGetSymFromLib(
-                libHandle, libname, "LogGeofenceBreach");
-        if (nullptr == mLogGeofenceBreach) {
-            LOC_LOGw("DiagIface mLogGeofenceBreach is null");
-        }
     }
 }
 
@@ -136,13 +131,6 @@ void LCAReportLoggerUtil::log(
 void LCAReportLoggerUtil::log(const GnssMeasurements& gnssMeasurements) {
     if (mLogMeas != nullptr) {
         mLogMeas(gnssMeasurements);
-    }
-}
-
-void LCAReportLoggerUtil::log(const GeofenceBreachNotification& breachNotif,
-            const std::vector<Geofence> &geofences) {
-    if (mLogGeofenceBreach != nullptr) {
-        mLogGeofenceBreach(breachNotif, geofences);
     }
 }
 }
