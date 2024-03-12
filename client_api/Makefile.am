@@ -4,10 +4,10 @@ AM_CFLAGS = \
     -I inc/ \
     $(GPSUTILS_CFLAGS) \
     $(LOCAPIMSGPROTO_CFLAGS) \
-    -std=c++14
+    -std=c++11
 
 ACLOCAL_AMFLAGS = -I m4
-AM_CPPFLAGS = -std=c++14
+AM_CPPFLAGS = -std=c++11
 
 requiredlibs = \
     $(GPSUTILS_LIBS) \

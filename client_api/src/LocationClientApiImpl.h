@@ -71,6 +71,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <LocIpc.h>
 #include <LocationDataTypes.h>
 #include <ILocationAPI.h>
+#include <LocationClientApi.h>
 #include <MsgTask.h>
 #include <LocationApiMsg.h>
 #include <LocationApiPbMsgConv.h>
@@ -102,6 +103,17 @@ enum ReportCbEnumType {
     REPORT_CB_ENGINE_INFO = 2,
 };
 
+struct ClientCallbacks {
+    CapabilitiesCb capabilitycb;
+    ResponseCb responsecb;
+    CollectiveResponseCb collectivecb;
+    LocationCb locationcb;
+    BatchingCb batchingcb;
+    GeofenceBreachCb gfbreachcb;
+    GnssReportCbs gnssreportcbs;
+    EngineReportCbs engreportcbs;
+};
+
 typedef std::function<void(
     uint32_t response
 )> PingTestCb;
@@ -126,7 +138,7 @@ class IpcListener;
 class LocationClientApiImpl : public ILocationAPI {
     friend IpcListener;
 public:
-    LocationClientApiImpl(capabilitiesCallback capabitiescb);
+    LocationClientApiImpl(CapabilitiesCb capabitiescb);
     virtual void destroy(locationApiDestroyCompleteCallback destroyCompleteCb=nullptr) override;
 
     // Tracking
@@ -164,30 +176,32 @@ public:
     virtual void gnssNiResponse(uint32_t id, GnssNiResponse response) override;
 
     // other interface
-    void startPositionSession(const LocationCallbacks& callbacksOption,
+    void startPositionSession(const ClientCallbacks& cbs,
+                              ReportCbEnumType reportCbType,
+                              const LocationCallbacks& callbacksOption,
                               const TrackingOptions& trackingOptions);
 
-    void startBatchingSession(const LocationCallbacks& callbacksOption,
+    void startBatchingSession(const ClientCallbacks& cbs,
+                              ReportCbEnumType reportCbType,
+                              const LocationCallbacks& callbacksOption,
                               const BatchingOptions& batchOptions);
 
     void updateNetworkAvailability(bool available);
-    void getGnssEnergyConsumed(gnssEnergyConsumedCallback gnssEnergyConsumedCb,
-            responseCallback responseCb);
-    void updateLocationSystemInfoListener(
-            locationSystemInfoCallback locationSystemInfoCb,
-            responseCallback responseCb);
+    void getGnssEnergyConsumed(GnssEnergyConsumedCb gnssEnergyConsumedCallback,
+                               ResponseCb responseCallback);
+    void updateLocationSystemInfoListener(LocationSystemInfoCb locSystemInfoCallback,
+                                          ResponseCb responseCallback);
 
-    void addGeofences(const LocationCallbacks& callbacksOption,
+    void addGeofences(const ClientCallbacks& cbs,
+                      ReportCbEnumType reportCbType,
+                      const LocationCallbacks& callbacksOption,
                       const std::vector<Geofence>& geofences);
-    inline Geofence getMappedGeofence(uint32_t id) {
-        return mGeofenceMap.at(id);
-    }
 
     inline uint16_t getYearOfHw() {return mYearOfHw;}
 
     void getSingleTerrestrialPos(uint32_t timeoutMsec, TerrestrialTechMask techMask,
-                                 float horQoS, trackingCallback terrestrialPositionCallback,
-                                 responseCallback responseCallback);
+                                 float horQoS, LocationCb terrestrialPositionCallback,
+                                 ResponseCb responseCallback);
     void getSinglePos(uint32_t timeoutMsec, float horQoS, LocationCb positionCallback,
                       ResponseCb responseCallback);
     // utilities
@@ -202,46 +216,13 @@ public:
     bool isInTracking() { return mSessionId != LOCATION_CLIENT_SESSION_ID_INVALID; }
     bool isInBatching() { return mBatchingId != LOCATION_CLIENT_SESSION_ID_INVALID; }
 
-    static LocationSystemInfo parseLocationSystemInfo(
-            const::LocationSystemInfo &halSystemInfo);
-    static LocationResponse parseLocationError(::LocationError error);
-    static GnssMeasurements parseGnssMeasurements(const ::GnssMeasurementsNotification
-            &halGnssMeasurements);
-    static GnssData parseGnssData(const ::GnssDataNotification &halGnssData);
-    static GnssSv parseGnssSv(const ::GnssSv &halGnssSv);
-    static GnssLocation parseLocationInfo(const ::GnssLocationInfoNotification &halLocationInfo);
-    static GnssSystemTime parseSystemTime(const ::GnssSystemTime &halSystemTime);
-    static GnssGloTimeStructType parseGloTime(const ::GnssGloTimeStructType &halGloTime);
-    static GnssSystemTimeStructType parseGnssTime(const ::GnssSystemTimeStructType &halGnssTime);
-    static LocationReliability parseLocationReliability(
-            const ::LocationReliability &halReliability);
-    static GnssLocationPositionDynamics parseLocationPositionDynamics(
-            const ::GnssLocationPositionDynamics &halPositionDynamics,
-            const ::GnssLocationPositionDynamicsExt &halPositionDynamicsExt);
-    static void parseGnssMeasUsageInfo(const ::GnssLocationInfoNotification &halLocationInfo,
-            std::vector<GnssMeasUsageInfo>& clientMeasUsageInfo);
-    static GnssSignalTypeMask parseGnssSignalType(
-            const ::GnssSignalTypeMask &halGnssSignalTypeMask);
-    static GnssLocationSvUsedInPosition parseLocationSvUsedInPosition(
-            const ::GnssLocationSvUsedInPosition &halSv);
-    static void parseLocation(const ::Location &halLocation, Location& location);
-    static Location parseLocation(const ::Location &halLocation);
-    static uint16_t parseYearOfHw(::LocationCapabilitiesMask mask);
-    static LocationCapabilitiesMask parseCapabilitiesMask(::LocationCapabilitiesMask mask);
-    static GnssMeasurementsDataFlagsMask parseMeasurementsDataMask(
-            ::GnssMeasurementsDataFlagsMask in);
-    static GnssEnergyConsumedInfo parseGnssConsumedInfo(::GnssEnergyConsumedInfo);
-
-    void logLocation(const GnssLocation &gnssLocation);
-    LCAReportLoggerUtil & getLogger() {
-        return mLogger;
-    }
-
 private:
     ~LocationClientApiImpl();
 
     inline LocationCapabilitiesMask getCapabilities() {return mCapsMask;}
     void capabilitesCallback(ELocMsgID  msgId, const void* msgData);
+    void updateCallbackFunctions(const ClientCallbacks&,
+                                 ReportCbEnumType reportCbType = REPORT_CB_TYPE_NONE);
     void updateTrackingOptionsSync(TrackingOptions& option);
     bool checkGeofenceMap(size_t count, uint32_t* ids);
     void addGeofenceMap(Geofence& geofence);
@@ -252,7 +233,7 @@ private:
         return (mIpcSender != nullptr) && LocIpc::send(*mIpcSender, data, length);
     }
 
-    void invokePositionSessionResponseCb(LocationError errCode);
+    void invokePositionSessionResponseCb(LocationResponse responseCode);
     void diagLogGnssLocation(const GnssLocation &gnssLocation);
 
     // protobuf conversion util class
@@ -283,21 +264,34 @@ private:
     uint64_t                   mSessionStartBootTimestampNs;
 
     // callbacks
-    LocationCallbacks       mLocationCbs;
-
-    //TODO:: remove after replacing all calls with ILocationAPI callbacks
-    capabilitiesCallback    mCapabilitiesCb;
+    CapabilitiesCb          mCapabilitiesCb;
+    ResponseCb              mResponseCb;
+    CollectiveResponseCb    mCollectiveResCb;
+    LocationCb              mLocationCb;
+    BatchingCb              mBatchingCb;
+    GeofenceBreachCb        mGfBreachCb;
     PingTestCb              mPingTestCb;
 
-    gnssEnergyConsumedCallback    mGnssEnergyConsumedInfoCb;
-    responseCallback              mGnssEnergyConsumedResponseCb;
+    // location callbacks
+    GnssLocationCb          mGnssLocationCb;
+    EngineLocationsCb       mEngLocationsCb;
 
-    locationSystemInfoCallback    mLocationSysInfoCb;
-    responseCallback              mLocationSysInfoResponseCb;
+    // other GNSS related callback
+    GnssSvCb                mGnssSvCb;
+    GnssNmeaCb              mGnssNmeaCb;
+    GnssDataCb              mGnssDataCb;
+    GnssMeasurementsCb      mGnssMeasurementsCb;
+    GnssMeasurementsCb      mGnssNHzMeasurementsCb;
+
+    GnssEnergyConsumedCb    mGnssEnergyConsumedInfoCb;
+    ResponseCb              mGnssEnergyConsumedResponseCb;
+
+    LocationSystemInfoCb    mLocationSysInfoCb;
+    ResponseCb              mLocationSysInfoResponseCb;
 
     // Terrestrial fix callback
-    trackingCallback              mSingleTerrestrialPosCb;
-    responseCallback              mSingleTerrestrialPosRespCb;
+    LocationCb              mSingleTerrestrialPosCb;
+    ResponseCb              mSingleTerrestrialPosRespCb;
 
     // Single fix callback
     LocationCb              mSinglePosCb;
