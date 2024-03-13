@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -381,6 +381,10 @@ enum LocationFlagsMask {
     LOCATION_HAS_ELAPSED_REAL_TIME_UNC_BIT = (1<<10),
     /** Location has valid Location::timeUncMs. <br/>   */
     LOCATION_HAS_TIME_UNC_BIT          = (1<<11),
+    /** GnssLocation has valid Location::elapsedgPTPTime. <br/> */
+    LOCATION_HAS_GPTP_TIME_BIT         = (1<<12),
+    /** GnssLocation has valid Location::elapsedgPTPTimeUnc. <br/> */
+    LOCATION_HAS_GPTP_TIME_UNC_BIT     = (1<<13),
 };
 
 /**
@@ -1229,6 +1233,21 @@ struct Location {
      *  presence of LOCATION_HAS_TIME_UNC_BIT in
      *  location::flags before retrieving this field. <br/> */
     float timeUncMs;
+    /** GPTP time field corresponding to source time ticks. Used for
+     *  time sync between different systems
+     *  Unit Nanoseconds <br/>
+     *  This field may not always be available. Please check for the
+     *  presence of LOCATION_HAS_GPTP_TIME_BIT in
+     *  location::flags before retrieving this field. <br/>
+     */
+    uint64_t elapsedgPTPTime;
+    /** Uncertainty for elapsed PTP time field
+     *  Unit Nanoseconds <br/>
+     *  This field may not always be available. Please check for the
+     *  presence of LOCATION_HAS_GPTP_TIME_UNC_BIT in
+     *  location::flags before retrieving this field. <br/>
+     */
+    uint64_t elapsedgPTPTimeUnc;
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
     string toString() const;
@@ -1463,12 +1482,12 @@ struct GnssLocation : public Location {
      *  risk, in unit of meter. <br/>
      */
     float    protectVertical;
-    /**<   List of DGNSS station IDs providing corrections. <br/>
-       Range:   <br/>
-       - SBAS --  120 to 158 and 183 to 191. <br/>
-       - Monitoring station -- 1000-2023 (Station ID biased by 1000).<br/>
-       - Other values reserved. <br/>
-    */
+    /** List of DGNSS station IDs providing corrections.
+     *  Range:
+     *  - SBAS --  120 to 158 and 183 to 191.
+     *  - Monitoring station -- 1000-2023 (Station ID biased by 1000).
+     *  - Other values reserved. <br/>
+     */
     std::vector<uint16_t> dgnssStationId;
 
     /* Default constructor to initalize GnssLocation structure */
@@ -1854,6 +1873,18 @@ enum GnssMeasurementsClockFlagsMask {
     /** GnssMeasurementsClock has valid
      *  GnssMeasurementsClock::hwClockDiscontinuityCount. <br/>   */
     GNSS_MEASUREMENTS_CLOCK_FLAGS_HW_CLOCK_DISCONTINUITY_COUNT_BIT  = (1<<8),
+    /** GnssMeasurementsClock has valid
+     *  elapsedRealTime <br/>   */
+    GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_BIT             = (1<<9),
+    /** GnssMeasurementsClock has valid
+     *  elapsedRealTimeUnc. <br/>   */
+    GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_UNC_BIT         = (1<<10),
+    /** GnssMeasurementsClock has valid
+     *  elapsedgPTPTime <br/>   */
+    GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_GPTP_TIME_BIT             = (1<<11),
+    /** GnssMeasurementsClock has valid
+     *  elapsedgPTPTimeUnc. <br/>   */
+    GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_GPTP_TIME_UNC_BIT         = (1<<12),
 };
 
 /** Specify the SV pseudo range and carrier phase measurement
@@ -1988,6 +2019,33 @@ struct GnssMeasurementsClock {
     /** HW clock discontinuity count - incremented
      *  for each discontinuity in HW clock. <br/>   */
     uint32_t hwClockDiscontinuityCount;
+    /** Elapsed time since boot <br/>
+     *  In unit of nano-seconds.<br/>
+     *  This field may not always be available. Please check for the
+     *  presence of GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_BIT in
+     *  GnssMeasurementsClock::flags before retrieving this field. <br/> */
+    uint64_t elapsedRealTime;
+    /** Uncertainty of elapsedRealTime <br/>
+     *  In unit of nano-seconds.<br/>
+     *  This field may not always be available. Please check for the
+     *  presence of GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_UNC_BIT in
+     *  GnssMeasurementsClock::flags before retrieving this field. <br/>   */
+    uint64_t elapsedRealTimeUnc;
+    /** GPTP time field corresponding to source time ticks. Used for
+     *  time sync between different systems
+     *  Unit Nanoseconds <br/>
+     *  This field may not always be available. Please check for the
+     *  presence of GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_GPTP_TIME_BIT in
+     *  GnssMeasurementsClock::flags before retrieving this field. <br/>
+     */
+    uint64_t elapsedgPTPTime;
+    /** Uncertainty for elapsed PTP time field
+     *  Unit Nanoseconds <br/>
+     *  This field may not always be available. Please check for the
+     *  presence of GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_GPTP_TIME_UNC_BIT in
+     *  GnssMeasurementsClock::flags before retrieving this field. <br/>
+     */
+    uint64_t elapsedgPTPTimeUnc;
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
     string toString() const;
@@ -2147,6 +2205,504 @@ enum GeofenceBreachTypeMask {
     GEOFENCE_BREACH_DWELL_IN_BIT  = (1<<2),
     /** Indicates that a client has dwelled outside the Geofence for a given period */
     GEOFENCE_BREACH_DWELL_OUT_BIT = (1<<3),
+};
+
+/** Specifies Source of Ephemeris data */
+enum GnssEphSource {
+    /** Source of ephemeris is unknown  */
+    GNSS_EPH_SRC_UNKNOWN     = 0,
+    /** Source of ephemeris is OTA  */
+    GNSS_EPH_SRC_OTA         = 1,
+    /** Max value for ephemeris Source. DO NOT USE  */
+    GNSS_EPH_SRC_MAX         = 999
+};
+
+/** Specifies the action to be performed on receipt of the ephemeris (Update/Delete)
+ *  Action shall be performed on GnssEphSource specified. */
+enum GnssEphAction {
+    /** Epehmeris Action Unknown  */
+    GNSS_EPH_ACTION_UNKNOWN = 0,
+    /** Update ephemeris data */
+    GNSS_EPH_ACTION_UPDATE     = 1,
+    /** Delete ephemeris data */
+    GNSS_EPH_ACTION_DELETE     = 2,
+    /** Max value for  ephemeris action. DO NOT USE  */
+    GNSS_EPH_ACTION_MAX     = 999,
+};
+
+/** Galileo Signal Source. */
+enum GalEphSignalSource {
+    /** GALILEO signal is unknown */
+    GAL_EPH_SIGNAL_SRC_UNKNOWN = 0,
+    /** GALILEO signal is E1B  */
+    GAL_EPH_SIGNAL_SRC_E1B    = 1,
+    /** GALILEO signal is E5A  */
+    GAL_EPH_SIGNAL_SRC_E5A    = 2,
+    /** GALILEO signal is E5B  */
+    GAL_EPH_SIGNAL_SRC_E5B    = 3,
+};
+
+/** Comman Ephemeris Data  */
+struct GnssEphCommonInfo {
+    /** Specify satellite vehicle ID number.
+     *  For SV id range of each supported constellations, refer to
+     *  documentation in GnssSv::svId.
+     */
+    uint16_t gnssSvId;
+
+    /** Specifies the source of ephemeris.
+     *  - Type: int32 enum */
+    GnssEphSource ephSource;
+
+    /** Specifies the action to be performed on receipt of the ephemeris (Update/Delete)
+     *  Action shall be performed on GnssEphSource specified. */
+    GnssEphAction action;
+
+    /** Issue of data ephemeris used (unit-less).
+     *  GPS: IODE 8 bits.
+     *  BDS: AODE 5 bits.
+     *  GAL: SIS IOD 10 bits.
+     *  - Type: uint16
+     *  - Units: Unit-less */
+    uint16_t IODE;
+
+    /** Square root of semi-major axis.
+     * - Type: double
+     * - Units: Square Root of Meters */
+    double aSqrt;
+
+    /** Mean motion difference from computed value.
+     * - Type: double
+     * - Units: Radians/Second */
+    double deltaN;
+
+    /** Mean anomaly at reference time.
+     * - Type: double
+     * - Units: Radians */
+    double m0;
+
+    /** Eccentricity.
+     * - Type: double
+     * - Units: Unit-less */
+    double eccentricity;
+
+    /** Longitude of ascending node of orbital plane at the weekly epoch.
+     * - Type: double
+     * - Units: Radians */
+    double omega0;
+
+    /** Inclination angle at reference time.
+     * - Type: double
+     * - Units: Radians */
+    double i0;
+
+    /** Argument of Perigee.
+     * - Type: double
+     * - Units: Radians */
+    double omega;
+
+    /** Rate of change of right ascension.
+     * - Type: double
+     * - Units: Radians/Second */
+    double omegaDot;
+
+    /** Rate of change of inclination angle.
+     * - Type: double
+     * - Units: Radians/Second */
+    double iDot;
+
+    /** Amplitude of the cosine harmonic correction term to the argument of latitude.
+     * - Type: double
+     * - Units: Radians */
+    double cUc;
+
+    /** Amplitude of the sine harmonic correction term to the argument of latitude.
+     * - Type: double
+     * - Units: Radians */
+    double cUs;
+
+    /** Amplitude of the cosine harmonic correction term to the orbit radius.
+     * - Type: double
+     * - Units: Meters */
+    double cRc;
+
+    /**  Amplitude of the sine harmonic correction term to the orbit radius.
+     * - Type: double
+     * - Units: Meters */
+    double cRs;
+
+    /** Amplitude of the cosine harmonic correction term to the angle of inclination.
+     * - Type: double
+     * - Units: Radians */
+    double cIc;
+
+    /** Amplitude of the sine harmonic correction term to the angle of inclination.
+     * - Type: double
+     * - Units: Radians */
+    double cIs;
+
+    /** Reference time of ephemeris.
+     * - Type: uint32
+     * - Units: Seconds */
+    uint32_t toe;
+
+    /**  Clock data reference time of week.
+     * - Type: uint32
+     * - Units: Seconds */
+    uint32_t toc;
+
+    /** Clock bias correction coefficient.
+     * - Type: double
+     * - Units: Seconds */
+    double af0;
+
+    /** Clock drift coefficient.
+     * - Type: double
+     * - Units: Seconds/Second */
+    double af1;
+
+    /** Clock drift rate correction coefficient.
+     * - Type: double
+     * - Units: Seconds/Seconds^2 */
+    double af2;
+
+    /** Method to print the struct to human readable form, for logging. */
+    string toString() const;
+
+};
+
+/** GPS Navigation Model Info */
+struct GpsQzssEphemeris {
+    /**   Common ephemeris data.   */
+    GnssEphCommonInfo commonEphemerisData;
+
+    /**   Signal health.
+     *   Bit 0 : L5 Signal Health.
+     *   Bit 1 : L2 Signal Health.
+     *   Bit 2 : L1 Signal Health.
+     *   - Type: uint8
+     *   - Values: 3 bit mask of signal health, where set bit indicates unhealthy signal */
+    uint8_t signalHealth;
+
+    /**   User Range Accuracy Index.
+     *   - Type: uint8
+     *   - Units: Unit-less */
+    uint8_t URAI;
+
+    /**   Indicates which codes are commanded ON for the L2 channel (2-bits).
+     *   - Type: uint8
+     *   Valid Values:
+     *   - 00 : Reserved
+     *   - 01 : P code ON
+     *   - 10 : C/A code ON */
+    uint8_t codeL2;
+
+    /**   L2 P-code indication flag.
+     *   - Type: uint8
+     *   - Value 1 indicates that the Nav data stream was commanded OFF
+     *     on the P-code of the L2 channel. */
+    uint8_t dataFlagL2P;
+
+    /**   Time of group delay.
+     *   - Type: double
+     *   - Units: Seconds */
+    double tgd;
+
+    /**  Indicates the curve-fit interval used by the CS.
+     *   - Type: uint8
+     *   Valid Values:
+     *   - 0 : Four hours
+     *   - 1 : Greater than four hours */
+    uint8_t fitInterval;
+
+    /**   Issue of Data, Clock.
+     *   - Type: uint16
+     *   - Units: Unit-less */
+    uint16_t IODC;
+
+    /** Method to print the struct to human readable form, for logging. */
+    string toString() const;
+};
+
+/** GLONASS Navigation Model Info */
+struct GlonassEphemeris {
+
+    /** Specify satellite vehicle ID number.
+     *  For SV id range of each supported constellations, refer to
+     *  documentation in GnssSv::svId.
+     */
+    uint16_t gnssSvId;
+
+    /** Specifies the source of ephemeris.
+     *  - Type: int32 enum */
+    GnssEphSource ephSource;
+
+     /** Specifies the action to be performed on receipt of the ephemeris (Update/Delete)
+      *  Action shall be performed on GnssEphSource specified. */
+    GnssEphAction action;
+
+    /**  SV health flags.
+     * - Type: uint8
+     * Valid Values:
+     * - 0 : Healthy
+     * - 1 : Unhealthy */
+    uint8_t bnHealth;
+
+    /** Ln SV health flags.
+     *  - Type: uint8
+     *  Valid Values:
+     *  - 0 : Healthy
+     *  - 1 : Unhealthy */
+    uint8_t lnHealth;
+
+    /** Index of a time interval within current day according to UTC(SU) + 03 hours 00 min.
+     * - Type: uint8
+     * - Units: Unit-less */
+    uint8_t tb;
+
+    /** SV accuracy index.
+     * - Type: uint8
+     * - Units: Unit-less */
+    uint8_t ft;
+
+    /** GLONASS-M flag.
+     * - Type: uint8
+     * Valid Values:
+     * - 0 : GLONASS
+     * - 1 : GLONASS-M */
+    uint8_t gloM;
+
+    /** Characterizes "Age" of current information.
+     * - Type: uint8
+     * - Units: Days */
+    uint8_t enAge;
+
+    /** GLONASS frequency number + 8.
+     * - Type: uint8
+     * - Range: 1 to 14
+     */
+    uint8_t gloFrequency;
+
+    /** Time interval between two adjacent values of tb parameter.
+     * - Type: uint8
+     * - Units: Minutes */
+    uint8_t p1;
+
+    /** Flag of oddness ("1") or evenness ("0") of the value of tb
+     *  for intervals 30 or 60 minutes.
+     *  - Type: uint8 */
+    uint8_t p2;
+
+    /** Time difference between navigation RF signal transmitted in L2 sub-band
+     *  and aviation RF signal transmitted in L1 sub-band.
+     *  - Type: floating point
+     *  - Units: Seconds */
+    float deltaTau;
+
+    /** Satellite XYZ position.
+     * - Type: array of doubles
+     * - Units: Meters */
+    double position[3];
+
+    /** Satellite XYZ velocity.
+     * - Type: array of doubles
+     * - Units: Meters/Second */
+    double velocity[3];
+
+    /** Satellite XYZ sola-luni acceleration.
+     * - Type: array of doubles
+     * - Units: Meters/Second^2 */
+    double acceleration[3];
+
+    /** Satellite clock correction relative to GLONASS time.
+     * - Type: floating point
+     * - Units: Seconds */
+    float tauN;
+
+    /** Relative deviation of predicted carrier frequency value
+     * from nominal value at the instant tb.
+     * - Type: floating point
+     * - Units: Unit-less */
+    float gamma;
+
+    /**<   Complete ephemeris time, including N4, NT and Tb.
+       [(N4-1)*1461 + (NT-1)]*86400 + tb*900
+       - Type: double
+       - Units: Seconds */
+    double toe;
+
+    /** Current date, calendar number of day within four-year interval.
+     *  Starting from the 1-st of January in a leap year.
+     *  - Type: uint16
+     *  - Units: Days */
+    uint16_t nt;
+
+    /** Method to print the struct to human readable form, for logging. */
+    string toString() const;
+
+};
+
+/** BDS Navigation Model Info */
+struct BdsEphemeris {
+
+    /**  Common ephemeris data.   */
+    GnssEphCommonInfo commonEphemerisData;
+
+    /**  Satellite health information applied to both B1 and B2 (SatH1).
+     * - Type: uint8
+     * Valid Values:
+     * - 0 : Healthy
+     * - 1 : Unhealthy */
+    uint8_t svHealth;
+
+    /**  Age of data clock.
+     * - Type: uint8
+     * - Units: Hours */
+    uint8_t AODC;
+
+    /** Equipment group delay differential on B1 signal.
+     * - Type: double
+     * - Units: Nano-Seconds */
+    double tgd1;
+
+    /** Equipment group delay differential on B2 signal.
+     * - Type: double
+     * - Units: Nano-Seconds */
+    double tgd2;
+
+    /** User range accuracy index (4-bits).
+     * - Type: uint8
+     * - Units: Unit-less */
+    uint8_t URAI;
+
+    /** Method to print the struct to human readable form, for logging. */
+    string toString() const;
+
+};
+
+/** GALILEO Navigation Model Info */
+struct GalileoEphemeris {
+
+    /**  Common ephemeris data. */
+    GnssEphCommonInfo commonEphemerisData;
+
+    /** Galileo Signal Source.
+     *  Valid Values:
+     * - GAL_EPH_SIGNAL_SRC_UNKNOWN (0) --  GALILEO signal is unknown
+     * - GAL_EPH_SIGNAL_SRC_E1B (1) --  GALILEO signal is E1B
+     * - GAL_EPH_SIGNAL_SRC_E5A (2) --  GALILEO signal is E5A
+     * - GAL_EPH_SIGNAL_SRC_E5B (3) --  GALILEO signal is E5B  */
+    GalEphSignalSource dataSourceSignal;
+
+    /**  Signal-in-space index for dual frequency E1-E5b/E5a depending on dataSignalSource.
+     * - Type: uint8
+     * - Units: Unit-less */
+    uint8_t sisIndex;
+
+    /** E1-E5a Broadcast group delay from F/Nav (E5A).
+     * - Type: double
+     * - Units: Seconds */
+    double bgdE1E5a;
+
+    /**  E1-E5b Broadcast group delay from I/Nav (E1B or E5B).
+     * For E1B or E5B signal, both bgdE1E5a and bgdE1E5b are valid.
+     * For E5A signal, only bgdE1E5a is valid.
+     * Signal source identified using dataSignalSource.
+     * - Type: double
+     * - Units: Seconds */
+    double bgdE1E5b;
+
+    /** SV health status of signal identified by dataSourceSignal.
+     * - Type: uint8
+     * Valid Values:
+     * - 0 : Healthy
+     * - 1 : Unhealthy */
+    uint8_t svHealth;
+
+    /** Method to print the struct to human readable form, for logging. */
+    string toString() const;
+
+};
+
+/** QZSS Navigation Model */
+struct QzssEphemeris {
+
+    /** GPS Ephemeris structure */
+    GpsQzssEphemeris qzssEphData;
+    /** Method to print the struct to human readable form, for logging. */
+    string toString() const;
+
+};
+
+/** NAVIC Navigation Model Info */
+struct NavicEphemeris {
+
+    /** Common ephemeris data. */
+    GnssEphCommonInfo commonEphemerisData;
+
+    /** Week number since the NavIC system time start epoch (August 22, 1999) */
+    uint32_t weekNum;
+    /** Issue of Data, Clock
+     *  Mandatory Field */
+    uint32_t iodec;
+    /** Health status of navigation data on L5 SPS signal.
+     *  0=OK, 1=bad */
+    uint8_t l5Health;
+    /** Health status of navigation data on S SPS signal.
+     *  0=OK, 1=bad */
+    uint8_t sHealth;
+    /** Inclination angle at reference time
+     *  Unit: radian
+     *  Mandatory Field */
+    double inclinationAngleRad;
+    /** User Range Accuracy Index(4bit)
+        Mandatory Field */
+    uint8_t urai;
+    /** Time of Group delay
+     *  Unit: second
+     *  Mandatory Field */
+    double  tgd;
+    /** Method to print the struct to human readable form, for logging. */
+    string toString() const;
+
+};
+
+/** GNSS Ephemeris Information */
+struct GnssEphemeris {
+    /** Indicates GNSS Constellation Type
+     *  Mandatory field */
+    Gnss_LocSvSystemEnumType gnssConstellation;
+
+    /** Validity of GPS System Time of the ephemeris report */
+    bool isSystemTimeValid;
+
+    /** GPS System Time of the ephemeris report */
+    GnssSystemTimeStructType systemTime;
+
+    /** Based on Constellation type, one of
+     *  below vectors shall be populated and rest
+     *  all the vectors will be empty. */
+
+    /** Ephemeris Data for each GPS SV */
+    std::vector<GpsQzssEphemeris> gpsEphemerisData;
+
+    /** Ephemeris Data for each GLONASS SV */
+    std::vector<GlonassEphemeris> gloEphemerisData;
+
+    /** Ephemeris Data for each BDS SV */
+    std::vector<BdsEphemeris> bdsEphemerisData;
+
+    /** Ephemeris Data for each GAL SV */
+    std::vector<GalileoEphemeris> galEphemerisData;
+
+    /** Ephemeris Data for each QZSS SV */
+    std::vector<QzssEphemeris> qzssEphemerisData;
+
+    /** Ephemeris Data for each NavIC SV */
+    std::vector<NavicEphemeris> navicEphemerisData;
+
+    /** Method to print the struct to human readable form, for logging.*/
+    string toString() const;
 };
 
 /** @brief Provides the capabilities of the system. <br/>
@@ -2338,6 +2894,13 @@ typedef std::function<void(
     uint64_t timestamp
 )> GeofenceBreachCb;
 
+/** @brief
+    GnssEphReportCb is for receiving GNSS Ephemeris Information
+    @param ephInfo: Ephemeris Info for a constellation
+*/
+typedef std::function<void(
+    const GnssEphemeris& ephInfo
+)> GnssEphReportCb;
 
 /** Specify the set of callbacks to receive the reports when
  *  invoking startPositionSession(uint32_t,
@@ -2375,6 +2938,9 @@ struct GnssReportCbs {
     /** Callback to receive disaster and crisis report from modem
      *  GNSS engine. <br/> */
     GnssDcReportCb gnssDcReportCallback;
+    /** Callback to receive Ephemeris report from modem
+     *  GNSS engine. <br/> */
+    GnssEphReportCb gnssEphReportCallback;
 };
 
 /** Specify the set of callbacks to receive the reports when
@@ -2419,6 +2985,9 @@ struct EngineReportCbs {
      * LOCATION_ERROR_INVALID_PARAMETER will be thrown.
      * Recommend to use EngineNmeaCb. <br/> */
     EngineNmeaCb engineNmeaCallback;
+    /** Callback to receive Ephemeris report from modem
+     *  GNSS engine. <br/> */
+    GnssEphReportCb gnssEphReportCallback;
 };
 
 /**

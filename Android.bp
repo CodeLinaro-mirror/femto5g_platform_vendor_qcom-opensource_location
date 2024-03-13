@@ -21,3 +21,30 @@ GNSS_CFLAGS = [
     "-Wno-error=tautological-compare",
     "-Wno-error=switch",
 ]
+
+
+soong_config_module_type {
+    name: "qtilocationopensrc_cc_defaults",
+    module_type: "cc_defaults",
+    config_namespace: "qtilocation",
+    bool_variables: [
+        "feature_nhz",
+        "feature_locauto",
+    ],
+    properties: [
+        "cflags",
+    ],
+}
+
+qtilocationopensrc_cc_defaults {
+    name: "qtilocationopensrc_common_defaults",
+    cflags: GNSS_CFLAGS,
+    soong_config_variables: {
+        feature_nhz: {
+            cflags: ["-DFEATURE_NHZ_ENABLED"],
+        },
+        feature_locauto: {
+            cflags: ["-DFEATURE_AUTOMOTIVE"],
+        },
+    },
+}
