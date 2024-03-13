@@ -191,52 +191,52 @@ public:
     {
         LocIdlAPISomeIPStubAdapterHelper::addStubDispatcher( { CommonAPI::SomeIP::method_id_t(0xbb8) }, &getGnssCapabilitiesMaskAttributeStubDispatcher );
         LocIdlAPISomeIPStubAdapterHelper::addStubDispatcher( { CommonAPI::SomeIP::method_id_t(0xbb9) }, &setGnssCapabilitiesMaskAttributeStubDispatcher );
-        LocIdlAPISomeIPStubAdapterHelper::addStubDispatcher( { CommonAPI::SomeIP::method_id_t(0x7532) }, &startPositionSessionStubDispatcher );
-        LocIdlAPISomeIPStubAdapterHelper::addStubDispatcher( { CommonAPI::SomeIP::method_id_t(0x7533) }, &startPositionSessionStubDispatcher1 );
-        LocIdlAPISomeIPStubAdapterHelper::addStubDispatcher( { CommonAPI::SomeIP::method_id_t(0x7534) }, &stopPositionSessionStubDispatcher );
-        LocIdlAPISomeIPStubAdapterHelper::addStubDispatcher( { CommonAPI::SomeIP::method_id_t(0x7531) }, &deleteAidingDataStubDispatcher );
-        LocIdlAPISomeIPStubAdapterHelper::addStubDispatcher( { CommonAPI::SomeIP::method_id_t(0x7535) }, &configConstellationsStubDispatcher );
+        LocIdlAPISomeIPStubAdapterHelper::addStubDispatcher( { CommonAPI::SomeIP::method_id_t(0x7d01) }, &startPositionSessionStubDispatcher );
+        LocIdlAPISomeIPStubAdapterHelper::addStubDispatcher( { CommonAPI::SomeIP::method_id_t(0x7d02) }, &startPositionSessionStubDispatcher1 );
+        LocIdlAPISomeIPStubAdapterHelper::addStubDispatcher( { CommonAPI::SomeIP::method_id_t(0x7d03) }, &stopPositionSessionStubDispatcher );
+        LocIdlAPISomeIPStubAdapterHelper::addStubDispatcher( { CommonAPI::SomeIP::method_id_t(0x7d04) }, &deleteAidingDataStubDispatcher );
+        LocIdlAPISomeIPStubAdapterHelper::addStubDispatcher( { CommonAPI::SomeIP::method_id_t(0x7d05) }, &configConstellationsStubDispatcher );
         std::shared_ptr<CommonAPI::SomeIP::ClientId> itsClient = std::make_shared<CommonAPI::SomeIP::ClientId>(0xFFFF, 0xFFFFFFFF, 0xFFFFFFFF);
 
         // Provided events/fields
         {
             std::set<CommonAPI::SomeIP::eventgroup_id_t> itsEventGroups;
-            itsEventGroups.insert(CommonAPI::SomeIP::eventgroup_id_t(0x9472));
-            CommonAPI::SomeIP::StubAdapter::registerEvent(CommonAPI::SomeIP::event_id_t(0x9471), itsEventGroups, CommonAPI::SomeIP::event_type_e::ET_EVENT, CommonAPI::SomeIP::reliability_type_e::RT_UNRELIABLE);
+            itsEventGroups.insert(CommonAPI::SomeIP::eventgroup_id_t(0x80e8));
+            CommonAPI::SomeIP::StubAdapter::registerEvent(CommonAPI::SomeIP::event_id_t(0x80e9), itsEventGroups, CommonAPI::SomeIP::event_type_e::ET_EVENT, CommonAPI::SomeIP::reliability_type_e::RT_UNRELIABLE);
         }
         {
             std::set<CommonAPI::SomeIP::eventgroup_id_t> itsEventGroups;
-            itsEventGroups.insert(CommonAPI::SomeIP::eventgroup_id_t(0x9472));
-            CommonAPI::SomeIP::StubAdapter::registerEvent(CommonAPI::SomeIP::event_id_t(0x9475), itsEventGroups, CommonAPI::SomeIP::event_type_e::ET_EVENT, CommonAPI::SomeIP::reliability_type_e::RT_UNRELIABLE);
+            itsEventGroups.insert(CommonAPI::SomeIP::eventgroup_id_t(0x80e8));
+            CommonAPI::SomeIP::StubAdapter::registerEvent(CommonAPI::SomeIP::event_id_t(0x80ea), itsEventGroups, CommonAPI::SomeIP::event_type_e::ET_EVENT, CommonAPI::SomeIP::reliability_type_e::RT_UNRELIABLE);
         }
         {
             std::set<CommonAPI::SomeIP::eventgroup_id_t> itsEventGroups;
-            itsEventGroups.insert(CommonAPI::SomeIP::eventgroup_id_t(0x9472));
-            CommonAPI::SomeIP::StubAdapter::registerEvent(CommonAPI::SomeIP::event_id_t(0x9476), itsEventGroups, CommonAPI::SomeIP::event_type_e::ET_EVENT, CommonAPI::SomeIP::reliability_type_e::RT_UNRELIABLE);
+            itsEventGroups.insert(CommonAPI::SomeIP::eventgroup_id_t(0x80e8));
+            CommonAPI::SomeIP::StubAdapter::registerEvent(CommonAPI::SomeIP::event_id_t(0x80eb), itsEventGroups, CommonAPI::SomeIP::event_type_e::ET_EVENT, CommonAPI::SomeIP::reliability_type_e::RT_UNRELIABLE);
         }
         {
             std::set<CommonAPI::SomeIP::eventgroup_id_t> itsEventGroups;
-            itsEventGroups.insert(CommonAPI::SomeIP::eventgroup_id_t(0x9472));
-            CommonAPI::SomeIP::StubAdapter::registerEvent(CommonAPI::SomeIP::event_id_t(0x9477), itsEventGroups, CommonAPI::SomeIP::event_type_e::ET_EVENT, CommonAPI::SomeIP::reliability_type_e::RT_UNRELIABLE);
+            itsEventGroups.insert(CommonAPI::SomeIP::eventgroup_id_t(0x80e8));
+            CommonAPI::SomeIP::StubAdapter::registerEvent(CommonAPI::SomeIP::event_id_t(0x80ec), itsEventGroups, CommonAPI::SomeIP::event_type_e::ET_EVENT, CommonAPI::SomeIP::reliability_type_e::RT_UNRELIABLE);
         }
         {
             std::set<CommonAPI::SomeIP::eventgroup_id_t> itsEventGroups;
-            itsEventGroups.insert(CommonAPI::SomeIP::eventgroup_id_t(0x9472));
-            CommonAPI::SomeIP::StubAdapter::registerEvent(CommonAPI::SomeIP::event_id_t(0x9478), itsEventGroups, CommonAPI::SomeIP::event_type_e::ET_EVENT, CommonAPI::SomeIP::reliability_type_e::RT_UNRELIABLE);
+            itsEventGroups.insert(CommonAPI::SomeIP::eventgroup_id_t(0x80e8));
+            CommonAPI::SomeIP::StubAdapter::registerEvent(CommonAPI::SomeIP::event_id_t(0x80ed), itsEventGroups, CommonAPI::SomeIP::event_type_e::ET_EVENT, CommonAPI::SomeIP::reliability_type_e::RT_UNRELIABLE);
         }
         {
             std::set<CommonAPI::SomeIP::eventgroup_id_t> itsEventGroups;
-            itsEventGroups.insert(CommonAPI::SomeIP::eventgroup_id_t(0x9472));
-            CommonAPI::SomeIP::StubAdapter::registerEvent(CommonAPI::SomeIP::event_id_t(0x9479), itsEventGroups, CommonAPI::SomeIP::event_type_e::ET_EVENT, CommonAPI::SomeIP::reliability_type_e::RT_UNRELIABLE);
+            itsEventGroups.insert(CommonAPI::SomeIP::eventgroup_id_t(0x80e8));
+            CommonAPI::SomeIP::StubAdapter::registerEvent(CommonAPI::SomeIP::event_id_t(0x80ee), itsEventGroups, CommonAPI::SomeIP::event_type_e::ET_EVENT, CommonAPI::SomeIP::reliability_type_e::RT_UNRELIABLE);
         }
         {
             std::set<CommonAPI::SomeIP::eventgroup_id_t> itsEventGroups;
-            itsEventGroups.insert(CommonAPI::SomeIP::eventgroup_id_t(0x9472));
-            CommonAPI::SomeIP::StubAdapter::registerEvent(CommonAPI::SomeIP::event_id_t(0x947a), itsEventGroups, CommonAPI::SomeIP::event_type_e::ET_EVENT, CommonAPI::SomeIP::reliability_type_e::RT_UNRELIABLE);
+            itsEventGroups.insert(CommonAPI::SomeIP::eventgroup_id_t(0x80e8));
+            CommonAPI::SomeIP::StubAdapter::registerEvent(CommonAPI::SomeIP::event_id_t(0x80ef), itsEventGroups, CommonAPI::SomeIP::event_type_e::ET_EVENT, CommonAPI::SomeIP::reliability_type_e::RT_UNRELIABLE);
         }
         if (_stub->hasElement(0)) {
             std::set<CommonAPI::SomeIP::eventgroup_id_t> itsEventGroups;
-            itsEventGroups.insert(CommonAPI::SomeIP::eventgroup_id_t(CommonAPI::SomeIP::eventgroup_id_t(0x9472)));
+            itsEventGroups.insert(CommonAPI::SomeIP::eventgroup_id_t(CommonAPI::SomeIP::eventgroup_id_t(0x80e8)));
             CommonAPI::SomeIP::StubAdapter::registerEvent(CommonAPI::SomeIP::event_id_t(0x80f2), itsEventGroups, CommonAPI::SomeIP::event_type_e::ET_FIELD, CommonAPI::SomeIP::reliability_type_e::RT_RELIABLE);
             fireGnssCapabilitiesMaskAttributeChanged(std::dynamic_pointer_cast< ::v0::com::qualcomm::qti::location::LocIdlAPIStub>(_stub)->getGnssCapabilitiesMaskAttribute(itsClient));
         }
@@ -274,7 +274,7 @@ void LocIdlAPISomeIPStubAdapterInternal<_Stub, _Stubs...>::fireGnssMeasurementsE
     >>
         ::sendEvent(
             *this,
-            CommonAPI::SomeIP::event_id_t(0x9471),
+            CommonAPI::SomeIP::event_id_t(0x80e9),
             false,
              deployed_gnssMeasurements 
     );
@@ -287,7 +287,7 @@ void LocIdlAPISomeIPStubAdapterInternal<_Stub, _Stubs...>::fireLocationReportEve
     >>
         ::sendEvent(
             *this,
-            CommonAPI::SomeIP::event_id_t(0x9475),
+            CommonAPI::SomeIP::event_id_t(0x80ea),
             false,
              deployed_locationReport 
     );
@@ -300,7 +300,7 @@ void LocIdlAPISomeIPStubAdapterInternal<_Stub, _Stubs...>::fireEngineLocationsEv
     >>
         ::sendEvent(
             *this,
-            CommonAPI::SomeIP::event_id_t(0x9476),
+            CommonAPI::SomeIP::event_id_t(0x80eb),
             false,
              deployed_engLocations 
     );
@@ -313,7 +313,7 @@ void LocIdlAPISomeIPStubAdapterInternal<_Stub, _Stubs...>::fireGnssSvEvent(const
     >>
         ::sendEvent(
             *this,
-            CommonAPI::SomeIP::event_id_t(0x9477),
+            CommonAPI::SomeIP::event_id_t(0x80ec),
             false,
              deployed_gnssSvs 
     );
@@ -328,7 +328,7 @@ void LocIdlAPISomeIPStubAdapterInternal<_Stub, _Stubs...>::fireGnssNmeaEvent(con
     >>
         ::sendEvent(
             *this,
-            CommonAPI::SomeIP::event_id_t(0x9478),
+            CommonAPI::SomeIP::event_id_t(0x80ed),
             false,
              deployed_timestamp 
             ,  deployed_nmea 
@@ -346,7 +346,7 @@ void LocIdlAPISomeIPStubAdapterInternal<_Stub, _Stubs...>::fireEngineNmeaEvent(c
     >>
         ::sendEvent(
             *this,
-            CommonAPI::SomeIP::event_id_t(0x9479),
+            CommonAPI::SomeIP::event_id_t(0x80ee),
             false,
              deployed_engType 
             ,  deployed_timestamp 
@@ -361,7 +361,7 @@ void LocIdlAPISomeIPStubAdapterInternal<_Stub, _Stubs...>::fireGnssDataEvent(con
     >>
         ::sendEvent(
             *this,
-            CommonAPI::SomeIP::event_id_t(0x947a),
+            CommonAPI::SomeIP::event_id_t(0x80ef),
             false,
              deployed_gnssData 
     );
