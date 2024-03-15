@@ -44,6 +44,10 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "LocLcaIdlConverter.h"
 #include "LocationIntegrationApi.h"
 
+#ifdef POWER_DAEMON_MGR_ENABLED
+#include "LocIdlPowerEvtManager.h"
+#endif
+
 using namespace location_client;
 using namespace v0::com::qualcomm::qti::location;
 using namespace std;
@@ -51,6 +55,17 @@ using namespace loc_util;
 using namespace location_integration;
 
 
+enum IDLPowerStateType {
+    IDL_POWER_STATE_UNKNOWN = 0,
+    IDL_POWER_STATE_SUSPEND = 1,
+    IDL_POWER_STATE_RESUME  = 2,
+    IDL_POWER_STATE_SHUTDOWN = 3,
+    IDL_POWER_STATE_DEEP_SLEEP_ENTRY = 4,
+    IDL_POWER_STATE_DEEP_SLEEP_EXIT = 5
+};
+#ifdef POWER_DAEMON_MGR_ENABLED
+class LocIdlPowerEvtHandler;
+#endif
 class LocIdlAPIStubImpl;
 
 class LocIdlAPIService {
@@ -61,6 +76,7 @@ public:
     bool init();
     bool createLocIdlService();
     bool registerWithFIDLService();
+    bool unRegisterWithFIDLService();
     bool processCapabilities(::LocationCapabilitiesMask mask);
 
     /* Process Fused/Detailed Position request */
@@ -123,6 +139,12 @@ public:
     (
         const location_client::LocationResponse lcaResponse
     ) const;
+
+    void onPowerEvent(IDLPowerStateType powerEvent);
+
+#ifdef POWER_DAEMON_MGR_ENABLED
+    LocIdlPowerEvtHandler* mPowerEventObserver;
+#endif
 
 private:
     static LocIdlAPIService *mInstance;
