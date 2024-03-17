@@ -79,9 +79,8 @@ enum LocationApiDataTypesVersion {
     LOCAPI_DATA_TYPES_VER_MAJOR = 1;
     // Minor - New features / API addition, new message/elemtent addition.
     // Bump the last byte of version i.e. x.2 to x.3
-    // Minor version 41: Add AGC status in GnssMeasurements and GnssData notification
-    // Minor version 42: Add tech mask of wifi and premium position in PBTerrestrialTechMask
-    LOCAPI_DATA_TYPES_VER_MINOR = 42;
+    // Minor version 43: Add session status in Location
+    LOCAPI_DATA_TYPES_VER_MINOR = 43;
 }
 
 // ============================================================================
@@ -603,6 +602,8 @@ enum PBLocationFlagsMask {
     PB_LOCATION_HAS_GPTP_TIME_BIT            = 0x0800;
     // location has valid GPTP Uncertainty
     PB_LOCATION_HAS_GPTP_TIME_UNC_BIT        = 0x1000;
+    // location has session status
+    PB_LOCATION_HAS_SESSION_STATUS_BIT       = 0x2000;
 }
 
 enum PBLocationTechnologyMask {
@@ -888,10 +889,12 @@ message PBLocation {
     uint64 elapsedRealTimeUnc = 14;
     /** time uncertainty in msec */
     float  timeUncMs = 15;
-    // GPTP time field in nano seconds
+    /** GPTP time field in nano seconds */
     uint64 elapsedgPTPTime  = 16;
-    // GPTP time Unc
+    /** GPTP time Unc */
     uint64 elapsedgPTPTimeUnc = 17;
+    /** Session Status */
+    PBLocationSessionStatus sessionStatus = 18;
 }
 
 message PBLocationOptions {
