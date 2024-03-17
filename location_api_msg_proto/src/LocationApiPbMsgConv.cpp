@@ -1740,6 +1740,9 @@ uint32_t LocationApiPbMsgConv::getPBMaskForLocationFlagsMask(const uint32_t &loc
     if (locFlagsMask & LOCATION_HAS_GPTP_TIME_UNC_BIT) {
         pbLocFlagsMask |= PB_LOCATION_HAS_GPTP_TIME_UNC_BIT;
     }
+    if (locFlagsMask & LOCATION_HAS_SESSION_STATUS_BIT) {
+        pbLocFlagsMask |= PB_LOCATION_HAS_SESSION_STATUS_BIT;
+    }
 
     LocApiPb_LOGv("LocApiPB: locFlagsMask:%x, pbLocFlagsMask:%x", locFlagsMask, pbLocFlagsMask);
     return pbLocFlagsMask;
@@ -3011,6 +3014,9 @@ uint32_t LocationApiPbMsgConv::getLocationFlagsMaskFromPB(const uint32_t &pbLocF
     if (pbLocFlagsMask & PB_LOCATION_HAS_GPTP_TIME_UNC_BIT) {
         locFlagsMask |= LOCATION_HAS_GPTP_TIME_UNC_BIT;
     }
+    if (pbLocFlagsMask & PB_LOCATION_HAS_SESSION_STATUS_BIT) {
+        locFlagsMask |= LOCATION_HAS_SESSION_STATUS_BIT;
+    }
     LocApiPb_LOGv("LocApiPB: pbLocFlagsMask:%x, locFlagsMask:%x", pbLocFlagsMask, locFlagsMask);
     return locFlagsMask;
 }
@@ -4160,14 +4166,15 @@ int LocationApiPbMsgConv::convertLocationToPB(const Location &location,
     // uint64 elapsedgPTPTimeUnc  = 17;
     pbLocation->set_elapsedgptptimeunc(location.elapsedgPTPTimeUnc);
 
-    LOC_LOGd("LocApiPB: location - Timestamp: %" PRIu64" Lat:%lf, Lon:%lf, Alt:%lf, TechMask:%x",
-            location.timestamp, location.latitude, location.longitude, location.altitude,
-            location.techMask);
+    // LocSessionStatus sessionStatus = 18;
+    pbLocation->set_sessionstatus(
+            getPBEnumForLocSessionStatus(location.sessionStatus));
+
     LocApiPb_LOGd("LocApiPB: location - speed:%f, bear:%f, HorzAcc:%f, VertAcc:%f, SpeedAcc:%f, "
-                  "BearAcc:%f, time unc msec %f elapsedgPTPTime %" PRIu64" nsec ",
-                  location.speed, location.bearing, location.accuracy, location.verticalAccuracy,
-                  location.speedAccuracy, location.bearingAccuracy, location.timeUncMs,
-                  location.elapsedgPTPTime);
+            "BearAcc:%f, time unc msec %f elapsedgPTPTime %" PRIu64" nsec, sessionStatus: %d",
+            location.speed, location.bearing, location.accuracy, location.verticalAccuracy,
+            location.speedAccuracy, location.bearingAccuracy, location.timeUncMs,
+            location.elapsedgPTPTime, (int)location.sessionStatus);
     return 0;
 }
 
@@ -5455,12 +5462,14 @@ int LocationApiPbMsgConv::pbConvertToLocation(const PBLocation &pbLoc, Location 
     // uint64 elapsedgPTPTimeUnc  = 17;
     loc.elapsedgPTPTimeUnc = pbLoc.elapsedgptptimeunc();
 
-    LOC_LOGd("LocApiPB: pbLoc - Timestamp: %" PRIu64" Lat:%lf, Lon:%lf, Alt:%lf, TechMask:%x",
-            loc.timestamp, loc.latitude, loc.longitude, loc.altitude, loc.techMask);
+    // LocSessionStatus sessionStatus = 18;
+    loc.sessionStatus = getLocSessionStatusFromPB(
+            pbLoc.sessionstatus());
+
     LocApiPb_LOGd("LocApiPB: pbLoc - speed:%f, bearing:%f, HorzAcc:%f, VertAcc:%f, SpeedAcc:%f, "
-                  "BearAcc:%f, time unc ms %f, elapsedGPTPTime:%" PRIu64" ", loc.speed, loc.bearing,
-                   loc.accuracy, loc.verticalAccuracy, loc.speedAccuracy, loc.bearingAccuracy,
-                   loc.timeUncMs, loc.elapsedgPTPTime);
+            "BearAcc:%f, time unc ms %f, elapsedGPTPTime:%" PRIu64" , sessionStatus %d",
+            loc.speed, loc.bearing, loc.accuracy, loc.verticalAccuracy, loc.speedAccuracy,
+            loc.bearingAccuracy, loc.timeUncMs, loc.elapsedgPTPTime, (int)loc.sessionStatus);
     return 0;
 }
 
@@ -5659,7 +5668,7 @@ int LocationApiPbMsgConv::pbConvertToGnssLocInfoNotif(
     }
     gnssLocInfoNotif.numOfDgnssStationId = i;
 
-   LOC_LOGv("LocApiPB: pbGnssLocInfoNotif -GLocInfoFlgMask:0x%" PRIx64 ", pdop:%f, "
+    LOC_LOGv("LocApiPB: pbGnssLocInfoNotif -GLocInfoFlgMask:0x%" PRIx64 ", pdop:%f, "
             "hdop:%f, vdop:%f",
             gnssLocInfoNotif.flags, gnssLocInfoNotif.pdop, gnssLocInfoNotif.hdop,
             gnssLocInfoNotif.vdop);
