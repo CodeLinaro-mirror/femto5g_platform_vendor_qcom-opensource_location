@@ -1,7 +1,5 @@
-/*
-* Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
-* SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
+/** Copyright (c) 2023-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+    SPDX-License-Identifier: BSD-3-Clause-Clear */
 
 package com.qualcomm.qti.location
 
@@ -306,7 +304,7 @@ interface LocIdlAPI {
         /**
          * Receive NMEA related to position report from all registered engines.
          * The SV report will come from GNSS engine.
-         * Don't register both GnssNmeaCb and EngineNmeaCb at same time
+         * Don't register both GnssNmea and EngineNmea at same time
          * If attempted, invalid error will be returned.
          * Recommend to use EngineNmea. <br/> */
         IDL_ENGINE_NMEA_CB_INFO_BIT         = 0x00000020
@@ -1120,7 +1118,7 @@ interface LocIdlAPI {
 
     /** Specify the set of engines whose position reports are
         requested via startPositionSession(uint32_t,
-        IDLLocReqEngineTypeMask, const EngineReportCbs&,ResponseCb).
+        IDLLocReqEngineTypeMask, const EngineReport&, Response).
 
     */
     enumeration IDLLocReqEngineTypeMask {
@@ -1332,7 +1330,7 @@ interface LocIdlAPI {
 
     /** Specify the location info received by client via
      *  startPositionSession(uint32_t, const
-     *  GnssReportCbs&, ResponseCb) and
+     *  GnssReport&, Response) and
      *  startPositionSession(uint32_t,
      *  IDLLocReqEngineTypeMask, const EngineReports&, ResponseCb).
      *
