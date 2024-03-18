@@ -1308,6 +1308,261 @@ void LocationClientApiImpl::logGeofenceBreach(const GeofenceBreachNotification& 
     mLogger.log(breachNotif, geofences);
 }
 
+void LocationClientApiImpl::parseEphSrcAndAction(const ::GnssEphAction& halEphAction,
+    GnssEphSource& ephSrc, GnssEphAction& ephAction) {
+
+    ephSrc    = GNSS_EPH_SRC_UNKNOWN;
+    ephAction = GNSS_EPH_ACTION_UNKNOWN;
+
+    switch (halEphAction) {
+        case GNSS_EPH_ACTION_UPDATE_SRC_UNKNOWN_V02:
+            ephSrc    = GNSS_EPH_SRC_UNKNOWN;
+            ephAction = GNSS_EPH_ACTION_UNKNOWN;
+            break;
+
+        case GNSS_EPH_ACTION_UPDATE_SRC_OTA_V02:
+            ephSrc    = GNSS_EPH_SRC_OTA;
+            ephAction = GNSS_EPH_ACTION_UPDATE;
+            break;
+
+        case GNSS_EPH_ACTION_UPDATE_SRC_NETWORK_V02:
+            ephSrc    = GNSS_EPH_SRC_UNKNOWN;
+            ephAction = GNSS_EPH_ACTION_UNKNOWN;
+            break;
+
+        case GNSS_EPH_ACTION_UPDATE_MAX_V02:
+            ephSrc    = GNSS_EPH_SRC_MAX;
+            ephAction = GNSS_EPH_ACTION_MAX;
+            break;
+
+        case GNSS_EPH_ACTION_DELETE_SRC_UNKNOWN_V02:
+            ephSrc    = GNSS_EPH_SRC_UNKNOWN;
+            ephAction = GNSS_EPH_ACTION_UNKNOWN;
+            break;
+
+        case GNSS_EPH_ACTION_DELETE_SRC_NETWORK_V02:
+            ephSrc    = GNSS_EPH_SRC_UNKNOWN;
+            ephAction = GNSS_EPH_ACTION_UNKNOWN;
+            break;
+
+        case GNSS_EPH_ACTION_DELETE_SRC_OTA_V02:
+            ephSrc    = GNSS_EPH_SRC_OTA;
+            ephAction = GNSS_EPH_ACTION_DELETE;
+            break;
+
+        case GNSS_EPH_ACTION_DELETE_MAX_V02:
+            ephSrc    = GNSS_EPH_SRC_UNKNOWN;
+            ephAction = GNSS_EPH_ACTION_MAX;
+            break;
+
+        default:
+            LOC_LOGe(" Source and Action on Ephemeris cannot be identified ");
+            break;
+    }
+}
+
+void LocationClientApiImpl::parseCommanGnssEphemeris(const ::GnssEphCommon& halCommanEph,
+            GnssEphCommonInfo& lcaCommanEph)
+{
+
+    lcaCommanEph.gnssSvId     = halCommanEph.gnssSvId;
+    parseEphSrcAndAction(halCommanEph.updateAction, lcaCommanEph.ephSource, lcaCommanEph.action);
+    lcaCommanEph.IODE         = halCommanEph.IODE;
+    lcaCommanEph.aSqrt        = halCommanEph.aSqrt;
+    lcaCommanEph.deltaN       = halCommanEph.deltaN;
+    lcaCommanEph.m0           = halCommanEph.m0;
+    lcaCommanEph.eccentricity = halCommanEph.eccentricity;
+    lcaCommanEph.omega0       = halCommanEph.omega0;
+    lcaCommanEph.i0           = halCommanEph.i0;
+    lcaCommanEph.omega        = halCommanEph.omega;
+    lcaCommanEph.omegaDot     = halCommanEph.omegaDot;
+    lcaCommanEph.iDot         = halCommanEph.iDot;
+    lcaCommanEph.cUc          = halCommanEph.cUc;
+    lcaCommanEph.cUs          = halCommanEph.cUs;
+    lcaCommanEph.cRc          = halCommanEph.cRc;
+    lcaCommanEph.cRs          = halCommanEph.cRs;
+    lcaCommanEph.cIc          = halCommanEph.cIc;
+    lcaCommanEph.cIs          = halCommanEph.cIs;
+    lcaCommanEph.toe          = halCommanEph.toe;
+    lcaCommanEph.toc          = halCommanEph.toc;
+    lcaCommanEph.af0          = halCommanEph.af0;
+    lcaCommanEph.af1          = halCommanEph.af1;
+    lcaCommanEph.af2          = halCommanEph.af2;
+}
+
+void LocationClientApiImpl::parseGpsEphemeris(const GpsEphemerisResponse& halEph,
+            std::vector<GpsQzssEphemeris>& lcaEphInfo) {
+
+    for (int idx = 0; idx < halEph.numOfEphemeris; idx++) {
+        GpsQzssEphemeris lcaEph = {};
+        parseCommanGnssEphemeris(halEph.gpsEphemerisData[idx].commonEphemerisData,
+                lcaEph.commonEphemerisData);
+
+        lcaEph.signalHealth  = halEph.gpsEphemerisData[idx].signalHealth;
+        lcaEph.URAI          = halEph.gpsEphemerisData[idx].URAI;
+        lcaEph.codeL2        = halEph.gpsEphemerisData[idx].codeL2;
+        lcaEph.dataFlagL2P   = halEph.gpsEphemerisData[idx].dataFlagL2P;
+        lcaEph.fitInterval   = halEph.gpsEphemerisData[idx].fitInterval;
+        lcaEph.IODC          = halEph.gpsEphemerisData[idx].IODC;
+        lcaEph.tgd           = halEph.gpsEphemerisData[idx].tgd;
+        lcaEphInfo.push_back(std::move(lcaEph));
+    }
+}
+
+void LocationClientApiImpl::parseGalEphemeris(const GalileoEphemerisResponse& halEph,
+            std::vector<GalileoEphemeris>& lcaEphInfo) {
+
+    for (int idx = 0; idx < halEph.numOfEphemeris; idx++) {
+        GalileoEphemeris lcaEph = {};
+        parseCommanGnssEphemeris(halEph.galEphemerisData[idx].commonEphemerisData,
+                lcaEph.commonEphemerisData);
+
+        lcaEph.dataSourceSignal =
+                (GalEphSignalSource)halEph.galEphemerisData[idx].dataSourceSignal;
+        lcaEph.sisIndex = halEph.galEphemerisData[idx].sisIndex;
+        lcaEph.bgdE1E5a = halEph.galEphemerisData[idx].bgdE1E5a;
+        lcaEph.bgdE1E5b = halEph.galEphemerisData[idx].bgdE1E5b;
+        lcaEph.svHealth = halEph.galEphemerisData[idx].svHealth;
+        lcaEphInfo.push_back(std::move(lcaEph));
+    }
+
+}
+
+void LocationClientApiImpl::parseGloEphemeris(const GlonassEphemerisResponse& halEph,
+            std::vector<GlonassEphemeris>& lcaEphInfo) {
+
+    for (int idx = 0; idx < halEph.numOfEphemeris; idx++) {
+        GlonassEphemeris lcaEph = {};
+        lcaEph.gnssSvId     = halEph.gloEphemerisData[idx].gnssSvId;
+        parseEphSrcAndAction(halEph.gloEphemerisData[idx].updateAction,
+                lcaEph.ephSource, lcaEph.action);
+        lcaEph.bnHealth     = halEph.gloEphemerisData[idx].bnHealth;
+        lcaEph.lnHealth     = halEph.gloEphemerisData[idx].lnHealth;
+        lcaEph.tb           = halEph.gloEphemerisData[idx].tb;
+        lcaEph.ft           = halEph.gloEphemerisData[idx].ft;
+        lcaEph.gloM         = halEph.gloEphemerisData[idx].gloM;
+        lcaEph.enAge        = halEph.gloEphemerisData[idx].enAge;
+        lcaEph.gloFrequency = halEph.gloEphemerisData[idx].gloFrequency;
+        lcaEph.p1           = halEph.gloEphemerisData[idx].p1;
+        lcaEph.p2           = halEph.gloEphemerisData[idx].p2;
+        lcaEph.deltaTau     = halEph.gloEphemerisData[idx].deltaTau;
+        lcaEph.position[0]  = halEph.gloEphemerisData[idx].position[0];
+        lcaEph.position[1]  = halEph.gloEphemerisData[idx].position[1];
+        lcaEph.position[2]  = halEph.gloEphemerisData[idx].position[2];
+        lcaEph.velocity[0]  = halEph.gloEphemerisData[idx].velocity[0];
+        lcaEph.velocity[1]  = halEph.gloEphemerisData[idx].velocity[1];
+        lcaEph.velocity[2]  = halEph.gloEphemerisData[idx].velocity[2];
+        lcaEph.acceleration[0] = halEph.gloEphemerisData[idx].acceleration[0];
+        lcaEph.acceleration[1] = halEph.gloEphemerisData[idx].acceleration[1];
+        lcaEph.acceleration[2] = halEph.gloEphemerisData[idx].acceleration[2];
+        lcaEph.tauN         = halEph.gloEphemerisData[idx].tauN;
+        lcaEph.gamma        = halEph.gloEphemerisData[idx].gamma;
+        lcaEph.toe          = halEph.gloEphemerisData[idx].toe;
+        lcaEph.nt           = halEph.gloEphemerisData[idx].nt;
+        lcaEphInfo.push_back(std::move(lcaEph));
+    }
+}
+
+void LocationClientApiImpl::parseBdsEphemeris(const BdsEphemerisResponse& halEph,
+            std::vector<BdsEphemeris>& lcaEphInfo) {
+
+    for (int idx = 0; idx < halEph.numOfEphemeris; idx++) {
+        BdsEphemeris lcaEph = {};
+        parseCommanGnssEphemeris(halEph.bdsEphemerisData[idx].commonEphemerisData,
+                lcaEph.commonEphemerisData);
+
+        lcaEph.svHealth = halEph.bdsEphemerisData[idx].svHealth;
+        lcaEph.AODC     = halEph.bdsEphemerisData[idx].AODC;
+        lcaEph.tgd1     = halEph.bdsEphemerisData[idx].tgd1;
+        lcaEph.tgd2     = halEph.bdsEphemerisData[idx].tgd2;
+        lcaEph.URAI     = halEph.bdsEphemerisData[idx].URAI;
+        lcaEphInfo.push_back(std::move(lcaEph));
+    }
+}
+
+void LocationClientApiImpl::parseQzssEphemeris(const QzssEphemerisResponse& halEph,
+                std::vector<QzssEphemeris>& lcaEphInfo) {
+
+    for (int idx = 0; idx < halEph.numOfEphemeris; idx++) {
+        QzssEphemeris lcaEph = {};
+        parseCommanGnssEphemeris(halEph.qzssEphemerisData[idx].commonEphemerisData,
+                lcaEph.qzssEphData.commonEphemerisData);
+
+        lcaEph.qzssEphData.signalHealth  = halEph.qzssEphemerisData[idx].signalHealth;
+        lcaEph.qzssEphData.URAI          = halEph.qzssEphemerisData[idx].URAI;
+        lcaEph.qzssEphData.codeL2        = halEph.qzssEphemerisData[idx].codeL2;
+        lcaEph.qzssEphData.dataFlagL2P   = halEph.qzssEphemerisData[idx].dataFlagL2P;
+        lcaEph.qzssEphData.fitInterval   = halEph.qzssEphemerisData[idx].fitInterval;
+        lcaEph.qzssEphData.IODC          = halEph.qzssEphemerisData[idx].IODC;
+        lcaEph.qzssEphData.tgd           = halEph.qzssEphemerisData[idx].tgd;
+        lcaEphInfo.push_back(std::move(lcaEph));
+    }
+}
+
+void LocationClientApiImpl::parseNavicEphemeris(const NavicEphemerisResponse& halEph,
+            std::vector<NavicEphemeris>& lcaEphInfo) {
+
+    for (int idx = 0; idx < halEph.numOfEphemeris; idx++) {
+        NavicEphemeris lcaEph = {};
+        parseCommanGnssEphemeris(halEph.navicEphemerisData[idx].commonEphemerisData,
+                lcaEph.commonEphemerisData);
+
+        lcaEph.weekNum  = halEph.navicEphemerisData[idx].weekNum;
+        lcaEph.iodec    = halEph.navicEphemerisData[idx].iodec;
+        lcaEph.l5Health = halEph.navicEphemerisData[idx].l5Health;
+        lcaEph.sHealth  = halEph.navicEphemerisData[idx].sHealth;
+        lcaEph.inclinationAngleRad =
+                halEph.navicEphemerisData[idx].inclinationAngleRad;
+        lcaEph.urai     = halEph.navicEphemerisData[idx].urai;
+        lcaEph.tgd      = halEph.navicEphemerisData[idx].tgd;
+        lcaEphInfo.push_back(std::move(lcaEph));
+    }
+}
+GnssEphemeris LocationClientApiImpl::parseGnssEphemerisInfo(
+         const ::GnssSvEphemerisReport &halGnssEphemeris) {
+    GnssEphemeris gnssEphInfo = {};
+    switch (halGnssEphemeris.gnssConstellation) {
+        case GNSS_LOC_SV_SYSTEM_GPS:
+            gnssEphInfo.gnssConstellation = GNSS_LOC_SV_SYSTEM_GPS;
+            parseGpsEphemeris(halGnssEphemeris.ephInfo.gpsEphemeris,
+                    gnssEphInfo.gpsEphemerisData);
+            break;
+        case GNSS_LOC_SV_SYSTEM_GALILEO:
+            gnssEphInfo.gnssConstellation = GNSS_LOC_SV_SYSTEM_GALILEO;
+            parseGalEphemeris(halGnssEphemeris.ephInfo.galileoEphemeris,
+                    gnssEphInfo.galEphemerisData);
+            break;
+        case GNSS_LOC_SV_SYSTEM_GLONASS:
+            gnssEphInfo.gnssConstellation = GNSS_LOC_SV_SYSTEM_GLONASS;
+            parseGloEphemeris(halGnssEphemeris.ephInfo.glonassEphemeris,
+                    gnssEphInfo.gloEphemerisData);
+            break;
+        case GNSS_LOC_SV_SYSTEM_BDS:
+            gnssEphInfo.gnssConstellation = GNSS_LOC_SV_SYSTEM_BDS;
+            parseBdsEphemeris(halGnssEphemeris.ephInfo.bdsEphemeris,
+                    gnssEphInfo.bdsEphemerisData);
+            break;
+        case GNSS_LOC_SV_SYSTEM_QZSS:
+            gnssEphInfo.gnssConstellation = GNSS_LOC_SV_SYSTEM_QZSS;
+            parseQzssEphemeris(halGnssEphemeris.ephInfo.qzssEphemeris,
+                    gnssEphInfo.qzssEphemerisData);
+            break;
+        case GNSS_LOC_SV_SYSTEM_NAVIC:
+            gnssEphInfo.gnssConstellation = GNSS_LOC_SV_SYSTEM_NAVIC;
+            parseNavicEphemeris(halGnssEphemeris.ephInfo.navicEphemeris,
+                    gnssEphInfo.navicEphemerisData);
+            break;
+        default:
+            LOC_LOGe("Unknown System Type for Ephemeris ");
+            break;
+   }
+   if (halGnssEphemeris.isSystemTimeValid) {
+       gnssEphInfo.isSystemTimeValid = 1;
+       gnssEphInfo.systemTime = parseGnssTime(halGnssEphemeris.systemTime);
+   }
+   return gnssEphInfo;
+}
+
 /******************************************************************************
 ILocIpcListener override
 ******************************************************************************/
@@ -1652,6 +1907,10 @@ void LocationClientApiImpl::updateCallbacksSync(LocationCallbacks& callbacks) {
         callBacksMask |= E_LOC_CB_GEOFENCE_BREACH_BIT;
         mLocationCbs.geofenceBreachCb = callbacks.geofenceBreachCb;
     }
+    if (callbacks.svEphemerisCb) {
+        callBacksMask |= E_LOC_CB_GNSS_EPH_BIT;
+        mLocationCbs.svEphemerisCb = callbacks.svEphemerisCb;
+    }
 
     // Callbacks may get increamentally updated, hence OR with the existing
     // callback mask
@@ -1896,6 +2155,7 @@ void LocationClientApiImpl::clearSubscriptions(LocationCallbackType cbTypeToClea
             mLocationCbs.gnssMeasurementsCb = nullptr;
             mLocationCbs.gnssNHzMeasurementsCb = nullptr;
             mLocationCbs.engineLocationsInfoCb = nullptr;
+            mLocationCbs.svEphemerisCb = nullptr;
             break;
         case BATCHING_CBS:
             mCallbacksMask &= ~LOCATION_BATCHING_SESSION_MASK;
@@ -3529,6 +3789,27 @@ void IpcListener::onReceive(const char* data, uint32_t length,
                 if (mApiImpl.mPingTestCb) {
                     uint32_t response = pIndMsg->data[0];
                     mApiImpl.mPingTestCb(response);
+                }
+                break;
+            }
+            case E_LOCAPI_EPH_MSG_ID:
+            {
+                LOC_LOGd("<<< message = Ephemeris");
+                if ((mApiImpl.mSessionId != LOCATION_CLIENT_SESSION_ID_INVALID) &&
+                        (mApiImpl.mPositionSessionResponseCbPending == false)) {
+                    PBLocAPIEphIndMsg pbLocApiEphIndMsg;
+                    if (0 == pbLocApiEphIndMsg.ParseFromString(pbLocApiMsg.payload())) {
+                        LOC_LOGe("Failed to parse pbLocApiEphIndMsg from payload!!");
+                        return;
+                    }
+                    LocAPIEphIndMsg msg(sockName.c_str(), pbLocApiEphIndMsg,
+                            &mApiImpl.mPbufMsgConv);
+                    const LocAPIEphIndMsg* pEphIndMsg = (LocAPIEphIndMsg*)(&msg);
+                    if ((mApiImpl.mCallbacksMask & E_LOC_CB_GNSS_EPH_BIT) &&
+                            (nullptr != mApiImpl.mLocationCbs.svEphemerisCb)) {
+                        mApiImpl.mLocationCbs.svEphemerisCb(
+                                pEphIndMsg->gnssEphNotification);
+                    }
                 }
                 break;
             }
