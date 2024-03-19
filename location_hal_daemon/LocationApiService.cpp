@@ -169,9 +169,9 @@ public:
             mService(service) {
     }
     inline virtual void onServiceStatusChange(int serviceId, int instanceId,
-            LocIpcQrtrWatcher::ServiceStatus status, const LocIpcSender& refSender) {
+            LocIpcQrtrWatcher::ServiceStatus status, uint32_t nodeId, uint32_t portId) {
         if (LocIpcQrtrWatcher::ServiceStatus::DOWN == status) {
-             LOC_LOGi(">-- client deleted by qrtr: (%d, %d)", serviceId, instanceId);
+             LOC_LOGi(">-- QRTR client (%d, %d) deleted", serviceId, instanceId);
              mService->deleteEapClientByIds(serviceId, instanceId);
         }
     }
@@ -1201,7 +1201,6 @@ void LocationApiService::stopBatching(LocAPIStopBatchingReqMsg *pMsg) {
 
     pClient->mBatching = false;
     pClient->mBatchingMode = BATCHING_MODE_NO_AUTO_REPORT;
-    pClient->updateSubscription(0);
     pClient->stopBatching();
     pClient->mPendingMessages.push(E_LOCAPI_STOP_BATCHING_MSG_ID);
     LOC_LOGi(">-- stopping batching session");
