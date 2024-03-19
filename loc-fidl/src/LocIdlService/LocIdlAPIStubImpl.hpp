@@ -45,6 +45,8 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 using namespace std;
 using namespace v0::com::qualcomm::qti::location;
+
+class LocIdlAPIService;
 class LocIdlAPIStubImpl: public v0::com::qualcomm::qti::location::LocIdlAPIStub {
 
 public:
