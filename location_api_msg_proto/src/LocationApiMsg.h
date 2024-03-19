@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -313,6 +313,9 @@ enum ELocMsgID {
     E_LOCAPI_GET_SINGLE_POS_REQ_MSG_ID = 38,
     E_LOCAPI_GET_SINGLE_POS_RESP_MSG_ID = 39,
 
+    // Ephemeris Reporting
+    E_LOCAPI_EPH_MSG_ID = 40,
+
     // ping
     E_LOCAPI_PINGTEST_MSG_ID = 99,
 
@@ -378,7 +381,8 @@ enum ELocationCallbacksOption {
     E_LOC_CB_GNSS_NHZ_MEAS_BIT          = (1<<12), /**< Register for NHZ GNSS Measurements */
     E_LOC_CB_GNSS_DC_REPORT_BIT         = (1<<13), /**< Register for disaster and crisis reports */
     E_LOC_CB_ANTENNA_INFO_BIT           = (1<<14), /**< Register for Antenna Info */
-    E_LOC_CB_ENGINE_NMEA_BIT            = (1<<15) /**< Register for Engine NMEA */
+    E_LOC_CB_ENGINE_NMEA_BIT            = (1<<15), /**< Register for Engine NMEA */
+    E_LOC_CB_GNSS_EPH_BIT               = (1<<16) /**< Register for Engine NMEA */
 };
 
 // Mask related to all info that are tied with a position session and need to be unsubscribed
@@ -391,7 +395,8 @@ enum ELocationCallbacksOption {
                                        E_LOC_CB_ENGINE_LOCATIONS_INFO_BIT|\
                                        E_LOC_CB_SIMPLE_LOCATION_INFO_BIT |\
                                        E_LOC_CB_GNSS_DC_REPORT_BIT |\
-                                       E_LOC_CB_ENGINE_NMEA_BIT)
+                                       E_LOC_CB_ENGINE_NMEA_BIT |\
+                                       E_LOC_CB_GNSS_EPH_BIT)
 
 #define LOCATION_BATCHING_SESSION_MASK (E_LOC_CB_BATCHING_BIT|\
                                         E_LOC_CB_BATCHING_STATUS_BIT)
@@ -1132,6 +1137,25 @@ struct LocAPIDcReportIndMsg : LocAPIMsgHeader
         dcReportInfo(gnssDcReportInfo) { }
     LocAPIDcReportIndMsg(const char* name, const PBLocAPIDcReportIndMsg &pbLocAPIDcReportIndMsg,
                          const LocationApiPbMsgConv *pbMsgConv);
+
+    int serializeToProtobuf(string& protoStr) override;
+};
+
+// defintion for message with msg id of E_LOCAPI_EPH_MSG_ID
+struct LocAPIEphIndMsg : LocAPIMsgHeader
+{
+    GnssSvEphemerisReport gnssEphNotification;
+
+    // For LOC-HAL to PROTO conversion
+    inline LocAPIEphIndMsg(const char* name,
+        const GnssSvEphemerisReport& ephemerisInfo,
+        const LocationApiPbMsgConv *pbMsgConv) :
+        LocAPIMsgHeader(name, E_LOCAPI_EPH_MSG_ID, pbMsgConv),
+        gnssEphNotification(ephemerisInfo) { }
+
+    // For PROTO to LOC-HAL conversion
+    LocAPIEphIndMsg(const char* name, const PBLocAPIEphIndMsg &pbLocApiEphIndMsg,
+            const LocationApiPbMsgConv *pbMsgConv);
 
     int serializeToProtobuf(string& protoStr) override;
 };
