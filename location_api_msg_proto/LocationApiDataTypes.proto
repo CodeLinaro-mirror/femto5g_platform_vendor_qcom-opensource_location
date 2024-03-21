@@ -28,7 +28,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -79,8 +79,8 @@ enum LocationApiDataTypesVersion {
     LOCAPI_DATA_TYPES_VER_MAJOR = 1;
     // Minor - New features / API addition, new message/elemtent addition.
     // Bump the last byte of version i.e. x.2 to x.3
-    // Minor version 36: Support GPTP time in Position and Measurement
-    LOCAPI_DATA_TYPES_VER_MINOR = 36;
+    // Minor version 39: Support to add NAVIC L1 signal type
+    LOCAPI_DATA_TYPES_VER_MINOR = 39;
 }
 
 // ============================================================================
@@ -150,6 +150,8 @@ enum PBGnssSignalTypeMask {
     PB_GNSS_SIGNAL_BEIDOU_B2BI_BIT         = 0x00400000;
     /** BEIDOU B2B_Q RF Band */
     PB_GNSS_SIGNAL_BEIDOU_B2BQ_BIT         = 0x00800000;
+    /** NAVIC L1 RF Band */
+    PB_GNSS_SIGNAL_NAVIC_L1_BIT            = 0x01000000;
 }
 
 enum PBLocApiGnss_LocSvSystemEnumType {
@@ -243,8 +245,6 @@ enum PBGnssLocationInfoExtFlagMask {
     PB_GNSS_LOCATION_INFO_PROTECT_CROSS_TRACK_BIT = 0x10; // valid protection level cross track
     PB_GNSS_LOCATION_INFO_PROTECT_VERTICAL_BIT    = 0x20; // valid protection level vertical
     PB_GNSS_LOCATION_INFO_DGNSS_STATION_ID_MASK_BIT = 0x40; // valid dgnss station id info
-    PB_GNSS_LOCATION_INFO_GPTP_TIME_BIT           = 0x80; // valid GPTPT time info
-    PB_GNSS_LOCATION_INFO_GPTP_TIME_UNC_BIT       = 0x100; // valid GPTPT time uncertainity info
 };
 
 enum PBGnssLocationNavSolutionMask {
@@ -582,6 +582,10 @@ enum PBLocationFlagsMask {
     PB_LOCATION_HAS_ELAPSED_REAL_TIME_BIT    = 0x0200;
     // location has valid time uncertainty
     PB_LOCATION_HAS_TIME_UNC_BIT             = 0x0400;
+    // location has valid GPTP time
+    PB_LOCATION_HAS_GPTP_TIME_BIT            = 0x0800;
+    // location has valid GPTP Uncertainty
+    PB_LOCATION_HAS_GPTP_TIME_UNC_BIT        = 0x1000;
 }
 
 enum PBLocationTechnologyMask {
@@ -867,6 +871,10 @@ message PBLocation {
     uint64 elapsedRealTimeUnc = 14;
     /** time uncertainty in msec */
     float  timeUncMs = 15;
+    // GPTP time field in nano seconds
+    uint64 elapsedgPTPTime  = 16;
+    // GPTP time Unc
+    uint64 elapsedgPTPTimeUnc = 17;
 }
 
 message PBLocationOptions {
@@ -1193,10 +1201,6 @@ message PBGnssLocationInfoNotification {
     float    protectVertical = 46;
     // dgnss station id, validity is set via extFlags
     repeated uint32 dgnssStationId = 47;
-    // GPTP time field in nano seconds
-    uint64 elapsedgPTPTime  = 48;
-    // GPTP time Unc
-    uint64 elapsedgPTPTimeUnc = 49;
 }
 
 message PBGnssDataNotification {
@@ -1735,5 +1739,480 @@ message PBGnssAntennaInformation {
 
 message PBAntennaInformation {
     repeated PBGnssAntennaInformation antennaInfos = 1;
+}
+
+
+/**************** EPH REPORT *************/
+
+/** Specifies the Source of ephemeris and action to be performed on
+ *  receipt of the ephemeris (Update/Delete) Action shall be
+ *  performed on GnssEphSource specified */
+enum PBGnssEphAction {
+    /**<Update ephemeris. Source of ephemeris is unknown  */
+    PB_GNSS_EPH_ACTION_UPDATE_SRC_UNKNOWN_V02 = 0;
+    /**<Update ephemeris. Source of ephemeris is OTA  */
+    PB_GNSS_EPH_ACTION_UPDATE_SRC_OTA_V02     = 1;
+    /**<Update ephemeris. Source of ephemeris is Network  */
+    PB_GNSS_EPH_ACTION_UPDATE_SRC_NETWORK_V02 = 2;
+    /**<Max value for update ephemeris action. DO NOT USE  */
+    PB_GNSS_EPH_ACTION_UPDATE_MAX_V02         = 999;
+    /**<Delete previous ephemeris from unknown source  */
+    PB_GNSS_EPH_ACTION_DELETE_SRC_UNKNOWN_V02 = 1000;
+    /**<Delete previous ephemeris from network  */
+    PB_GNSS_EPH_ACTION_DELETE_SRC_NETWORK_V02 = 1001;
+    /**<Delete previous ephemeris from OTA  */
+    PB_GNSS_EPH_ACTION_DELETE_SRC_OTA_V02     = 1002;
+    /**<Max value for delete ephemeris action. DO NOT USE  */
+    PB_GNSS_EPH_ACTION_DELETE_MAX_V02         = 1999;
+};
+
+enum PBGalEphSignalSource {
+    PB_GAL_EPH_SIGNAL_SRC_UNKNOWN = 0; /**<  GALILEO signal is unknown  */
+    PB_GAL_EPH_SIGNAL_SRC_E1B     = 1; /**<  GALILEO signal is E1B  */
+    PB_GAL_EPH_SIGNAL_SRC_E5A     = 2; /**<  GALILEO signal is E5A  */
+    PB_GAL_EPH_SIGNAL_SRC_E5B     = 3; /**<  GALILEO signal is E5B  */
+}
+
+message PBGnssEphCommon {
+    uint32 gnssSvId = 1;
+    /** Unique SV Identifier.
+     *  For SV Range of supported constellation, please refer to the
+     *  comment section of gnssSvId in GpsMeasUsageInfo.
+     */
+
+    PBGnssEphAction ephAction = 2;
+    /**< Specifies the source of ephemeris and action to be performed on receipt of
+     *  the ephemeris (Update/Delete) Action shall be performed on GnssEphSource specified.
+     *  - Type: int32 enum */
+
+    uint32 IODE = 3;
+    /**<   Issue of data ephemeris used (unit-less). \n
+        GPS: IODE 8 bits.\n
+        BDS: AODE 5 bits. \n
+        GAL: SIS IOD 10 bits. \n
+        - Type: uint16
+        - Units: Unit-less */
+
+    double aSqrt = 4;
+    /**<   Square root of semi-major axis. \n
+      - Type: double
+      - Units: Square Root of Meters */
+
+    double deltaN = 5;
+    /**<   Mean motion difference from computed value. \n
+      - Type: double
+      - Units: Radians/Second */
+
+    double m0 = 6;
+    /**<   Mean anomaly at reference time. \n
+      - Type: double
+      - Units: Radians */
+
+    double eccentricity = 7;
+    /**<   Eccentricity . \n
+      - Type: double
+      - Units: Unit-less */
+
+    double omega0 = 8;
+    /**<   Longitude of ascending node of orbital plane at the weekly epoch. \n
+      - Type: double
+      - Units: Radians */
+
+    double i0 = 9;
+    /**<   Inclination angle at reference time. \n
+      - Type: double
+      - Units: Radians */
+
+    double omega = 10;
+    /**<   Argument of Perigee. \n
+      - Type: double
+      - Units: Radians */
+
+    double omegaDot = 11;
+    /**<   Rate of change of right ascension. \n
+      - Type: double
+      - Units: Radians/Second */
+
+    double iDot = 12;
+    /**<   Rate of change of inclination angle. \n
+      - Type: double
+      - Units: Radians/Second */
+
+    double cUc = 13;
+    /**<   Amplitude of the cosine harmonic correction term to the argument of latitude. \n
+      - Type: double
+      - Units: Radians */
+
+    double cUs = 14;
+    /**<   Amplitude of the sine harmonic correction term to the argument of latitude. \n
+      - Type: double
+      - Units: Radians */
+
+    double cRc = 15;
+    /**<   Amplitude of the cosine harmonic correction term to the orbit radius. \n
+      - Type: double
+      - Units: Meters */
+
+    double cRs = 16;
+    /**<   Amplitude of the sine harmonic correction term to the orbit radius. \n
+      - Type: double
+      - Units: Meters */
+
+    double cIc = 17;
+    /**<   Amplitude of the cosine harmonic correction term to the angle of inclination. \n
+      - Type: double
+      - Units: Radians */
+
+    double cIs = 18;
+    /**<   Amplitude of the sine harmonic correction term to the angle of inclination. \n
+      - Type: double
+      - Units: Radians */
+
+    uint32 toe = 19;
+    /**<   Reference time of ephemeris. \n
+      - Type: uint32
+      - Units: Seconds */
+
+    uint32 toc = 20;
+    /**<   Clock data reference time of week.  \n
+      - Type: uint32
+      - Units: Seconds */
+
+    double af0 = 21;
+    /**<   Clock bias correction coefficient. \n
+      - Type: double
+      - Units: Seconds */
+
+    double af1 = 22;
+    /**<   Clock drift coefficient. \n
+      - Type: double
+      - Units: Seconds/Second */
+
+    double af2 = 23;
+    /**<   Clock drift rate correction coefficient. \n
+      - Type: double
+      - Units: Seconds/Seconds^2 */
+
+}
+
+/* GPS Navigation Model Info */
+message PBGpsEphemeris {
+    PBGnssEphCommon commonEphemerisData = 1;
+    /**<   Common ephemeris data.   */
+
+    uint32 signalHealth = 2;
+    /**<   Signal health. \n
+         Bit 0 : L5 Signal Health. \n
+         Bit 1 : L2 Signal Health. \n
+         Bit 2 : L1 Signal Health. \n
+         - Type: uint8
+         - Values: 3 bit mask of signal health, where set bit indicates unhealthy signal */
+
+    uint32 URAI = 3;
+    /**<   User Range Accuracy Index. \n
+         - Type: uint8
+         - Units: Unit-less */
+
+    uint32 codeL2 = 4;
+    /**<   Indicates which codes are commanded ON for the L2 channel (2-bits). \n
+         - Type: uint8
+         Valid Values: \n
+         - 00 : Reserved
+         - 01 : P code ON
+         - 10 : C/A code ON */
+
+    uint32 dataFlagL2P = 5;
+    /**<   L2 P-code indication flag. \n
+         - Type: uint8
+         - Value 1 indicates that the Nav data stream was commanded OFF on the P-code of the L2 channel. */
+
+    double tgd = 6;
+    /**<   Time of group delay. \n
+         - Type: double
+         - Units: Seconds */
+
+    uint32 fitInterval = 7;
+    /**<   Indicates the curve-fit interval used by the CS. \n
+         - Type: uint8
+         Valid Values:
+         - 0 : Four hours
+         - 1 : Greater than four hours */
+
+    uint32 IODC  = 8;
+    /**<   Issue of Data, Clock. \n
+         - Type: uint16
+         - Units: Unit-less */
+}
+
+/* GLONASS Navigation Model Info */
+message PBGlonassEphemeris {
+
+    uint32 gnssSvId  = 1;
+    /**<   GNSS SV ID.
+       - Type: uint16
+       - Range: 65 to 96 if known. When the slot number to SV ID mapping is unknown, set to 255 */
+
+    PBGnssEphAction ephAction = 2;
+    /**< Specifies the source of ephemeris and action to be performed on receipt of
+     *  the ephemeris (Update/Delete) Action shall be performed on GnssEphSource specified.
+     *  - Type: int32 enum */
+
+    uint32 bnHealth = 3;
+    /**<   SV health flags. \n
+       - Type: uint8
+       Valid Values: \n
+    - 0 : Healthy
+    - 1 : Unhealthy */
+
+    uint32 lnHealth = 4;
+    /**<   Ln SV health flags. GLONASS-M. \n
+       - Type: uint8
+       Valid Values: \n
+    - 0 : Healthy
+    - 1 : Unhealthy */
+
+    uint32 tb = 5;
+    /**<   Index of a time interval within current day according to UTC(SU) + 03 hours 00 min. \n
+       - Type: uint8
+       - Units: Unit-less */
+
+    uint32 ft = 6;
+    /**<   SV accuracy index. \n
+       - Type: uint8
+       - Units: Unit-less */
+
+    uint32 gloM = 7;
+    /**<   GLONASS-M flag. \n
+       - Type: uint8
+       Valid Values: \n
+    - 0 : GLONASS
+    - 1 : GLONASS-M */
+
+    uint32 enAge = 8;
+    /**<   Characterizes "Age" of current information. \n
+       - Type: uint8
+       - Units: Days */
+
+    uint32 gloFrequency = 9;
+    /**<   GLONASS frequency number + 8. \n
+       - Type: uint8
+       - Range: 1 to 14
+    */
+
+    uint32 p1 = 10;
+    /**<   Time interval between two adjacent values of tb parameter. \n
+       - Type: uint8
+       - Units: Minutes */
+
+    uint32 p2 = 11;
+    /**<   Flag of oddness ("1") or evenness ("0") of the value of tb \n
+       for intervals 30 or 60 minutes. \n
+       - Type: uint8 */
+
+    float deltaTau = 12;
+    /**<   Time difference between navigation RF signal transmitted in L2 sub-band \n
+       and aviation RF signal transmitted in L1 sub-band. \n
+       - Type: floating point
+       - Units: Seconds */
+
+    repeated double position = 13;
+    /**<   Satellite XYZ position. \n
+       - Type: array of doubles
+       - Units: Meters */
+
+    repeated double velocity = 14;
+    /**<   Satellite XYZ velocity. \n
+       - Type: array of doubles
+       - Units: Meters/Second */
+
+    repeated double acceleration = 15;
+    /**<   Satellite XYZ sola-luni acceleration. \n
+       - Type: array of doubles
+       - Units: Meters/Second^2 */
+
+    float tauN = 16;
+    /**<   Satellite clock correction relative to GLONASS time. \n
+       - Type: floating point
+       - Units: Seconds */
+
+    float gamma = 17;
+    /**<   Relative deviation of predicted carrier frequency value \n
+       from nominal value at the instant tb. \n
+       - Type: floating point
+       - Units: Unit-less */
+
+    double toe = 18;
+    /**<   Complete ephemeris time, including N4, NT and Tb. \n
+       [(N4-1)*1461 + (NT-1)]*86400 + tb*900 \n
+       - Type: double
+       - Units: Seconds */
+
+    uint32 nt = 19;
+    /**<   Current date, calendar number of day within four-year interval. \n
+       Starting from the 1-st of January in a leap year. \n
+       - Type: uint16
+       - Units: Days */
+}
+
+/* BDS Navigation Model Info */
+message PBBdsEphemeris {
+
+    PBGnssEphCommon commonEphemerisData = 1;
+    /**<   Common ephemeris data.   */
+
+    uint32 svHealth = 2;
+    /**<   Satellite health information applied to both B1 and B2 (SatH1). \n
+       - Type: uint8
+       Valid Values: \n
+       - 0 : Healthy
+       - 1 : Unhealthy */
+
+    uint32 AODC = 3;
+    /**<   Age of data clock. \n
+       - Type: uint8
+       - Units: Hours */
+
+    double tgd1 = 4;
+    /**<   Equipment group delay differential on B1 signal. \n
+       - Type: double
+       - Units: Nano-Seconds */
+
+    double tgd2 = 5;
+    /**<   Equipment group delay differential on B2 signal. \n
+       - Type: double
+       - Units: Nano-Seconds */
+
+    uint32 URAI = 6;
+    /**<   User range accuracy index (4-bits). \n
+       - Type: uint8
+       - Units: Unit-less */
+}
+
+/* GALIELO Navigation Model Info */
+message PBGalileoEphemeris {
+
+    PBGnssEphCommon commonEphemerisData  = 1;
+    /**<   Common ephemeris data.   */
+
+    PBGalEphSignalSource dataSourceSignal = 2;
+    /**<   Galileo Signal Source. \n
+    Valid Values: \n
+      - GAL_EPH_SIGNAL_SRC_UNKNOWN (0) --  GALILEO signal is unknown
+      - GAL_EPH_SIGNAL_SRC_E1B (1) --  GALILEO signal is E1B
+      - GAL_EPH_SIGNAL_SRC_E5A (2) --  GALILEO signal is E5A
+      - GAL_EPH_SIGNAL_SRC_E5B (3) --  GALILEO signal is E5B  */
+
+    uint32 sisIndex = 3;
+    /**<   Signal-in-space index for dual frequency E1-E5b/E5a depending on dataSignalSource. \n
+       - Type: uint8
+       - Units: Unit-less */
+
+    double bgdE1E5a = 4;
+    /**<   E1-E5a Broadcast group delay from F/Nav (E5A). \n
+       - Type: double
+       - Units: Seconds */
+
+    double bgdE1E5b = 5;
+    /**<   E1-E5b Broadcast group delay from I/Nav (E1B or E5B). \n
+       For E1B or E5B signal, both bgdE1E5a and bgdE1E5b are valid. \n
+       For E5A signal, only bgdE1E5a is valid. \n
+       Signal source identified using dataSignalSource. \n
+       - Type: double
+       - Units: Seconds */
+
+    uint32 svHealth = 6;
+    /**<   SV health status of signal identified by dataSourceSignal. \n
+       - Type: uint8
+       Valid Values: \n
+       - 0 : Healthy
+       - 1 : Unhealthy */
+}
+
+/* NAVIC Navigation Model Info */
+message PBNavicEphemeris {
+
+    PBGnssEphCommon commonEphemerisData = 1;
+    /**<   Common ephemeris data.   */
+    /** Week number since the NavIC system time start epoch (August 22, 1999) */
+    uint32 weekNum = 2;
+    /** Issue of Data, Clock
+        Mandatory Field */
+    uint32 iodec = 3;
+    /** Health status of navigation data on L5 SPS signal.
+        0=OK, 1=bad */
+    uint32 l5Health = 4;
+    /** Health status of navigation data on S SPS signal.
+        0=OK, 1=bad */
+    uint32 sHealth = 5;
+    /** Inclination angle at reference time
+        Unit: radian
+        Mandatory Field */
+    double inclinationAngleRad = 6;
+    /** User Range Accuracy Index(4bit)
+        Mandatory Field */
+    uint32 urai = 7;
+    /** Time of Group delay
+        Unit: second
+        Mandatory Field */
+    double  tgd = 8;
+}
+
+/** GPS Navigation model for each SV */
+message PBGpsEphemerisResponse {
+    repeated PBGpsEphemeris gpsEphemerisData = 1;
+}
+
+/** GLONASS Navigation model for each SV */
+message PBGlonassEphemerisResponse {
+    repeated PBGlonassEphemeris gloEphemerisData = 1;
+}
+
+/** BDS Navigation model for each SV */
+message PBBdsEphemerisResponse {
+    repeated PBBdsEphemeris bdsEphemerisData = 1;
+}
+
+/** GALILEO Navigation model for each SV */
+message PBGalileoEphemerisResponse {
+    repeated PBGalileoEphemeris galEphemerisData = 1;
+}
+
+/** QZSS Navigation model for each SV */
+message PBQzssEphemerisResponse {
+    repeated PBGpsEphemeris qzssEphemerisData = 1;
+};
+
+/** NAVIC Navigation model for each SV */
+message PBNavicEphemerisResponse {
+    repeated PBNavicEphemeris navicEphemerisData = 1;
+}
+
+message PBEphInfoUnion {
+   oneof ephInfoUnion {
+        /** GPS Ephemeris */
+        PBGpsEphemerisResponse gpsEphemeris = 1;
+        /** GLONASS Ephemeris */
+        PBGlonassEphemerisResponse glonassEphemeris = 2;
+        /** BDS Ephemeris */
+        PBBdsEphemerisResponse bdsEphemeris = 3;
+        /** GALILEO Ephemeris */
+        PBGalileoEphemerisResponse galileoEphemeris = 4;
+        /** QZSS Ephemeris */
+        PBQzssEphemerisResponse qzssEphemeris = 5;
+        /** NAVIC Ephemeris */
+        PBNavicEphemerisResponse navicEphemeris = 6;
+    }
+}
+
+message PBGnssEphemerisNotification {
+    /** Indicates GNSS Constellation Type
+        Mandatory field */
+    PBLocApiGnss_LocSvSystemEnumType gnssConstellation = 1;
+
+    /** GPS System Time of the ephemeris report */
+    bool isSystemTimeValid = 2;
+    PBLocApiGnssSystemTimeStructType systemTime = 3;
+
+    PBEphInfoUnion ephUnion = 4;
 }
 
