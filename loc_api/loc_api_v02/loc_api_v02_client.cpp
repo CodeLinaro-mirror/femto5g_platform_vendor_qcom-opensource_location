@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2016, 2018-2021, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2016, 2018-2021 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -149,10 +149,6 @@ static const locClientEventIndTableStructT locClientEventIndTable[]= {
   // satellite report ind
   { QMI_LOC_EVENT_GNSS_SV_INFO_IND_V02,
     sizeof(qmiLocEventGnssSvInfoIndMsgT_v02) },
-
-  // NMEA report ind
-  { QMI_LOC_EVENT_NMEA_IND_V02,
-    sizeof(qmiLocEventNmeaIndMsgT_v02) },
 
   //NI event ind
   { QMI_LOC_EVENT_NI_NOTIFY_VERIFY_REQ_IND_V02,
@@ -414,14 +410,6 @@ static const locClientRespIndTableStructT locClientRespIndTable[]= {
    //Get SBAS Config Resp Ind
    { QMI_LOC_GET_SBAS_CONFIG_IND_V02,
      sizeof(qmiLocGetSbasConfigIndMsgT_v02)},
-
-   //Set NMEA Types Resp Ind
-   { QMI_LOC_SET_NMEA_TYPES_IND_V02,
-     sizeof(qmiLocSetNmeaTypesIndMsgT_v02)},
-
-   //Get NMEA Types Resp Ind
-   { QMI_LOC_GET_NMEA_TYPES_IND_V02,
-     sizeof(qmiLocGetNmeaTypesIndMsgT_v02)},
 
    //Set Low Power Mode Resp Ind
    { QMI_LOC_SET_LOW_POWER_MODE_IND_V02,
@@ -1358,12 +1346,6 @@ bool validateRequest(
       break;
     }
 
-    case QMI_LOC_SET_NMEA_TYPES_REQ_V02:
-    {
-      *pOutLen = sizeof(qmiLocSetNmeaTypesReqMsgT_v02);
-      break;
-    }
-
     case QMI_LOC_SET_LOW_POWER_MODE_REQ_V02:
     {
       *pOutLen = sizeof(qmiLocSetLowPowerModeReqMsgT_v02);
@@ -1933,7 +1915,6 @@ bool validateRequest(
     case QMI_LOC_GET_PREDICTED_ORBITS_DATA_VALIDITY_REQ_V02:
     case QMI_LOC_GET_ENGINE_LOCK_REQ_V02:
     case QMI_LOC_GET_SBAS_CONFIG_REQ_V02:
-    case QMI_LOC_GET_NMEA_TYPES_REQ_V02:
     case QMI_LOC_GET_LOW_POWER_MODE_REQ_V02:
     case QMI_LOC_GET_SERVER_REQ_V02:
     case QMI_LOC_GET_XTRA_T_SESSION_CONTROL_REQ_V02:
