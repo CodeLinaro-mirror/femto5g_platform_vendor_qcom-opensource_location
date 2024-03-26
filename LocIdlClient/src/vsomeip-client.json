@@ -11,7 +11,7 @@
     "applications" :
     [
         {
-            "name" : "client-sample",
+            "name" : "location-fidl-client",
             "id" : "0x02"
         }
     ],
@@ -21,13 +21,13 @@
             "service" : "0xEE00",
             "instance" : "0x01",
             "unreliable" : "30509",
-            "someip-tp":
+            "someip-tp": 
             {
                 "client-to-service": ["0x80E9", "0x80EA", "0x80EB", "0x80EC", "0x80ED", "0x80EE", "0x80EF", "0x80F0"]
-            }
+            }     
         }
     ],
-    "routing" : "client-sample",
+    "routing" : "location-fidl-client",
     "service-discovery" :
     {
         "enable" : "true",

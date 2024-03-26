@@ -638,7 +638,7 @@ int main(int argc, char* argv[])
 
     string domain = "local";
     string instance = "com.qualcomm.qti.location.LocIdlAPI";
-    string connection = "client-sample";
+    string connection = "location-fidl-client";
 
     myProxy = runtime->buildProxy<LocIdlAPIProxy>(domain,
             instance, connection);

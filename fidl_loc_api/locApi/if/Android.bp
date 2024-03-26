@@ -1,0 +1,33 @@
+cc_library_shared {
+
+    name: "libfidl_loc_api",
+    vendor: true,
+
+    shared_libs: [
+      "libutils",
+      "libcutils",
+      "libqmi_cci",
+      "libqmi_common_so",
+      "libloc_core",
+      "libgps.utils",
+      "libdl",
+      "liblog",
+    ],
+
+    srcs: [
+       "LocApiIfFidl.cpp",
+    ],
+
+    cflags: [
+        "-fno-short-enums",
+        "-D_ANDROID_",
+    ],
+
+    header_libs: [
+        "libloc_core_headers",
+        "libgps.utils_headers",
+        "libloc_pla_headers",
+        "liblocation_api_headers",
+        "libloc_fidl_if_headers",
+    ],
+}

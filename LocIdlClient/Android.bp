@@ -56,6 +56,13 @@ cc_library_headers {
     vendor: true,
 }
 
+cc_library_headers {
+    name: "libLocIdlClientIfV02H_headers",
+    export_include_dirs: [
+       "inc",
+    ],
+    vendor: true,
+}
 
 cc_library_shared {
     name: "libLocIdlAPI-someip",
@@ -104,3 +111,81 @@ cc_binary {
     ],
 }
 
+cc_binary {
+    name: "locIdlClient_daemon",
+    defaults: ["locSomeip_defaults"],
+
+    srcs: [
+        "diag/src/LocIdlclientDiagLogTypes.cpp",
+        "daemon/LocIdlClientDeviceMsgHandler.cpp",
+        "daemon/LocIdlClientDeviceMsgParser.cpp",
+        "daemon/LocIdlClientDevice.cpp",
+    ],
+    local_include_dirs: [
+        "inc",
+        "daemon",
+        "diag/inc/",
+    ],
+    shared_libs: [
+        "libutils",
+        "libcutils",
+        "liblocdiagiface",
+        "liblog",
+        "libgps.utils",
+        "libLocIdlAPI-someip",
+        "libLocIdlAPI-proxy",
+    ],
+
+    header_libs: [
+        "libgps.utils_headers",
+        "libloc_pla_headers",
+        "vendor_common_inc",
+        "liblocation_api_headers",
+        "libloc_fidl_if_headers",
+        "liblocClient_fidl_if_headers",
+        "libgptp_headers",
+        "libLocIdlAPI-proxy_headers",
+        "libdiag_headers",
+        "libloc_base_util_headers",
+        "libloc_diag_iface_headers",
+    ],
+}
+
+cc_library_shared {
+    name: "libLocationFidlV02",
+    vendor: true,
+
+    cppflags: [
+        "-std=c++11",
+        "-fexceptions",
+        "-Wno-attributes",
+        "-Wno-unused-variable",
+        "-Wno-unused-parameter"
+    ],
+
+    srcs: [
+        "lib/LocIdlClientV02Api.cpp",
+    ],
+
+    local_include_dirs: [
+       "inc",
+       "lib",
+    ],
+    shared_libs: [
+        "libutils",
+        "libcutils",
+        "libgps.utils",
+        "libdl",
+        "liblog",
+    ],
+
+    header_libs: [
+        "libloc_core_headers",
+        "libgps.utils_headers",
+        "libloc_pla_headers",
+        "liblocation_api_headers",
+        "libloc_fidl_if_headers",
+        "liblocClient_fidl_if_headers",
+    ],
+    rtti: true,
+}

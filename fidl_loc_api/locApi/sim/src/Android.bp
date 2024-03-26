@@ -1,0 +1,35 @@
+cc_library_shared {
+
+    name: "libloc_fidl_sim",
+    owner: "qti",
+    vendor: true,
+
+    shared_libs: [
+        "libutils",
+        "libcutils",
+        "libgps.utils",
+        "libdl",
+        "liblog",
+    ],
+
+    srcs: [
+        "locApiMain.cpp",
+        "locApiProcessMsg.cpp",
+        "locApiIfReq.cpp",
+    ],
+
+    cflags: [
+        "-fno-short-enums",
+        "-D_ANDROID_",
+    ] + GNSS_CFLAGS,
+
+    header_libs: [
+        "libgps.utils_headers",
+        "libloc_core_headers",
+        "libloc_pla_headers",
+        "liblocation_api_headers",
+        "libloc_fidl_if_headers",
+        "liblocClient_fidl_if_headers",
+        "liblocApiV02_fidl_headers"
+    ],
+}
