@@ -1201,7 +1201,6 @@ void LocationApiService::stopBatching(LocAPIStopBatchingReqMsg *pMsg) {
 
     pClient->mBatching = false;
     pClient->mBatchingMode = BATCHING_MODE_NO_AUTO_REPORT;
-    pClient->updateSubscription(0);
     pClient->stopBatching();
     pClient->mPendingMessages.push(E_LOCAPI_STOP_BATCHING_MSG_ID);
     LOC_LOGi(">-- stopping batching session");
