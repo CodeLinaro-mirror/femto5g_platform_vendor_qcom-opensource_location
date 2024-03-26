@@ -70,7 +70,7 @@ typedef CommonAPI::SomeIP::StructDeployment<
     CommonAPI::SomeIP::IntegerDeployment<uint64_t>
 > IDLLocationReportSvUsedInPositionDeployment_t;
 typedef CommonAPI::SomeIP::StructDeployment<
-    CommonAPI::SomeIP::IntegerDeployment<uint32_t>,
+    CommonAPI::SomeIP::IntegerDeployment<uint16_t>,
     CommonAPI::SomeIP::IntegerDeployment<uint16_t>,
     CommonAPI::SomeIP::IntegerDeployment<uint32_t>
 > IDLGnssMeasUsageInfoDeployment_t;
@@ -386,7 +386,7 @@ typedef CommonAPI::SomeIP::StructDeployment<
     >,
     CommonAPI::SomeIP::ArrayDeployment<
         CommonAPI::SomeIP::StructDeployment<
-            CommonAPI::SomeIP::IntegerDeployment<uint32_t>,
+            CommonAPI::SomeIP::IntegerDeployment<uint16_t>,
             CommonAPI::SomeIP::IntegerDeployment<uint16_t>,
             CommonAPI::SomeIP::IntegerDeployment<uint32_t>
         >
@@ -416,9 +416,14 @@ typedef CommonAPI::SomeIP::StructDeployment<
         CommonAPI::SomeIP::IntegerDeployment<uint16_t>
     >,
     CommonAPI::SomeIP::IntegerDeployment<uint64_t>,
-    CommonAPI::SomeIP::IntegerDeployment<uint64_t>
+    CommonAPI::SomeIP::IntegerDeployment<uint64_t>,
+    CommonAPI::EmptyDeployment,
+    CommonAPI::SomeIP::IntegerDeployment<uint64_t>,
+    CommonAPI::SomeIP::IntegerDeployment<uint32_t>,
+    CommonAPI::SomeIP::IntegerDeployment<int16_t>
 > IDLLocationReportDeployment_t;
 typedef CommonAPI::SomeIP::StructDeployment<
+    CommonAPI::SomeIP::IntegerDeployment<uint16_t>,
     CommonAPI::SomeIP::IntegerDeployment<uint16_t>,
     ::v0::com::qualcomm::qti::location::LocIdlAPI_::IDLGnssSvTypeDeployment_t,
     CommonAPI::EmptyDeployment,
@@ -427,8 +432,7 @@ typedef CommonAPI::SomeIP::StructDeployment<
     CommonAPI::SomeIP::IntegerDeployment<uint32_t>,
     CommonAPI::EmptyDeployment,
     CommonAPI::SomeIP::IntegerDeployment<uint32_t>,
-    CommonAPI::EmptyDeployment,
-    CommonAPI::SomeIP::IntegerDeployment<uint16_t>
+    CommonAPI::EmptyDeployment
 > IDLGnssSvDeployment_t;
 typedef CommonAPI::SomeIP::StructDeployment<
     CommonAPI::SomeIP::ArrayDeployment<
@@ -444,6 +448,7 @@ typedef CommonAPI::SomeIP::StructDeployment<
 typedef CommonAPI::SomeIP::StructDeployment<
     CommonAPI::SomeIP::IntegerDeployment<uint32_t>,
     CommonAPI::SomeIP::IntegerDeployment<uint16_t>,
+    CommonAPI::SomeIP::IntegerDeployment<uint8_t>,
     ::v0::com::qualcomm::qti::location::LocIdlAPI_::IDLGnssSvTypeDeployment_t,
     CommonAPI::EmptyDeployment,
     CommonAPI::SomeIP::IntegerDeployment<uint32_t>,
@@ -466,8 +471,7 @@ typedef CommonAPI::SomeIP::StructDeployment<
     CommonAPI::EmptyDeployment,
     CommonAPI::SomeIP::IntegerDeployment<uint32_t>,
     CommonAPI::EmptyDeployment,
-    CommonAPI::EmptyDeployment,
-    CommonAPI::SomeIP::IntegerDeployment<uint8_t>
+    CommonAPI::EmptyDeployment
 > IDLGnssMeasurementsDataDeployment_t;
 typedef CommonAPI::SomeIP::StructDeployment<
     CommonAPI::SomeIP::IntegerDeployment<uint32_t>,
@@ -506,6 +510,7 @@ typedef CommonAPI::SomeIP::StructDeployment<
         CommonAPI::SomeIP::StructDeployment<
             CommonAPI::SomeIP::IntegerDeployment<uint32_t>,
             CommonAPI::SomeIP::IntegerDeployment<uint16_t>,
+            CommonAPI::SomeIP::IntegerDeployment<uint8_t>,
             ::v0::com::qualcomm::qti::location::LocIdlAPI_::IDLGnssSvTypeDeployment_t,
             CommonAPI::EmptyDeployment,
             CommonAPI::SomeIP::IntegerDeployment<uint32_t>,
@@ -528,11 +533,11 @@ typedef CommonAPI::SomeIP::StructDeployment<
             CommonAPI::EmptyDeployment,
             CommonAPI::SomeIP::IntegerDeployment<uint32_t>,
             CommonAPI::EmptyDeployment,
-            CommonAPI::EmptyDeployment,
-            CommonAPI::SomeIP::IntegerDeployment<uint8_t>
+            CommonAPI::EmptyDeployment
         >
     >,
-    CommonAPI::EmptyDeployment
+    CommonAPI::EmptyDeployment,
+    CommonAPI::SomeIP::IntegerDeployment<int16_t>
 > IDLGnssMeasurementsDeployment_t;
 typedef CommonAPI::SomeIP::StructDeployment<
     ::v0::com::qualcomm::qti::location::LocIdlAPI_::IDLGnssConstellationTypeDeployment_t,
