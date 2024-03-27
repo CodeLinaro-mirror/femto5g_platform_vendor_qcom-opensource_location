@@ -179,6 +179,7 @@ void printMeasurement(const LocIdlAPI::IDLGnssMeasurements& gnssMeasurements)
                     ""<< measData[idx].getFullInterSignalBiasUncertaintyNs() << endl;
             cout <<"cycleSlipCount "<< static_cast<int>(measData[idx].getCycleSlipCount()) << endl;
         }
+        cout <<"ReportingLatency "<< gnssMeasurements.getReportingLatency() << endl;
         cout << "-------" << endl;
     }
 }
@@ -370,6 +371,10 @@ void printPosResport(const LocIdlAPI::IDLLocationReport &_locationReport)
                cout << "DgnssStationId        " << dgnss[l] << endl;
         }
         cout << "ElapsedPTPTimeNs  " << _locationReport.getElapsedgPTPTime() << endl;
+        cout << "BaseLineLength  " << _locationReport.getBaseLineLength() << endl;
+        cout << "AgeMsecOfCorrections  " << _locationReport.getAgeMsecOfCorrections() << endl;
+        cout << "CurrReportingRate  " << _locationReport.getCurrReportingRate() << endl;
+        cout << "ReportingLatency  " << _locationReport.getReportingLatency() << endl;
         cout << "-------" << endl;
     }
 }
@@ -595,7 +600,7 @@ void sessionStart()
     uint32_t _intervalInMs = 100;
     LocIdlAPI::IDLLocationResponse resp;
     CommonAPI::CallStatus callStatus;
-    info.sender_ = 1234;
+    info.sender_ = 0xEE00;
 
     sleep(1);
     myProxy->startPositionSession(_intervalInMs, mask, callStatus, resp, &info);
