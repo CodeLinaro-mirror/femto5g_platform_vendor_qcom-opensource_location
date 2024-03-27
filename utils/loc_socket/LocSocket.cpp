@@ -30,7 +30,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022, 2024 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -332,12 +332,11 @@ public:
         return make_unique<SockRecver>(listener, *this, mSock);
     }
 
-    inline virtual bool copyDestAddrFrom(const LocIpcSender& otherSender) override {
-        sockaddr_qrtr otherAddr = (reinterpret_cast<const LocIpcQrtrSender&>(otherSender)).mAddr;
-        if (mAddr.sq_family != otherAddr.sq_family ||
-                mAddr.sq_node != otherAddr.sq_node ||
-                mAddr.sq_port != otherAddr.sq_port) {
-            mAddr = otherAddr;
+    inline virtual bool updateDestAddr(uint32_t nodeId, uint32_t portId)
+    {
+        if (mAddr.sq_node != nodeId || mAddr.sq_port != portId) {
+            sockaddr_qrtr addr = {AF_QIPCRTR, nodeId, portId};
+            mAddr = addr;
         }
         mLookupPending = false;
         return true;
@@ -372,9 +371,8 @@ class LocIpcQrtrListener : public ILocIpcListener {
                         LocIpcQrtrWatcher::ServiceStatus status = (QRTR_TYPE_NEW_SERVER == cmd) ?
                                 LocIpcQrtrWatcher::ServiceStatus::UP :
                                 LocIpcQrtrWatcher::ServiceStatus::DOWN;
-                        sockaddr_qrtr addr = {AF_QIPCRTR, serverNodeId, serverPort};
-                        const LocIpcQrtrSender sender(addr);
-                        mQrtrWatcher->onServiceStatusChange(serviceId, instanceId, status, sender);
+                        mQrtrWatcher->onServiceStatusChange(serviceId, instanceId, status,
+                                                            serverNodeId, serverPort);
                     } else if ((QRTR_TYPE_DEL_CLIENT == cmd || QRTR_TYPE_BYE == cmd) &&
                                mQrtrWatcher->isClientInWatch(clientNodeId)) {
                         mQrtrWatcher->onClientGone(clientNodeId, clientPort);
