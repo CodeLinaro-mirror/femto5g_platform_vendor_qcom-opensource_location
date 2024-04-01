@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -156,6 +156,8 @@ const char* LocApiMsgString(ELocMsgID msgId) {
         return "E_LOCAPI_GET_ANTENNA_INFO_MSG_ID";
     case E_LOCAPI_ANTENNA_INFO_MSG_ID:
         return "E_LOCAPI_ANTENNA_INFO_MSG_ID";
+    case E_LOCAPI_EPH_MSG_ID:
+        return "E_LOCAPI_EPH_MSG_ID";
     case E_LOCAPI_PINGTEST_MSG_ID:
         return "E_LOCAPI_PINGTEST_MSG_ID";
     case E_INTAPI_CONFIG_CONSTRAINTED_TUNC_MSG_ID:
@@ -4291,4 +4293,72 @@ LocAPIPingTestIndMsg::LocAPIPingTestIndMsg(const char* name,
         data[i] = pbLocApiPingTestIndMsg.data(i);
         LOC_LOGv("LocApiPB: LocAPIPingTestIndMsg pingData[%d]: %d", i, data[i]);
     }
+}
+
+// Decode PBLocAPIEphIndMsg -> LocAPIEphIndMsg
+LocAPIEphIndMsg::LocAPIEphIndMsg(const char* name,
+            const PBLocAPIEphIndMsg &pbLocApiEphIndMsg,
+            const LocationApiPbMsgConv *pbMsgConv):
+        LocAPIMsgHeader(name, E_LOCAPI_EPH_MSG_ID, pbMsgConv) {
+    if (nullptr == pLocApiPbMsgConv) {
+        LOC_LOGe("pLocApiPbMsgConv is null!");
+        return;
+    }
+    // >>>> PBLocAPIEphIndMsg conversion
+    // PBGnssEphemerisNotification gnssEphNotification = 1;
+    pLocApiPbMsgConv->pbConvertToGnssEphNotif(
+            pbLocApiEphIndMsg.gnssephemerisnotification(),
+            gnssEphNotification);
+}
+
+// Decode LocAPIEphIndMsg -> PBLocAPIEphIndMsg
+int LocAPIEphIndMsg ::serializeToProtobuf(string& protoStr) {
+    PBLocAPIMsgHeader pLocApiMsgHdr;
+    PBLocAPIEphIndMsg pbLocApiEphInd;
+
+    if (nullptr == pLocApiPbMsgConv) {
+        LOC_LOGe("pLocApiPbMsgConv is null!");
+        return 0;
+    }
+    // string      mSocketName = 1;
+    pLocApiMsgHdr.set_msocketname(mSocketName);
+    // PBELocMsgID  msgId = 2;
+    pLocApiMsgHdr.set_msgid(pLocApiPbMsgConv->getPBEnumForELocMsgID(msgId));
+    // uint32   msgVersion = 3;
+    pLocApiMsgHdr.set_msgversion(msgVersion);
+
+    // >>>> PBLocAPIEphIndMsg conversion
+    // PBGnssEphemerisNotification gnssEphNotification = 1;
+    PBGnssEphemerisNotification* gnssEphNotif =
+            pbLocApiEphInd.mutable_gnssephemerisnotification();
+    if (nullptr != gnssEphNotif) {
+        if (pLocApiPbMsgConv->convertGnssEphNotifToPB(gnssEphNotification,
+                gnssEphNotif)) {
+            LOC_LOGe("convertGnssEphNotifToPB failed");
+            free(gnssEphNotif);
+            return 0;
+        }
+    } else {
+        LOC_LOGe("mutable_gnssephnotification failed");
+        return 0;
+    }
+
+    string pbStr;
+    if (!pbLocApiEphInd.SerializeToString(&pbStr)) {
+        LOC_LOGe("SerializeToString on pbLocApiEphInd failed!");
+        return 0;
+    }
+    // bytes       payload = 4;
+    pLocApiMsgHdr.set_payload(pbStr);
+
+    // uint32   payloadSize = 5;
+    pLocApiMsgHdr.set_payloadsize(sizeof(LocAPIEphIndMsg));
+
+    if (!pLocApiMsgHdr.SerializeToString(&protoStr)) {
+        LOC_LOGe("SerializeToString on pLocApiMsgHdr failed!");
+        return 0;
+    }
+    // free memory
+    pLocApiPbMsgConv->freeUpPBLocAPIEphIndMsg(pbLocApiEphInd);
+    return protoStr.size();
 }
