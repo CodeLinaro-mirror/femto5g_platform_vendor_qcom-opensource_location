@@ -2624,7 +2624,7 @@ SynergyLocApi::startTimeBasedTracking(const TrackingOptions& options,
             posMode.preferred_time = 120000;
             posMode.share_position = true;
             posMode.powerMode = GNSS_POWER_MODE_M2;
-            posMode.timeBetweenMeasurements = 1000;
+            posMode.timeBetweenMeasurements = options.tbm;
 
             rtv = sllReqIf->sllStartFix(posMode, ((void *)this));
             if (LOC_API_ADAPTER_ERR_SUCCESS == rtv) {
