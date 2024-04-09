@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -74,6 +74,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <LocIpc.h>
 #include <LocTimer.h>
 #include <loc_cfg.h>
+#include <LocationDataTypes.h>
 
 #include <LocationApiPbMsgConv.h>
 
@@ -216,6 +217,9 @@ ELocMsgID LocationApiPbMsgConv::getEnumForPBELocMsgID(const PBELocMsgID &pbLocMs
             break;
         case PB_E_LOCAPI_GET_SINGLE_POS_RESP_MSG_ID:
             eLocMsgId = E_LOCAPI_GET_SINGLE_POS_RESP_MSG_ID;
+            break;
+        case PB_E_LOCAPI_EPH_MSG_ID:
+            eLocMsgId = E_LOCAPI_EPH_MSG_ID;
             break;
         case PB_E_LOCAPI_PINGTEST_MSG_ID:
             eLocMsgId = E_LOCAPI_PINGTEST_MSG_ID;
@@ -548,9 +552,11 @@ LocEngineRunState LocationApiPbMsgConv::getEnumForPBLocEngineRunState(
         locEngRunState = LOC_ENGINE_RUN_STATE_PAUSE;
     } else if (pbLocEngRunState == PB_LOC_ENGINE_RUN_STATE_RESUME) {
         locEngRunState = LOC_ENGINE_RUN_STATE_RESUME;
+    } else if (pbLocEngRunState == PB_LOC_ENGINE_RUN_STATE_PAUSE_RETAIN) {
+        locEngRunState = LOC_ENGINE_RUN_STATE_PAUSE_RETAIN;
     }
 
-    LocApiPb_LOGv("LocApiPB: pbEngineRunState:%d, llocEngRunState:%d",
+    LocApiPb_LOGv("LocApiPB: pbEngineRunState:%d, locEngRunState:%d",
             pbLocEngRunState, locEngRunState);
     return locEngRunState;
 }
@@ -565,6 +571,8 @@ uint32_t LocationApiPbMsgConv::getPBEnumForLocEngineRunState(
         pbEngineRunState = PB_LOC_ENGINE_RUN_STATE_PAUSE;
     } else if (locEngineRunState ==LOC_ENGINE_RUN_STATE_RESUME) {
         pbEngineRunState = PB_LOC_ENGINE_RUN_STATE_RESUME;
+    } else if (locEngineRunState ==LOC_ENGINE_RUN_STATE_PAUSE_RETAIN) {
+        pbEngineRunState = PB_LOC_ENGINE_RUN_STATE_PAUSE_RETAIN;
     }
     LocApiPb_LOGd("LocApiPB: locEngineRunState: %d, pbEngineRunState: %d",
                   locEngineRunState, pbEngineRunState);
@@ -992,6 +1000,9 @@ PBELocMsgID LocationApiPbMsgConv::getPBEnumForELocMsgID(const ELocMsgID &eLocMsg
         case E_LOCAPI_GET_SINGLE_POS_RESP_MSG_ID:
             pbLocMsgId = PB_E_LOCAPI_GET_SINGLE_POS_RESP_MSG_ID;
             break;
+        case E_LOCAPI_EPH_MSG_ID:
+            pbLocMsgId = PB_E_LOCAPI_EPH_MSG_ID;
+            break;
         case E_LOCAPI_PINGTEST_MSG_ID:
             pbLocMsgId = PB_E_LOCAPI_PINGTEST_MSG_ID;
             break;
@@ -1406,6 +1417,9 @@ uint32_t LocationApiPbMsgConv::getPBMaskForLocationCallbacksMask(const uint32_t 
     if (locCbMask & E_LOC_CB_ENGINE_NMEA_BIT) {
         pbLocCbMask |= PB_E_LOC_CB_ENGINE_NMEA_BIT;
     }
+    if (locCbMask & E_LOC_CB_GNSS_EPH_BIT) {
+        pbLocCbMask |= PB_E_LOC_CB_GNSS_EPH_BIT;
+    }
     LocApiPb_LOGv("LocApiPB: locCbMask:%x, pbLocCbMask:%x", locCbMask, pbLocCbMask);
     return pbLocCbMask;
 }
@@ -1500,6 +1514,9 @@ uint64_t LocationApiPbMsgConv::getPBMaskForLocationCapabilitiesMask(
     }
     if (locCapabMask & LOCATION_CAPABILITIES_QWES_SV_EPHEMERIS_BIT) {
         pbLocCapabMask |= PB_LOCATION_CAPABILITIES_QWES_SV_EPHEMERIS_BIT;
+    }
+    if (locCapabMask & LOCATION_CAPABILITIES_NLOS_ML20) {
+        pbLocCapabMask |= PB_LOCATION_CAPABILITIES_QWES_NLOS_ML20;
     }
     LOC_LOGi("LocApiPB: locCapabMask:0x%" PRIx64", pbLocCapabMask:0x%" PRIx64,
             locCapabMask, pbLocCapabMask);
@@ -1679,6 +1696,12 @@ uint32_t LocationApiPbMsgConv::getPBMaskForLocationFlagsMask(const uint32_t &loc
     }
     if (locFlagsMask & LOCATION_HAS_TIME_UNC_BIT) {
         pbLocFlagsMask |= PB_LOCATION_HAS_TIME_UNC_BIT;
+    }
+    if (locFlagsMask & LOCATION_HAS_GPTP_TIME_BIT) {
+        pbLocFlagsMask |= PB_LOCATION_HAS_GPTP_TIME_BIT;
+    }
+    if (locFlagsMask & LOCATION_HAS_GPTP_TIME_UNC_BIT) {
+        pbLocFlagsMask |= PB_LOCATION_HAS_GPTP_TIME_UNC_BIT;
     }
 
     LocApiPb_LOGv("LocApiPB: locFlagsMask:%x, pbLocFlagsMask:%x", locFlagsMask, pbLocFlagsMask);
@@ -1862,7 +1885,6 @@ uint32_t LocationApiPbMsgConv::getPBMaskForGnssLocationInfoExtFlagMask(
     if (gnssLocInfoFlagMask & LDT_GNSS_LOCATION_INFO_DGNSS_STATION_ID_BIT) {
         pbGnssLocInfoFlagMask |= PB_GNSS_LOCATION_INFO_DGNSS_STATION_ID_MASK_BIT;
     }
-
     return pbGnssLocInfoFlagMask;
 }
 
@@ -2209,6 +2231,18 @@ uint32_t LocationApiPbMsgConv::getPBMaskForGnssMeasurementsClockFlagsMask(
     if (gnssMeasClockFlagsMask & GNSS_MEASUREMENTS_CLOCK_FLAGS_HW_CLOCK_DISCONTINUITY_COUNT_BIT) {
         pbGnssMeasClockFlagsMask |=
                 PB_GNSS_MEASUREMENTS_CLOCK_FLAGS_HW_CLOCK_DISCONTINUITY_COUNT_BIT;
+    }
+    if (gnssMeasClockFlagsMask & GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_BIT) {
+        pbGnssMeasClockFlagsMask |= PB_GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_BIT;
+    }
+    if (gnssMeasClockFlagsMask & GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_UNC_BIT) {
+        pbGnssMeasClockFlagsMask |= PB_GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_UNC_BIT;
+    }
+    if (gnssMeasClockFlagsMask & GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_GPTP_TIME_BIT) {
+        pbGnssMeasClockFlagsMask |= PB_GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_GPTP_TIME_BIT;
+    }
+    if (gnssMeasClockFlagsMask & GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_GPTP_TIME_UNC_BIT) {
+        pbGnssMeasClockFlagsMask |= PB_GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_GPTP_TIME_UNC_BIT;
     }
     LocApiPb_LOGv("LocApiPB: gnssMeasClockFlagsMask:%x, pbGnssMeasClockFlagsMask:%x",
             gnssMeasClockFlagsMask, pbGnssMeasClockFlagsMask);
@@ -2560,6 +2594,9 @@ uint64_t LocationApiPbMsgConv::getLocationCapabilitiesMaskFromPB(
     if (pbLocCapabMask & PB_LOCATION_CAPABILITIES_QWES_SV_EPHEMERIS_BIT) {
         locCapabMask |= LOCATION_CAPABILITIES_QWES_SV_EPHEMERIS_BIT;
     }
+    if (pbLocCapabMask & PB_LOCATION_CAPABILITIES_QWES_NLOS_ML20) {
+        locCapabMask |= LOCATION_CAPABILITIES_NLOS_ML20;
+    }
     LOC_LOGi("LocApiPB: pbLocCapabMask:0x%" PRIx64", locCapabMask:0x%" PRIx64,
             pbLocCapabMask, locCapabMask);
     return locCapabMask;
@@ -2611,6 +2648,9 @@ uint32_t LocationApiPbMsgConv::getLocationCallbacksMaskFromPB(const uint32_t &pb
     }
     if (pbLocCbMask & PB_E_LOC_CB_ENGINE_NMEA_BIT) {
         locCbMask |= E_LOC_CB_ENGINE_NMEA_BIT;
+    }
+    if (pbLocCbMask & PB_E_LOC_CB_GNSS_EPH_BIT) {
+        locCbMask |= E_LOC_CB_GNSS_EPH_BIT;
     }
     LocApiPb_LOGv("LocApiPB: pbLocCbMask:%x, locCbMask:%x", pbLocCbMask, locCbMask);
     return locCbMask;
@@ -2928,6 +2968,12 @@ uint32_t LocationApiPbMsgConv::getLocationFlagsMaskFromPB(const uint32_t &pbLocF
     if (pbLocFlagsMask & PB_LOCATION_HAS_TIME_UNC_BIT) {
         locFlagsMask |= LOCATION_HAS_TIME_UNC_BIT;
     }
+    if (pbLocFlagsMask & PB_LOCATION_HAS_GPTP_TIME_BIT) {
+        locFlagsMask |= LOCATION_HAS_GPTP_TIME_BIT;
+    }
+    if (pbLocFlagsMask & PB_LOCATION_HAS_GPTP_TIME_UNC_BIT) {
+        locFlagsMask |= LOCATION_HAS_GPTP_TIME_UNC_BIT;
+    }
     LocApiPb_LOGv("LocApiPB: pbLocFlagsMask:%x, locFlagsMask:%x", pbLocFlagsMask, locFlagsMask);
     return locFlagsMask;
 }
@@ -3005,6 +3051,18 @@ uint32_t LocationApiPbMsgConv::getGnssMeasurementsClockFlagsMaskFromPB(
     if (pbGnssMeasClockFlgMask &
             PB_GNSS_MEASUREMENTS_CLOCK_FLAGS_HW_CLOCK_DISCONTINUITY_COUNT_BIT) {
         gnssMeasClockFlgMask |= GNSS_MEASUREMENTS_CLOCK_FLAGS_HW_CLOCK_DISCONTINUITY_COUNT_BIT;
+    }
+    if (pbGnssMeasClockFlgMask & PB_GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_BIT) {
+        gnssMeasClockFlgMask |= GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_BIT;
+    }
+    if (pbGnssMeasClockFlgMask & PB_GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_UNC_BIT) {
+        gnssMeasClockFlgMask |= GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_UNC_BIT;
+    }
+    if (pbGnssMeasClockFlgMask & PB_GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_GPTP_TIME_BIT) {
+        gnssMeasClockFlgMask |= GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_GPTP_TIME_BIT;
+    }
+    if (pbGnssMeasClockFlgMask & PB_GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_GPTP_TIME_UNC_BIT) {
+        gnssMeasClockFlgMask |= GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_GPTP_TIME_UNC_BIT;
     }
     LocApiPb_LOGv("LocApiPB: pbGnssMeasClockFlgMask:%x, gnssMeasClockFlgMask:%x",
             pbGnssMeasClockFlgMask, gnssMeasClockFlgMask);
@@ -3775,6 +3833,7 @@ int LocationApiPbMsgConv::convertXtraConfigParamsToPB(
         LOC_LOGv("add %s", xtraParams.ntpServerURLs[index]);
     }
 
+    pbXtraParams->set_ntskeserverurl(xtraParams.ntsKeServerURL);
     // conversion routine for debug level
     pbXtraParams->set_xtradaemondebugloglevel(
             getPBEnumForDebugLogLevel(xtraParams.xtraDaemonDebugLogLevel));
@@ -3783,6 +3842,9 @@ int LocationApiPbMsgConv::convertXtraConfigParamsToPB(
             xtraParams.xtraIntegrityDownloadEnable);
     pbXtraParams->set_xtraintegritydownloadintervalminute(
             xtraParams.xtraIntegrityDownloadIntervalMinute);
+    pbXtraParams->set_xtradaemondiagloggingstatus(
+            xtraParams.xtraDaemonDiagLoggingStatus);
+
     return 0;
 }
 
@@ -3811,6 +3873,9 @@ int LocationApiPbMsgConv::pbConvertToXtraConfig(const PBXtraConfigParams &pbXtra
         LOC_LOGv("ntp server url: %d %s", index, xtraParams.ntpServerURLs[index]);
     }
     xtraParams.ntpServerURLsCount = pbXtraParams.ntpserverurls_size();
+    strlcpy(xtraParams.ntsKeServerURL, pbXtraParams.ntskeserverurl().c_str(),
+            sizeof(xtraParams.ntsKeServerURL));
+    LOC_LOGv("nts ke server url: %s", xtraParams.ntsKeServerURL);
 
     xtraParams.xtraDaemonDebugLogLevel =
             getDebugLogLevelFromPB(pbXtraParams.xtradaemondebugloglevel());
@@ -3818,6 +3883,8 @@ int LocationApiPbMsgConv::pbConvertToXtraConfig(const PBXtraConfigParams &pbXtra
     xtraParams.xtraIntegrityDownloadEnable = pbXtraParams.xtraintegritydownloadenable();
     xtraParams.xtraIntegrityDownloadIntervalMinute =
             pbXtraParams.xtraintegritydownloadintervalminute();
+    xtraParams.xtraDaemonDiagLoggingStatus =
+            pbXtraParams.xtradaemondiagloggingstatus();
     return 0;
 }
 
@@ -4051,13 +4118,19 @@ int LocationApiPbMsgConv::convertLocationToPB(const Location &location,
     // float timeuncMs = 15;
     pbLocation->set_timeuncms(location.timeUncMs);
 
+    // uint64 elapsedgPTPTime  = 16;
+    pbLocation->set_elapsedgptptime(location.elapsedgPTPTime);
+    // uint64 elapsedgPTPTimeUnc  = 17;
+    pbLocation->set_elapsedgptptimeunc(location.elapsedgPTPTimeUnc);
+
     LOC_LOGd("LocApiPB: location - Timestamp: %" PRIu64" Lat:%lf, Lon:%lf, Alt:%lf, TechMask:%x",
             location.timestamp, location.latitude, location.longitude, location.altitude,
             location.techMask);
     LocApiPb_LOGd("LocApiPB: location - speed:%f, bear:%f, HorzAcc:%f, VertAcc:%f, SpeedAcc:%f, "
-                  "BearAcc:%f, time unc msec %f", location.speed, location.bearing,
-                  location.accuracy, location.verticalAccuracy, location.speedAccuracy,
-                  location.bearingAccuracy, location.timeUncMs);
+                  "BearAcc:%f, time unc msec %f elapsedgPTPTime %" PRIu64" nsec ",
+                  location.speed, location.bearing, location.accuracy, location.verticalAccuracy,
+                  location.speedAccuracy, location.bearingAccuracy, location.timeUncMs,
+                  location.elapsedgPTPTime);
     return 0;
 }
 
@@ -4342,7 +4415,6 @@ int LocationApiPbMsgConv::convertGnssLocInfoNotifToPB(
     for (uint32_t iter = 0; iter < gnssLocInfoNotif.numOfDgnssStationId; iter++) {
         pbGnssLocInfoNotif->add_dgnssstationid(gnssLocInfoNotif.dgnssStationId[iter]);
     }
-
     LocApiPb_LOGv("LocApiPB: gnssLocInfoNotif - GLocInfoFlgMask:%" PRIu64", pdop:%f, hdop:%f, "
             "vdop:%f",
             gnssLocInfoNotif.flags, gnssLocInfoNotif.pdop, gnssLocInfoNotif.hdop,
@@ -4843,14 +4915,25 @@ int LocationApiPbMsgConv::convertGnssMeasClockToPB(const GnssMeasurementsClock &
     pbGnssMeasClock->set_driftuncertaintynsps(gnssMeasClock.driftUncertaintyNsps);
     // uint32 hwClockDiscontinuityCount= 10;
     pbGnssMeasClock->set_hwclockdiscontinuitycount(gnssMeasClock.hwClockDiscontinuityCount);
+    // uint64 elapsedRealTime = 11;
+    pbGnssMeasClock->set_elapsedrealtime(gnssMeasClock.elapsedRealTime);
+    // uint64 elapsedRealTimeUnc = 12;
+    pbGnssMeasClock->set_elapsedrealtimeunc(gnssMeasClock.elapsedRealTimeUnc);
+    // uint64 elapsedgPTPTime = 13;
+    pbGnssMeasClock->set_elapsedgptptime(gnssMeasClock.elapsedgPTPTime);
+    // uint64 elapsedgPTPTimeUnc = 14;
+    pbGnssMeasClock->set_elapsedgptptimeunc(gnssMeasClock.elapsedgPTPTimeUnc);
 
     LOC_LOGv("LocApiPB: gnssMeasClock - GnssMeasClockFlags:%x, leapSecond:%u, TimeNs:%" PRIu64\
         "TimeUnc:%lf FullBiasNs:%" PRIu64" BiasNs:%lf, BiasUncNs:%lf, DriftNs:%lf, DriftUncNs:%lf"
-        "HwDiscCnt:%u",
+        "HwDiscCnt:%u, elapsedRealTime:%" PRIu64" elapsedRealTimeUnc: %" PRIu64\
+        "elapsedgPTPTime:%" PRIu64" elapsedgPTPTimeUnc: %" PRIu64,
         gnssMeasClock.flags, gnssMeasClock.leapSecond, gnssMeasClock.timeNs,
         gnssMeasClock.timeUncertaintyNs, gnssMeasClock.fullBiasNs, gnssMeasClock.biasNs,
         gnssMeasClock.biasUncertaintyNs, gnssMeasClock.driftNsps,
-        gnssMeasClock.driftUncertaintyNsps, gnssMeasClock.hwClockDiscontinuityCount);
+        gnssMeasClock.driftUncertaintyNsps, gnssMeasClock.hwClockDiscontinuityCount,
+        gnssMeasClock.elapsedRealTime, gnssMeasClock.elapsedRealTimeUnc,
+        gnssMeasClock.elapsedgPTPTime, gnssMeasClock.elapsedgPTPTimeUnc);
     return 0;
 }
 
@@ -5318,11 +5401,17 @@ int LocationApiPbMsgConv::pbConvertToLocation(const PBLocation &pbLoc, Location 
     // float timeuncMs = 15;
     loc.timeUncMs = pbLoc.timeuncms();
 
+    // uint64 elapsedgPTPTime  = 16;
+    loc.elapsedgPTPTime = pbLoc.elapsedgptptime();
+    // uint64 elapsedgPTPTimeUnc  = 17;
+    loc.elapsedgPTPTimeUnc = pbLoc.elapsedgptptimeunc();
+
     LOC_LOGd("LocApiPB: pbLoc - Timestamp: %" PRIu64" Lat:%lf, Lon:%lf, Alt:%lf, TechMask:%x",
             loc.timestamp, loc.latitude, loc.longitude, loc.altitude, loc.techMask);
     LocApiPb_LOGd("LocApiPB: pbLoc - speed:%f, bearing:%f, HorzAcc:%f, VertAcc:%f, SpeedAcc:%f, "
-                  "BearAcc:%f, time unc ms %f", loc.speed, loc.bearing, loc.accuracy,
-                  loc.verticalAccuracy, loc.speedAccuracy, loc.bearingAccuracy, loc.timeUncMs);
+                  "BearAcc:%f, time unc ms %f, elapsedGPTPTime:%" PRIu64" ", loc.speed, loc.bearing,
+                   loc.accuracy, loc.verticalAccuracy, loc.speedAccuracy, loc.bearingAccuracy,
+                   loc.timeUncMs, loc.elapsedgPTPTime);
     return 0;
 }
 
@@ -5521,7 +5610,7 @@ int LocationApiPbMsgConv::pbConvertToGnssLocInfoNotif(
     }
     gnssLocInfoNotif.numOfDgnssStationId = i;
 
-    LOC_LOGv("LocApiPB: pbGnssLocInfoNotif -GLocInfoFlgMask:0x%" PRIx64 ", pdop:%f, "
+   LOC_LOGv("LocApiPB: pbGnssLocInfoNotif -GLocInfoFlgMask:0x%" PRIx64 ", pdop:%f, "
             "hdop:%f, vdop:%f",
             gnssLocInfoNotif.flags, gnssLocInfoNotif.pdop, gnssLocInfoNotif.hdop,
             gnssLocInfoNotif.vdop);
@@ -6090,14 +6179,25 @@ int LocationApiPbMsgConv::pbConvertToGnssMeasurementsClock(
     gnssMeasClock.driftUncertaintyNsps = pbGnssMeasClock.driftuncertaintynsps();
     // uint32 hwClockDiscontinuityCount= 10;
     gnssMeasClock.hwClockDiscontinuityCount = pbGnssMeasClock.hwclockdiscontinuitycount();
+    // uint64 elapsedRealTime = 11;
+    gnssMeasClock.elapsedRealTime = pbGnssMeasClock.elapsedrealtime();
+    // uint64 elapsedRealTimeUnc = 12;
+    gnssMeasClock.elapsedRealTimeUnc = pbGnssMeasClock.elapsedrealtimeunc();
+    // uint64 elapsedgPTPTime = 13;
+    gnssMeasClock.elapsedgPTPTime = pbGnssMeasClock.elapsedgptptime();
+    // uint64 elapsedgPTPTimeUnc = 14;
+    gnssMeasClock.elapsedgPTPTimeUnc = pbGnssMeasClock.elapsedgptptimeunc();
 
     LOC_LOGv("LocApiPB: pbGnssMeasClock - GnssMeasClockFlags:%x, leapSecond:%u, TimeNs:%" PRIu64\
         "TimeUnc:%lf FullBiasNs:%" PRIu64" BiasNs:%lf, BiasUncNs:%lf, DriftNs:%lf, DriftUncNs:%lf"
-        "HwDiscCnt:%u",
+        "HwDiscCnt:%u, elapsedRealTime:%" PRIu64" elapsedRealTimeUnc:%" PRIu64\
+        "elapsedgPTPTime:%" PRIu64" elapsedgPTPTimeUnc:%" PRIu64,
         gnssMeasClock.flags, gnssMeasClock.leapSecond, gnssMeasClock.timeNs,
         gnssMeasClock.timeUncertaintyNs, gnssMeasClock.fullBiasNs, gnssMeasClock.biasNs,
         gnssMeasClock.biasUncertaintyNs, gnssMeasClock.driftNsps,
-        gnssMeasClock.driftUncertaintyNsps, gnssMeasClock.hwClockDiscontinuityCount);
+        gnssMeasClock.driftUncertaintyNsps, gnssMeasClock.hwClockDiscontinuityCount,
+        gnssMeasClock.elapsedRealTime, gnssMeasClock.elapsedRealTimeUnc,
+        gnssMeasClock.elapsedgPTPTime, gnssMeasClock.elapsedgPTPTimeUnc);
 
     return 0;
 }
@@ -6955,6 +7055,957 @@ int LocationApiPbMsgConv::pbConvertTo2DimensionDoubleVector(
             dVector.push_back(pbDoubleArrays.value(i * column + j));
         }
         doubleArrays.push_back(std::move(dVector));
+    }
+    return 0;
+}
+
+PBGnssEphAction LocationApiPbMsgConv::getPBEphAction (const GnssEphAction& ephAction) const {
+    PBGnssEphAction pbEphAction = PB_GNSS_EPH_ACTION_UPDATE_SRC_UNKNOWN_V02;
+    switch (ephAction) {
+        case GNSS_EPH_ACTION_UPDATE_SRC_UNKNOWN_V02:
+            pbEphAction = PB_GNSS_EPH_ACTION_UPDATE_SRC_UNKNOWN_V02;
+            break;
+        case GNSS_EPH_ACTION_UPDATE_SRC_OTA_V02:
+            pbEphAction = PB_GNSS_EPH_ACTION_UPDATE_SRC_OTA_V02;
+            break;
+        case GNSS_EPH_ACTION_UPDATE_SRC_NETWORK_V02:
+            pbEphAction = PB_GNSS_EPH_ACTION_UPDATE_SRC_NETWORK_V02;
+            break;
+        case GNSS_EPH_ACTION_UPDATE_MAX_V02:
+            pbEphAction = PB_GNSS_EPH_ACTION_UPDATE_MAX_V02;
+            break;
+        case GNSS_EPH_ACTION_DELETE_SRC_UNKNOWN_V02:
+            pbEphAction = PB_GNSS_EPH_ACTION_DELETE_SRC_UNKNOWN_V02;
+            break;
+        case GNSS_EPH_ACTION_DELETE_SRC_NETWORK_V02:
+            pbEphAction = PB_GNSS_EPH_ACTION_DELETE_SRC_NETWORK_V02;
+            break;
+        case GNSS_EPH_ACTION_DELETE_SRC_OTA_V02:
+            pbEphAction = PB_GNSS_EPH_ACTION_DELETE_SRC_OTA_V02;
+            break;
+        case GNSS_EPH_ACTION_DELETE_MAX_V02:
+            pbEphAction = PB_GNSS_EPH_ACTION_DELETE_MAX_V02;
+            break;
+    }
+    return pbEphAction;
+}
+
+int LocationApiPbMsgConv::convertCommanEphToPB (
+    const GnssEphCommon &commanEph,
+    PBGnssEphCommon* pbCommanEph) const {
+
+    if (pbCommanEph) {
+        // uint32 gnssSvId = 1;
+        pbCommanEph->set_gnsssvid(commanEph.gnssSvId);
+
+        // PBGnssEphAction ephAction = 2;
+        pbCommanEph->set_ephaction(getPBEphAction(commanEph.updateAction));
+
+        // uint32 IODE = 3;
+        pbCommanEph->set_iode(commanEph.IODE);
+
+        // double aSqrt = 4;
+        pbCommanEph->set_asqrt(commanEph.aSqrt);
+
+        // double deltaN = 5;
+        pbCommanEph->set_deltan(commanEph.deltaN);
+
+        // double m0 = 6;
+        pbCommanEph->set_m0(commanEph.m0);
+
+        // double eccentricity = 7;
+        pbCommanEph->set_eccentricity(commanEph.eccentricity);
+
+        // double omega0 = 8;
+        pbCommanEph->set_omega0(commanEph.omega0);
+
+        // double i0 = 9;
+        pbCommanEph->set_i0(commanEph.i0);
+
+        // double omega = 10;
+        pbCommanEph->set_omega(commanEph.omega);
+
+        // double omegaDot = 11;
+        pbCommanEph->set_omegadot(commanEph.omegaDot);
+
+        // double iDot = 12;
+        pbCommanEph->set_idot(commanEph.iDot);
+
+        // double cUc = 13;
+        pbCommanEph->set_cuc(commanEph.cUc);
+
+        // double cUs = 14;
+        pbCommanEph->set_cus(commanEph.cUs);
+
+        // double cRc = 15;
+        pbCommanEph->set_crc(commanEph.cRc);
+
+        // double cRs = 16;
+        pbCommanEph->set_crs(commanEph.cRs);
+
+        // double cIc = 17;
+        pbCommanEph->set_cic(commanEph.cIc);
+
+        // double cIs = 18;
+        pbCommanEph->set_cis(commanEph.cIs);
+
+        // uint32 toe = 19;
+        pbCommanEph->set_toe(commanEph.toe);
+
+        // uint32 toc = 20;
+        pbCommanEph->set_toc(commanEph.toc);
+
+        // double af0 = 21;
+        pbCommanEph->set_af0(commanEph.af0);
+
+        // double af1 = 22;
+        pbCommanEph->set_af1(commanEph.af1);
+
+        // double af2 = 23;
+        pbCommanEph->set_af2(commanEph.af2);
+        return 0;
+    } else {
+        return 1;
+    }
+}
+
+int LocationApiPbMsgConv::convertGpsEphDataToPB(
+    const GpsEphemeris &halEphInfo,
+    PBGpsEphemeris *pbEphInfo) const {
+
+    if (pbEphInfo) {
+        PBGnssEphCommon* pbcommanEph = pbEphInfo->mutable_commonephemerisdata();
+        if (nullptr != pbcommanEph) {
+            if (convertCommanEphToPB(halEphInfo.commonEphemerisData, pbcommanEph)) {
+                LOC_LOGe(" convertCommanEphtoPB failed ");
+                free(pbcommanEph);
+            }
+        } else {
+            LOC_LOGe(" mutable_commonephemerisdata is nullptr ");
+        }
+
+        pbEphInfo->set_signalhealth(halEphInfo.signalHealth);
+        pbEphInfo->set_urai(halEphInfo.URAI);
+        pbEphInfo->set_codel2(halEphInfo.codeL2);
+        pbEphInfo->set_dataflagl2p(halEphInfo.dataFlagL2P);
+        pbEphInfo->set_tgd(halEphInfo.tgd);
+        pbEphInfo->set_fitinterval(halEphInfo.fitInterval);
+        pbEphInfo->set_iodc(halEphInfo.IODC);
+        return 0;
+    } else {
+        return 1;
+    }
+}
+
+int LocationApiPbMsgConv::convertGpsEphResponseToPB(
+    const GpsEphemerisResponse  &halResp,
+    PBGpsEphemerisResponse*  pbEphResp) const {
+
+    if (pbEphResp) {
+        for (uint32_t idx = 0; idx < halResp.numOfEphemeris; idx++) {
+            PBGpsEphemeris *pbEph = pbEphResp->add_gpsephemerisdata();
+            if (nullptr != pbEph) {
+                if (convertGpsEphDataToPB(halResp.gpsEphemerisData[idx], pbEph)) {
+                    LOC_LOGe(" Failed convertGpsEphData");
+                    free(pbEph);
+                    return 1;
+                }
+            } else {
+                LOC_LOGe(" add_gpsephemerisdata is NULL ");
+                return 1;
+            }
+        }
+        return 0;
+    } else {
+        return 1;
+    }
+}
+
+int LocationApiPbMsgConv::convertBdsEphDataToPB(
+    const BdsEphemeris &halEphInfo,
+    PBBdsEphemeris *pbEphInfo) const {
+
+    if (pbEphInfo) {
+        PBGnssEphCommon* pbcommanEph = pbEphInfo->mutable_commonephemerisdata();
+        if (nullptr != pbcommanEph) {
+            if (convertCommanEphToPB(halEphInfo.commonEphemerisData, pbcommanEph)) {
+                LOC_LOGe(" convertCommanEphtoPB failed ");
+                free(pbcommanEph);
+            }
+        } else {
+            LOC_LOGe(" mutable_commonephemerisdata is nullptr ");
+        }
+        // uint32 svHealth = 2;
+        pbEphInfo->set_svhealth(halEphInfo.svHealth);
+        // uint32 AODC = 3;
+        pbEphInfo->set_aodc(halEphInfo.AODC);
+        // double tgd1 = 4;
+        pbEphInfo->set_tgd1(halEphInfo.tgd1);
+        //  double tgd2 = 5;
+        pbEphInfo->set_tgd2(halEphInfo.tgd2);
+        // uint32 URAI = 6;
+        pbEphInfo->set_urai(halEphInfo.URAI);
+        return 0;
+    } else {
+        return 1;
+    }
+}
+
+int LocationApiPbMsgConv::convertBdsEphResponseToPB(
+    const BdsEphemerisResponse  &halResp,
+    PBBdsEphemerisResponse*  pbEphResp) const {
+
+    if (pbEphResp) {
+        for (uint32_t idx = 0; idx < halResp.numOfEphemeris; idx++) {
+            PBBdsEphemeris *pbEph = pbEphResp->add_bdsephemerisdata();
+            if (nullptr != pbEph) {
+                if (convertBdsEphDataToPB(halResp.bdsEphemerisData[idx], pbEph)) {
+                    LOC_LOGe(" Failed convertBdsEphData");
+                    free(pbEph);
+                    return 1;
+                }
+            } else {
+                LOC_LOGe(" add_bdsephemerisdata is NULL ");
+                return 1;
+            }
+        }
+        return 0;
+    } else {
+        return 1;
+    }
+}
+
+int LocationApiPbMsgConv::convertGlonassEphDataToPB(
+    const GlonassEphemeris &halEphInfo,
+    PBGlonassEphemeris *pbEphInfo) const {
+
+    if (pbEphInfo) {
+        // uint32 gnssSvId  = 1;
+        pbEphInfo->set_gnsssvid(halEphInfo.gnssSvId);
+        // PBGnssEphAction ephAction = 2;
+        pbEphInfo->set_ephaction(getPBEphAction(halEphInfo.updateAction));
+        // uint32 bnHealth = 3;
+        pbEphInfo->set_bnhealth(halEphInfo.bnHealth);
+        //  double bnHealth = 4;
+        pbEphInfo->set_lnhealth(halEphInfo.lnHealth);
+        // uint32 tb = 5;
+        pbEphInfo->set_tb(halEphInfo.tb);
+        // uint32 ft = 6;
+        pbEphInfo->set_ft(halEphInfo.ft);
+        // uint32 gloM = 7;
+        pbEphInfo->set_glom(halEphInfo.gloM);
+        // uint32 enAge = 8;
+        pbEphInfo->set_enage(halEphInfo.enAge);
+        //  uint32 gloFrequency = 9;
+        pbEphInfo->set_glofrequency(halEphInfo.gloFrequency);
+        // uint32 p1 = 10;
+        pbEphInfo->set_p1(halEphInfo.p1);
+        // uint32 p2 = 11;
+        pbEphInfo->set_p2(halEphInfo.p2);
+        // float deltaTau = 12;
+        pbEphInfo->set_deltatau(halEphInfo.deltaTau);
+        for (int i = 0; i < 3; i++) {
+            // double position[3] = 13;
+            pbEphInfo->add_position(halEphInfo.position[i]);
+            // double velocity[3] = 14;
+            pbEphInfo->add_velocity(halEphInfo.velocity[i]);
+            // double acceleration[3] = 15;
+            pbEphInfo->add_acceleration(halEphInfo.acceleration[i]);
+        }
+        //  float tauN = 16;
+        pbEphInfo->set_taun(halEphInfo.tauN);
+        // float gamma = 17;
+        pbEphInfo->set_gamma(halEphInfo.gamma);
+        // double toe = 18;
+        pbEphInfo->set_toe(halEphInfo.toe);
+        // uint32 nt = 19;
+        pbEphInfo->set_nt(halEphInfo.nt);
+        return 0;
+    } else {
+        return 1;
+    }
+}
+
+int LocationApiPbMsgConv::convertGloEphResponseToPB(
+    const GlonassEphemerisResponse  &halResp,
+    PBGlonassEphemerisResponse*  pbEphResp) const {
+
+    if (pbEphResp) {
+
+        for (uint32_t idx = 0; idx < halResp.numOfEphemeris; idx++) {
+            PBGlonassEphemeris *pbEph = pbEphResp->add_gloephemerisdata();
+            if (nullptr != pbEph) {
+                if (convertGlonassEphDataToPB(halResp.gloEphemerisData[idx], pbEph)) {
+                    LOC_LOGe(" Failed convertGlonassEphDatatoPB ");
+                    free(pbEph);
+                    return 1;
+                }
+            } else {
+                LOC_LOGe(" add_glonassephemerisdata is NULL ");
+                return 1;
+            }
+        }
+        return 0;
+    } else {
+        return 1;
+    }
+}
+
+PBGalEphSignalSource LocationApiPbMsgConv::convertDataSignalSourceToPB(
+    const GalEphSignalSource &ephSignal) const {
+
+    PBGalEphSignalSource pbSignal = PB_GAL_EPH_SIGNAL_SRC_UNKNOWN;
+
+    switch (ephSignal) {
+        case GAL_EPH_SIGNAL_SRC_E1B_V02:
+            pbSignal = PB_GAL_EPH_SIGNAL_SRC_E1B;
+            break;
+        case GAL_EPH_SIGNAL_SRC_E5A_V02:
+            pbSignal = PB_GAL_EPH_SIGNAL_SRC_E5A;
+            break;
+        case GAL_EPH_SIGNAL_SRC_E5B_V02:
+            pbSignal = PB_GAL_EPH_SIGNAL_SRC_E5B;
+            break;
+        default:
+            pbSignal = PB_GAL_EPH_SIGNAL_SRC_UNKNOWN;
+            break;
+    }
+    return pbSignal;
+}
+
+int LocationApiPbMsgConv::convertGalileoEphDataToPB(
+    const GalileoEphemeris &halEphInfo,
+    PBGalileoEphemeris *pbEphInfo) const {
+
+    if (pbEphInfo) {
+        PBGnssEphCommon* pbcommanEph = pbEphInfo->mutable_commonephemerisdata();
+        if (nullptr != pbcommanEph) {
+            if (convertCommanEphToPB(halEphInfo.commonEphemerisData, pbcommanEph)) {
+                LOC_LOGe(" convertCommanEphtoPB failed ");
+                free(pbcommanEph);
+            }
+        } else {
+            LOC_LOGe(" mutable_commonephemerisdata is nullptr ");
+        }
+        //PBGalEphSignalSource dataSourceSignal = 2;
+        pbEphInfo->set_datasourcesignal(convertDataSignalSourceToPB(halEphInfo.dataSourceSignal));
+        // uint32 sisIndex = 3;
+        pbEphInfo->set_sisindex(halEphInfo.sisIndex);
+        // double bgdE1E5a = 4;
+        pbEphInfo->set_bgde1e5a(halEphInfo.bgdE1E5a);
+        //  double bgdE1E5b = 5;
+        pbEphInfo->set_bgde1e5b(halEphInfo.bgdE1E5b);
+        // uint32 svHealth = 6;
+        pbEphInfo->set_svhealth(halEphInfo.svHealth);
+        return 0;
+    } else {
+        return 1;
+    }
+}
+
+int LocationApiPbMsgConv::convertGalEphResponseToPB(
+    const GalileoEphemerisResponse  &halResp,
+    PBGalileoEphemerisResponse*  pbEphResp) const {
+
+    if (pbEphResp) {
+        for (uint32_t idx = 0; idx < halResp.numOfEphemeris; idx++) {
+            PBGalileoEphemeris *pbEph = pbEphResp->add_galephemerisdata();
+            if (nullptr != pbEph) {
+                if (convertGalileoEphDataToPB(halResp.galEphemerisData[idx], pbEph)) {
+                    LOC_LOGe(" Failed convertGalileoEphDatatoPB ");
+                    free(pbEph);
+                    return 1;
+                }
+            } else {
+                LOC_LOGe(" add_galileoephemerisdata is NULL ");
+                return 1;
+            }
+        }
+        return 0;
+    } else {
+        return 1;
+    }
+}
+
+int LocationApiPbMsgConv::convertQzssEphResponseToPB(
+    const QzssEphemerisResponse  &halResp,
+    PBQzssEphemerisResponse*  pbEphResp) const {
+
+    if (pbEphResp) {
+        for (uint32_t idx = 0; idx < halResp.numOfEphemeris; idx++) {
+            PBGpsEphemeris *pbEph = pbEphResp->add_qzssephemerisdata();
+            if (nullptr != pbEph) {
+                if (convertGpsEphDataToPB(halResp.qzssEphemerisData[idx], pbEph)) {
+                    LOC_LOGe(" Failed convertGpsEphDatatoPB for QZSS ");
+                    free(pbEph);
+                    return 1;
+                }
+            } else {
+                LOC_LOGe(" add_qzssephemerisdata is NULL ");
+                return 1;
+            }
+        }
+        return 0;
+    } else {
+        return 1;
+    }
+}
+
+int LocationApiPbMsgConv::convertNavicEphDataToPB(
+    const NavicEphemeris &halEphInfo,
+    PBNavicEphemeris *pbEphInfo) const {
+
+    if (pbEphInfo) {
+        PBGnssEphCommon* pbcommanEph = pbEphInfo->mutable_commonephemerisdata();
+        if (nullptr != pbcommanEph) {
+            if (convertCommanEphToPB(halEphInfo.commonEphemerisData, pbcommanEph)) {
+                LOC_LOGe(" convertCommanEphtoPB failed ");
+                free(pbcommanEph);
+            }
+        } else {
+            LOC_LOGe(" mutable_commonephemerisdata is nullptr ");
+        }
+        // uint32 weekNum = 2;
+        pbEphInfo->set_weeknum(halEphInfo.weekNum);
+        // uint32 iodec = 3;
+        pbEphInfo->set_iodec(halEphInfo.iodec);
+        // uint32 l5Health = 4;
+        pbEphInfo->set_l5health(halEphInfo.l5Health);
+        //  uint32 sHealth = 5;
+        pbEphInfo->set_shealth(halEphInfo.sHealth);
+        // double inclinationAngleRad = 6;
+        pbEphInfo->set_inclinationanglerad(halEphInfo.inclinationAngleRad);
+        // uint32 urai = 7;
+        pbEphInfo->set_urai(halEphInfo.urai);
+        // double  tgd = 8;
+        pbEphInfo->set_tgd(halEphInfo.tgd);
+        return 0;
+    } else {
+        return 1;
+    }
+}
+
+int LocationApiPbMsgConv::convertNavicEphResponseToPB(
+    const NavicEphemerisResponse  &halResp,
+    PBNavicEphemerisResponse*  pbEphResp) const {
+
+    if (pbEphResp) {
+        for (uint32_t idx = 0; idx < halResp.numOfEphemeris; idx++) {
+            PBNavicEphemeris *pbEph = pbEphResp->add_navicephemerisdata();
+            if (nullptr != pbEph) {
+                if (convertNavicEphDataToPB(halResp.navicEphemerisData[idx], pbEph)) {
+                    LOC_LOGe(" Failed convertNavicEphDatatoPB ");
+                    free(pbEph);
+                    return 1;
+                }
+            } else {
+                LOC_LOGe(" add_navicephemerisdata is NULL ");
+                return 1;
+            }
+        }
+        return 0;
+    } else {
+        return 1;
+    }
+}
+
+int LocationApiPbMsgConv::convertGnssEphNotifToPB(
+        const GnssSvEphemerisReport &gnssEphNotif,
+        PBGnssEphemerisNotification *pbGnssEphNotif) const {
+
+    if (nullptr == pbGnssEphNotif) {
+        LOC_LOGe("pbGnssEphNotif is NULL!, return");
+        return 1;
+    }
+    pbGnssEphNotif->set_gnssconstellation(
+            getPBEnumForGnssLocSvSystem(gnssEphNotif.gnssConstellation));
+    pbGnssEphNotif->set_issystemtimevalid(gnssEphNotif.isSystemTimeValid);
+
+    PBLocApiGnssSystemTimeStructType*  sysTime = pbGnssEphNotif->mutable_systemtime();
+    if (nullptr != sysTime) {
+        if (convertGnssSystemTimeStructTypeToPB(gnssEphNotif.systemTime,
+                sysTime)) {
+            LOC_LOGe("convertGnssSystemTimeStructTypeToPB failed");
+            free(sysTime);
+            return 1;
+        }
+    } else {
+        LOC_LOGe("mutable_systemtime failed");
+        return 1;
+    }
+    PBEphInfoUnion *ephU = pbGnssEphNotif->mutable_ephunion();
+    if (ephU) {
+        switch (gnssEphNotif.gnssConstellation) {
+            case GNSS_LOC_SV_SYSTEM_GPS: {
+                PBGpsEphemerisResponse* ephResp = ephU->mutable_gpsephemeris();
+                if (nullptr != ephResp) {
+                    if (convertGpsEphResponseToPB(gnssEphNotif.ephInfo.gpsEphemeris, ephResp)) {
+                        LOC_LOGe("Failed to convertGpsEphResponsetoPB");
+                        free(ephResp);
+                        return 1;
+                    }
+                } else {
+                    LOC_LOGe("mutable_gpsephemeris failed");
+                    return 1;
+                }
+                break;
+            }
+            case GNSS_LOC_SV_SYSTEM_GALILEO: {
+                PBGalileoEphemerisResponse* ephRespGal = ephU->mutable_galileoephemeris();
+                if (nullptr != ephRespGal) {
+                    if (convertGalEphResponseToPB(gnssEphNotif.ephInfo.galileoEphemeris,
+                            ephRespGal)) {
+                        LOC_LOGe("Failed to convertGalEphResponsetoPB");
+                        free(ephRespGal);
+                        return 1;
+                    }
+                } else {
+                    LOC_LOGe("mutable_galileoephemeris failed");
+                    return 1;
+                }
+                break;
+            }
+            case GNSS_LOC_SV_SYSTEM_GLONASS: {
+                PBGlonassEphemerisResponse* ephRespGlo = ephU->mutable_glonassephemeris();
+                if (nullptr != ephRespGlo) {
+                    if (convertGloEphResponseToPB(gnssEphNotif.ephInfo.glonassEphemeris,
+                            ephRespGlo)) {
+                        LOC_LOGe("Failed to convertGloEphResponsetoPB");
+                        free(ephRespGlo);
+                        return 1;
+                    }
+                } else {
+                    LOC_LOGe("mutable_glonassephemeris failed");
+                    return 1;
+                }
+                break;
+            }
+            case GNSS_LOC_SV_SYSTEM_BDS: {
+                PBBdsEphemerisResponse* ephRespBds = ephU->mutable_bdsephemeris();
+                if (nullptr != ephRespBds) {
+                    if (convertBdsEphResponseToPB(gnssEphNotif.ephInfo.bdsEphemeris, ephRespBds)) {
+                        LOC_LOGe("Failed to convertBdsEphResponsetoPB");
+                        free(ephRespBds);
+                        return 1;
+                    }
+                } else {
+                    LOC_LOGe("mutable_bdsephemeris failed");
+                    return 1;
+                }
+                break;
+            }
+            case GNSS_LOC_SV_SYSTEM_QZSS: {
+                PBQzssEphemerisResponse* ephRespQzss = ephU->mutable_qzssephemeris();
+                if (nullptr != ephRespQzss) {
+                    if (convertQzssEphResponseToPB(gnssEphNotif.ephInfo.qzssEphemeris,
+                             ephRespQzss)) {
+                        LOC_LOGe("Failed to convertQzssEphResponsetoPB");
+                        free(ephRespQzss);
+                        return 1;
+                    }
+                } else {
+                    LOC_LOGe("mutable_qzssephemeris failed");
+                    return 1;
+                }
+                break;
+            }
+            case GNSS_LOC_SV_SYSTEM_NAVIC: {
+                PBNavicEphemerisResponse* ephRespNavic = ephU->mutable_navicephemeris();
+                if (nullptr != ephRespNavic) {
+                    if (convertNavicEphResponseToPB(gnssEphNotif.ephInfo.navicEphemeris,
+                            ephRespNavic)) {
+                        LOC_LOGe("Failed to convertNavicEphResponsetoPB");
+                        free(ephRespNavic);
+                        return 1;
+                    }
+                } else {
+                    LOC_LOGe("mutable_navicephemeris failed");
+                    return 1;
+                }
+                break;
+            }
+        }
+    } else {
+        LOC_LOGe("mutable_ephunion failed");
+        return 1;
+    }
+    return 0;
+}
+
+GnssEphAction LocationApiPbMsgConv::pbConvertToEphAction (
+            const PBGnssEphAction& pbEphAction) const {
+    GnssEphAction ephAction = GNSS_EPH_ACTION_UPDATE_SRC_UNKNOWN_V02;
+    switch (pbEphAction) {
+        case PB_GNSS_EPH_ACTION_UPDATE_SRC_UNKNOWN_V02:
+            ephAction = GNSS_EPH_ACTION_UPDATE_SRC_UNKNOWN_V02;
+            break;
+        case PB_GNSS_EPH_ACTION_UPDATE_SRC_OTA_V02:
+            ephAction = GNSS_EPH_ACTION_UPDATE_SRC_OTA_V02;
+            break;
+        case PB_GNSS_EPH_ACTION_UPDATE_SRC_NETWORK_V02:
+            ephAction = GNSS_EPH_ACTION_UPDATE_SRC_NETWORK_V02;
+            break;
+        case PB_GNSS_EPH_ACTION_UPDATE_MAX_V02:
+            ephAction = GNSS_EPH_ACTION_UPDATE_MAX_V02;
+            break;
+        case PB_GNSS_EPH_ACTION_DELETE_SRC_UNKNOWN_V02:
+            ephAction = GNSS_EPH_ACTION_DELETE_SRC_UNKNOWN_V02;
+            break;
+        case PB_GNSS_EPH_ACTION_DELETE_SRC_NETWORK_V02:
+            ephAction = GNSS_EPH_ACTION_DELETE_SRC_NETWORK_V02;
+            break;
+        case PB_GNSS_EPH_ACTION_DELETE_SRC_OTA_V02:
+            ephAction = GNSS_EPH_ACTION_DELETE_SRC_OTA_V02;
+            break;
+        case PB_GNSS_EPH_ACTION_DELETE_MAX_V02:
+            ephAction = GNSS_EPH_ACTION_DELETE_MAX_V02;
+            break;
+    }
+    return ephAction;
+}
+
+int LocationApiPbMsgConv::pbConvertToCommanEph (
+    const PBGnssEphCommon &pbCommanEph,
+    GnssEphCommon &commanEph) const {
+
+    // uint32 gnssSvId = 1;
+    commanEph.gnssSvId = pbCommanEph.gnsssvid();
+
+    // PBGnssEphAction ephAction = 2;
+    commanEph.updateAction = pbConvertToEphAction(pbCommanEph.ephaction());
+
+    // uint32 IODE = 3;
+    commanEph.IODE = pbCommanEph.iode();
+
+    // double aSqrt = 4;
+    commanEph.aSqrt = pbCommanEph.asqrt();
+
+    // double deltaN = 5;
+    commanEph.deltaN = pbCommanEph.deltan();
+
+    // double m0 = 6;
+    commanEph.m0 = pbCommanEph.m0();
+
+    // double eccentricity = 7;
+    commanEph.eccentricity = pbCommanEph.eccentricity();
+
+    // double omega0 = 8;
+    commanEph.omega0 = pbCommanEph.omega0();
+
+    // double i0 = 9;
+    commanEph.i0 = pbCommanEph.i0();
+
+    // double omega = 10;
+    commanEph.omega = pbCommanEph.omega();
+
+    // double omegaDot = 11;
+    commanEph.omegaDot = pbCommanEph.omegadot();
+
+    // double iDot = 12;
+    commanEph.iDot = pbCommanEph.idot();
+
+    // double cUc = 13;
+    commanEph.cUc = pbCommanEph.cuc();
+
+    // double cUs = 14;
+    commanEph.cUs = pbCommanEph.cus();
+
+    // double cRc = 15;
+    commanEph.cRc = pbCommanEph.crc();
+
+    // double cRs = 16;
+    commanEph.cRs = pbCommanEph.crs();
+
+    // double cIc = 17;
+    commanEph.cIc = pbCommanEph.cic();
+
+    // double cIs = 18;
+    commanEph.cIs = pbCommanEph.cis();
+
+    // uint32 toe = 19;
+    commanEph.toe = pbCommanEph.toe();
+
+    // uint32 toc = 20;
+    commanEph.toc = pbCommanEph.toc();
+
+    // double af0 = 21;
+    commanEph.af0 = pbCommanEph.af0();
+
+    // double af1 = 22;
+    commanEph.af1 = pbCommanEph.af1();
+
+    // double af2 = 23;
+    commanEph.af2 = pbCommanEph.af2();
+    return 0;
+}
+
+int LocationApiPbMsgConv::pbConvertToGpsEphData(
+    const PBGpsEphemeris &pbEphInfo,
+    GpsEphemeris &halEphInfo) const {
+
+    pbConvertToCommanEph(pbEphInfo.commonephemerisdata(), halEphInfo.commonEphemerisData);
+    halEphInfo.signalHealth = pbEphInfo.signalhealth();
+    halEphInfo.URAI         = pbEphInfo.urai();
+    halEphInfo.codeL2       = pbEphInfo.codel2();
+    halEphInfo.dataFlagL2P  = pbEphInfo.dataflagl2p();
+    halEphInfo.tgd          = pbEphInfo.tgd();
+    halEphInfo.fitInterval  = pbEphInfo.fitinterval();
+    halEphInfo.IODC         = pbEphInfo.iodc();
+
+    return 0;
+}
+
+int LocationApiPbMsgConv::pbConvertToGpsEphResponse(
+    const PBGpsEphemerisResponse  &pbEphResp,
+    GpsEphemerisResponse  &halResp) const {
+
+    halResp.numOfEphemeris = pbEphResp.gpsephemerisdata_size();
+
+    for (uint32_t idx = 0; idx < halResp.numOfEphemeris; idx++) {
+        pbConvertToGpsEphData(pbEphResp.gpsephemerisdata(idx),
+                halResp.gpsEphemerisData[idx]);
+    }
+    return 0;
+}
+
+int LocationApiPbMsgConv::pbConvertToBdsEphData(
+    const PBBdsEphemeris &pbEphInfo,
+    BdsEphemeris &halEphInfo) const {
+
+    pbConvertToCommanEph(pbEphInfo.commonephemerisdata(), halEphInfo.commonEphemerisData);
+    // uint32 svHealth = 2;
+    halEphInfo.svHealth = pbEphInfo.svhealth();
+    // uint32 AODC = 3;
+    halEphInfo.AODC = pbEphInfo.aodc();
+    // double tgd1 = 4;
+    halEphInfo.tgd1 = pbEphInfo.tgd1();
+    //  double tgd2 = 5;
+    halEphInfo.tgd2 = pbEphInfo.tgd2();
+    // uint32 URAI = 6;
+    halEphInfo.URAI = pbEphInfo.urai();
+    return 0;
+
+}
+
+int LocationApiPbMsgConv::pbConvertToBdsEphResponse(
+    const PBBdsEphemerisResponse &pbEphResp,
+    BdsEphemerisResponse  &halResp) const {
+
+    halResp.numOfEphemeris = pbEphResp.bdsephemerisdata_size();
+    for (uint32_t idx = 0; idx < halResp.numOfEphemeris; idx++) {
+        pbConvertToBdsEphData(pbEphResp.bdsephemerisdata(idx),
+                halResp.bdsEphemerisData[idx]);
+    }
+    return 0;
+}
+
+int LocationApiPbMsgConv::pbConvertToGlonassEphData(
+    const  PBGlonassEphemeris &pbEphInfo,
+    GlonassEphemeris &halEphInfo) const {
+
+    // uint32 gnssSvId  = 1;
+    halEphInfo.gnssSvId = pbEphInfo.gnsssvid();
+    // PBGnssEphAction ephAction = 2;
+    halEphInfo.updateAction = pbConvertToEphAction(pbEphInfo.ephaction());
+    // uint32 bnHealth = 3;
+    halEphInfo.bnHealth = pbEphInfo.bnhealth();
+    //  double bnHealth = 4;
+    halEphInfo.lnHealth = pbEphInfo.lnhealth();
+    // uint32 tb = 5;
+    halEphInfo.tb = pbEphInfo.tb();
+    // uint32 ft = 6;
+    halEphInfo.ft = pbEphInfo.ft();
+    // uint32 gloM = 7;
+    halEphInfo.gloM = pbEphInfo.glom();
+    // uint32 enAge = 8;
+    halEphInfo.enAge = pbEphInfo.enage();
+    //  uint32 gloFrequency = 9;
+    halEphInfo.gloFrequency = pbEphInfo.glofrequency();
+    // uint32 p1 = 10;
+    halEphInfo.p1 = pbEphInfo.p1();
+    // uint32 p2 = 11;
+    halEphInfo.p2 = pbEphInfo.p2();
+    // float deltaTau = 12;
+    halEphInfo.deltaTau = pbEphInfo.deltatau();
+
+    for (int i = 0; i < 3; i++) {
+        // double position[3] = 13;
+        halEphInfo.position[i] = pbEphInfo.position(i);
+        // double velocity[3] = 14;
+        halEphInfo.velocity[i] = pbEphInfo.velocity(i);
+        // double acceleration[3] = 15;
+        halEphInfo.acceleration[i] = pbEphInfo.acceleration(i);
+    }
+
+    //  float tauN = 16;
+    halEphInfo.tauN = pbEphInfo.taun();
+    // float gamma = 17;
+    halEphInfo.gamma = pbEphInfo.gamma();
+    // double toe = 18;
+    halEphInfo.toe = pbEphInfo.toe();
+    // uint32 nt = 19;
+    halEphInfo.nt = pbEphInfo.nt();
+    return 0;
+}
+
+int LocationApiPbMsgConv::pbConvertToGloEphResponse(
+    const PBGlonassEphemerisResponse  &pbEphResp,
+    GlonassEphemerisResponse  &halResp) const {
+
+    halResp.numOfEphemeris = pbEphResp.gloephemerisdata_size();
+    for (uint32_t idx = 0; idx < halResp.numOfEphemeris; idx++) {
+        pbConvertToGlonassEphData(pbEphResp.gloephemerisdata(idx),
+                halResp.gloEphemerisData[idx]);
+    }
+    return 0;
+}
+
+GalEphSignalSource LocationApiPbMsgConv::pbConvertToDataSourceSignal(
+    const PBGalEphSignalSource &pbSignal) const {
+    GalEphSignalSource ephSignal = GAL_EPH_SIGNAL_SRC_UNKNOWN_V02;
+
+    switch (pbSignal) {
+        case PB_GAL_EPH_SIGNAL_SRC_E1B:
+            ephSignal = GAL_EPH_SIGNAL_SRC_E1B_V02;
+            break;
+        case PB_GAL_EPH_SIGNAL_SRC_E5A:
+            ephSignal = GAL_EPH_SIGNAL_SRC_E5A_V02;
+            break;
+        case PB_GAL_EPH_SIGNAL_SRC_E5B:
+            ephSignal = GAL_EPH_SIGNAL_SRC_E5B_V02;
+            break;
+        default:
+            ephSignal = GAL_EPH_SIGNAL_SRC_UNKNOWN_V02;
+            break;
+    }
+    return ephSignal;
+}
+
+int LocationApiPbMsgConv::pbConvertToGalileoEphData(
+    const  PBGalileoEphemeris &pbEphInfo,
+    GalileoEphemeris &halEphInfo) const {
+
+    pbConvertToCommanEph(pbEphInfo.commonephemerisdata(), halEphInfo.commonEphemerisData);
+    // PBGalEphSignalSource dataSourceSignal = 2;
+    halEphInfo.dataSourceSignal = pbConvertToDataSourceSignal(pbEphInfo.datasourcesignal());
+    // uint32 sisIndex = 3;
+    halEphInfo.sisIndex = pbEphInfo.sisindex();
+    // double bgdE1E5a = 4;
+    halEphInfo.bgdE1E5a = pbEphInfo.bgde1e5a();
+    //  double bgdE1E5b = 5;
+    halEphInfo.bgdE1E5b = pbEphInfo.bgde1e5b();
+    // uint32 svHealth = 6;
+    halEphInfo.svHealth = pbEphInfo.svhealth();
+    return 0;
+}
+
+int LocationApiPbMsgConv::pbConvertToGalEphResponse(
+    const PBGalileoEphemerisResponse  &pbEphResp,
+    GalileoEphemerisResponse  &halResp) const {
+    halResp.numOfEphemeris = pbEphResp.galephemerisdata_size();
+    for (uint32_t idx = 0; idx < halResp.numOfEphemeris; idx++) {
+        pbConvertToGalileoEphData(pbEphResp.galephemerisdata(idx),
+                halResp.galEphemerisData[idx]);
+    }
+    return 0;
+}
+
+int LocationApiPbMsgConv::pbConvertToQzssEphResponse(
+    const PBQzssEphemerisResponse  &pbEphResp,
+    QzssEphemerisResponse  &halResp) const {
+
+    halResp.numOfEphemeris = pbEphResp.qzssephemerisdata_size();
+    for (uint32_t idx = 0; idx < halResp.numOfEphemeris; idx++) {
+        pbConvertToGpsEphData(pbEphResp.qzssephemerisdata(idx),
+                halResp.qzssEphemerisData[idx]);
+    }
+    return 0;
+}
+
+int LocationApiPbMsgConv::pbConvertToNavicEphData(
+    const PBNavicEphemeris &pbEphInfo,
+    NavicEphemeris &halEphInfo) const {
+    pbConvertToCommanEph(pbEphInfo.commonephemerisdata(), halEphInfo.commonEphemerisData);
+    // uint32 weekNum = 2;
+    halEphInfo.weekNum = pbEphInfo.weeknum();
+    // uint32 iodec = 3;
+    halEphInfo.iodec = pbEphInfo.iodec();
+    // uint32 l5Health = 4;
+    halEphInfo.l5Health = pbEphInfo.l5health();
+    //  uint32 sHealth = 5;
+    halEphInfo.sHealth = pbEphInfo.shealth();
+    // double inclinationAngleRad = 6;
+    halEphInfo.inclinationAngleRad = pbEphInfo.inclinationanglerad();
+    // uint32 urai = 7;
+    halEphInfo.urai = pbEphInfo.urai();
+    // double  tgd = 8;
+    halEphInfo.tgd = pbEphInfo.tgd();
+    return 0;
+}
+
+int LocationApiPbMsgConv::pbConvertToNavicEphResponse(
+    const PBNavicEphemerisResponse  &pbEphResp,
+    NavicEphemerisResponse  &halResp) const {
+
+    halResp.numOfEphemeris = pbEphResp.navicephemerisdata_size();
+    for (uint32_t idx = 0; idx < halResp.numOfEphemeris; idx++) {
+        pbConvertToNavicEphData(pbEphResp.navicephemerisdata(idx),
+                halResp.navicEphemerisData[idx]);
+    }
+    return 0;
+}
+
+int LocationApiPbMsgConv::pbConvertToSystemTime(
+    const PBLocApiGnssSystemTimeStructType &pbSystemTime,
+    GnssSystemTimeStructType &halSystemTime) const {
+
+    halSystemTime.validityMask = getGnssSystemTimeStructTypeFlagsFromPB(
+                                        pbSystemTime.validitymask());
+    halSystemTime.systemWeek             = pbSystemTime.systemweek();
+    halSystemTime.systemMsec             = pbSystemTime.systemmsec();
+    halSystemTime.systemClkTimeBias      = pbSystemTime.systemclktimebiasms();
+    halSystemTime.systemClkTimeUncMs     = pbSystemTime.systemclktimebiasuncms();
+    halSystemTime.refFCount              = pbSystemTime.reffcount();
+    halSystemTime.numClockResets         = pbSystemTime.numclockresets();
+    return 0;
+}
+
+int LocationApiPbMsgConv::pbConvertToGnssEphNotif(
+        const PBGnssEphemerisNotification &pbGnssEphNotif,
+        GnssSvEphemerisReport &gnssEphNotif) const {
+
+    gnssEphNotif.gnssConstellation =  getEnumForPBGnssLocSvSystem(
+            pbGnssEphNotif.gnssconstellation());
+    gnssEphNotif.isSystemTimeValid = pbGnssEphNotif.issystemtimevalid();
+
+    pbConvertToSystemTime(pbGnssEphNotif.systemtime(),
+            gnssEphNotif.systemTime);
+
+    switch (gnssEphNotif.gnssConstellation) {
+        case GNSS_LOC_SV_SYSTEM_GPS:
+            pbConvertToGpsEphResponse(pbGnssEphNotif.ephunion().gpsephemeris(),
+                    gnssEphNotif.ephInfo.gpsEphemeris);
+            break;
+        case GNSS_LOC_SV_SYSTEM_GALILEO:
+            pbConvertToGalEphResponse(pbGnssEphNotif.ephunion().galileoephemeris(),
+                    gnssEphNotif.ephInfo.galileoEphemeris);
+            break;
+        case GNSS_LOC_SV_SYSTEM_GLONASS:
+            pbConvertToGloEphResponse(pbGnssEphNotif.ephunion().glonassephemeris(),
+                    gnssEphNotif.ephInfo.glonassEphemeris);
+            break;
+        case GNSS_LOC_SV_SYSTEM_BDS:
+            pbConvertToBdsEphResponse(pbGnssEphNotif.ephunion().bdsephemeris(),
+                    gnssEphNotif.ephInfo.bdsEphemeris);
+            break;
+        case GNSS_LOC_SV_SYSTEM_QZSS:
+            pbConvertToQzssEphResponse(pbGnssEphNotif.ephunion().qzssephemeris(),
+                    gnssEphNotif.ephInfo.qzssEphemeris);
+            break;
+        case GNSS_LOC_SV_SYSTEM_NAVIC:
+            pbConvertToNavicEphResponse(pbGnssEphNotif.ephunion().navicephemeris(),
+                    gnssEphNotif.ephInfo.navicEphemeris);
+            break;
     }
     return 0;
 }

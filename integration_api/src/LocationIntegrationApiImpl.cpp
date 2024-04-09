@@ -71,6 +71,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <log_util.h>
 #include <gps_extended_c.h>
 #include <inttypes.h>
+#include <loc_misc_utils.h>
 
 static uint32_t sXtraTestEnabled = 0;
 static uint32_t sSleepTime = 800000;
@@ -338,6 +339,8 @@ LocationIntegrationApiImpl::LocationIntegrationApiImpl(LocIntegrationCbs& integr
     }
 
     LOC_LOGd("create sender socket: %s", mSocketName);
+    locUtilWaitForDir(SOCKET_LOC_CLIENT_DIR, "gps");
+
     // establish an ipc sender to the hal daemon
     mIpcSender = LocIpc::getLocIpcLocalSender(SOCKET_TO_LOCATION_HAL_DAEMON);
     if (mIpcSender == nullptr) {
@@ -382,12 +385,15 @@ void LocationIntegrationApiImpl::destroy() {
                 lock_guard<mutex> lock(mMutex);
                 mApiImpl->mClientRunning = false;
             }
+            usleep(50000); //give 50ms for socket clean up
+
             delete mApiImpl;
         }
         LocationIntegrationApiImpl* mApiImpl;
     };
 
     mMsgTask.sendMsg(new (nothrow) DestroyReq(this));
+    usleep(100000); //100ms for handling onReceive() messages
 }
 
 bool LocationIntegrationApiImpl::integrationClientAllowed() {
@@ -1269,7 +1275,7 @@ uint32_t LocationIntegrationApiImpl::configXtraParams(bool enable,
             LocConfigXtraReqMsg msg(mApiImpl->mSocketName, mEnable, mConfigParams,
                                     &mApiImpl->mPbufMsgConv);
             if (msg.serializeToProtobuf(pbStr)) {
-                mApiImpl->sendConfigMsgToHalDaemon(CONFIG_XTRA_PARAMS, pbStr.c_str());
+                mApiImpl->sendConfigMsgToHalDaemon(CONFIG_XTRA_PARAMS, pbStr);
             } else {
                 LOC_LOGe("serializeToProtobuf failed");
             }

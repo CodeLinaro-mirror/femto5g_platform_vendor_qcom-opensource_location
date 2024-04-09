@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -228,6 +228,15 @@ void LocHalDaemonClientHandler::updateSubscription(uint32_t mask) {
         };
     } else {
         mCallbacks.gnssDcReportCb = nullptr;
+    }
+
+    // Ephemeris Info
+    if (mSubscriptionMask & E_LOC_CB_GNSS_EPH_BIT) {
+        mCallbacks.svEphemerisCb = [this](const GnssSvEphemerisReport &notification) {
+            onGnssSvEphemerisCb(notification);
+        };
+    } else {
+        mCallbacks.svEphemerisCb = nullptr;
     }
 
     // following callbacks are not supported
@@ -447,7 +456,7 @@ void LocHalDaemonClientHandler::getAntennaInfo() {
     }
 }
 
-void LocHalDaemonClientHandler::cleanup() {
+void LocHalDaemonClientHandler::cleanup(bool forceRemove) {
     // please do not attempt to hold the lock, as the caller of this function
     // already holds the lock
 
@@ -455,7 +464,7 @@ void LocHalDaemonClientHandler::cleanup() {
     // remote client that is no longer reachable
     mIpcSender = nullptr;
 
-    if (0 != remove(mName.c_str())) {
+    if (forceRemove && 0 != remove(mName.c_str())) {
         LOC_LOGw("<-- failed to remove file %s error %s", mName.c_str(), strerror(errno));
     }
 
@@ -1394,4 +1403,28 @@ static GeofenceBreachTypeMask parseClientGeofenceBreachType(GeofenceBreachType t
             mask = 0;
     }
     return mask;
+}
+
+void LocHalDaemonClientHandler::onGnssSvEphemerisCb(
+        const GnssSvEphemerisReport &notification) {
+    std::lock_guard<std::recursive_mutex> lock(LocationApiService::mMutex);
+    LOC_LOGd("--< onGnssSvEphemerisCb, client name %s, ipc valid %d ",
+             mName.c_str(), (nullptr != mIpcSender));
+
+    if ((nullptr != mIpcSender) &&
+            (mSubscriptionMask & (E_LOC_CB_GNSS_EPH_BIT))) {
+        string pbStr;
+        LocAPIEphIndMsg msg(SERVICE_NAME, notification, &mService->mPbufMsgConv);
+        if (msg.serializeToProtobuf(pbStr)) {
+            LOC_LOGv("Sending eph message");
+            bool rc = sendMessage(pbStr.c_str(), pbStr.size(), msg.msgId);
+            // purge this client if failed
+            if (!rc) {
+                LOC_LOGe("failed rc=%d purging client=%s", rc, mName.c_str());
+                mService->deleteClientbyName(mName);
+            }
+        } else {
+            LOC_LOGe("LocAPIEphIndMsg serializeToProtobuf failed");
+        }
+    }
 }

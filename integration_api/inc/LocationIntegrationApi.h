@@ -27,7 +27,6 @@
  */
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
-
 Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -196,6 +195,17 @@ enum LocIntegrationEngineRunState {
     /** Request the position engine to be put into resume state.
      *  <br/> */
     LOC_INT_ENGINE_RUN_STATE_RESUME   = 2,
+    /** Request the selected position engine to be put into pause state
+     *  while retaining of any useful state data.
+     *  This engine run state is currently applicable to QDR engine only.
+     *  It is strongly advised to link this state to a vehicle state in which
+     *  the vehicle is expected to be stationary at the time of invocation of API
+     *  and subsequently, until the state is changed to Running.
+     *  For QDR, transition out of PAUSE_RETAIN happens
+     *  when either the state is changed to RESUME state via same command OR
+     *  when the device taken through suspend/resume or reboot power-state cycles.
+     *  <br/> */
+    LOC_INT_ENGINE_RUN_STATE_PAUSE_RETAIN   = 3,
 };
 
 /**
@@ -882,6 +892,28 @@ struct XtraConfigParams {
 
     /** Level of debug log messages that will be logged. <br/> */
     DebugLogLevel xtraDaemonDebugLogLevel;
+
+    /** URL of NTS KE Server. <br/>
+     *
+     *  The URL, if provided, shall be complete and shall include
+     *  the port number. <br/>
+     *
+     *  Max of 128 bytes, including null-terminating byte will be
+     *  supported. <br/>
+     *
+     *  Valid NTS KE server URL should start with "https://".
+     *  <br/>
+     *
+     *  If NTS KE server URL is not specified, then device will use
+     *  the default URL of https://nts.xtracloud.net:4460. <br/>
+     */
+    std::string ntsKeServerURL;
+
+    /** To set the diag logging status for XTRA. <br/>
+     *
+     * 0 to disable diag logging <br/>
+     * 1 to enable diag logging <br/> */
+    uint32_t xtraDaemonDiagLoggingStatus;
 };
 
 class LocationIntegrationApiImpl;
@@ -949,7 +981,30 @@ public:
         the constellation configuration to device default. <br/>
 
         Empty blacklistedSvList will be interpreted as to not
-        disable any constellation and to not blacklist any SV. <br/>
+        disable any constellation and not to blacklist any SV, which
+        means all SVs from all constellations are allowed to be used
+        by SPE. <br/>
+
+        For example, if client wants to disable data demod for all
+        SBAS SVs, client need to specify SBAS to be blacklisted by
+        adding (GNSS_CONSTELLATION_TYPE_SBAS, 0) to param
+        blacklistedSvList. Another example, if client wants to
+        enable only GPS and GAL constellations to be used by SPE,
+        then client needs to specify all the other constellations
+        defined in GnssConstellationType as to be blacklisted, this
+        means adding (GNSS_CONSTELLATION_TYPE_QZSS, 0),
+        (GNSS_CONSTELLATION_TYPE_BEIDOU, 0),
+        (GNSS_CONSTELLATION_TYPE_SBAS, 0) and
+        (GNSS_CONSTELLATION_TYPE_NAVIC, 0) to param
+        blacklistedSvList. <br/>
+
+        For blacklist one or more SVs in one constellation,
+        if client only wants to disale sv id 1 from GPS
+        constellation, then client needs to add
+        (GNSS_CONSTELLATION_TYPE_GPS, 1) to param blacklistedSvList.
+        By doing this, all other SVs in GPS constellation whose SV
+        id is not 1 and all SVs in non-GPS consteallations are
+        allowed to be used by SPE. <br/>
 
         @return true, if request is successfully processed as
                 requested. When returning true, LocConfigCb() will

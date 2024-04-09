@@ -97,8 +97,8 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *THIS IS AN AUTO GENERATED FILE. DO NOT ALTER IN ANY WAY
  *====*====*====*====*====*====*====*====*====*====*====*====*====*====*====*/
 
-/* This file was generated with Tool version 6.14.9
-   It was generated on: Thu Mar 23 2023 (Spin 0)
+/* This file was generated with Tool version 6.14.7
+   It was generated on: Thu Oct  5 2023 (Spin 0)
    From IDL File: location_service_v02.idl */
 
 /** @defgroup loc_qmi_consts Constant values defined in the IDL */
@@ -124,7 +124,7 @@ extern "C" {
 /** Major Version Number of the IDL used to generate this file */
 #define LOC_V02_IDL_MAJOR_VERS 0x02
 /** Revision Number of the IDL used to generate this file */
-#define LOC_V02_IDL_MINOR_VERS 0xA1
+#define LOC_V02_IDL_MINOR_VERS 0xA6
 /** Major Version Number of the qmi_idl_compiler used to generate this file */
 #define LOC_V02_IDL_TOOL_VERS 0x06
 /** Maximum Defined Message ID */
@@ -321,6 +321,9 @@ extern "C" {
 
 /**  Maximum number of satellites for which DGNSS corrections are provided.  */
 #define QMI_LOC_DGNSS_SV_MEAS_LIST_MAX_SIZE_V02 24
+
+/**  Maximum number of satellites for which ML Inferences are provided.  */
+#define QMI_LOC_ML_INFER_SV_MEAS_LIST_MAX_SIZE_V02 24
 #define QMI_LOC_SV_POLY_VELOCITY_COEF_SIZE_V02 12
 #define QMI_LOC_SV_POLY_XYZ_0_TH_ORDER_COEFF_SIZE_V02 3
 #define QMI_LOC_SV_POLY_XYZ_N_TH_ORDER_COEFF_SIZE_V02 9
@@ -1323,18 +1326,18 @@ typedef struct {
 
   float PDOP;
   /**<   Position dilution of precision (PDOP). \n
-       - Range -- 0 (highest accuracy) to 50 (lowest accuracy) \n
+       - Range -- 0 (highest accuracy) to 500 (lowest accuracy) \n
        - PDOP = square root of (HDOP\textsuperscript{2} + VDOP\textsuperscript{2})
       */
 
   float HDOP;
   /**<   Horizontal dilution of precision. \n
-       - Range -- 0 (highest accuracy) to 50 (lowest accuracy)
+       - Range -- 0 (highest accuracy) to 500 (lowest accuracy)
     */
 
   float VDOP;
   /**<   Vertical dilution of precision. \n
-       - Range -- 0 (highest accuracy) to 50 (lowest accuracy)
+       - Range -- 0 (highest accuracy) to 500 (lowest accuracy)
        */
 }qmiLocDOPStructT_v02;  /* Type */
 /**
@@ -1348,28 +1351,28 @@ typedef struct {
 
   float PDOP;
   /**<   Position dilution of precision. \n
-       - Range: 0 (highest accuracy) to 50 (lowest accuracy) \n
+       - Range: 0 (highest accuracy) to 500 (lowest accuracy) \n
        - PDOP = square root of (HDOP\textsuperscript{2} + VDOP\textsuperscript{2})
      */
 
   float HDOP;
   /**<   Horizontal dilution of precision. \n
-       - Range: 0 (highest accuracy) to 50 (lowest accuracy)
+       - Range: 0 (highest accuracy) to 500 (lowest accuracy)
     */
 
   float VDOP;
   /**<   Vertical dilution of precision. \n
-       - Range: 0 (highest accuracy) to 50 (lowest accuracy)
+       - Range: 0 (highest accuracy) to 500 (lowest accuracy)
     */
 
   float GDOP;
   /**<   Geometric  dilution of precision. \n
-       - Range -- 0 (highest accuracy) to 50 (lowest accuracy)
+       - Range -- 0 (highest accuracy) to 500 (lowest accuracy)
     */
 
   float TDOP;
   /**<   Time dilution of precision. \n
-       - Range -- 0 (highest accuracy) to 50 (lowest accuracy)
+       - Range -- 0 (highest accuracy) to 500 (lowest accuracy)
     */
 }qmiLocExtDOPStructT_v02;  /* Type */
 /**
@@ -1497,7 +1500,9 @@ typedef uint64_t qmiLocGnssSignalTypeMaskT_v02;
 #define QMI_LOC_MASK_GNSS_SIGNAL_TYPE_NAVIC_L5_V02 ((qmiLocGnssSignalTypeMaskT_v02)0x00040000ull) /**<  NavIC L5 RF band \n */
 #define QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2A_Q_V02 ((qmiLocGnssSignalTypeMaskT_v02)0x00080000ull) /**<  BeiDou B2a Q RF band.  */
 #define QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_I_V02 ((qmiLocGnssSignalTypeMaskT_v02)0x00100000ull) /**<  BeiDou B2b I RF band (data) \n  */
-#define QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q_V02 ((qmiLocGnssSignalTypeMaskT_v02)0x00200000ull) /**<  BeiDou B2b Q RF band (pilot)  */
+#define QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q_V02 ((qmiLocGnssSignalTypeMaskT_v02)0x00200000ull) /**<  BeiDou B2b Q RF band (pilot) \n */
+#define QMI_LOC_MASK_GNSS_SIGNAL_TYPE_NAVIC_L1_V02 ((qmiLocGnssSignalTypeMaskT_v02)0x00400000ull) /**<  Navic L1 RF band \n  */
+#define QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1_CB_V02 ((qmiLocGnssSignalTypeMaskT_v02)0x00800000ull) /**<  QZSS L1 CB RF band   */
 /** @addtogroup loc_qmi_enums
     @{
   */
@@ -1523,9 +1528,11 @@ typedef enum {
   eQMI_LOC_GNSS_SIGNAL_TYPE_QZSS_L5_Q_V02 = 17, /**<  QZSS L5 Q RF band \n  */
   eQMI_LOC_GNSS_SIGNAL_TYPE_SBAS_L1_CA_V02 = 18, /**<  SBAS L1 CA RF band \n */
   eQMI_LOC_GNSS_SIGNAL_TYPE_NAVIC_L5_V02 = 19, /**<  NavIC L5 RF band \n */
-  eQMI_LOC_GNSS_SIGNAL_TYPE_BEIDOU_B2A_Q_V02 = 20, /**<  BeiDou B2a Q RF band  */
-  eQMI_LOC_GNSS_SIGNAL_TYPE_BEIDOU_B2B_I_V02 = 21, /**<  BeiDou B2b I RF band (data)  */
-  eQMI_LOC_GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q_V02 = 22, /**<  BeiDou B2b Q RF band (pilot)  */
+  eQMI_LOC_GNSS_SIGNAL_TYPE_BEIDOU_B2A_Q_V02 = 20, /**<  BeiDou B2a Q RF band \n */
+  eQMI_LOC_GNSS_SIGNAL_TYPE_BEIDOU_B2B_I_V02 = 21, /**<  BeiDou B2b I RF band (data) \n */
+  eQMI_LOC_GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q_V02 = 22, /**<  BeiDou B2b Q RF band (pilot) \n */
+  eQMI_LOC_GNSS_SIGNAL_TYPE_NAVIC_L1_V02 = 23, /**<  Navic L1 RF band \n */
+  eQMI_LOC_GNSS_SIGNAL_TYPE_QZSS_L1_CB_V02 = 24, /**<  QZSS L1 CB RF band  */
   QMILOCGNSSSIGNALTYPEENUMT_MAX_ENUM_VAL_V02 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
 }qmiLocGnssSignalTypeEnumT_v02;
 /**
@@ -1575,7 +1582,9 @@ typedef struct {
       - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_NAVIC_L5 (0x00040000) --  NavIC L5 RF band \n
       - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2A_Q (0x00080000) --  BeiDou B2a Q RF band.
       - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_I (0x00100000) --  BeiDou B2b I RF band (data) \n
-      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q (0x00200000) --  BeiDou B2b Q RF band (pilot)  */
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q (0x00200000) --  BeiDou B2b Q RF band (pilot) \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_NAVIC_L1 (0x00400000) --  Navic L1 RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1_CB (0x00800000) --  QZSS L1 CB RF band   */
 
   int32_t agcMetricDb;
   /**<   AGC metric in 0.01 dB. */
@@ -1974,7 +1983,7 @@ typedef struct {
        - QZSS --    193 to 197 \n
        - BDS --     201 to 263 \n
        - Galileo -- 301 to 336 \n
-       - NavIC --   401 to 414
+       - NavIC --   401 to 420
       */
 
   /* Optional */
@@ -2081,7 +2090,7 @@ typedef struct {
       - QZSS --    193 to 197 \n
       - BDS --     201 to 263 \n
       - Galileo -- 301 to 336 \n
-      - NavIC --   401 to 414
+      - NavIC --   401 to 420
       */
 
   /* Optional */
@@ -2114,7 +2123,9 @@ typedef struct {
       - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_NAVIC_L5 (0x00040000) --  NavIC L5 RF band \n
       - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2A_Q (0x00080000) --  BeiDou B2a Q RF band.
       - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_I (0x00100000) --  BeiDou B2b I RF band (data) \n
-      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q (0x00200000) --  BeiDou B2b Q RF band (pilot)
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q (0x00200000) --  BeiDou B2b Q RF band (pilot) \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_NAVIC_L1 (0x00400000) --  Navic L1 RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1_CB (0x00800000) --  QZSS L1 CB RF band
  */
 
   /* Optional */
@@ -2299,7 +2310,7 @@ typedef struct {
          - QZSS --   193 to 197 \n
          - BDS --    201 to 263 \n
          - Galileo -- 301 to 336 \n
-         - NavIC --  401 to 414 \n
+         - NavIC --  401 to 420 \n
         The GPS and GLONASS SVs can be disambiguated using the system field. */
 
   uint8_t healthStatus;
@@ -2418,7 +2429,9 @@ typedef struct {
       - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_NAVIC_L5 (0x00040000) --  NavIC L5 RF band \n
       - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2A_Q (0x00080000) --  BeiDou B2a Q RF band.
       - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_I (0x00100000) --  BeiDou B2b I RF band (data) \n
-      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q (0x00200000) --  BeiDou B2b Q RF band (pilot)  */
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q (0x00200000) --  BeiDou B2b Q RF band (pilot) \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_NAVIC_L1 (0x00400000) --  Navic L1 RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1_CB (0x00800000) --  QZSS L1 CB RF band   */
 
   /* Optional */
   /*  RF Loss from Antenna to Baseband */
@@ -3714,11 +3727,11 @@ typedef struct {
        - 0x00 (FALSE) -- Civic address is not needed \n
        - 0x01 (TRUE) -- Civic address is needed
 
-    Note: If the civic address is available with the AP, the AP shall inject
-    the same using the new QMI_LOC_INJECT_LOCATION_ CIVIC_ADDRESS command.
+	Note: If the civic address is available with the AP, the AP shall inject
+	the same using the new QMI_LOC_INJECT_LOCATION_ CIVIC_ADDRESS command.
 
         If the civic address is not available, the AP shall NOT use the new
-    QMI_LOC_INJECT_LOCATION_ CIVIC_ADDRESS command. The existing DBH injection API should
+	QMI_LOC_INJECT_LOCATION_ CIVIC_ADDRESS command. The existing DBH injection API should
         be used to inject hybrid location if available.
   */
 }qmiLocEventWifiReqIndMsgT_v02;  /* Message */
@@ -4508,7 +4521,7 @@ typedef struct {
        - QZSS --    193 to 197 \n
        - BDS --     201 to 263 \n
        - Galileo -- 301 to 336 \n
-       - NavIC --   401 to 414
+       - NavIC --   401 to 420
         */
 
   /* Optional */
@@ -4532,7 +4545,7 @@ typedef struct {
       - QZSS --    193 to 197 \n
       - BDS --     201 to 263 \n
       - Galileo -- 301 to 336 \n
-      - NavIC --   401 to 414
+      - NavIC --   401 to 420
       */
 
   /* Optional */
@@ -4564,7 +4577,9 @@ typedef struct {
       - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_NAVIC_L5 (0x00040000) --  NavIC L5 RF band \n
       - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2A_Q (0x00080000) --  BeiDou B2a Q RF band.
       - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_I (0x00100000) --  BeiDou B2b I RF band (data) \n
-      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q (0x00200000) --  BeiDou B2b Q RF band (pilot)  */
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q (0x00200000) --  BeiDou B2b Q RF band (pilot) \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_NAVIC_L1 (0x00400000) --  Navic L1 RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1_CB (0x00800000) --  QZSS L1 CB RF band   */
 }qmiLocEventGeofenceBatchedBreachIndMsgT_v02;  /* Message */
 /**
     @}
@@ -4726,7 +4741,7 @@ typedef struct {
        - QZSS --    193 to 197 \n
        - BDS --     201 to 263 \n
        - Galileo -- 301 to 336 \n
-       - NavIC --   401 to 414
+       - NavIC --   401 to 420
         */
 
   /* Optional */
@@ -4750,7 +4765,7 @@ typedef struct {
         - QZSS --    193 to 197 \n
         - BDS --     201 to 263 \n
         - Galileo -- 301 to 336 \n
-        - NavIC --   401 to 414
+        - NavIC --   401 to 420
       */
 
   /* Optional */
@@ -4782,7 +4797,9 @@ typedef struct {
       - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_NAVIC_L5 (0x00040000) --  NavIC L5 RF band \n
       - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2A_Q (0x00080000) --  BeiDou B2a Q RF band.
       - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_I (0x00100000) --  BeiDou B2b I RF band (data) \n
-      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q (0x00200000) --  BeiDou B2b Q RF band (pilot)  */
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q (0x00200000) --  BeiDou B2b Q RF band (pilot) \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_NAVIC_L1 (0x00400000) --  Navic L1 RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1_CB (0x00800000) --  QZSS L1 CB RF band   */
 }qmiLocEventGeofenceBatchedDwellIndMsgT_v02;  /* Message */
 /**
     @}
@@ -6046,13 +6063,13 @@ typedef struct {
   /**<   Each entry in the list contains the SV ID of a satellite
        used for calculating this position report. The following
        information is associated with each SV ID. \n
-       Range: \n
+	   Range: \n
       - GPS --     1 to 32 \n
       - GLONASS -- 65 to 96 \n
       - QZSS --    193 to 197 \n
       - BDS --     201 to 263 \n
       - Galileo -- 301 to 336 \n
-      - NavIC --   401 to 414
+      - NavIC --   401 to 420
       */
 
   /* Optional */
@@ -11870,7 +11887,7 @@ typedef struct {
        - QZSS --    193 to 197 \n
        - BDS --     201 to 263 \n
        - Galileo -- 301 to 336 \n
-       - NavIC --   401 to 414
+       - NavIC --   401 to 420
        */
 
   /* Optional */
@@ -11904,7 +11921,7 @@ typedef struct {
        - QZSS --    193 to 197 \n
        - BDS --     201 to 263 \n
        - Galileo -- 301 to 336 \n
-       - NavIC --   401 to 414
+       - NavIC --   401 to 420
       */
 
   /* Optional */
@@ -11936,7 +11953,9 @@ typedef struct {
       - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_NAVIC_L5 (0x00040000) --  NavIC L5 RF band \n
       - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2A_Q (0x00080000) --  BeiDou B2a Q RF band.
       - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_I (0x00100000) --  BeiDou B2b I RF band (data) \n
-      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q (0x00200000) --  BeiDou B2b Q RF band (pilot)  */
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q (0x00200000) --  BeiDou B2b Q RF band (pilot) \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_NAVIC_L1 (0x00400000) --  Navic L1 RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1_CB (0x00800000) --  QZSS L1 CB RF band   */
 
   /* Optional */
   /*  Conformity Index */
@@ -13334,7 +13353,7 @@ typedef struct {
        - 0x01 (TRUE) -- GPS engine is in E911 mode \n
        - 0x00 (FALSE) -- GPS engine is not in E911 mode
 
-       Note: e911Mode shall be set as TRUE for non-E911 Wi-Fi AP injections.
+	   Note: e911Mode shall be set as TRUE for non-E911 Wi-Fi AP injections.
     */
 }qmiLocEventInjectWifiApDataReqIndMsgT_v02;  /* Message */
 /**
@@ -14575,6 +14594,20 @@ typedef enum {
     @}
   */
 
+/** @addtogroup loc_qmi_enums
+    @{
+  */
+typedef enum {
+  QMILOCAGCSTATUSENUMT_MIN_ENUM_VAL_V02 = -2147483647, /**< To force a 32 bit signed enum.  Do not change or use*/
+  eQMI_LOC_NO_SATURATION_V02 = 0, /**<  AGC status is No saturation \n  */
+  eQMI_LOC_FRONT_END_GAIN_MAXIMUM_SATURATION_V02 = 1, /**<  AGC status is Front end gain maximum saturation \n  */
+  eQMI_LOC_FRONT_END_GAIN_MINIMUM_SATURATION_V02 = 2, /**<  AGC status is Front end gain minimum saturation  */
+  QMILOCAGCSTATUSENUMT_MAX_ENUM_VAL_V02 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
+}qmiLocAgcStatusEnumT_v02;
+/**
+    @}
+  */
+
 /** @addtogroup loc_qmi_aggregates
     @{
   */
@@ -14836,7 +14869,7 @@ typedef struct {
          - QZSS --    193 to 197 \n
          - BDS --     201 to 263 \n
          - Galileo -- 301 to 336 \n
-         - NavIC -- 401 to 414
+         - NavIC -- 401 to 420
       */
 
   uint8_t gloFrequency;
@@ -15016,6 +15049,26 @@ typedef struct {
     @}
   */
 
+/** @addtogroup loc_qmi_aggregates
+    @{
+  */
+typedef struct {
+
+  uint8_t mlInfer_valid;
+  /**<   Indicates whether the ML Inference Pseudorange correction in meters
+       field contains valid information. \n
+       - 0x01 (TRUE)  -- Valid \n
+       - 0x00 (FALSE) -- Invalid
+       */
+
+  float mlInfer;
+  /**<   ML Inference, per SV measurement correction data in meters.
+    */
+}qmiLocMlInferSVMeasurementStructT_v02;  /* Type */
+/**
+    @}
+  */
+
 /** @addtogroup loc_qmi_messages
     @{
   */
@@ -15182,7 +15235,9 @@ typedef struct {
       - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_NAVIC_L5 (0x00040000) --  NavIC L5 RF band \n
       - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2A_Q (0x00080000) --  BeiDou B2a Q RF band.
       - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_I (0x00100000) --  BeiDou B2b I RF band (data) \n
-      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q (0x00200000) --  BeiDou B2b Q RF band (pilot)  */
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q (0x00200000) --  BeiDou B2b Q RF band (pilot) \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_NAVIC_L1 (0x00400000) --  Navic L1 RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1_CB (0x00800000) --  QZSS L1 CB RF band   */
 
   /* Optional */
   /*  Jammer Indicator */
@@ -15470,7 +15525,9 @@ typedef struct {
       - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_NAVIC_L5 (0x00040000) --  NavIC L5 RF band \n
       - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2A_Q (0x00080000) --  BeiDou B2a Q RF band.
       - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_I (0x00100000) --  BeiDou B2b I RF band (data) \n
-      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q (0x00200000) --  BeiDou B2b Q RF band (pilot)  */
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q (0x00200000) --  BeiDou B2b Q RF band (pilot) \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_NAVIC_L1 (0x00400000) --  Navic L1 RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1_CB (0x00800000) --  QZSS L1 CB RF band   */
 
   /* Optional */
   /*  GNSS Leap Second */
@@ -15481,6 +15538,28 @@ typedef struct {
   /*  GNSS Leap Second Uncertainty */
   uint8_t gnssLeapSecondUnc_valid;  /**< Must be set to true if gnssLeapSecondUnc is being passed */
   uint8_t gnssLeapSecondUnc;
+
+  /* Optional */
+  /*  ML Inference Report for SVs */
+  uint8_t mlInferSvMeasurement_valid;  /**< Must be set to true if mlInferSvMeasurement is being passed */
+  uint32_t mlInferSvMeasurement_len;  /**< Must be set to # of elements in mlInferSvMeasurement */
+  qmiLocMlInferSVMeasurementStructT_v02 mlInferSvMeasurement[QMI_LOC_ML_INFER_SV_MEAS_LIST_MAX_SIZE_V02];
+  /**<  \n ML Inference array denoting SV measurement correction data.
+       The elements 0 to (QMI_LOC_SV_MEAS_LIST_MAX_SIZE - 1) of this array correspond
+       to the SV measurements in the TLV svMeasurement.
+       The elements QMI_LOC_SV_MEAS_LIST_MAX_SIZE to (QMI_LOC_ML_INFER_SV_MEAS_LIST_MAX_SIZE - 1) of
+       this array correspond to the SV measurements in the TLV extSvMeasurement.
+      	*/
+
+  /* Optional */
+  /*  Automatic gain control(AGC) Status */
+  uint8_t agcStatus_valid;  /**< Must be set to true if agcStatus is being passed */
+  qmiLocAgcStatusEnumT_v02 agcStatus;
+  /**<   Values: \n
+      - eQMI_LOC_NO_SATURATION (0) --  AGC status is No saturation \n
+      - eQMI_LOC_FRONT_END_GAIN_MAXIMUM_SATURATION (1) --  AGC status is Front end gain maximum saturation \n
+      - eQMI_LOC_FRONT_END_GAIN_MINIMUM_SATURATION (2) --  AGC status is Front end gain minimum saturation
+ */
 }qmiLocEventGnssSvMeasInfoIndMsgT_v02;  /* Message */
 /**
     @}
@@ -15540,7 +15619,7 @@ typedef struct {
          - QZSS --    193 to 197 \n
          - BDS --     201 to 263 \n
          - Galileo -- 301 to 336 \n
-         - NavIC --   401 to 414
+         - NavIC --   401 to 420
      */
 
   /* Mandatory */
@@ -15881,7 +15960,7 @@ typedef struct {
   uint32_t toc;
   /**<   Clock data reference time of week.  \n
        - Units -- Seconds \n
-       If source is ephemeris: \n
+	   If source is ephemeris: \n
          - Value for GPS, QZSS, BDS, Galileo, and NavIC is decoded OTA in full GPS seconds. \n
          - Value for GLONASS is the same as GLONASS TOE in full GPS seconds. \n
        If source is XTRA: \n
@@ -15900,7 +15979,7 @@ typedef struct {
   uint32_t toe;
   /**<   Reference time of ephemeris. \n
        - Units -- Seconds \n
-       If source is ephemeris: \n
+	   If source is ephemeris: \n
          - Value for GPS, QZSS, Galileo, and BDS is decoded OTA. \n
          - Value for GLONASS corresponds to ephemeris Tb. \n
        If source is XTRA: \n
@@ -17302,7 +17381,7 @@ typedef struct {
       - QZSS --    193 to 197 \n
       - BDS --     201 to 263 \n
       - Galileo -- 301 to 336 \n
-      - NavIC --   401 to 414
+      - NavIC --   401 to 420
   */
 
   /* Optional */
@@ -17345,7 +17424,7 @@ typedef struct {
        - QZSS --    193 to 197 \n
        - BDS --     201 to 263 \n
        - Galileo -- 301 to 336 \n
-       - NavIC --   401 to 414\n
+       - NavIC --   401 to 420\n
       */
 
   /* Optional */
@@ -17377,7 +17456,9 @@ typedef struct {
       - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_NAVIC_L5 (0x00040000) --  NavIC L5 RF band \n
       - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2A_Q (0x00080000) --  BeiDou B2a Q RF band.
       - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_I (0x00100000) --  BeiDou B2b I RF band (data) \n
-      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q (0x00200000) --  BeiDou B2b Q RF band (pilot)  */
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q (0x00200000) --  BeiDou B2b Q RF band (pilot) \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_NAVIC_L1 (0x00400000) --  Navic L1 RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1_CB (0x00800000) --  QZSS L1 CB RF band   */
 }qmiLocEventDbtPositionReportIndMsgT_v02;  /* Message */
 /**
     @}
@@ -18608,7 +18689,9 @@ typedef uint64_t qmiLocFeaturesStatusMaskT_v02;
 #define QMI_LOC_FEATURE_STATUS_CLOCK_ESTIMATE_V02 ((qmiLocFeaturesStatusMaskT_v02)0x00000080ull) /**<  Clock estimate. \n */
 #define QMI_LOC_FEATURE_STATUS_DGNSS_V02 ((qmiLocFeaturesStatusMaskT_v02)0x00000100ull) /**<  DGNSS. \n */
 #define QMI_LOC_FEATURE_STATUS_QPPE_V02 ((qmiLocFeaturesStatusMaskT_v02)0x00000200ull) /**<  QPPE. \n */
-#define QMI_LOC_FEATURE_STATUS_ROBUST_LOCATION_V02 ((qmiLocFeaturesStatusMaskT_v02)0x00000400ull) /**<  Robust Location.  */
+#define QMI_LOC_FEATURE_STATUS_ROBUST_LOCATION_V02 ((qmiLocFeaturesStatusMaskT_v02)0x00000400ull) /**<  Robust Location. \n */
+#define QMI_LOC_FEATURE_STATUS_NLOS_ML20_V02 ((qmiLocFeaturesStatusMaskT_v02)0x00000800ull) /**<  Machine Learning. \n */
+#define QMI_LOC_FEATURE_STATUS_GNSS_NHZ_V02 ((qmiLocFeaturesStatusMaskT_v02)0x00001000ull) /**<  GNSS NHz.  */
 /** @addtogroup loc_qmi_messages
     @{
   */
@@ -18666,7 +18749,9 @@ typedef struct {
       - QMI_LOC_FEATURE_STATUS_CLOCK_ESTIMATE (0x00000080) --  Clock estimate. \n
       - QMI_LOC_FEATURE_STATUS_DGNSS (0x00000100) --  DGNSS. \n
       - QMI_LOC_FEATURE_STATUS_QPPE (0x00000200) --  QPPE. \n
-      - QMI_LOC_FEATURE_STATUS_ROBUST_LOCATION (0x00000400) --  Robust Location.
+      - QMI_LOC_FEATURE_STATUS_ROBUST_LOCATION (0x00000400) --  Robust Location. \n
+      - QMI_LOC_FEATURE_STATUS_NLOS_ML20 (0x00000800) --  Machine Learning. \n
+      - QMI_LOC_FEATURE_STATUS_GNSS_NHZ (0x00001000) --  GNSS NHz.
  */
 }qmiLocGetSupportedFeatureIndMsgT_v02;  /* Message */
 /**
@@ -20238,14 +20323,14 @@ typedef struct {
   uint8_t navic_persist_blacklist_sv_valid;  /**< Must be set to true if navic_persist_blacklist_sv is being passed */
   uint64_t navic_persist_blacklist_sv;
   /**<   Specifies the NavIC SV mask to disable/blacklist. SV ID mapping: \n
-       - SV IDs 401-414 map to bits 0-13. */
+       - SV IDs 401-420 map to bits 0-19. */
 
   /* Optional */
   /*  NavIC SV IDs to Remove from Blacklist */
   uint8_t navic_clear_persist_blacklist_sv_valid;  /**< Must be set to true if navic_clear_persist_blacklist_sv is being passed */
   uint64_t navic_clear_persist_blacklist_sv;
   /**<   Specifies the NavIC SV mask to remove from persistent blacklist. SV ID mapping: \n
-       - SV IDs 401-414 map to bits 0-13. */
+       - SV IDs 401-420 map to bits 0-19. */
 }qmiLocSetBlacklistSvReqMsgT_v02;  /* Message */
 /**
     @}
@@ -20318,7 +20403,7 @@ typedef struct {
   uint8_t navic_persist_blacklist_sv_valid;  /**< Must be set to true if navic_persist_blacklist_sv is being passed */
   uint64_t navic_persist_blacklist_sv;
   /**<   Specifies the blacklisted NavIC SV mask. SV ID mapping: \n
-       - SV IDs 401-414 map to bits 0-13 */
+       - SV IDs 401-420 map to bits 0-19 */
 }qmiLocGetBlacklistSvIndMsgT_v02;  /* Message */
 /**
     @}
@@ -21219,7 +21304,7 @@ typedef struct {
        - QZSS --    193 to 197 \n
        - BDS --     201 to 263 \n
        - Galileo -- 301 to 336 \n
-       - NavIC --   401 to 414 \n
+       - NavIC --   401 to 420 \n
       */
 
   qmiLocEphUpdateActionEnumT_v02 updateAction;
@@ -22030,7 +22115,9 @@ typedef struct {
       - QMI_LOC_FEATURE_STATUS_CLOCK_ESTIMATE (0x00000080) --  Clock estimate. \n
       - QMI_LOC_FEATURE_STATUS_DGNSS (0x00000100) --  DGNSS. \n
       - QMI_LOC_FEATURE_STATUS_QPPE (0x00000200) --  QPPE. \n
-      - QMI_LOC_FEATURE_STATUS_ROBUST_LOCATION (0x00000400) --  Robust Location.
+      - QMI_LOC_FEATURE_STATUS_ROBUST_LOCATION (0x00000400) --  Robust Location. \n
+      - QMI_LOC_FEATURE_STATUS_NLOS_ML20 (0x00000800) --  Machine Learning. \n
+      - QMI_LOC_FEATURE_STATUS_GNSS_NHZ (0x00001000) --  GNSS NHz.
  */
 }qmiLocEventReportIndMsgT_v02;  /* Message */
 /**
@@ -22566,7 +22653,7 @@ typedef struct {
        - QZSS --    193 to 197  \n
        - BDS --     201 to 263 \n
        - Galileo -- 301 to 336 \n
-       - NavIC --   401 to 414 */
+       - NavIC --   401 to 420 */
 
   float carrierFrequencyHz;
   /**<   Carrier frequency of the signal to correct.
@@ -23013,7 +23100,7 @@ typedef struct {
        - QZSS --    193 to 197 \n
        - BDS --     201 to 263 \n
        - Galileo -- 301 to 336 \n
-       - NavIC --   401 to 414
+       - NavIC --   401 to 420
      */
 
   /* Optional */
@@ -23045,7 +23132,9 @@ typedef struct {
       - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_NAVIC_L5 (0x00040000) --  NavIC L5 RF band \n
       - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2A_Q (0x00080000) --  BeiDou B2a Q RF band.
       - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_I (0x00100000) --  BeiDou B2b I RF band (data) \n
-      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q (0x00200000) --  BeiDou B2b Q RF band (pilot)  */
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q (0x00200000) --  BeiDou B2b Q RF band (pilot) \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_NAVIC_L1 (0x00400000) --  Navic L1 RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1_CB (0x00800000) --  QZSS L1 CB RF band   */
 
   /* Optional */
   /*  Measurement Variance 1 */
@@ -23943,7 +24032,7 @@ typedef struct {
         - Units -- Degrees \n
         - Range -- -90.0 to 90.0 \n
         Positive values indicate northern latitude.
-        Negative values indicate southern latitude.
+		Negative values indicate southern latitude.
    */
 
   /* Optional */
@@ -23953,8 +24042,8 @@ typedef struct {
   /**<   Latitude (specified in WGS84 datum).\n
         - Units -- Degrees \n
         - Range -- -180.0 to 180.0 \n
-        Positive values indicate eastern longitude.
-        Negative values indicate western longitude.
+		Positive values indicate eastern longitude.
+		Negative values indicate western longitude.
    */
 
   /* Optional */
@@ -23973,7 +24062,7 @@ typedef struct {
         - Units -- Percent (1 to 99)\n
         - 0, 101 to 255 -- Invalid value\n
         - If 100 is received, reinterpret to 99 \n
-        Note: This field must be specified with horizontal uncertainty.
+		Note: This field must be specified with horizontal uncertainty.
         If not specified when horUncCircular is set, the default value is 50.
    */
 
@@ -23983,8 +24072,8 @@ typedef struct {
   float altitudeWrtEllipsoid;
   /**<   Altitude with respect to the WGS84 ellipsoid.\n
         - Units -- Meters \n
-        - Positive -- Height \n
-        - Negative -- Depth
+		- Positive -- Height \n
+		- Negative -- Depth
    */
 
   /* Optional */
@@ -24010,12 +24099,12 @@ typedef struct {
   uint8_t vertConfidence;
   /**<   Vertical confidence, as defined by ETSI TS 101 109 (3GPP \hyperref[TS 03.32]{TS 03.32}). \n
         - Units -- Percent (0 to 99)\n
-        - 0 -- Invalid value \n
-        - 100 to 256 -- Not used \n
-        - If 100 is received, reinterpret to 99 \n
-        Note: This field must be specified with the vertical uncertainty.
+		- 0 -- Invalid value \n
+		- 100 to 256 -- Not used \n
+		- If 100 is received, reinterpret to 99 \n
+		Note: This field must be specified with the vertical uncertainty.
         If not specified, the default value is 50.
-    */
+	*/
 
   /* Optional */
   /*  Altitude Source */
@@ -24345,15 +24434,29 @@ typedef struct {
   /*  Old Power State  */
   uint8_t powerStateOld_valid;  /**< Must be set to true if powerStateOld is being passed */
   qmiLocPlatformPowerStateEnumT_v02 powerStateOld;
-  /**<   Old power state. */
+  /**<   Old power state. \n
+ Values: \n
+      - eQMI_LOC_POWER_STATE_UNKNOWN (0) --  Platform power state unknown \n
+      - eQMI_LOC_POWER_STATE_SUSPENDED (1) --  Platform has entered a lower power state \n
+      - eQMI_LOC_POWER_STATE_RESUME (2) --  Platform has entered a higher power state \n
+      - eQMI_LOC_POWER_STATE_SHUTDOWN (3) --  Platform has started to gracefully shutdown \n
+      - eQMI_LOC_POWER_STATE_DEEP_SLEEP_ENTRY (4) --  Platform has entered deep sleep power state \n
+      - eQMI_LOC_POWER_STATE_DEEP_SLEEP_EXIT (5) --  Platform has exited deep sleep power state   */
 
   /* Optional */
   /*  New Power State */
   uint8_t powerStateNew_valid;  /**< Must be set to true if powerStateNew is being passed */
   qmiLocPlatformPowerStateEnumT_v02 powerStateNew;
   /**<   New power state. Clients should deregister for all events and indications
-       when GNSS is in a suspended state and reregister when the resume event is
-       received. */
+ when GNSS is in a suspended state and reregister when the resume event is
+ received. \n
+ Values: \n
+      - eQMI_LOC_POWER_STATE_UNKNOWN (0) --  Platform power state unknown \n
+      - eQMI_LOC_POWER_STATE_SUSPENDED (1) --  Platform has entered a lower power state \n
+      - eQMI_LOC_POWER_STATE_RESUME (2) --  Platform has entered a higher power state \n
+      - eQMI_LOC_POWER_STATE_SHUTDOWN (3) --  Platform has started to gracefully shutdown \n
+      - eQMI_LOC_POWER_STATE_DEEP_SLEEP_ENTRY (4) --  Platform has entered deep sleep power state \n
+      - eQMI_LOC_POWER_STATE_DEEP_SLEEP_EXIT (5) --  Platform has exited deep sleep power state   */
 }qmiLocPlatformPowerStateChangedIndMsgT_v02;  /* Message */
 /**
     @}
@@ -24461,7 +24564,7 @@ typedef struct {
        - QZSS --    193 to 197 \n
        - BDS --     201 to 263 \n
        - Galileo -- 301 to 336 \n
-       - NavIC --   401 to 414 */
+       - NavIC --   401 to 420 */
 
   uint8_t type;
   /**<   Navigation data type. Values:  \n
@@ -24718,7 +24821,9 @@ typedef struct {
       - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_NAVIC_L5 (0x00040000) --  NavIC L5 RF band \n
       - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2A_Q (0x00080000) --  BeiDou B2a Q RF band.
       - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_I (0x00100000) --  BeiDou B2b I RF band (data) \n
-      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q (0x00200000) --  BeiDou B2b Q RF band (pilot)  */
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q (0x00200000) --  BeiDou B2b Q RF band (pilot) \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_NAVIC_L1 (0x00400000) --  Navic L1 RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1_CB (0x00800000) --  QZSS L1 CB RF band   */
 
   /* Optional */
   /*  Jammer Indicator for GNSS Signals */
@@ -25142,6 +25247,36 @@ typedef struct {
   /*  GNSS Leap Second Uncertainty */
   uint8_t gnssLeapSecondUnc_valid;  /**< Must be set to true if gnssLeapSecondUnc is being passed */
   uint8_t gnssLeapSecondUnc;
+
+  /* Optional */
+  /*  Automatic gain control(AGC) Status for L1 band */
+  uint8_t agcStatusL1_valid;  /**< Must be set to true if agcStatusL1 is being passed */
+  qmiLocAgcStatusEnumT_v02 agcStatusL1;
+  /**<   Values: \n
+      - eQMI_LOC_NO_SATURATION (0) --  AGC status is No saturation \n
+      - eQMI_LOC_FRONT_END_GAIN_MAXIMUM_SATURATION (1) --  AGC status is Front end gain maximum saturation \n
+      - eQMI_LOC_FRONT_END_GAIN_MINIMUM_SATURATION (2) --  AGC status is Front end gain minimum saturation
+ */
+
+  /* Optional */
+  /*  Automatic gain control(AGC) Status for L2 band */
+  uint8_t agcStatusL2_valid;  /**< Must be set to true if agcStatusL2 is being passed */
+  qmiLocAgcStatusEnumT_v02 agcStatusL2;
+  /**<   Values: \n
+      - eQMI_LOC_NO_SATURATION (0) --  AGC status is No saturation \n
+      - eQMI_LOC_FRONT_END_GAIN_MAXIMUM_SATURATION (1) --  AGC status is Front end gain maximum saturation \n
+      - eQMI_LOC_FRONT_END_GAIN_MINIMUM_SATURATION (2) --  AGC status is Front end gain minimum saturation
+ */
+
+  /* Optional */
+  /*  Automatic gain control(AGC) Status for L5 band */
+  uint8_t agcStatusL5_valid;  /**< Must be set to true if agcStatusL5 is being passed */
+  qmiLocAgcStatusEnumT_v02 agcStatusL5;
+  /**<   Values: \n
+      - eQMI_LOC_NO_SATURATION (0) --  AGC status is No saturation \n
+      - eQMI_LOC_FRONT_END_GAIN_MAXIMUM_SATURATION (1) --  AGC status is Front end gain maximum saturation \n
+      - eQMI_LOC_FRONT_END_GAIN_MINIMUM_SATURATION (2) --  AGC status is Front end gain minimum saturation
+ */
 }qmiLocEngineDebugDataIndMsgT_v02;  /* Message */
 /**
     @}
@@ -25261,7 +25396,9 @@ typedef struct {
       - QMI_LOC_FEATURE_STATUS_CLOCK_ESTIMATE (0x00000080) --  Clock estimate. \n
       - QMI_LOC_FEATURE_STATUS_DGNSS (0x00000100) --  DGNSS. \n
       - QMI_LOC_FEATURE_STATUS_QPPE (0x00000200) --  QPPE. \n
-      - QMI_LOC_FEATURE_STATUS_ROBUST_LOCATION (0x00000400) --  Robust Location.
+      - QMI_LOC_FEATURE_STATUS_ROBUST_LOCATION (0x00000400) --  Robust Location. \n
+      - QMI_LOC_FEATURE_STATUS_NLOS_ML20 (0x00000800) --  Machine Learning. \n
+      - QMI_LOC_FEATURE_STATUS_GNSS_NHZ (0x00001000) --  GNSS NHz.
  */
 }qmiLocSetSdkFeatureConfigReqMsgT_v02;  /* Message */
 /**
@@ -25310,7 +25447,9 @@ typedef struct {
       - QMI_LOC_FEATURE_STATUS_CLOCK_ESTIMATE (0x00000080) --  Clock estimate. \n
       - QMI_LOC_FEATURE_STATUS_DGNSS (0x00000100) --  DGNSS. \n
       - QMI_LOC_FEATURE_STATUS_QPPE (0x00000200) --  QPPE. \n
-      - QMI_LOC_FEATURE_STATUS_ROBUST_LOCATION (0x00000400) --  Robust Location.
+      - QMI_LOC_FEATURE_STATUS_ROBUST_LOCATION (0x00000400) --  Robust Location. \n
+      - QMI_LOC_FEATURE_STATUS_NLOS_ML20 (0x00000800) --  Machine Learning. \n
+      - QMI_LOC_FEATURE_STATUS_GNSS_NHZ (0x00001000) --  GNSS NHz.
  */
 }qmiLocSetSdkFeatureConfigIndMsgT_v02;  /* Message */
 /**
@@ -25351,7 +25490,9 @@ typedef struct {
       - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_NAVIC_L5 (0x00040000) --  NavIC L5 RF band \n
       - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2A_Q (0x00080000) --  BeiDou B2a Q RF band.
       - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_I (0x00100000) --  BeiDou B2b I RF band (data) \n
-      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q (0x00200000) --  BeiDou B2b Q RF band (pilot)  */
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q (0x00200000) --  BeiDou B2b Q RF band (pilot) \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_NAVIC_L1 (0x00400000) --  Navic L1 RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1_CB (0x00800000) --  QZSS L1 CB RF band   */
 
   /* Optional */
   /*  GNSS Supported Signals */
@@ -25380,7 +25521,9 @@ typedef struct {
       - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_NAVIC_L5 (0x00040000) --  NavIC L5 RF band \n
       - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2A_Q (0x00080000) --  BeiDou B2a Q RF band.
       - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_I (0x00100000) --  BeiDou B2b I RF band (data) \n
-      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q (0x00200000) --  BeiDou B2b Q RF band (pilot)  */
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q (0x00200000) --  BeiDou B2b Q RF band (pilot) \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_NAVIC_L1 (0x00400000) --  Navic L1 RF band \n
+      - QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1_CB (0x00800000) --  QZSS L1 CB RF band   */
 }qmiLocGnssBandsSupportedIndMsgT_v02;  /* Message */
 /**
     @}
@@ -26243,3 +26386,4 @@ qmi_idl_service_object_type loc_get_service_object_internal_v02
 }
 #endif
 #endif
+

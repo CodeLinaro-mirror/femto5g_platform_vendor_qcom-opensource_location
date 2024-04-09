@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -124,7 +124,7 @@ public:
     }
 
     static shared_ptr<LocIpcSender> createSender(const string socket);
-    void cleanup();
+    void cleanup(bool forceRemove = true);
 
     // public APIs
     void updateSubscription(uint32_t mask);
@@ -211,6 +211,7 @@ private:
     void onDcReportCb(const GnssDcReportInfo& dcReportInfo);
     void onLocationApiDestroyCompleteCb();
     void onAntennaInfoCb(std::vector<GnssAntennaInformation>& gnssAntennaInformations);
+    void onGnssSvEphemerisCb(const GnssSvEphemerisReport &notification);
 
     // send ipc message to this client for serialized payload
     bool sendMessage(const char* msg, size_t msglen, ELocMsgID msg_id) {
