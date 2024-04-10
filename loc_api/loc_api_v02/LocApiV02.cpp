@@ -2918,6 +2918,8 @@ void LocApiV02 :: reportPosition (
                     locationExtended.measUsageInfo[idx].gnssSvId = gnssSvIdUsed;
                     locationExtended.measUsageInfo[idx].carrierPhaseAmbiguityType =
                             CARRIER_PHASE_AMBIGUITY_RESOLUTION_NONE;
+                    locationExtended.measUsageInfo[idx].measUsageStatusMask =
+                            GNSS_MEAS_USED_IN_PVT;
 
                     if (gnssSvIdUsed <= GPS_SV_PRN_MAX)
                     {
