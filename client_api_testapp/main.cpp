@@ -30,7 +30,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -99,6 +99,7 @@ static uint32_t numGnssNmeaCb = 0;
 static uint32_t numEngineNmeaCb = 0;
 static uint32_t numDataCb         = 0;
 static uint32_t numGnssMeasurementsCb = 0;
+static uint32_t numGnssEphemerisCb = 0;
 
 static LocationClientApi* pLcaClient = nullptr;
 static location_integration::LocationIntegrationApi* pIntClient = nullptr;
@@ -118,14 +119,15 @@ static char NMEA_PORT[] = "/dev/at_usb1";
 static int ttyFd = -1;
 static int routeToNMEAPort = 0;
 enum ReportType {
-    POSITION_REPORT = 1 << 0,
-    NMEA_REPORT     = 1 << 1,
-    SV_REPORT       = 1 << 2,
-    DATA_REPORT     = 1 << 3,
-    MEAS_REPORT     = 1 << 4,
-    NHZ_MEAS_REPORT = 1 << 5,
-    DC_REPORT       = 1 << 6,
+    POSITION_REPORT    = 1 << 0,
+    NMEA_REPORT        = 1 << 1,
+    SV_REPORT          = 1 << 2,
+    DATA_REPORT        = 1 << 3,
+    MEAS_REPORT        = 1 << 4,
+    NHZ_MEAS_REPORT    = 1 << 5,
+    DC_REPORT          = 1 << 6,
     ENGINE_NMEA_REPORT = 1 << 7,
+    EPHEMERIS_REPORT   = 1 << 8,
 };
 
 enum TrackingSessionType {
@@ -596,6 +598,12 @@ static void onGetXtraStatusCb(XtraStatusUpdateTrigger updateTrigger, const XtraS
 
 static void onGnssSignalTypesCb(GnssSignalTypeMask signalType) {
     printf("<<< onGnssSignalTypesCb, supported signalType mask %x \n", signalType);
+}
+
+static void onGnssEphemerisCb(const location_client::GnssEphemeris& ephInfo) {
+    numGnssEphemerisCb++;
+    printf("<<< onGnssEphemerisCb  cnt=%u Constellation=%d \n", numGnssEphemerisCb,
+            ephInfo.gnssConstellation);
 }
 
 static void printHelp() {
@@ -1150,6 +1158,9 @@ static void setupGnssReportCbs(uint32_t reportType, GnssReportCbs& reportcbs) {
     if (reportType & DC_REPORT) {
         reportcbs.gnssDcReportCallback = GnssDcReportCb(onGnssDcReportCb);
     }
+    if (reportType & EPHEMERIS_REPORT) {
+        reportcbs.gnssEphReportCallback = GnssEphReportCb(onGnssEphemerisCb);
+    }
 }
 
 static void setupEngineReportCbs(uint32_t reportType, EngineReportCbs& reportcbs) {
@@ -1176,6 +1187,9 @@ static void setupEngineReportCbs(uint32_t reportType, EngineReportCbs& reportcbs
     }
     if (reportType & ENGINE_NMEA_REPORT) {
         reportcbs.engineNmeaCallback = EngineNmeaCb(onEngineNmeaCb);
+    }
+    if (reportType & EPHEMERIS_REPORT) {
+        reportcbs.gnssEphReportCallback = GnssEphReportCb(onGnssEphemerisCb);
     }
 }
 
@@ -1493,7 +1507,7 @@ static bool checkForAutoStart(int argc, char *argv[]) {
     uint32_t aidingDataMask = 0;
     int interval = 100;
     LocReqEngineTypeMask reqEngMask = (LocReqEngineTypeMask) 0x7;
-    uint32_t reportType = 0xfd;
+    uint32_t reportType = 0x1fd;
     TrackingSessionType trackingType = NO_TRACKING;
 
     //Specifying the expected options
@@ -1553,6 +1567,10 @@ static bool checkForAutoStart(int argc, char *argv[]) {
              case 'l':
                  printf("fix cnt: %s\n", optarg);
                  fixCnt = atoi(optarg);
+                 if (fixCnt <= 0) {
+                     fixCnt = 1;
+                     printf("setting fixCnt to %d", fixCnt);
+                 }
                  if (trackingType == NO_TRACKING) {
                     trackingType = ENGINE_REPORT_TRACKING;
                  }
@@ -1560,6 +1578,10 @@ static bool checkForAutoStart(int argc, char *argv[]) {
             case 'i':
                  printf("interval: %s\n", optarg);
                  interval = atoi(optarg);
+                 if (interval <= 0) {
+                     interval = 1000;
+                     printf("setting interval to %d", interval);
+                 }
                  if (trackingType == NO_TRACKING) {
                      trackingType = ENGINE_REPORT_TRACKING;
                  }
@@ -1567,10 +1589,18 @@ static bool checkForAutoStart(int argc, char *argv[]) {
              case 't':
                  printf("tiemout: %s\n", optarg);
                  autoTestTimeoutSec = atoi(optarg);
+                 if (autoTestTimeoutSec <= 0) {
+                     autoTestTimeoutSec = 30;
+                     printf("setting autoTestTimeoutSec to %d", autoTestTimeoutSec);
+                 }
                  break;
              case 'r' :
                  printf("report type: %s\n", optarg);
                  reportType = atoi(optarg);
+                 if (reportType <= 0) {
+                     reportType = 1;
+                     printf("setting reportType to %d", reportType);
+                 }
                  break;
              case 'U' :
                  printf("route to NMEA port: %s\n", optarg);
@@ -1728,7 +1758,7 @@ void getTrackingParams(char *buf, uint32_t *reportTypePtr, uint32_t *tbfMsecPtr,
     // initialize to default value in case of invalid input
     if (reportTypePtr) {
         if (*reportTypePtr == 0) {
-            *reportTypePtr = 0xFF;
+            *reportTypePtr = 0x1FF;
         }
     }
 
@@ -2497,7 +2527,7 @@ int main(int argc, char *argv[]) {
                     pLcaClient = new LocationClientApi(onCapabilitiesCb);
                 }
                 if (pLcaClient) {
-                    uint32_t reportType = 0xfd;
+                    uint32_t reportType = 0x1fd;
                     uint32_t tbfMsec = 100;
                     LocReqEngineTypeMask reqEngMask = (LocReqEngineTypeMask)
                         (LOC_REQ_ENGINE_FUSED_BIT|LOC_REQ_ENGINE_SPE_BIT|
@@ -2517,7 +2547,7 @@ int main(int argc, char *argv[]) {
                     pLcaClient = new LocationClientApi(onCapabilitiesCb);
                 }
                 if (pLcaClient) {
-                    uint32_t reportType = 0xff;
+                    uint32_t reportType = 0x1ff;
                     uint32_t tbfMsec = 100;
                     getTrackingParams(buf, &reportType, &tbfMsec, nullptr);
                     reportcbs = {};

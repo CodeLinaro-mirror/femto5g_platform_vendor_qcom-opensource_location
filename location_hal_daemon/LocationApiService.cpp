@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -1201,7 +1201,6 @@ void LocationApiService::stopBatching(LocAPIStopBatchingReqMsg *pMsg) {
 
     pClient->mBatching = false;
     pClient->mBatchingMode = BATCHING_MODE_NO_AUTO_REPORT;
-    pClient->updateSubscription(0);
     pClient->stopBatching();
     pClient->mPendingMessages.push(E_LOCAPI_STOP_BATCHING_MSG_ID);
     LOC_LOGi(">-- stopping batching session");
@@ -1942,6 +1941,10 @@ void LocationApiService::performMaintenance() {
     }
 
     for (auto client : clientsToCheck) {
+        if ((client.first.compare(0, sizeof(SOCKET_LOC_CLIENT_DIR)-1, SOCKET_LOC_CLIENT_DIR))) {
+            LOC_LOGd(" Skipping EAP client %s", client.first.c_str());
+            continue;
+        }
         string pbStr;
         bool messageSent = false;
         LocAPIPingTestReqMsg msg(SERVICE_NAME, &mPbufMsgConv);
@@ -1951,7 +1954,8 @@ void LocationApiService::performMaintenance() {
         } else {
             LOC_LOGe("LocAPIPingTestReqMsg serializeToProtobuf failed");
         }
-        LOC_LOGd("send ping message returned %d for client %s", messageSent, client.first.c_str());
+        LOC_LOGd("send ping message returned %d for client %s",
+                messageSent, client.first.c_str());
         if (messageSent == false) {
             LOC_LOGe("--< ping failed for client %s", client.first.c_str());
             deleteClientbyName(client.first);
