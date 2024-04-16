@@ -89,7 +89,8 @@ class LocationTrackingSessCbHandler {
                         clock_gettime(CLOCK_BOOTTIME, &curBootTime);
                         int64_t curBootTimeNs = ((int64_t)curBootTime.tv_sec * 1000000000) +
                                 (int64_t)curBootTime.tv_nsec;
-                        int64_t latencyMs = (curBootTimeNs - n.elapsedRealTimeNs)/1000000;
+                        int16_t latencyMs = 0;
+                        latencyMs = (int16_t)((curBootTimeNs - n.elapsedRealTimeNs)/1000000);
                         if (latencyMs > MAX_POSITION_LATENCY) {
                               latentPosCount++;
                         }
@@ -98,6 +99,7 @@ class LocationTrackingSessCbHandler {
                                      " latent by 20 msec",
                                     latentPosCount, posCount);
                         }
+                        idlLocRpt.setReportingLatency(latencyMs);
                         pClientApiService->mService->fireLocationReportEvent(idlLocRpt);
                     };
                 }
@@ -129,6 +131,14 @@ class LocationTrackingSessCbHandler {
                             [pClientApiService](const ::GnssMeasurements gnssMeasurements) {
                         LocIdlAPI::IDLGnssMeasurements idlGnssMeasurement =
                                 pClientApiService->parseGnssMeasurements(gnssMeasurements);
+                        struct timespec curBootTime = {};
+                        clock_gettime(CLOCK_BOOTTIME, &curBootTime);
+                        int64_t curBootTimeNs = ((int64_t)curBootTime.tv_sec * 1000000000) +
+                                (int64_t)curBootTime.tv_nsec;
+                        int16_t latencyMs = 0;
+                        latencyMs = (int16_t)((curBootTimeNs -
+                                gnssMeasurements.clock.elapsedRealTime)/1000000);
+                        idlGnssMeasurement.setReportingLatency(latencyMs);
                         pClientApiService->mService->fireGnssMeasurementsEvent(idlGnssMeasurement);
                     };
                 }
