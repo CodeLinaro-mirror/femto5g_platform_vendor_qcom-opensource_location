@@ -28,7 +28,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -64,8 +64,8 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *THIS IS AN AUTO GENERATED FILE. DO NOT ALTER IN ANY WAY
  *====*====*====*====*====*====*====*====*====*====*====*====*====*====*====*/
 
-/* This file was generated with Tool version 6.14.7
-   It was generated on: Thu Oct  5 2023 (Spin 0)
+/* This file was generated with Tool version 6.14.11
+   It was generated on: Wed Jan 10 2024 (Spin 0)
    From IDL File: location_service_v02.idl */
 
 #include "stdint.h"
@@ -7635,10 +7635,20 @@ static const uint8_t qmiLocSetBlacklistSvReqMsgT_data_v02[] = {
    QMI_IDL_GENERIC_8_BYTE,
   QMI_IDL_OFFSET8(qmiLocSetBlacklistSvReqMsgT_v02, navic_persist_blacklist_sv),
 
-  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(qmiLocSetBlacklistSvReqMsgT_v02, navic_clear_persist_blacklist_sv) - QMI_IDL_OFFSET8(qmiLocSetBlacklistSvReqMsgT_v02, navic_clear_persist_blacklist_sv_valid)),
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(qmiLocSetBlacklistSvReqMsgT_v02, navic_clear_persist_blacklist_sv) - QMI_IDL_OFFSET8(qmiLocSetBlacklistSvReqMsgT_v02, navic_clear_persist_blacklist_sv_valid)),
   0x1B,
    QMI_IDL_GENERIC_8_BYTE,
-  QMI_IDL_OFFSET8(qmiLocSetBlacklistSvReqMsgT_v02, navic_clear_persist_blacklist_sv)
+  QMI_IDL_OFFSET8(qmiLocSetBlacklistSvReqMsgT_v02, navic_clear_persist_blacklist_sv),
+
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(qmiLocSetBlacklistSvReqMsgT_v02, gps_persist_blacklist_sv) - QMI_IDL_OFFSET8(qmiLocSetBlacklistSvReqMsgT_v02, gps_persist_blacklist_sv_valid)),
+  0x1C,
+   QMI_IDL_GENERIC_8_BYTE,
+  QMI_IDL_OFFSET8(qmiLocSetBlacklistSvReqMsgT_v02, gps_persist_blacklist_sv),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET16RELATIVE(qmiLocSetBlacklistSvReqMsgT_v02, gps_clear_persist_blacklist_sv) - QMI_IDL_OFFSET16RELATIVE(qmiLocSetBlacklistSvReqMsgT_v02, gps_clear_persist_blacklist_sv_valid)),
+  0x1D,
+   QMI_IDL_FLAGS_OFFSET_IS_16 | QMI_IDL_GENERIC_8_BYTE,
+  QMI_IDL_OFFSET16ARRAY(qmiLocSetBlacklistSvReqMsgT_v02, gps_clear_persist_blacklist_sv)
 };
 
 static const uint8_t qmiLocGetBlacklistSvIndMsgT_data_v02[] = {
@@ -7671,10 +7681,15 @@ static const uint8_t qmiLocGetBlacklistSvIndMsgT_data_v02[] = {
    QMI_IDL_GENERIC_8_BYTE,
   QMI_IDL_OFFSET8(qmiLocGetBlacklistSvIndMsgT_v02, sbas_persist_blacklist_sv),
 
-  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(qmiLocGetBlacklistSvIndMsgT_v02, navic_persist_blacklist_sv) - QMI_IDL_OFFSET8(qmiLocGetBlacklistSvIndMsgT_v02, navic_persist_blacklist_sv_valid)),
+  QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(qmiLocGetBlacklistSvIndMsgT_v02, navic_persist_blacklist_sv) - QMI_IDL_OFFSET8(qmiLocGetBlacklistSvIndMsgT_v02, navic_persist_blacklist_sv_valid)),
   0x15,
    QMI_IDL_GENERIC_8_BYTE,
-  QMI_IDL_OFFSET8(qmiLocGetBlacklistSvIndMsgT_v02, navic_persist_blacklist_sv)
+  QMI_IDL_OFFSET8(qmiLocGetBlacklistSvIndMsgT_v02, navic_persist_blacklist_sv),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | QMI_IDL_TLV_FLAGS_OPTIONAL | (QMI_IDL_OFFSET8(qmiLocGetBlacklistSvIndMsgT_v02, gps_persist_blacklist_sv) - QMI_IDL_OFFSET8(qmiLocGetBlacklistSvIndMsgT_v02, gps_persist_blacklist_sv_valid)),
+  0x16,
+   QMI_IDL_GENERIC_8_BYTE,
+  QMI_IDL_OFFSET8(qmiLocGetBlacklistSvIndMsgT_v02, gps_persist_blacklist_sv)
 };
 
 static const uint8_t qmiLocSetConstellationConfigReqMsgT_data_v02[] = {
@@ -10307,7 +10322,7 @@ static const qmi_idl_service_message_table_entry loc_service_command_messages_v0
   {QMI_LOC_QUERY_OTB_ACCUMULATED_DISTANCE_REQ_V02, QMI_IDL_TYPE16(0, 251), 0},
   {QMI_LOC_GET_FDCL_BS_LIST_REQ_V02, QMI_IDL_TYPE16(0, 254), 23},
   {QMI_LOC_INJECT_FDCL_DATA_REQ_V02, QMI_IDL_TYPE16(0, 256), 2273},
-  {QMI_LOC_SET_BLACKLIST_SV_REQ_V02, QMI_IDL_TYPE16(0, 258), 132},
+  {QMI_LOC_SET_BLACKLIST_SV_REQ_V02, QMI_IDL_TYPE16(0, 258), 154},
   {QMI_LOC_GET_BLACKLIST_SV_REQ_V02, QMI_IDL_TYPE16(0, 0), 0},
   {QMI_LOC_SET_CONSTELLATION_CONTROL_REQ_V02, QMI_IDL_TYPE16(0, 260), 26},
   {QMI_LOC_REGISTER_MASTER_CLIENT_REQ_V02, QMI_IDL_TYPE16(0, 262), 7},
@@ -10595,7 +10610,7 @@ static const qmi_idl_service_message_table_entry loc_service_indication_messages
   {QMI_LOC_GET_AVAILABLE_WWAN_POSITION_IND_V02, QMI_IDL_TYPE16(0, 184), 166},
   {QMI_LOC_SET_PREMIUM_SERVICES_CONFIG_IND_V02, QMI_IDL_TYPE16(0, 186), 7},
   {QMI_LOC_SET_XTRA_VERSION_CHECK_IND_V02, QMI_IDL_TYPE16(0, 188), 7},
-  {QMI_LOC_EVENT_GNSS_MEASUREMENT_REPORT_IND_V02, QMI_IDL_TYPE16(0, 191), 5426},
+  {QMI_LOC_EVENT_GNSS_MEASUREMENT_REPORT_IND_V02, QMI_IDL_TYPE16(0, 191), 5440},
   {QMI_LOC_EVENT_SV_POLYNOMIAL_REPORT_IND_V02, QMI_IDL_TYPE16(0, 192), 690},
   {QMI_LOC_SET_GNSS_CONSTELL_REPORT_CONFIG_IND_V02, QMI_IDL_TYPE16(0, 190), 7},
   {QMI_LOC_ADD_GEOFENCE_CONTEXT_IND_V02, QMI_IDL_TYPE16(0, 194), 28},
@@ -10643,7 +10658,7 @@ static const qmi_idl_service_message_table_entry loc_service_indication_messages
   {QMI_LOC_GET_FDCL_BS_LIST_IND_V02, QMI_IDL_TYPE16(0, 255), 2456},
   {QMI_LOC_INJECT_FDCL_DATA_IND_V02, QMI_IDL_TYPE16(0, 257), 272},
   {QMI_LOC_SET_BLACKLIST_SV_IND_V02, QMI_IDL_TYPE16(0, 2), 7},
-  {QMI_LOC_GET_BLACKLIST_SV_IND_V02, QMI_IDL_TYPE16(0, 259), 73},
+  {QMI_LOC_GET_BLACKLIST_SV_IND_V02, QMI_IDL_TYPE16(0, 259), 84},
   {QMI_LOC_SET_CONSTELLATION_CONTROL_IND_V02, QMI_IDL_TYPE16(0, 2), 7},
   {QMI_LOC_DC_REPORT_IND_V02, QMI_IDL_TYPE16(0, 261), 84},
   {QMI_LOC_REGISTER_MASTER_CLIENT_IND_V02, QMI_IDL_TYPE16(0, 263), 7},
@@ -10708,7 +10723,7 @@ struct qmi_idl_service_object loc_qmi_idl_service_object_v02 = {
     sizeof(loc_service_indication_messages_v02)/sizeof(qmi_idl_service_message_table_entry) },
   { loc_service_command_messages_v02, loc_service_response_messages_v02, loc_service_indication_messages_v02},
   &loc_qmi_idl_type_table_object_v02,
-  0xA6,
+  0xA7,
   NULL
 };
 

@@ -3799,6 +3799,40 @@ static Gnss_LocSvSystemEnumType getLocApiSvSystemType (qmiLocSvSystemEnumT_v02 q
 
     return locSvSystemType;
 }
+static GnssRfBand getLocApiSvRfBand(qmiLocGnssSignalTypeMaskT_v02 qmiGnssSignalType) {
+    GnssRfBand rfBand = GNSS_RF_BAND_UNKNOWN;
+    switch (qmiGnssSignalType) {
+        case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L1CA_V02:
+        case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L1C_V02:
+        case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GLONASS_G1_V02:
+        case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GALILEO_E1_C_V02:
+        case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B1_I_V02:
+        case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B1C_V02:
+        case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1CA_V02:
+        case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1S_V02:
+        case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_SBAS_L1_CA_V02:
+            rfBand = GNSS_RF_BAND_L1;
+            break;
+        case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L2C_L_V02:
+        case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GLONASS_G2_V02:
+        case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2_I_V02:
+        case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2A_I_V02:
+        case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L2C_L_V02:
+        case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2A_Q_V02:
+            rfBand = GNSS_RF_BAND_L2;
+            break;
+        case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L5_Q_V02:
+        case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GALILEO_E5A_Q_V02:
+        case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GALILEO_E5B_Q_V02:
+        case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L5_Q_V02:
+        case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_NAVIC_L5_V02:
+            rfBand = GNSS_RF_BAND_L5;
+            break;
+        default:
+            break;
+    }
+    return rfBand;
+}
 
 /* convert satellite polynomial to loc eng format and  send the converted
    report to loc eng */
@@ -5528,6 +5562,29 @@ void LocApiV02::reportGnssMeasurementData(
         mGnssMeasurements->gnssMeasNotification.clock.elapsedRealTimeUnc = unc;
 
         mGnssMeasurements->gnssMeasNotification.isFullTracking = mIsFullTracking;
+        //AGC Status
+        GnssMeasurementsNotification& measurementsNotify = mGnssMeasurements->gnssMeasNotification;
+        if (gnss_measurement_report_ptr.agcStatus_valid) {
+            GnssRfBand bandType = getLocApiSvRfBand(gnss_measurement_report_ptr.gnssSignalType);
+            switch (bandType) {
+                case GNSS_RF_BAND_L1:
+                    measurementsNotify.agcStatusL1 = convertQmiAgcStatusType(
+                            gnss_measurement_report_ptr.agcStatus);
+                    break;
+                case GNSS_RF_BAND_L2:
+                    measurementsNotify.agcStatusL2 = convertQmiAgcStatusType(
+                            gnss_measurement_report_ptr.agcStatus);
+                    break;
+                case GNSS_RF_BAND_L5:
+                    measurementsNotify.agcStatusL5 = convertQmiAgcStatusType(
+                            gnss_measurement_report_ptr.agcStatus);
+                    break;
+            }
+        }
+        LOC_LOGv("agcStatusL1: %d, agcStatusL2: %d, agcStatusL5: %d",
+                measurementsNotify.agcStatusL1, measurementsNotify.agcStatusL2,
+                measurementsNotify.agcStatusL5);
+
         reportSvMeasurementInternal();
         resetSvMeasurementReport();
         // set up flag to indicate that no new info in mGnssMeasurements
@@ -6678,8 +6735,6 @@ GnssMeasurementsCodeType LocApiV02::getCodeType(qmiLocGnssSignalTypeMaskT_v02 gn
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GALILEO_E5A_Q_V02:
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GALILEO_E5B_Q_V02:
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L5_Q_V02:
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2A_Q_V02:
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q_V02:
         return GNSS_MEASUREMENTS_CODE_TYPE_Q;
 
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B1_I_V02:
@@ -6687,10 +6742,13 @@ GnssMeasurementsCodeType LocApiV02::getCodeType(qmiLocGnssSignalTypeMaskT_v02 gn
         return GNSS_MEASUREMENTS_CODE_TYPE_I;
 
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B1C_V02:
+    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2A_Q_V02:
+    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q_V02:
+    // this one is not yet supported
+    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L1C_V02:
         return GNSS_MEASUREMENTS_CODE_TYPE_P;
 
-    /* not supported */
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L1C_V02:
+    /* no plan to support  */
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2_I_V02:
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2A_I_V02:
     default:
@@ -7044,7 +7102,7 @@ bool LocApiV02 :: convertGnssMeasurements(
 
     // carrierToNoiseDbHz
     measurementData.carrierToNoiseDbHz = gnss_measurement_info.CNo/10.0;
-    measurementData.flags |= GNSS_MEASUREMENTS_DATA_SIGNAL_TO_NOISE_RATIO_BIT;
+    measurementData.flags |= GNSS_MEASUREMENTS_DATA_CARRIER_TO_NOISE_BIT;
 
     if (QMI_LOC_MASK_MEAS_STATUS_VELOCITY_FINE_V02 ==
         (gnss_measurement_info.measurementStatus & QMI_LOC_MASK_MEAS_STATUS_VELOCITY_FINE_V02)) {
@@ -7724,6 +7782,78 @@ void LocApiV02 ::getBestAvailableZppFix()
 
     locClientSendReq(QMI_LOC_GET_BEST_AVAILABLE_POSITION_REQ_V02, req_union);
     }));
+}
+
+bool LocApiV02::getBestAvailableZppFixSync(LocGpsLocation &zppLoc,
+        LocPosTechMask &tech_mask) {
+
+    qmiLocGetBestAvailablePositionReqMsgT_v02 zpp_req;
+    qmiLocGetBestAvailablePositionIndMsgT_v02 zpp_ind;
+    locClientReqUnionType req_union;
+    locClientStatusEnumType status;
+
+    LOC_LOGd("Get ZPP Fix from best available source\n");
+    memset(&zpp_req, 0, sizeof(zpp_req));
+    memset(&zpp_ind, 0, sizeof(zpp_ind));
+    memset(&zppLoc, 0, sizeof(zppLoc));
+    zppLoc.size = sizeof(zppLoc);
+    tech_mask = 0;
+
+    req_union.pGetBestAvailablePositionReq = &zpp_req;
+    zpp_req.transactionId = 1;
+    status = locSyncSendReq(QMI_LOC_GET_BEST_AVAILABLE_POSITION_REQ_V02,
+                            req_union,
+                            LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
+                            QMI_LOC_GET_BEST_AVAILABLE_POSITION_IND_V02,
+                            &zpp_ind);
+
+    if ((eLOC_CLIENT_SUCCESS != status) ||
+        (eQMI_LOC_SUCCESS_V02 != zpp_ind.status))
+    {
+        LOC_LOGe("error! status = %d, zpp_ind.status = %d\n",
+                  (status),
+                  (zpp_ind.status));
+        return false;
+    } else {
+        if (zpp_ind.timestampUtc_valid) {
+            zppLoc.timestamp = zpp_ind.timestampUtc;
+        } else {
+            /* The UTC time from modem is not valid.
+                    In this case, we use current system time instead.*/
+
+          struct timespec time_info_current = {};
+          clock_gettime(CLOCK_REALTIME, &time_info_current);
+          zppLoc.timestamp = (time_info_current.tv_sec)*1e3 +
+                  (time_info_current.tv_nsec)/1e6;
+          LOC_LOGd("zpp timestamp got from system: %" PRIu64, zppLoc.timestamp);
+        }
+
+        if (zpp_ind.latitude_valid && zpp_ind.longitude_valid &&
+                zpp_ind.horUncCircular_valid ) {
+            zppLoc.flags = LOC_GPS_LOCATION_HAS_LAT_LONG | LOC_GPS_LOCATION_HAS_ACCURACY;
+            zppLoc.latitude = zpp_ind.latitude;
+            zppLoc.longitude = zpp_ind.longitude;
+            zppLoc.accuracy = zpp_ind.horUncCircular;
+
+            // If horCircularConfidence_valid is true, and horCircularConfidence value
+            // is less than 68%, then scale the accuracy value to 68% confidence.
+            if (zpp_ind.horCircularConfidence_valid)
+            {
+                scaleAccuracyTo68PercentConfidence(zpp_ind.horCircularConfidence,
+                                                   zppLoc, true);
+            }
+
+            if (zpp_ind.altitudeWrtEllipsoid_valid) {
+                zppLoc.flags |= LOC_GPS_LOCATION_HAS_ALTITUDE;
+                zppLoc.altitude = zpp_ind.altitudeWrtEllipsoid;
+            }
+
+            if (zpp_ind.technologyMask_valid) {
+                tech_mask = zpp_ind.technologyMask;
+            }
+        }
+        return true;
+    }
 }
 
 LocationError LocApiV02 :: setGpsLockSync(GnssConfigGpsLock lock)
@@ -9504,6 +9634,11 @@ LocApiV02::setBlacklistSvSync(const GnssSvIdConfig& config)
     memset(&genReqStatusIndMsg, 0, sizeof(genReqStatusIndMsg));
 
     // Fill in the request details
+    setBlacklistSvMsg.gps_persist_blacklist_sv_valid = true;
+    setBlacklistSvMsg.gps_persist_blacklist_sv = config.gpsBlacklistSvMask,
+    setBlacklistSvMsg.gps_clear_persist_blacklist_sv_valid = true;
+    setBlacklistSvMsg.gps_clear_persist_blacklist_sv = ~config.gpsBlacklistSvMask;
+
     setBlacklistSvMsg.glo_persist_blacklist_sv_valid = true;
     setBlacklistSvMsg.glo_persist_blacklist_sv = config.gloBlacklistSvMask;
     setBlacklistSvMsg.glo_clear_persist_blacklist_sv_valid = true;
@@ -9535,12 +9670,14 @@ LocApiV02::setBlacklistSvSync(const GnssSvIdConfig& config)
     setBlacklistSvMsg.navic_clear_persist_blacklist_sv = ~config.navicBlacklistSvMask;
 
     LOC_LOGd(">>> configConstellations, "
+             "gps blacklist mask =0x%" PRIx64 ", "
              "glo blacklist mask =0x%" PRIx64 ", "
              "qzss blacklist mask =0x%" PRIx64 ",\n"
              "bds blacklist mask =0x%" PRIx64 ", "
              "gal blacklist mask =0x%" PRIx64 ",\n"
              "sbas blacklist mask =0x%" PRIx64 ", "
-             "navic blacklist mask =0x%" PRIx64 ", ",
+             "navic blacklist mask =0x%" PRIx64 ",\n",
+             setBlacklistSvMsg.gps_persist_blacklist_sv,
              setBlacklistSvMsg.glo_persist_blacklist_sv,
              setBlacklistSvMsg.qzss_persist_blacklist_sv,
              setBlacklistSvMsg.bds_persist_blacklist_sv,
@@ -9770,6 +9907,12 @@ LocApiV02::convertToGnssSvTypeConfig(
         GnssSvTypeConfig& config)
 {
     // Enabled Mask
+    if (ind.gps_status_valid &&
+            (ind.gps_status == eQMI_LOC_CONSTELLATION_ENABLED_MANDATORY_V02 ||
+                    ind.gps_status == eQMI_LOC_CONSTELLATION_ENABLED_INTERNALLY_V02 ||
+                    ind.gps_status == eQMI_LOC_CONSTELLATION_ENABLED_BY_CLIENT_V02)) {
+        config.enabledSvTypesMask |= GNSS_SV_TYPES_MASK_GPS_BIT;
+    }
     if (ind.bds_status_valid &&
             (ind.bds_status == eQMI_LOC_CONSTELLATION_ENABLED_MANDATORY_V02 ||
                     ind.bds_status == eQMI_LOC_CONSTELLATION_ENABLED_INTERNALLY_V02 ||
@@ -9802,6 +9945,13 @@ LocApiV02::convertToGnssSvTypeConfig(
     }
 
     // Disabled Mask
+    if (ind.gps_status_valid &&
+            (ind.gps_status == eQMI_LOC_CONSTELLATION_DISABLED_NOT_SUPPORTED_V02 ||
+                    ind.gps_status == eQMI_LOC_CONSTELLATION_DISABLED_INTERNALLY_V02 ||
+                    ind.gps_status == eQMI_LOC_CONSTELLATION_DISABLED_BY_CLIENT_V02 ||
+                    ind.gps_status == eQMI_LOC_CONSTELLATION_DISABLED_NO_MEMORY_V02)) {
+        config.blacklistedSvTypesMask |= GNSS_SV_TYPES_MASK_GPS_BIT;
+    }
     if (ind.bds_status_valid &&
             (ind.bds_status == eQMI_LOC_CONSTELLATION_DISABLED_NOT_SUPPORTED_V02 ||
                     ind.bds_status == eQMI_LOC_CONSTELLATION_DISABLED_INTERNALLY_V02 ||
@@ -11110,16 +11260,22 @@ void LocApiV02::convertQmiBlacklistedSvConfigToGnssConfig(
         gnssBlacklistConfig.navicBlacklistSvMask = qmiBlacklistConfig.navic_persist_blacklist_sv;
     }
 
-    LOC_LOGd("%d %d %d %d %d %d , blacklist bds 0x%" PRIx64 ", "
-             "glo 0x%" PRIx64", qzss 0x%" PRIx64 ", "
-             "gal 0x%" PRIx64 ", sbas 0x%" PRIx64 ", "
-             "navic 0x%" PRIx64 "",
+    if (qmiBlacklistConfig.gps_persist_blacklist_sv_valid) {
+        gnssBlacklistConfig.gpsBlacklistSvMask = qmiBlacklistConfig.gps_persist_blacklist_sv;
+    }
+
+    LOC_LOGd("%d %d %d %d %d %d %d, blacklist gps 0x%" PRIx64 ", "
+             "bds 0x%" PRIx64", glo 0x%" PRIx64 ", "
+             "qzss 0x%" PRIx64", gal 0x%" PRIx64 ", "
+             "sbas 0x%" PRIx64 ", navic 0x%" PRIx64 "",
+             qmiBlacklistConfig.gps_persist_blacklist_sv_valid,
              qmiBlacklistConfig.glo_persist_blacklist_sv_valid,
              qmiBlacklistConfig.bds_persist_blacklist_sv_valid,
              qmiBlacklistConfig.qzss_persist_blacklist_sv_valid,
              qmiBlacklistConfig.gal_persist_blacklist_sv_valid,
              qmiBlacklistConfig.sbas_persist_blacklist_sv_valid,
              qmiBlacklistConfig.navic_persist_blacklist_sv_valid,
+             gnssBlacklistConfig.gpsBlacklistSvMask,
              gnssBlacklistConfig.bdsBlacklistSvMask, gnssBlacklistConfig.gloBlacklistSvMask,
              gnssBlacklistConfig.qzssBlacklistSvMask, gnssBlacklistConfig.galBlacklistSvMask,
              gnssBlacklistConfig.sbasBlacklistSvMask, gnssBlacklistConfig.navicBlacklistSvMask);
@@ -12073,4 +12229,22 @@ GnssSignalTypeMask LocApiV02::convertQmiGnssSignalType(
     }
 
     return gnssSignalType;
+}
+
+AgcStatus LocApiV02::convertQmiAgcStatusType(qmiLocAgcStatusEnumT_v02 qmiAgcStatus) {
+    AgcStatus agcStatus = AGC_STATUS_UNKNOWN;
+    switch (qmiAgcStatus) {
+        case eQMI_LOC_NO_SATURATION_V02:
+            agcStatus = AGC_STATUS_NO_SATURATION;
+            break;
+        case eQMI_LOC_FRONT_END_GAIN_MAXIMUM_SATURATION_V02:
+            agcStatus = AGC_STATUS_FRONT_END_GAIN_MAXIMUM_SATURATION;
+            break;
+        case eQMI_LOC_FRONT_END_GAIN_MINIMUM_SATURATION_V02:
+            agcStatus = AGC_STATUS_FRONT_END_GAIN_MINIMUM_SATURATION;
+            break;
+        default:
+            break;
+    }
+    return agcStatus;
 }

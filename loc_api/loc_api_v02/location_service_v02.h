@@ -28,7 +28,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -97,8 +97,8 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *THIS IS AN AUTO GENERATED FILE. DO NOT ALTER IN ANY WAY
  *====*====*====*====*====*====*====*====*====*====*====*====*====*====*====*/
 
-/* This file was generated with Tool version 6.14.7
-   It was generated on: Thu Oct  5 2023 (Spin 0)
+/* This file was generated with Tool version 6.14.11
+   It was generated on: Wed Jan 10 2024 (Spin 0)
    From IDL File: location_service_v02.idl */
 
 /** @defgroup loc_qmi_consts Constant values defined in the IDL */
@@ -124,7 +124,7 @@ extern "C" {
 /** Major Version Number of the IDL used to generate this file */
 #define LOC_V02_IDL_MAJOR_VERS 0x02
 /** Revision Number of the IDL used to generate this file */
-#define LOC_V02_IDL_MINOR_VERS 0xA6
+#define LOC_V02_IDL_MINOR_VERS 0xA7
 /** Major Version Number of the qmi_idl_compiler used to generate this file */
 #define LOC_V02_IDL_TOOL_VERS 0x06
 /** Maximum Defined Message ID */
@@ -1038,7 +1038,9 @@ typedef enum {
   eQMI_LOC_POWER_MODE_BACKGROUND_DEFINED_TIME_V02 = 4, /**<  GNSS receiver duty cycles at a fixed time interval. \n */
   eQMI_LOC_POWER_MODE_BACKGROUND_KEEP_WARM_V02 = 5, /**<  GNSS receiver operates in very-low power (less than 1mA)
        duty cycling mode, to keep GNSS receiver warm for faster signal
-       acquisition and tracking.  */
+       acquisition and tracking.
+
+       Note: All QMI Indications are blocked in this mode to save power. */
   QMILOCPOWERMODEENUMT_MAX_ENUM_VAL_V02 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
 }qmiLocPowerModeEnumT_v02;
 /**
@@ -1064,6 +1066,8 @@ typedef struct {
       - eQMI_LOC_POWER_MODE_BACKGROUND_KEEP_WARM (5) --  GNSS receiver operates in very-low power (less than 1mA)
        duty cycling mode, to keep GNSS receiver warm for faster signal
        acquisition and tracking.
+
+       Note: All QMI Indications are blocked in this mode to save power.
  */
 
   uint32_t timeBetweenMeasurement;
@@ -15549,10 +15553,10 @@ typedef struct {
        to the SV measurements in the TLV svMeasurement.
        The elements QMI_LOC_SV_MEAS_LIST_MAX_SIZE to (QMI_LOC_ML_INFER_SV_MEAS_LIST_MAX_SIZE - 1) of
        this array correspond to the SV measurements in the TLV extSvMeasurement.
-      	*/
+       */
 
   /* Optional */
-  /*  Automatic gain control(AGC) Status */
+  /*  Automatic gain control(AGC) Status*/
   uint8_t agcStatus_valid;  /**< Must be set to true if agcStatus is being passed */
   qmiLocAgcStatusEnumT_v02 agcStatus;
   /**<   Values: \n
@@ -20331,6 +20335,20 @@ typedef struct {
   uint64_t navic_clear_persist_blacklist_sv;
   /**<   Specifies the NavIC SV mask to remove from persistent blacklist. SV ID mapping: \n
        - SV IDs 401-420 map to bits 0-19. */
+
+  /* Optional */
+  /*  GPS SV IDs to Blacklist */
+  uint8_t gps_persist_blacklist_sv_valid;  /**< Must be set to true if gps_persist_blacklist_sv is being passed */
+  uint64_t gps_persist_blacklist_sv;
+  /**<   Specifies the GPS SV mask to disable or blacklist. \n
+       SV ID mapping -- SV 1 maps to bit 0. */
+
+  /* Optional */
+  /*  GPS SV IDs to Remove from Blacklist */
+  uint8_t gps_clear_persist_blacklist_sv_valid;  /**< Must be set to true if gps_clear_persist_blacklist_sv is being passed */
+  uint64_t gps_clear_persist_blacklist_sv;
+  /**<   Specifies the GPS SV mask to remove from persistent blacklist.\n
+       SV ID mapping -- SV 1 maps to bit 0. */
 }qmiLocSetBlacklistSvReqMsgT_v02;  /* Message */
 /**
     @}
@@ -20404,6 +20422,13 @@ typedef struct {
   uint64_t navic_persist_blacklist_sv;
   /**<   Specifies the blacklisted NavIC SV mask. SV ID mapping: \n
        - SV IDs 401-420 map to bits 0-19 */
+
+  /* Optional */
+  /*  GPS SV IDs to Blacklist */
+  uint8_t gps_persist_blacklist_sv_valid;  /**< Must be set to true if gps_persist_blacklist_sv is being passed */
+  uint64_t gps_persist_blacklist_sv;
+  /**<   Specifies the blacklisted GPS SV mask. \n
+       SV ID mapping -- SV 1 maps to bit 0. */
 }qmiLocGetBlacklistSvIndMsgT_v02;  /* Message */
 /**
     @}
@@ -20415,6 +20440,7 @@ typedef uint64_t qmiLocConstellationMaskT_v02;
 #define QMI_LOC_CONSTELLATION_QZSS_V02 ((qmiLocConstellationMaskT_v02)0x00000004ull) /**<  Enable QZSS. \n */
 #define QMI_LOC_CONSTELLATION_GAL_V02 ((qmiLocConstellationMaskT_v02)0x00000008ull) /**<  Enable Galileo. \n */
 #define QMI_LOC_CONSTELLATION_NAVIC_V02 ((qmiLocConstellationMaskT_v02)0x00000010ull) /**<  Enable NavIC.  */
+#define QMI_LOC_CONSTELLATION_GPS_V02 ((qmiLocConstellationMaskT_v02)0x00000020ull) /**<  Enable GPS.  */
 /** @addtogroup loc_qmi_messages
     @{
   */
@@ -20436,28 +20462,21 @@ typedef struct {
   uint8_t enableMask_valid;  /**< Must be set to true if enableMask is being passed */
   qmiLocConstellationMaskT_v02 enableMask;
   /**<   Specifies which GNSS constellations to enable.
- GPS is always enabled.
  Valid only when resetConstellations is FALSE.
  Valid bitmasks: \n
       - QMI_LOC_CONSTELLATION_GLO (0x00000001) --  Enable GLONASS. \n
       - QMI_LOC_CONSTELLATION_BDS (0x00000002) --  Enable BDS.\n
       - QMI_LOC_CONSTELLATION_QZSS (0x00000004) --  Enable QZSS. \n
       - QMI_LOC_CONSTELLATION_GAL (0x00000008) --  Enable Galileo. \n
-      - QMI_LOC_CONSTELLATION_NAVIC (0x00000010) --  Enable NavIC.  */
+      - QMI_LOC_CONSTELLATION_NAVIC (0x00000010) --  Enable NavIC.
+      - QMI_LOC_CONSTELLATION_GPS (0x00000020) --  Enable GPS.  */
 
   /* Optional */
-  /*  GNSS Constellations to Disable */
+  /*  GNSS Constellations to Disable (Deprecated) */
   uint8_t disableMask_valid;  /**< Must be set to true if disableMask is being passed */
   qmiLocConstellationMaskT_v02 disableMask;
-  /**<   Specifies which GNSS constellations to disable.
- GPS cannot be disabled.
- Valid only when resetConstellations is FALSE.
- Valid bitmasks: \n
-      - QMI_LOC_CONSTELLATION_GLO (0x00000001) --  Enable GLONASS. \n
-      - QMI_LOC_CONSTELLATION_BDS (0x00000002) --  Enable BDS.\n
-      - QMI_LOC_CONSTELLATION_QZSS (0x00000004) --  Enable QZSS. \n
-      - QMI_LOC_CONSTELLATION_GAL (0x00000008) --  Enable Galileo. \n
-      - QMI_LOC_CONSTELLATION_NAVIC (0x00000010) --  Enable NavIC.  */
+  /**<   (Deprecated)
+       Specifies which GNSS constellations to disable. */
 }qmiLocSetConstellationConfigReqMsgT_v02;  /* Message */
 /**
     @}

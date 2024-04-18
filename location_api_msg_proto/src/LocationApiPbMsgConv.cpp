@@ -543,6 +543,24 @@ LocOutputEngineType LocationApiPbMsgConv::getEnumForPBLocOutputEngineType(
     return locOpEngType;
 }
 
+AgcStatus LocationApiPbMsgConv::getEnumForPBAgcStatus(const PBAgcStatus &pbAgcStatus) const {
+    AgcStatus agcStatus = AGC_STATUS_UNKNOWN;
+    switch (pbAgcStatus) {
+        case PB_AGC_STATUS_NO_SATURATION:
+            agcStatus = AGC_STATUS_NO_SATURATION;
+            break;
+        case PB_AGC_STATUS_FRONT_END_GAIN_MAXIMUM_SATURATION:
+            agcStatus = AGC_STATUS_FRONT_END_GAIN_MAXIMUM_SATURATION;
+            break;
+        case PB_AGC_STATUS_FRONT_END_GAIN_MINIMUM_SATURATION:
+            agcStatus = AGC_STATUS_FRONT_END_GAIN_MINIMUM_SATURATION;
+            break;
+        default:
+            break;
+    }
+    LocApiPb_LOGv("LocApiPB: pbAgcStatus:%d, agcStatus:%d", pbAgcStatus, agcStatus);
+    return agcStatus;
+}
 // HAL position mask from PB position engine mask
 LocEngineRunState LocationApiPbMsgConv::getEnumForPBLocEngineRunState(
             const PBLocEngineRunState &pbLocEngRunState) const {
@@ -1330,6 +1348,25 @@ PBLocApiGnss_LocSvSystemEnumType LocationApiPbMsgConv::getPBEnumForGnssLocSvSyst
     LocApiPb_LOGv("LocApiPB: gnssLocSvSysEnumType:%d, pbGnssLocSvSysEnumType:%d",
             gnssLocSvSysEnumType, pbGnssLocSvSysEnumType);
     return pbGnssLocSvSysEnumType;
+}
+
+PBAgcStatus LocationApiPbMsgConv::getPBEnumForAgcStatus(const AgcStatus &agcStatus) const {
+     PBAgcStatus pbAgcStatus = PB_AGC_STATUS_UNKNOWN;
+     switch (agcStatus) {
+        case AGC_STATUS_NO_SATURATION:
+            pbAgcStatus = PB_AGC_STATUS_NO_SATURATION;
+            break;
+        case AGC_STATUS_FRONT_END_GAIN_MAXIMUM_SATURATION:
+            pbAgcStatus = PB_AGC_STATUS_FRONT_END_GAIN_MAXIMUM_SATURATION;
+            break;
+        case AGC_STATUS_FRONT_END_GAIN_MINIMUM_SATURATION:
+            pbAgcStatus = PB_AGC_STATUS_FRONT_END_GAIN_MINIMUM_SATURATION;
+            break;
+        default:
+            break;
+     }
+    LocApiPb_LOGv("LocApiPB: agcStatus:%x, pbAgcStatus:%x", agcStatus, pbAgcStatus);
+    return pbAgcStatus;
 }
 
 // GnssSvType to PBLocApiGnss_LocSvSystemEnumType
@@ -4534,6 +4571,12 @@ int LocationApiPbMsgConv::convertGnssMeasNotifToPB(
 
     // bool isNhz = 3;
     pbGnssMeasNotif->set_isnhz(gnssMeasNotif.isNhz);
+    // PBAgcStatus agcStatusL1 = 4;
+    pbGnssMeasNotif->set_agcstatusl1(getPBEnumForAgcStatus(gnssMeasNotif.agcStatusL1));
+    // PBAgcStatus agcStatusL2 = 5;
+    pbGnssMeasNotif->set_agcstatusl2(getPBEnumForAgcStatus(gnssMeasNotif.agcStatusL2));
+    // PBAgcStatus agcStatusL5 = 6;
+    pbGnssMeasNotif->set_agcstatusl5(getPBEnumForAgcStatus(gnssMeasNotif.agcStatusL5));
 
     return 0;
 }
@@ -4559,6 +4602,12 @@ int LocationApiPbMsgConv::convertGnssDataNotifToPB(const GnssDataNotification &g
         pbGnssDataNotif->add_jammerind(gnssDataNotif.jammerInd[i]);
         pbGnssDataNotif->add_agc(gnssDataNotif.agc[i]);
     }
+    // PBAgcStatus agcStatusL1 = 5;
+    pbGnssDataNotif->set_agcstatusl1(getPBEnumForAgcStatus(gnssDataNotif.agcStatusL1));
+    // PBAgcStatus agcStatusL2 = 6;
+    pbGnssDataNotif->set_agcstatusl2(getPBEnumForAgcStatus(gnssDataNotif.agcStatusL2));
+    // PBAgcStatus agcStatusL5 = 7;
+    pbGnssDataNotif->set_agcstatusl5(getPBEnumForAgcStatus(gnssDataNotif.agcStatusL5));
     return 0;
 }
 
@@ -5740,6 +5789,12 @@ int LocationApiPbMsgConv::pbConvertToGnssMeasNotification(
 
     // bool isNhz = 3;
     gnssMeasNotif.isNhz = pbGnssMeasNotif.isnhz();
+    // bool agcStatusL1 = 4;
+    gnssMeasNotif.agcStatusL1 = getEnumForPBAgcStatus(pbGnssMeasNotif.agcstatusl1());
+    // bool agcStatusL2 = 5;
+    gnssMeasNotif.agcStatusL2 = getEnumForPBAgcStatus(pbGnssMeasNotif.agcstatusl2());
+    // bool agcStatusL5 = 6;
+    gnssMeasNotif.agcStatusL5 = getEnumForPBAgcStatus(pbGnssMeasNotif.agcstatusl5());
 
     LOC_LOGv("LocApiPB: pbGnssMeasNotif - count:%u, isNhz:%d", count, gnssMeasNotif.isNhz);
 

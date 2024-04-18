@@ -1532,6 +1532,9 @@ string GnssData::toString() const {
         out += FIELDVAL_DEC(jammerInd[i]);
         out += FIELDVAL_DEC(agc[i]);
     }
+    out += FIELDVAL_DEC(agcStatusL1);
+    out += FIELDVAL_DEC(agcStatusL2);
+    out += FIELDVAL_DEC(agcStatusL5);
 
     return out;
 }
@@ -1604,6 +1607,9 @@ string GnssMeasurements::toString() const {
     }
 
     out += FIELDVAL_DEC(isNhz);
+    out += FIELDVAL_DEC(agcStatusL1);
+    out += FIELDVAL_DEC(agcStatusL2);
+    out += FIELDVAL_DEC(agcStatusL5);
     return out;
 }
 
