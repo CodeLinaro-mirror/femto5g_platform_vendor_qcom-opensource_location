@@ -10378,13 +10378,16 @@ void LocApiV02::geofenceStatusEvent(const qmiLocEventGeofenceGenAlertIndMsgT_v02
         "GEOFENCE_GEN_ALERT_GNSS_UNAVAILABLE",
         "GEOFENCE_GEN_ALERT_GNSS_AVAILABLE",
         "GEOFENCE_GEN_ALERT_OOS",
-        "GEOFENCE_GEN_ALERT_TIME_INVALID"
+        "GEOFENCE_GEN_ALERT_TIME_INVALID",
+        "GEOFENCE_GEN_ALERT_REQUESTED_GNSS_FIX",
+        "GEOFENCE_GEN_ALERT_REQUESTED_CPI_FIX"
     };
     int index = alertInfo->geofenceAlert;
-    if (index < 0 || index > 4) {
+    int lenOfArray = (sizeof(names) / sizeof(names[0]));
+    if (index < 0 || index >= lenOfArray) {
         index = 0;
     }
-    LOC_LOGv("GEOFENCE_GEN_ALERT - %s", names[index]);
+    LOC_LOGd("GEOFENCE_GEN_ALERT - %s", names[index]);
 
     GeofenceStatusAvailable available = GEOFENCE_STATUS_AVAILABILE_NO;
     switch (alertInfo->geofenceAlert) {
