@@ -731,7 +731,7 @@ private:
     // LocationTechnologyMask to PBLocationTechnologyMask
     uint32_t getPBMaskForLocationTechnologyMask(const uint32_t &locTechMask) const;
     // GnssLocationInfoFlagMask to PBGnssLocationInfoFlagMask
-    uint32_t getPBMaskForGnssLocationInfoFlagMask(const uint32_t &gnssLocInfoFlagMask) const;
+    uint32_t getPBMaskForGnssLocationInfoFlagMask(const uint64_t &gnssLocInfoFlagMask) const;
     // GnssLocationNavSolutionMask to PBGnssLocationNavSolutionMask
     uint32_t getPBMaskForGnssLocationNavSolutionMask(const uint32_t &gnssLocNavSolnMask) const;
     // DrCalibrationStatusMask to PBLocApiDrCalibrationStatusMask
@@ -777,6 +777,7 @@ private:
             const GnssMeasurementsMultipathIndicator &gnssMeasMultiPathIndic) const;
     PBLocApiGnss_LocSvSystemEnumType getPBEnumForGnssLocSvSystem(
             const Gnss_LocSvSystemEnumType &gnssLocSvSysEnumType) const;
+    PBLocationSessionStatus getPBEnumForLocSessionStatus(const loc_sess_status &status) const;
 
     // ** Special enum conversion
     // GnssSvType to PBLocApiGnss_LocSvSystemEnumType
@@ -854,6 +855,7 @@ private:
             const PBLocApiGnss_LocSvSystemEnumType &pbGnssLocSvSysEnumType) const;
     LocOutputEngineType getEnumForPBLocOutputEngineType(
             const PBLocApiOutputEngineType &pbLocOpEngType) const;
+    loc_sess_status getLocSessionStatusFromPB(const PBLocationSessionStatus &pbStatus) const;
 
     // ** Special enum conversion
     // PBLocApiGnss_LocSvSystemEnumType to GnssSvType
