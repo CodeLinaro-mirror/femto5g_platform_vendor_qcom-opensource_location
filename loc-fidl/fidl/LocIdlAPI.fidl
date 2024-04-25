@@ -750,6 +750,12 @@ interface LocIdlAPI {
         IDL_LOC_INFO_GPTP_TIME_BIT                      = 0x0000010000000000
         /** IDLLocationReport has valid IDLLocationReport::elapsedgPTPTimeUnc. */
         IDL_LOC_INFO_GPTP_TIME_UNC_BIT                  = 0x0000020000000000
+        /** GnssLocation has valid IDLLocationReport::baseLineLength. */
+        IDL_LOC_INFO_BASE_LINE_LENGTH_BIT               = 0x0000040000000000
+        /** GnssLocation has valid IDLLocationReport::ageMsecOfCorrections. */
+        IDL_LOC_INFO_AGE_OF_CORRECTION_BIT              = 0x0000080000000000
+        /** IDLLocationReport has valid IDLLocationReport::currReportingRate. */
+        IDL_LOC_INFO_CURR_REPORT_RATE_BIT               = 0x0000100000000000
     }
 
     /** Specify the reliability level of
@@ -929,7 +935,7 @@ interface LocIdlAPI {
      *  IDLLocationReport.  */
     struct IDLGnssMeasUsageInfo {
         /** Specify GNSS Constellation Type for the SV. */
-        UInt32 gnssConstellation
+        UInt16 gnssConstellation
         /** Specify satellite vehicle ID number.
          *  For SV id range of each supported constellations, refer to
          *  documentation section in IDLGnssSv::svId.
@@ -1509,6 +1515,20 @@ interface LocIdlAPI {
         UInt64 elapsedgPTPTime
         /** GPTP time Unc */
         UInt64 elapsedgPTPTimeUnc
+        /** Distance between the base station and the receiver
+         *  Unit- meters */
+        Double baseLineLength
+        /** Difference in time between the fix timestamp using the
+         *  correction and the time of the correction
+         *  Unit - milli-seconds */
+        UInt64 ageMsecOfCorrections
+        /** Current Reporting Rate of GNSS engine
+         *  Unit - milli-seconds */
+        UInt32 currReportingRate
+        /** Time difference between packet generation time
+         *  and sending over SOMEIP
+         *  Unit- milli-seconds */
+        Int16 reportingLatency
     }
 
     /** GNSS SV report that comes when clients registers for
@@ -1528,6 +1548,11 @@ interface LocIdlAPI {
          *    - For GAL:     301 to 336
          *    - For NAVIC:   401 to 414    */
         UInt16 svId
+        /** GLONASS frequency channel number, range is [1, 14].
+         *
+         * This field is always valid if and only if sv is of GLONASS.
+         *  */
+        UInt16 gloFrequency
         /** Constellation type of the SV (GPS, SBAS, GLONASS, QZSS,
          *  BEIDOU, GALILEO).
          *  This field is always valid.   */
@@ -1560,12 +1585,6 @@ interface LocIdlAPI {
          *  This field is valid if gnssSvOptionsMask has
          *  GNSS_SV_OPTIONS_HAS_BASEBAND_CARRIER_TO_NOISE_BIT set.  */
         Double basebandCarrierToNoiseDbHz
-        /** GLONASS frequency channel number, range is [1, 14].
-         *
-         * This field is always valid if and only if sv is of GLONASS.
-         *  */
-        UInt16 gloFrequency
-
     }
 
     /** Specify the GNSS signal type and RF band for jammer info and
@@ -1864,6 +1883,8 @@ interface LocIdlAPI {
          *  documentation in IDLGnssSv::svId.
          */
         UInt16 svId
+        /** Increments when a cycle slip is detected.  */
+        UInt8 cycleSlipCount
         /** SV constellation type.    */
         IDLGnssSvType svType
         /** Time offset when the measurement was taken,
@@ -1944,8 +1965,6 @@ interface LocIdlAPI {
         /** 1-sigma uncertainty associated with the full inter-signal
          *  bias in nanoseconds.    */
         Double fullInterSignalBiasUncertaintyNs
-        /** Increments when a cycle slip is detected.  */
-        UInt8 cycleSlipCount
     }
 
     /** Specify GNSS measurements clock.
@@ -1997,6 +2016,10 @@ interface LocIdlAPI {
         IDLGnssMeasurementsData [] measurements
         /** NHz measurements indicator */
         Boolean isNHz
+        /** Time difference between packet generation time
+         *  and sending over SOMEIP
+         *  Unit- milli-seconds */
+        Int16 reportingLatency
     }
 
     /*********** LIA API's ******************/
