@@ -2243,6 +2243,12 @@ locClientEventMaskType LocApiV02 :: convertLocClientEventMask(
   if (mask & LOC_API_ADAPTER_BIT_SATELLITE_REPORT)
       eventMask |= QMI_LOC_EVENT_MASK_GNSS_SV_INFO_V02;
 
+  /* treat NMEA_1Hz and NMEA_POSITION_REPORT the same*/
+  if ((mask & LOC_API_ADAPTER_BIT_NMEA_POSITION_REPORT) ||
+      (mask & LOC_API_ADAPTER_BIT_NMEA_1HZ_REPORT) ) {
+      eventMask |= QMI_LOC_EVENT_MASK_NMEA_V02;
+  }
+
   if (mask & LOC_API_ADAPTER_BIT_NI_NOTIFY_VERIFY_REQUEST)
       eventMask |= QMI_LOC_EVENT_MASK_NI_NOTIFY_VERIFY_REQ_V02;
 
