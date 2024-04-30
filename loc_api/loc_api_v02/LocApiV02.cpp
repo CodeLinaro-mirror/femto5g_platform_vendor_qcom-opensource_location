@@ -160,6 +160,9 @@ template struct loc_core::LocApiResponseData<LocApiBatchData>;
 template struct loc_core::LocApiResponseData<LocApiGeofenceData>;
 template struct loc_core::LocApiResponseData<LocGpsLocation>;
 
+// Leap Second Uncertainity value in seconds during leap Second roll-over
+#define LOC_LEAP_SEC_UNC_GAURD_VALUE (3)
+
 /* minimum number of measurements with
   mask QMI_LOC_MASK_MEAS_STATUS_GNSS_FRESH_MEAS_VALID */
 #define MIN_REFRESH_MEASUREMENTS (3)
@@ -3344,6 +3347,15 @@ void LocApiV02 :: reportPosition (
             locationExtended.systemTick = location_report_ptr->systemTick;
             locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_SYSTEM_TICK_UNC;
             locationExtended.systemTickUnc = location_report_ptr->systemTickUnc;
+        }
+        if (location_report_ptr->leapSecUnc_valid) {
+            locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_LEAP_SECONDS_UNC;
+            if (location_report_ptr->leapSecUnc == LOC_LEAP_SEC_UNC_GAURD_VALUE &&
+                    location_report_ptr->timestampUtc_valid) {
+                locationExtended.leapSecondsUnc = 0;
+            } else {
+                locationExtended.leapSecondsUnc = location_report_ptr->leapSecUnc;
+            }
         }
 
         loc_sess_status sessStatus =
