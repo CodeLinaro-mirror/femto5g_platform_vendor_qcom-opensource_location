@@ -1518,6 +1518,7 @@ string GnssLocation::toString() const {
         out += to_string(dgnssId);
         count++;
     }
+    out += FIELDVAL_DEC(leapSecondsUnc);
     return out;
 }
 
