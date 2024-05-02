@@ -79,8 +79,9 @@ enum LocationApiDataTypesVersion {
     LOCAPI_DATA_TYPES_VER_MAJOR = 1;
     // Minor - New features / API addition, new message/elemtent addition.
     // Bump the last byte of version i.e. x.2 to x.3
-    // Minor version 39: Support to add NAVIC L1 signal type
-    LOCAPI_DATA_TYPES_VER_MINOR = 39;
+    // Minor version 41: Add AGC status in GnssMeasurements and GnssData notification
+    // Minor version 42: Add tech mask of wifi and premium position in PBTerrestrialTechMask
+    LOCAPI_DATA_TYPES_VER_MINOR = 42;
 }
 
 // ============================================================================
@@ -245,6 +246,8 @@ enum PBGnssLocationInfoExtFlagMask {
     PB_GNSS_LOCATION_INFO_PROTECT_CROSS_TRACK_BIT = 0x10; // valid protection level cross track
     PB_GNSS_LOCATION_INFO_PROTECT_VERTICAL_BIT    = 0x20; // valid protection level vertical
     PB_GNSS_LOCATION_INFO_DGNSS_STATION_ID_MASK_BIT = 0x40; // valid dgnss station id info
+    PB_GNSS_LOCATION_INFO_BASE_LINE_LENGTH_BIT    = 0x80; // valid base station-receiver distance
+    PB_GNSS_LOCATION_INFO_AGE_OF_CORRECTION_BIT   = 0x100; // valid age of Correction
 };
 
 enum PBGnssLocationNavSolutionMask {
@@ -398,7 +401,14 @@ enum PBLeapSecondSysInfoMask {
 
 enum PBTerrestrialTechMask {
     PB_TERRESTRIAL_TECH_INVALID = 0;
+    //terrestrialTechMask = PB_TERRESTRIAL_TECH_GTP_WWAN
     PB_TERRESTRIAL_TECH_GTP_WWAN = 1;
+    //terrestrialTechMask = PB_TERRESTRIAL_TECH_GTP_WWAN_PREMIUM
+    PB_TERRESTRIAL_TECH_GTP_WWAN_PREMIUM = 2;
+    //terrestrialTechMask = PB_TERRESTRIAL_TECH_GTP_WIFI
+    PB_TERRESTRIAL_TECH_GTP_WIFI = 4;
+    //terrestrialTechMask = PB_TERRESTRIAL_TECH_GTP_WIFI_PREMIUN
+    PB_TERRESTRIAL_TECH_GTP_WIFI_PREMIUN = 8;
 };
 
 enum PBLocApiGnssLocationPosDataMask {
@@ -548,6 +558,13 @@ enum PBGnssMeasurementsMultipathIndicator {
     PB_GNSS_MEASUREMENTS_MULTIPATH_INDICATOR_UNKNOWN = 0;
     PB_GNSS_MEASUREMENTS_MULTIPATH_INDICATOR_PRESENT = 1;
     PB_GNSS_MEASUREMENTS_MULTIPATH_INDICATOR_NOT_PRESENT = 2;
+}
+
+enum PBAgcStatus {
+    PB_AGC_STATUS_UNKNOWN = 0;
+    PB_AGC_STATUS_NO_SATURATION = 1;
+    PB_AGC_STATUS_FRONT_END_GAIN_MAXIMUM_SATURATION = 2;
+    PB_AGC_STATUS_FRONT_END_GAIN_MINIMUM_SATURATION = 3;
 }
 
 enum PBLocApiGnssAidingDataSvMask {
@@ -1201,6 +1218,10 @@ message PBGnssLocationInfoNotification {
     float    protectVertical = 46;
     // dgnss station id, validity is set via extFlags
     repeated uint32 dgnssStationId = 47;
+    // Distance between base station and reciever
+    double baseLineLength = 48;
+    // Age of corrections - Unit - milli-seconds
+    uint64 ageMsecOfCorrections = 49;
 }
 
 message PBGnssDataNotification {
@@ -1212,6 +1233,12 @@ message PBGnssDataNotification {
     repeated double     jammerInd = 3;
     // Automatic gain control.
     repeated double     agc = 4;
+    // RF Automatic gain control status for L1 band
+    PBAgcStatus agcStatusL1 = 5;
+    // RF Automatic gain control status for L2 band
+    PBAgcStatus agcStatusL2 = 6;
+    // RF Automatic gain control status for L5 band
+    PBAgcStatus agcStatusL5 = 7;
 }
 
 message PBGnssMeasurementsNotification {
@@ -1222,6 +1249,12 @@ message PBGnssMeasurementsNotification {
     PBGnssMeasurementsClock clock = 2;
     // NHz measurments indicator
     bool isNhz = 3;
+    // RF Automatic gain control status for L1 band
+    PBAgcStatus agcStatusL1 = 4;
+    // RF Automatic gain control status for L2 band
+    PBAgcStatus agcStatusL2 = 5;
+    // RF Automatic gain control status for L5 band
+    PBAgcStatus agcStatusL5 = 6;
 }
 
 message PBLocApiGnssSystemTimeStructType {
