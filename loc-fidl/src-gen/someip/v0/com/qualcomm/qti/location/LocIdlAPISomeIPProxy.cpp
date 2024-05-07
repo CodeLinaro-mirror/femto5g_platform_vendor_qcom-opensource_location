@@ -35,10 +35,10 @@ std::shared_ptr<CommonAPI::SomeIP::Proxy> createLocIdlAPISomeIPProxy(
 
 void initializeLocIdlAPISomeIPProxy() {
     CommonAPI::SomeIP::AddressTranslator::get()->insert(
-        "local:com.qualcomm.qti.location.LocIdlAPI:v0_1:com.qualcomm.qti.location.LocIdlAPI",
-        0xee00, 0x1, 0, 1);
+        "local:com.qualcomm.qti.location.LocIdlAPI:v0_2:com.qualcomm.qti.location.LocIdlAPI",
+        0xee00, 0x1, 0, 2);
     CommonAPI::SomeIP::Factory::get()->registerProxyCreateMethod(
-        "com.qualcomm.qti.location.LocIdlAPI:v0_1",
+        "com.qualcomm.qti.location.LocIdlAPI:v0_2",
         &createLocIdlAPISomeIPProxy);
 }
 
@@ -387,9 +387,67 @@ std::future<CommonAPI::CallStatus> LocIdlAPISomeIPProxy::configConstellationsAsy
         std::make_tuple(deploy_resp));
 }
 
+void LocIdlAPISomeIPProxy::injectMapMatchedFeedbackData(LocIdlAPI::MapMatchingFeedbackData _mmfData, CommonAPI::CallStatus &_internalCallStatus, LocIdlAPI::IDLLocationResponse &_resp, const CommonAPI::CallInfo *_info) {
+    CommonAPI::Deployable< LocIdlAPI::MapMatchingFeedbackData, ::v0::com::qualcomm::qti::location::LocIdlAPI_::MapMatchingFeedbackDataDeployment_t> deploy_mmfData(_mmfData, static_cast< ::v0::com::qualcomm::qti::location::LocIdlAPI_::MapMatchingFeedbackDataDeployment_t* >(nullptr));
+    CommonAPI::Deployable< LocIdlAPI::IDLLocationResponse, ::v0::com::qualcomm::qti::location::LocIdlAPI_::IDLLocationResponseDeployment_t> deploy_resp(&::v0::com::qualcomm::qti::location::LocIdlAPI_::IDLLocationResponseDeployment);
+    CommonAPI::SomeIP::ProxyHelper<
+        CommonAPI::SomeIP::SerializableArguments<
+            CommonAPI::Deployable<
+                LocIdlAPI::MapMatchingFeedbackData,
+                ::v0::com::qualcomm::qti::location::LocIdlAPI_::MapMatchingFeedbackDataDeployment_t
+            >
+        >,
+        CommonAPI::SomeIP::SerializableArguments<
+            CommonAPI::Deployable<
+                LocIdlAPI::IDLLocationResponse,
+                ::v0::com::qualcomm::qti::location::LocIdlAPI_::IDLLocationResponseDeployment_t
+            >
+        >
+    >::callMethodWithReply(
+        *this,
+        CommonAPI::SomeIP::method_id_t(0x7d06),
+        true,
+        false,
+        (_info ? _info : &CommonAPI::SomeIP::defaultCallInfo),
+        deploy_mmfData,
+        _internalCallStatus,
+        deploy_resp);
+    _resp = deploy_resp.getValue();
+}
+
+std::future<CommonAPI::CallStatus> LocIdlAPISomeIPProxy::injectMapMatchedFeedbackDataAsync(const LocIdlAPI::MapMatchingFeedbackData &_mmfData, InjectMapMatchedFeedbackDataAsyncCallback _callback, const CommonAPI::CallInfo *_info) {
+    CommonAPI::Deployable< LocIdlAPI::MapMatchingFeedbackData, ::v0::com::qualcomm::qti::location::LocIdlAPI_::MapMatchingFeedbackDataDeployment_t> deploy_mmfData(_mmfData, static_cast< ::v0::com::qualcomm::qti::location::LocIdlAPI_::MapMatchingFeedbackDataDeployment_t* >(nullptr));
+    CommonAPI::Deployable< LocIdlAPI::IDLLocationResponse, ::v0::com::qualcomm::qti::location::LocIdlAPI_::IDLLocationResponseDeployment_t> deploy_resp(&::v0::com::qualcomm::qti::location::LocIdlAPI_::IDLLocationResponseDeployment);
+    return CommonAPI::SomeIP::ProxyHelper<
+        CommonAPI::SomeIP::SerializableArguments<
+            CommonAPI::Deployable<
+                LocIdlAPI::MapMatchingFeedbackData,
+                ::v0::com::qualcomm::qti::location::LocIdlAPI_::MapMatchingFeedbackDataDeployment_t
+            >
+        >,
+        CommonAPI::SomeIP::SerializableArguments<
+            CommonAPI::Deployable<
+                LocIdlAPI::IDLLocationResponse,
+                ::v0::com::qualcomm::qti::location::LocIdlAPI_::IDLLocationResponseDeployment_t
+            >
+        >
+    >::callMethodAsync(
+        *this,
+        CommonAPI::SomeIP::method_id_t(0x7d06),
+        true,
+        false,
+        (_info ? _info : &CommonAPI::SomeIP::defaultCallInfo),
+        deploy_mmfData,
+        [_callback] (CommonAPI::CallStatus _internalCallStatus, CommonAPI::Deployable< LocIdlAPI::IDLLocationResponse, ::v0::com::qualcomm::qti::location::LocIdlAPI_::IDLLocationResponseDeployment_t > _resp) {
+            if (_callback)
+                _callback(_internalCallStatus, _resp.getValue());
+        },
+        std::make_tuple(deploy_resp));
+}
+
 void LocIdlAPISomeIPProxy::getOwnVersion(uint16_t& ownVersionMajor, uint16_t& ownVersionMinor) const {
     ownVersionMajor = 0;
-    ownVersionMinor = 1;
+    ownVersionMinor = 2;
 }
 
 std::future<void> LocIdlAPISomeIPProxy::getCompletionFuture() {
