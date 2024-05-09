@@ -10950,22 +10950,17 @@ LocApiV02::startTimeBasedTracking(const TrackingOptions& options, LocApiResponse
 
     // power mode
     mPowerMode = options.powerMode;
-    if (!(GNSS_POWER_MODE_DEFAULT == options.powerMode && options.tbm == 0)) {
-        start_msg.powerMode_valid = 1;
-        start_msg.powerMode.powerMode = convertPowerMode(options.powerMode);
-        // Force low accuracy for background power modes
-        if (GNSS_POWER_MODE_M3 == options.powerMode ||
-                GNSS_POWER_MODE_M4 == options.powerMode ||
-                GNSS_POWER_MODE_M5 == options.powerMode) {
-            start_msg.horizontalAccuracyLevel =  eQMI_LOC_ACCURACY_LOW_V02;
-        }
-        // Force TBM = TBF for power mode M4
-        if (GNSS_POWER_MODE_M4 == options.powerMode) {
-            start_msg.powerMode.timeBetweenMeasurement = start_msg.minInterval;
-        } else {
-            start_msg.powerMode.timeBetweenMeasurement = options.tbm;
-        }
+
+    start_msg.powerMode_valid = 1;
+    start_msg.powerMode.powerMode = convertPowerMode(options.powerMode);
+    // Force low accuracy for background power modes
+    if (GNSS_POWER_MODE_M3 == options.powerMode ||
+            GNSS_POWER_MODE_M4 == options.powerMode ||
+            GNSS_POWER_MODE_M5 == options.powerMode) {
+        start_msg.horizontalAccuracyLevel =  eQMI_LOC_ACCURACY_LOW_V02;
     }
+
+    start_msg.powerMode.timeBetweenMeasurement = start_msg.minInterval;
 
     //special req type
     if (SPECIAL_REQ_INVALID != options.specialReq) {
