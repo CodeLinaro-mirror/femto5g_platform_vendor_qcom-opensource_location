@@ -30,7 +30,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -294,6 +294,12 @@ DECLARE_TBL(loc_v02_event_name) =
     NAME_VAL(QMI_LOC_SET_OSNMA_STATE_REQ_V02),
     NAME_VAL(QMI_LOC_SET_OSNMA_STATE_RESP_V02),
     NAME_VAL(QMI_LOC_SET_OSNMA_STATE_IND_V02),
+    NAME_VAL(QMI_LOC_SET_NTN_STATUS_REQ_V02),
+    NAME_VAL(QMI_LOC_SET_NTN_STATUS_RESP_V02),
+    NAME_VAL(QMI_LOC_SET_NTN_STATUS_IND_V02),
+    NAME_VAL(QMI_LOC_GET_NTN_STATUS_REQ_V02),
+    NAME_VAL(QMI_LOC_GET_NTN_STATUS_RESP_V02),
+    NAME_VAL(QMI_LOC_GET_NTN_STATUS_IND_V02),
 };
 
 const char* loc_get_v02_event_name(uint32_t event)

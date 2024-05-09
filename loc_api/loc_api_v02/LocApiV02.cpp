@@ -2395,6 +2395,10 @@ locClientEventMaskType LocApiV02 :: convertLocClientEventMask(
       eventMask |= QMI_LOC_EVENT_MASK_GNSS_BANDS_SUPPORTED_V02;
   }
 
+  if (mask & LOC_API_ADAPTER_BIT_NTN_CONFIG_UPDATE) {
+      eventMask |= QMI_LOC_EVENT_MASK_NTN_CONFIG_UPDATE_V02;
+  }
+
   return eventMask;
 }
 
@@ -7747,6 +7751,10 @@ void LocApiV02 :: eventCb(locClientHandleType /*clientHandle*/,
     case QMI_LOC_GNSS_BANDS_SUPPORTED_IND_V02:
       processGnssBandsSupportedInd(eventPayload.pGnssBandsSupportedIndMsg);
       break;
+
+    case QMI_LOC_NTN_CONFIG_UPDATE_IND_V02:
+      LocApiBase::reportNtnConfigUpdateEvent(eventPayload.pNtnConfigUpdateIndMsg->signalType);
+      break;
   }
 }
 
@@ -11196,6 +11204,75 @@ void LocApiV02::configOsnmaEnablement(bool enable, LocApiResponse* adapterRespon
         }
     }
     if (adapterResponse) {
+        adapterResponse->returnToSender(err);
+    }
+    }));
+}
+
+void LocApiV02::getNtnConfigSignalMask(LocApiResponse* adapterResponse) {
+    sendMsg(new LocApiMsg([this, adapterResponse] () {
+    LocationError err = LOCATION_ERROR_SUCCESS;
+    locClientStatusEnumType status = eLOC_CLIENT_FAILURE_GENERAL;
+    locClientReqUnionType req_union = {};
+    qmiLocGetNtnStatusIndMsgT_v02 getNtnStatusInd = {};
+
+    status = locSyncSendReq(QMI_LOC_GET_NTN_STATUS_REQ_V02,
+                            req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
+                            QMI_LOC_GET_NTN_STATUS_IND_V02,
+                            &getNtnStatusInd);
+
+    GnssSignalTypeMask returnedMask = 0;
+    if ((status == eLOC_CLIENT_SUCCESS) &&
+        (getNtnStatusInd.status == eQMI_LOC_SUCCESS_V02)) {
+        // Modem return NTN status successfully
+        err = LOCATION_ERROR_SUCCESS;
+        returnedMask = getNtnStatusInd.signalType;
+    } else {
+        // Modem doesn't response this QMI for some reason
+        err = LOCATION_ERROR_NOT_SUPPORTED;
+    }
+
+    LocApiBase::reportNtnStatusEvent(err, returnedMask, false);
+    if (adapterResponse != NULL) {
+        adapterResponse->returnToSender(err);
+    }
+    }));
+}
+
+void LocApiV02::setNtnConfigSignalMask(GnssSignalTypeMask gpsSignalTypeConfigMask,
+        LocApiResponse* adapterResponse) {
+    sendMsg(new LocApiMsg([this, gpsSignalTypeConfigMask, adapterResponse] () {
+    LOC_LOGd("gpsSignalTypeConfigMask = %d", gpsSignalTypeConfigMask);
+    LocationError err = LOCATION_ERROR_SUCCESS;
+    locClientStatusEnumType status = eLOC_CLIENT_FAILURE_GENERAL;
+    locClientReqUnionType req_union = {};
+    qmiLocSetNtnStatusReqMsgT_v02 setNtnStatusReq = {};
+    qmiLocSetNtnStatusIndMsgT_v02 setNtnStatusInd = {};
+
+    setNtnStatusReq.signalType = gpsSignalTypeConfigMask;
+    req_union.pSetNtnStatusReq = &setNtnStatusReq;
+
+    status = locSyncSendReq(QMI_LOC_SET_NTN_STATUS_REQ_V02,
+                            req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
+                            QMI_LOC_SET_NTN_STATUS_IND_V02,
+                            &setNtnStatusInd);
+
+    GnssSignalTypeMask returnedMask = 0;
+    if ((status == eLOC_CLIENT_SUCCESS) &&
+        (setNtnStatusInd.status == eQMI_LOC_SUCCESS_V02)) {
+        // Modem set NTN status successfully
+        returnedMask = setNtnStatusInd.signalType;
+        err = LOCATION_ERROR_SUCCESS;
+    } else if (setNtnStatusInd.status == eQMI_LOC_GENERAL_FAILURE_V02) {
+        // Modem cannot set NTN status exactly folllow gpsSignalTypeConfigMask
+        err = LOCATION_ERROR_GENERAL_FAILURE;
+        returnedMask = setNtnStatusInd.signalType;
+    } else {
+        //Modem doesn't response this QMI for some reason
+        err = LOCATION_ERROR_NOT_SUPPORTED;
+    }
+    LocApiBase::reportNtnStatusEvent(err, returnedMask, true);
+    if (adapterResponse != NULL) {
         adapterResponse->returnToSender(err);
     }
     }));
