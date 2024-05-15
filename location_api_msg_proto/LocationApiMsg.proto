@@ -29,7 +29,7 @@
  /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022, 2024 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -87,8 +87,8 @@ enum LocationApiMsgVersion {
     LOCAPI_MSG_VER_MAJOR = 1;
     // Minor - New features / API addition, new message/elemtent addition.
     // Bump the last byte of version i.e. x.2 to x.3
-    // Minor version 20: Add Gnss signal types register msg
-    LOCAPI_MSG_VER_MINOR = 20;
+    // Minor version 21: Support Ephemeris reporting for LCA
+    LOCAPI_MSG_VER_MINOR = 21;
 }
 
 // ============================================================================
@@ -171,6 +171,8 @@ enum PBELocMsgID {
     // Single shot fix request/response msg
     PB_E_LOCAPI_GET_SINGLE_POS_REQ_MSG_ID = 38;
     PB_E_LOCAPI_GET_SINGLE_POS_RESP_MSG_ID = 39;
+    // Ephemeris Data
+    PB_E_LOCAPI_EPH_MSG_ID = 40;
 
     // ping
     PB_E_LOCAPI_PINGTEST_MSG_ID = 99;
@@ -256,6 +258,8 @@ enum PBLocationCallbacksMask {
     PB_E_LOC_CB_GNSS_DC_REPORT_BIT          = 0x2000;
     /**< Register for Engine NMEA */
     PB_E_LOC_CB_ENGINE_NMEA_BIT             = 0x4000;
+    /**< Register for GNSS EPH */
+    PB_E_LOC_CB_GNSS_EPH_BIT                = 0x8000;
 }
 
 enum PBEngineInfoCallbacksMask {
@@ -525,6 +529,11 @@ message PBLocAPIDcReportIndMsg {
     PBGnssDcReportInfo dcReportInfo = 1;
 }
 
+
+// defintion for message with msg id of PB_E_LOCAPI_EPH_MSG_ID
+message PBLocAPIEphIndMsg {
+    PBGnssEphemerisNotification gnssEphemerisNotification = 1;
+}
 //*******************************************************************
 // IPC message structure - Single-shot Terrestrial fix
 //*******************************************************************

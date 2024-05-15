@@ -58,6 +58,7 @@ static uint32_t posCount = 0;
 static uint32_t latentPosCount = 0;
 /** Latency threshold for Position reports in msec */
 #define MAX_POSITION_LATENCY   20
+#define IDL_MAX_RETRY 5
 
 static void onConfigResponseCb(location_integration::LocConfigTypeEnum      requestType,
                                location_integration::LocIntegrationResponse response) {
@@ -237,6 +238,9 @@ LocIdlAPIService::LocIdlAPIService():
         mLcaInstance(nullptr),
         mMsgTask(new MsgTask("LocIDLService")),
         mLIAInstance(nullptr),
+#ifdef POWER_DAEMON_MGR_ENABLED
+        mPowerEventObserver(nullptr),
+#endif
         mLcaIdlConverter(new LocLcaIdlConverter())
 {
 
@@ -247,6 +251,34 @@ LocIdlAPIService::~LocIdlAPIService()
 
 }
 
+void LocIdlAPIService::onPowerEvent(IDLPowerStateType powerEvent) {
+    LOC_LOGi("Recieved Power Event %d", powerEvent);
+    struct PowerEventMsg : public LocMsg {
+
+         LocIdlAPIService* mIDLService;
+        IDLPowerStateType mPowerEvent;
+        inline PowerEventMsg(LocIdlAPIService* IDLService,
+                IDLPowerStateType event) :
+            LocMsg(),
+            mIDLService(IDLService),
+            mPowerEvent(event){};
+        inline virtual void proc() const {
+            switch (mPowerEvent) {
+                 case IDL_POWER_STATE_SUSPEND:
+                 case IDL_POWER_STATE_SHUTDOWN:
+                     mIDLService->unRegisterWithFIDLService();
+                     break;
+                 case IDL_POWER_STATE_RESUME:
+                     mIDLService->registerWithFIDLService();
+                     break;
+             }
+        }
+    };
+
+    mMsgTask->sendMsg(new PowerEventMsg(this, powerEvent));
+
+
+}
 bool LocIdlAPIService::init()
 {
 
@@ -289,7 +321,14 @@ bool LocIdlAPIService::createLocIdlService()
         mLIAInstance = new LocationIntegrationApi(priorityMap, intCbs);
         LOC_LOGi (" LIA instance created Successfully ");
     }
-    //Create FIDL object and register with FIDL service
+#ifdef POWER_DAEMON_MGR_ENABLED
+    if (nullptr == mPowerEventObserver && mInstance != NULL) {
+        mPowerEventObserver = LocIdlPowerEvtHandler::getPwrEvtHandler(mInstance);
+        if (nullptr == mPowerEventObserver) {
+            LOC_LOGe(" mPowerEventObserver null !! ");
+        }
+    }
+#endif
     registerWithFIDLService();
 
     return true;
@@ -355,6 +394,30 @@ bool LocIdlAPIService::registerWithFIDLService()
 
     LOC_LOGd("Successfully Registered Service!");
 
+    return true;
+}
+
+bool LocIdlAPIService::unRegisterWithFIDLService()
+{
+    LOC_LOGi("UnRegistering IDL Service ");
+
+    std::shared_ptr<CommonAPI::Runtime> runtime = CommonAPI::Runtime::get();
+
+    std::string domain = "local";
+    std::string instance = "com.qualcomm.qti.location.LocIdlAPI";
+    std::string connection = "location-fidl-service";
+
+    bool successfullyUnRegistered = runtime->unregisterService(domain,
+            v0::com::qualcomm::qti::location::LocIdlAPI::getInterface(), instance);
+    uint8_t count =  1;
+    while (!successfullyUnRegistered && count <= IDL_MAX_RETRY) {
+        LOC_LOGi("UnRegister IDL Service failed, No. of retires: %d !!", count);
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        successfullyUnRegistered = runtime->unregisterService(domain,
+                v0::com::qualcomm::qti::location::LocIdlAPI::getInterface(), instance);
+        count++;
+    }
+    LOC_LOGi("Successfully UnRegistered Service!");
     return true;
 }
 

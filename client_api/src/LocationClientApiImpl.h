@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -243,6 +243,24 @@ public:
     static GnssDcReport parseDcReport(const::GnssDcReportInfo &halDcReport);
     static GeofenceBreachTypeMask parseGeofenceBreachType(GeofenceBreachType breachType);
     static GeofenceBreachType parseGeofenceBreachTypeMask(::GeofenceBreachTypeMask breachTypeMask);
+
+    static void parseEphSrcAndAction(const ::GnssEphAction& halEphAction,
+            GnssEphSource& ephSrc, GnssEphAction& ephAction);
+    static GnssEphemeris parseGnssEphemerisInfo(const ::GnssSvEphemerisReport &ephInfo);
+    static void parseCommanGnssEphemeris(const ::GnssEphCommon& halCommanEph,
+            GnssEphCommonInfo& lcaCommanEph);
+    static void parseGloEphemeris( const GlonassEphemerisResponse& halEph,
+                std::vector<GlonassEphemeris>& lcaEphInfo);
+    static void parseGalEphemeris( const GalileoEphemerisResponse& halEph,
+                std::vector<GalileoEphemeris>& lcaEphInfo);
+    static void parseGpsEphemeris(const GpsEphemerisResponse& halEph,
+                std::vector<GpsQzssEphemeris>& lcaEphInfo);
+    static void parseBdsEphemeris(const BdsEphemerisResponse& halEph,
+                std::vector<BdsEphemeris>& lcaEphInfo);
+    static void parseQzssEphemeris(const QzssEphemerisResponse& halEph,
+                std::vector<QzssEphemeris>& lcaEphInfo);
+    static void parseNavicEphemeris(const NavicEphemerisResponse& halEph,
+                std::vector<NavicEphemeris>& lcaEphInfo);
 
     void logLocation(const Location &location,
                      LocReportTriggerType reportTriggerType);
