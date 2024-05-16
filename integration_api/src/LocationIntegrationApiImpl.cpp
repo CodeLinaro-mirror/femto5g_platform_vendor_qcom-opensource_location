@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -229,20 +229,20 @@ public:
             mMsgTask(msgTask), mKnownStatus(LocIpcQrtrWatcher::ServiceStatus::DOWN) {
     }
     inline virtual void onServiceStatusChange(int serviceId, int instanceId,
-            LocIpcQrtrWatcher::ServiceStatus status, const LocIpcSender& refSender) {
+            LocIpcQrtrWatcher::ServiceStatus status, uint32_t nodeId, uint32_t portId) {
 
         struct onHalServiceStatusChangeHandler : public LocMsg {
             onHalServiceStatusChangeHandler(HalDaemonQrtrWatcher& watcher,
                                             LocIpcQrtrWatcher::ServiceStatus status,
-                                            const LocIpcSender& refSender) :
-                mWatcher(watcher), mStatus(status), mRefSender(refSender) {}
+                                            uint32_t nodeId, uint32_t portId) :
+                mWatcher(watcher), mStatus(status), mNodeId(nodeId), mPortId(portId) {}
 
             virtual ~onHalServiceStatusChangeHandler() {}
             void proc() const {
                 if (LocIpcQrtrWatcher::ServiceStatus::UP == mStatus) {
                     LOC_LOGi("LocIpcQrtrWatcher:: HAL Daemon ServiceStatus::UP");
                     auto sender = mWatcher.mIpcSender.lock();
-                    if (nullptr != sender && sender->copyDestAddrFrom(mRefSender)) {
+                    if (nullptr != sender && sender->updateDestAddr(mNodeId, mPortId)) {
                         usleep(sSleepTime);
                         auto listener = mWatcher.mIpcListener.lock();
                         if (nullptr != listener) {
@@ -261,13 +261,14 @@ public:
 
             HalDaemonQrtrWatcher& mWatcher;
             LocIpcQrtrWatcher::ServiceStatus mStatus;
-            const LocIpcSender& mRefSender;
+            uint32_t mNodeId;
+            uint32_t mPortId;
         };
 
         if (LOCATION_CLIENT_API_QSOCKET_HALDAEMON_SERVICE_ID == serviceId &&
             LOCATION_CLIENT_API_QSOCKET_HALDAEMON_INSTANCE_ID == instanceId) {
             mMsgTask.sendMsg(new (nothrow)
-                     onHalServiceStatusChangeHandler(*this, status, refSender));
+                     onHalServiceStatusChangeHandler(*this, status, nodeId, portId));
         }
     }
 };

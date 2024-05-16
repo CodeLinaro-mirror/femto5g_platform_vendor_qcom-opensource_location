@@ -107,5 +107,6 @@ void LocIdlAPIStubImpl::deleteAidingData(const std::shared_ptr<CommonAPI::Client
 void LocIdlAPIStubImpl::configConstellations(const std::shared_ptr<CommonAPI::ClientId> client,
     std::vector< LocIdlAPI::IDLGnssSvIdInfo > svList,
     configConstellationsReply_t reply) {
-    mApiService->LIAconfigConstellations(client, svList, reply);
+    // This API is currently not supported.
+    reply(LocIdlAPI::IDLLocationResponse::IDL_LOC_RESP_NOT_SUPPORTED);
 }

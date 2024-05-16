@@ -341,7 +341,7 @@ static void getInterSystemTimeBias(const char* interSystem,
                                    Gnss_InterSystemBiasStructType &interSystemBias,
                                    const qmiLocInterSystemBiasStructT_v02* pInterSysBias)
 {
-    LOC_LOGa("interSystem: %s, Mask:%d, TimeBias:%f, TimeBiasUnc:%f",
+    LOC_LOGa("interSystem: %s, Mask:0x%x, TimeBias:%f, TimeBiasUnc:%f",
              interSystem, pInterSysBias->validMask, pInterSysBias->timeBias,
              pInterSysBias->timeBiasUnc);
 
@@ -703,6 +703,7 @@ bool LocApiV02::sendRequestForAidingData(locClientEventMaskType qmiMask) {
 locClientEventMaskType LocApiV02 :: adjustLocClientEventMask(locClientEventMaskType qmiMask)
 {
     locClientEventMaskType oldQmiMask = qmiMask;
+
     if (!mInSession) {
         locClientEventMaskType clearMask = QMI_LOC_EVENT_MASK_POSITION_REPORT_V02 |
                                            QMI_LOC_EVENT_MASK_UNPROPAGATED_POSITION_REPORT_V02 |
@@ -723,6 +724,15 @@ locClientEventMaskType LocApiV02 :: adjustLocClientEventMask(locClientEventMaskT
         qmiMask = qmiMask & ~clearMask;
     }
 
+#ifdef __ANDROID__
+    if (mInSession || mEngineOn) {
+        // if device is in session, always register for engine state
+        // so that we can support full tracking mode in concurrent
+        // measurement and position session
+        qmiMask |= QMI_LOC_EVENT_MASK_ENGINE_STATE_V02;
+    }
+#endif
+
     //Enable feature status report for master client
     if (isMaster()) {
         qmiMask |= QMI_LOC_EVENT_MASK_FEATURE_STATUS_V02;
@@ -737,16 +747,17 @@ locClientEventMaskType LocApiV02 :: adjustLocClientEventMask(locClientEventMaskT
         // to avoid wake up
         qmiMask &= ~(QMI_LOC_EVENT_MASK_ENGINE_STATE_V02 |
                 QMI_LOC_EVENT_MASK_NEXT_LS_INFO_REPORT_V02);
-        syslog(LOG_INFO, "adjustLocClientEventMask, oldQmiMask=%" PRIu64 " "
-               "qmiMask=%" PRIu64 " mInSession: %d, power state %d, retry queue empty %d",
+        syslog(LOG_INFO, "adjustLocClientEventMask, oldQmiMask=0x%" PRIx64 " "
+               "qmiMask=0x%" PRIx64 " mInSession: %d, power state %d, retry queue empty %d",
                oldQmiMask, qmiMask, mInSession, mPlatformPowerState, mResenders.empty());
     } else if (mResenders.empty() == false) {
         qmiMask |= QMI_LOC_EVENT_MASK_ENGINE_STATE_V02;
     }
 
-    LOC_LOGi("oldQmiMask=%" PRIu64 " qmiMask=%" PRIu64 " mInSession: %d, "
-             "power state %d, retry queue empty %d, mEngineOn: %d",
-             oldQmiMask, qmiMask, mInSession, mPlatformPowerState, mResenders.empty(), mEngineOn);
+    LOC_LOGi("oldQmiMask=0x%" PRIx64 " qmiMask=0x%" PRIx64 " mInSession: %d, "
+             "power state %d, retry queue empty %d, mEngineOn: %d, qmi mask has engine state %d",
+             oldQmiMask, qmiMask, mInSession, mPlatformPowerState, mResenders.empty(), mEngineOn,
+             (qmiMask & QMI_LOC_EVENT_MASK_ENGINE_STATE_V02) != 0);
 
     return qmiMask;
 }
@@ -2227,7 +2238,6 @@ locClientEventMaskType LocApiV02 :: convertLocClientEventMask(
   LOC_API_ADAPTER_EVENT_MASK_T mask)
 {
   locClientEventMaskType eventMask = 0;
-  LOC_LOGd("adapter mask = 0x%" PRIx64, mask);
 
   if (mask & LOC_API_ADAPTER_BIT_PARSED_POSITION_REPORT)
       eventMask |= QMI_LOC_EVENT_MASK_POSITION_REPORT_V02;
@@ -2237,15 +2247,6 @@ locClientEventMaskType LocApiV02 :: convertLocClientEventMask(
 
   if (mask & LOC_API_ADAPTER_BIT_SATELLITE_REPORT)
       eventMask |= QMI_LOC_EVENT_MASK_GNSS_SV_INFO_V02;
-
-  /* treat NMEA_1Hz and NMEA_POSITION_REPORT the same*/
-  if ((mask & LOC_API_ADAPTER_BIT_NMEA_POSITION_REPORT) ||
-      (mask & LOC_API_ADAPTER_BIT_NMEA_1HZ_REPORT) ) {
-      eventMask |= QMI_LOC_EVENT_MASK_NMEA_V02;
-      // if registering for NMEA event, also register for ENGINE STATE event so that we can
-      // register for NMEA event when Engine turns ON and deregister when Engine turns OFF
-      eventMask |= QMI_LOC_EVENT_MASK_ENGINE_STATE_V02;
-  }
 
   if (mask & LOC_API_ADAPTER_BIT_NI_NOTIFY_VERIFY_REQUEST)
       eventMask |= QMI_LOC_EVENT_MASK_NI_NOTIFY_VERIFY_REQ_V02;
@@ -2383,11 +2384,6 @@ locClientEventMaskType LocApiV02 :: convertLocClientEventMask(
 
   if (mask & LOC_API_ADAPTER_BIT_GNSS_BANDS_SUPPORTED) {
       eventMask |= QMI_LOC_EVENT_MASK_GNSS_BANDS_SUPPORTED_V02;
-  }
-
-  if ((eventMask & QMI_LOC_EVENT_MASK_GNSS_MEASUREMENT_REPORT_V02) ||
-        (eventMask & QMI_LOC_EVENT_MASK_GNSS_NHZ_MEASUREMENT_REPORT_V02)) {
-      eventMask |= QMI_LOC_EVENT_MASK_ENGINE_STATE_V02;
   }
 
   return eventMask;
@@ -2927,6 +2923,8 @@ void LocApiV02 :: reportPosition (
                     locationExtended.measUsageInfo[idx].gnssSvId = gnssSvIdUsed;
                     locationExtended.measUsageInfo[idx].carrierPhaseAmbiguityType =
                             CARRIER_PHASE_AMBIGUITY_RESOLUTION_NONE;
+                    locationExtended.measUsageInfo[idx].measUsageStatusMask =
+                            GNSS_MEAS_USED_IN_PVT;
 
                     if (gnssSvIdUsed <= GPS_SV_PRN_MAX)
                     {
@@ -3783,6 +3781,40 @@ static Gnss_LocSvSystemEnumType getLocApiSvSystemType (qmiLocSvSystemEnumT_v02 q
     }
 
     return locSvSystemType;
+}
+static GnssRfBand getLocApiSvRfBand(qmiLocGnssSignalTypeMaskT_v02 qmiGnssSignalType) {
+    GnssRfBand rfBand = GNSS_RF_BAND_UNKNOWN;
+    switch (qmiGnssSignalType) {
+        case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L1CA_V02:
+        case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L1C_V02:
+        case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GLONASS_G1_V02:
+        case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GALILEO_E1_C_V02:
+        case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B1_I_V02:
+        case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B1C_V02:
+        case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1CA_V02:
+        case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1S_V02:
+        case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_SBAS_L1_CA_V02:
+            rfBand = GNSS_RF_BAND_L1;
+            break;
+        case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L2C_L_V02:
+        case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GLONASS_G2_V02:
+        case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2_I_V02:
+        case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2A_I_V02:
+        case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L2C_L_V02:
+        case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2A_Q_V02:
+            rfBand = GNSS_RF_BAND_L2;
+            break;
+        case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L5_Q_V02:
+        case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GALILEO_E5A_Q_V02:
+        case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GALILEO_E5B_Q_V02:
+        case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L5_Q_V02:
+        case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_NAVIC_L5_V02:
+            rfBand = GNSS_RF_BAND_L5;
+            break;
+        default:
+            break;
+    }
+    return rfBand;
 }
 
 /* convert satellite polynomial to loc eng format and  send the converted
@@ -4821,14 +4853,15 @@ void LocApiV02::reportLocationRequestNotification(
 void LocApiV02 :: reportEngineState (
     const qmiLocEventEngineStateIndMsgT_v02 *engine_state_ptr)
 {
-  LOC_LOGd("engine state = %d", engine_state_ptr->engineState);
-
   struct MsgUpdateEngineState : public LocMsg {
       LocApiV02* mpLocApiV02;
       bool mEngineOn;
       inline MsgUpdateEngineState(LocApiV02* pLocApiV02, bool engineOn) :
                  LocMsg(), mpLocApiV02(pLocApiV02), mEngineOn(engineOn) {}
       inline virtual void proc() const {
+
+          LOC_LOGi("current engine state %d, old engine state %d, in session %d",
+                   mEngineOn, mpLocApiV02->mEngineOn, mpLocApiV02->mInSession);
 
           // During quick session stop/start, there is a chance of left
           // over GNSS measurement from previous session gets received at
@@ -4842,7 +4875,7 @@ void LocApiV02 :: reportEngineState (
           // it will register the new qmi mask to the modem
           mpLocApiV02->mEngineOn = mEngineOn;
 
-          if (!mEngineOn && !mpLocApiV02->mResenders.empty()) {
+          if (!mEngineOn) {
               for (auto resender : mpLocApiV02->mResenders) {
                   LOC_LOGV("%s:%d]: resend failed command.", __func__, __LINE__);
                   resender();
@@ -5512,6 +5545,29 @@ void LocApiV02::reportGnssMeasurementData(
         mGnssMeasurements->gnssMeasNotification.clock.elapsedRealTimeUnc = unc;
 
         mGnssMeasurements->gnssMeasNotification.isFullTracking = mIsFullTracking;
+        //AGC Status
+        GnssMeasurementsNotification& measurementsNotify = mGnssMeasurements->gnssMeasNotification;
+        if (gnss_measurement_report_ptr.agcStatus_valid) {
+            GnssRfBand bandType = getLocApiSvRfBand(gnss_measurement_report_ptr.gnssSignalType);
+            switch (bandType) {
+                case GNSS_RF_BAND_L1:
+                    measurementsNotify.agcStatusL1 = convertQmiAgcStatusType(
+                            gnss_measurement_report_ptr.agcStatus);
+                    break;
+                case GNSS_RF_BAND_L2:
+                    measurementsNotify.agcStatusL2 = convertQmiAgcStatusType(
+                            gnss_measurement_report_ptr.agcStatus);
+                    break;
+                case GNSS_RF_BAND_L5:
+                    measurementsNotify.agcStatusL5 = convertQmiAgcStatusType(
+                            gnss_measurement_report_ptr.agcStatus);
+                    break;
+            }
+        }
+        LOC_LOGv("agcStatusL1: %d, agcStatusL2: %d, agcStatusL5: %d",
+                measurementsNotify.agcStatusL1, measurementsNotify.agcStatusL2,
+                measurementsNotify.agcStatusL5);
+
         reportSvMeasurementInternal();
         resetSvMeasurementReport();
         // set up flag to indicate that no new info in mGnssMeasurements
@@ -6660,8 +6716,6 @@ GnssMeasurementsCodeType LocApiV02::getCodeType(qmiLocGnssSignalTypeMaskT_v02 gn
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GALILEO_E5A_Q_V02:
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GALILEO_E5B_Q_V02:
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L5_Q_V02:
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2A_Q_V02:
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q_V02:
         return GNSS_MEASUREMENTS_CODE_TYPE_Q;
 
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B1_I_V02:
@@ -6669,10 +6723,13 @@ GnssMeasurementsCodeType LocApiV02::getCodeType(qmiLocGnssSignalTypeMaskT_v02 gn
         return GNSS_MEASUREMENTS_CODE_TYPE_I;
 
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B1C_V02:
+    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2A_Q_V02:
+    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q_V02:
+    // this one is not yet supported
+    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L1C_V02:
         return GNSS_MEASUREMENTS_CODE_TYPE_P;
 
-    /* not supported */
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L1C_V02:
+    /* no plan to support  */
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2_I_V02:
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2A_I_V02:
     default:
@@ -7026,7 +7083,7 @@ bool LocApiV02 :: convertGnssMeasurements(
 
     // carrierToNoiseDbHz
     measurementData.carrierToNoiseDbHz = gnss_measurement_info.CNo/10.0;
-    measurementData.flags |= GNSS_MEASUREMENTS_DATA_SIGNAL_TO_NOISE_RATIO_BIT;
+    measurementData.flags |= GNSS_MEASUREMENTS_DATA_CARRIER_TO_NOISE_BIT;
 
     if (QMI_LOC_MASK_MEAS_STATUS_VELOCITY_FINE_V02 ==
         (gnss_measurement_info.measurementStatus & QMI_LOC_MASK_MEAS_STATUS_VELOCITY_FINE_V02)) {
@@ -7105,14 +7162,12 @@ bool LocApiV02 :: convertGnssMeasurements(
         }
     }
 
-    // accumulatedDeltaRangeState
-    measurementData.adrStateMask = GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_UNKNOWN;
     measurementData.flags |= GNSS_MEASUREMENTS_DATA_ADR_STATE_BIT;
-    measurementData.adrStateMask |= GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_RESET_BIT;
 
     if ((gnss_measurement_info.validMask & QMI_LOC_SV_CARRIER_PHASE_VALID_V02) &&
         (gnss_measurement_info.carrierPhase != 0.0)) {
-        measurementData.adrStateMask = GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_VALID_BIT;
+        measurementData.adrStateMask = (GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_VALID_BIT |
+                GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_RESET_BIT);
 
         uint8_t svIdFound = 1;
         int32_t refCountDiff = 0;
@@ -7141,10 +7196,10 @@ bool LocApiV02 :: convertGnssMeasurements(
                        gnss_measurement_info.gnssSvId, refCountDiff, maxRefCntDiff);
             }
         }
-
-        measurementData.adrStateMask &=
-                ~GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_RESET_BIT;
-
+        if (svIdFound) {
+            measurementData.adrStateMask &=
+                    ~GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_RESET_BIT;
+        }
         if ((gnss_measurement_info.validMask & QMI_LOC_SV_CYCLESLIP_COUNT_VALID_V02) && svIdFound &&
             (iter->second.cycleSlipCount != gnss_measurement_info.cycleSlipCount)) {
             measurementData.adrStateMask |=
@@ -7169,6 +7224,8 @@ bool LocApiV02 :: convertGnssMeasurements(
                     GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_HALF_CYCLE_RESOLVED_BIT;
         }
         LOC_LOGa("adrStateMask = 0x%02x", measurementData.adrStateMask);
+    } else {
+        measurementData.adrStateMask = GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_UNKNOWN;
     }
 
     // cycleSlipCount
@@ -12052,4 +12109,22 @@ GnssSignalTypeMask LocApiV02::convertQmiGnssSignalType(
     }
 
     return gnssSignalType;
+}
+
+AgcStatus LocApiV02::convertQmiAgcStatusType(qmiLocAgcStatusEnumT_v02 qmiAgcStatus) {
+    AgcStatus agcStatus = AGC_STATUS_UNKNOWN;
+    switch (qmiAgcStatus) {
+        case eQMI_LOC_NO_SATURATION_V02:
+            agcStatus = AGC_STATUS_NO_SATURATION;
+            break;
+        case eQMI_LOC_FRONT_END_GAIN_MAXIMUM_SATURATION_V02:
+            agcStatus = AGC_STATUS_FRONT_END_GAIN_MAXIMUM_SATURATION;
+            break;
+        case eQMI_LOC_FRONT_END_GAIN_MINIMUM_SATURATION_V02:
+            agcStatus = AGC_STATUS_FRONT_END_GAIN_MINIMUM_SATURATION;
+            break;
+        default:
+            break;
+    }
+    return agcStatus;
 }
