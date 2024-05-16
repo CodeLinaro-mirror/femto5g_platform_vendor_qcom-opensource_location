@@ -273,6 +273,7 @@ uint16_t LocationClientApiImpl::parseYearOfHw(::LocationCapabilitiesMask mask) {
 void LocationClientApiImpl::parseLocation(const ::Location &halLocation, Location& location) {
     uint32_t flags = 0;
 
+    location.sessionStatus = (LocSessionStatus)halLocation.sessionStatus;
     location.timestamp = halLocation.timestamp;
     location.timeUncMs = halLocation.timeUncMs;
     location.latitude = halLocation.latitude;
@@ -337,6 +338,10 @@ void LocationClientApiImpl::parseLocation(const ::Location &halLocation, Locatio
     if (::LOCATION_HAS_GPTP_TIME_UNC_BIT & halLocation.flags) {
         flags |= LOCATION_HAS_GPTP_TIME_UNC_BIT;
         location.elapsedgPTPTimeUnc =  halLocation.elapsedgPTPTimeUnc;
+    }
+
+    if (::LOCATION_HAS_SESSION_STATUS_BIT & halLocation.flags) {
+        flags |= LOCATION_HAS_SESSION_STATUS_BIT;
     }
     location.flags = (LocationFlagsMask)flags;
 
@@ -865,7 +870,8 @@ GnssLocation LocationClientApiImpl::parseLocationInfo(
         flags |= LCA_GNSS_LOCATION_INFO_ALTITUDE_ASSUMED_BIT;
     }
 
-    if (LDT_GNSS_LOCATION_INFO_SESSION_STATUS_BIT & halLocationInfo.flags) {
+    //sessionStatus is set in parseLocation
+    if (::LOCATION_HAS_SESSION_STATUS_BIT & halLocationInfo.location.flags) {
         flags |= LCA_GNSS_LOCATION_INFO_SESSION_STATUS_BIT;
     }
 
@@ -928,7 +934,6 @@ GnssLocation LocationClientApiImpl::parseLocationInfo(
     parseGnssMeasUsageInfo(halLocationInfo, locationInfo.measUsageInfo);
     locationInfo.drSolutionStatusMask = (DrSolutionStatusMask) halLocationInfo.drSolutionStatusMask;
     locationInfo.altitudeAssumed = halLocationInfo.altitudeAssumed;
-    locationInfo.sessionStatus = (LocSessionStatus) halLocationInfo.sessionStatus;
     locationInfo.integrityRiskUsed =  halLocationInfo.integrityRiskUsed;
     locationInfo.protectAlongTrack =  halLocationInfo.protectAlongTrack;
     locationInfo.protectCrossTrack =  halLocationInfo.protectCrossTrack;
