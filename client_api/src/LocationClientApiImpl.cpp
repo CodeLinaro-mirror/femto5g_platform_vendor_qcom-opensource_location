@@ -612,6 +612,24 @@ LocationReliability LocationClientApiImpl::parseLocationReliability(
     return reliability;
 }
 
+static AgcStatus parseAgcStatus(const ::AgcStatus &halAgcStatus) {
+    AgcStatus agcStatus = AGC_STATUS_UNKNOWN;
+    switch (halAgcStatus) {
+        case ::AGC_STATUS_NO_SATURATION:
+            agcStatus = AGC_STATUS_NO_SATURATION;
+            break;
+        case ::AGC_STATUS_FRONT_END_GAIN_MAXIMUM_SATURATION:
+            agcStatus = AGC_STATUS_FRONT_END_GAIN_MAXIMUM_SATURATION;
+            break;
+        case ::AGC_STATUS_FRONT_END_GAIN_MINIMUM_SATURATION:
+            agcStatus = AGC_STATUS_FRONT_END_GAIN_MINIMUM_SATURATION;
+            break;
+        default:
+            break;
+    }
+    return agcStatus;
+}
+
 GnssSystemTimeStructType LocationClientApiImpl::parseGnssTime(
         const ::GnssSystemTimeStructType &halGnssTime) {
 
@@ -733,7 +751,7 @@ GnssLocation LocationClientApiImpl::parseLocationInfo(
 
     GnssLocation locationInfo = {};
     parseLocation(halLocationInfo.location, locationInfo);
-    uint64_t flags = 0;
+    LCAGnssLocationInfoFlagMask flags = 0;
 
     if (LDT_GNSS_LOCATION_INFO_ALTITUDE_MEAN_SEA_LEVEL_BIT & halLocationInfo.flags) {
         flags |= LCA_GNSS_LOCATION_INFO_ALTITUDE_MEAN_SEA_LEVEL_BIT;
@@ -868,7 +886,7 @@ GnssLocation LocationClientApiImpl::parseLocationInfo(
         flags |= LCA_GNSS_LOCATION_INFO_DGNSS_STATION_ID_BIT;
     }
 
-    locationInfo.gnssInfoFlags = (GnssLocationInfoFlagMask)flags;
+    locationInfo.gnssInfoFlags = flags;
     locationInfo.altitudeMeanSeaLevel = halLocationInfo.altitudeMeanSeaLevel;
     locationInfo.pdop = halLocationInfo.pdop;
     locationInfo.hdop = halLocationInfo.hdop;
@@ -1052,6 +1070,9 @@ GnssData LocationClientApiImpl::parseGnssData(const ::GnssDataNotification &halG
             LOC_LOGv("agc[%d]=%f", sig, gnssData.agc[sig]);
         }
     }
+    gnssData.agcStatusL1 = parseAgcStatus(halGnssData.agcStatusL1);
+    gnssData.agcStatusL2 = parseAgcStatus(halGnssData.agcStatusL2);
+    gnssData.agcStatusL5 = parseAgcStatus(halGnssData.agcStatusL5);
     return gnssData;
 }
 
@@ -1137,6 +1158,9 @@ GnssMeasurements LocationClientApiImpl::parseGnssMeasurements(
     gnssMeasurements.clock.elapsedgPTPTime = halGnssMeasurements.clock.elapsedgPTPTime;
     gnssMeasurements.clock.elapsedgPTPTimeUnc = halGnssMeasurements.clock.elapsedgPTPTimeUnc;
     gnssMeasurements.isNhz = halGnssMeasurements.isNhz;
+    gnssMeasurements.agcStatusL1 = parseAgcStatus(halGnssMeasurements.agcStatusL1);
+    gnssMeasurements.agcStatusL2 = parseAgcStatus(halGnssMeasurements.agcStatusL2);
+    gnssMeasurements.agcStatusL5 = parseAgcStatus(halGnssMeasurements.agcStatusL5);
 
     return gnssMeasurements;
 }

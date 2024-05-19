@@ -194,7 +194,16 @@ static void location_collective_response_callback(
 
     // hard-coded
     qLocationErrorArray = new qapi_Location_Error_t[5];
+    if (nullptr == qLocationErrorArray) {
+        LOC_LOGe("qLocationErrorArray is nullptr");
+        return;
+    }
     uint32_t* ids = new uint32_t[5];
+    if (nullptr == ids) {
+        LOC_LOGe("ids is nullptr");
+        delete[] qLocationErrorArray;
+        return;
+    }
 
     for (int i = 0; i < 5; i++) {
         qLocationErrorArray[i] = QAPI_LOCATION_ERROR_SUCCESS;

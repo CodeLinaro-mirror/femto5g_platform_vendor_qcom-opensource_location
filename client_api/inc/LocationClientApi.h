@@ -234,6 +234,9 @@ enum GnssLocationInfoFlagMask { // Recommend use LCAGnssLocationInfoFlagMask by 
     /** GnssLocation has valid GnssLocation::sprotectVertical.
      *  <br/> */
     GNSS_LOCATION_INFO_PROTECT_VERTICAL_BIT             = (1ULL<<38),
+    /** GnssLocation has valid GnssLocation::dgnssStationId.
+     *  <br/> */
+    GNSS_LOCATION_INFO_DGNSS_STATION_ID_BIT             = (1ULL<<39),
 };
 // DEPRECATION - BACKWARD COMPATIBILITY SECTION
 class Geofence;
@@ -1345,9 +1348,9 @@ enum LocSessionStatus {
  *  <br/>
  */
 struct GnssLocation : public Location {
-    /** Bitwise OR of GnssLocationInfoFlagMask for param
+    /** Bitwise OR of LCAGnssLocationInfoFlagMask for param
      *  validity. <br/>   */
-    GnssLocationInfoFlagMask gnssInfoFlags;
+    LCAGnssLocationInfoFlagMask gnssInfoFlags;
     /** Altitude wrt mean sea level, in unit of meters. <br/>   */
     float altitudeMeanSeaLevel;
     /** Position dilusion of precision, range: 0 (highest accuracy)
@@ -1492,7 +1495,7 @@ struct GnssLocation : public Location {
 
     /* Default constructor to initalize GnssLocation structure */
     inline GnssLocation() :
-            Location({}), gnssInfoFlags((GnssLocationInfoFlagMask)0),
+            Location({}), gnssInfoFlags(0),
             altitudeMeanSeaLevel(0.0f), pdop(0.0f), hdop(0.0f),
             vdop(0.0f), gdop(0.0f), tdop(0.0f), magneticDeviation(0.0f),
             horReliability(LOCATION_RELIABILITY_NOT_SET),
@@ -1643,7 +1646,19 @@ enum GnssDataMask {
     /** Jammer Indicator is available. <br/>   */
     GNSS_DATA_JAMMER_IND_BIT = (1ULL << 0),
     /** AGC is available. <br/>   */
-    GNSS_DATA_AGC_BIT = (1ULL << 1)
+    GNSS_DATA_AGC_BIT = (1ULL << 1),
+};
+
+/** Indicate RF Automatic Gain Control Status <br/>   */
+enum AgcStatus {
+    /**< AGC status is unknown <br/> */
+    AGC_STATUS_UNKNOWN = 0,
+    /**< AGC status is No saturation <br/> */
+    AGC_STATUS_NO_SATURATION = 1,
+    /**< AGC status is Front end gain maximum saturation <br/> */
+    AGC_STATUS_FRONT_END_GAIN_MAXIMUM_SATURATION = 2,
+    /**< AGC status is Front end gain minimum saturation <br/> */
+    AGC_STATUS_FRONT_END_GAIN_MINIMUM_SATURATION = 3,
 };
 
 /** Specify the additional GNSS data that can be provided
@@ -1673,6 +1688,12 @@ struct GnssData {
     double        jammerInd[GNSS_MAX_NUMBER_OF_SIGNAL_TYPES];
     /** Automatic gain control metric, in unit of dB.  <br/>   */
     double        agc[GNSS_MAX_NUMBER_OF_SIGNAL_TYPES];
+    /** RF Automatic gain control status for L1 band.  <br/>   */
+    AgcStatus     agcStatusL1;
+    /** RF Automatic gain control status for L2 band.  <br/>   */
+    AgcStatus     agcStatusL2;
+    /** RF Automatic gain control status for L5 band.  <br/>   */
+    AgcStatus     agcStatusL5;
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
     string toString() const;
@@ -2059,6 +2080,12 @@ struct GnssMeasurements {
     std::vector<GnssMeasurementsData> measurements;
     /** NHz measurements indicator */
     bool isNhz;
+    /** RF Automatic gain control status for L1 band.  <br/>   */
+    AgcStatus     agcStatusL1;
+    /** RF Automatic gain control status for L2 band.  <br/>   */
+    AgcStatus     agcStatusL2;
+    /** RF Automatic gain control status for L5 band.  <br/>   */
+    AgcStatus     agcStatusL5;
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
     string toString() const;
