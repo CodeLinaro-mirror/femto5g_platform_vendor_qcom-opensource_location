@@ -80,7 +80,8 @@ enum LocationApiDataTypesVersion {
     // Minor - New features / API addition, new message/elemtent addition.
     // Bump the last byte of version i.e. x.2 to x.3
     // Minor version 41: Add AGC status in GnssMeasurements and GnssData notification
-    LOCAPI_DATA_TYPES_VER_MINOR = 41;
+    // Minor version 42: Add tech mask of wifi and premium position in PBTerrestrialTechMask
+    LOCAPI_DATA_TYPES_VER_MINOR = 42;
 }
 
 // ============================================================================
@@ -400,7 +401,14 @@ enum PBLeapSecondSysInfoMask {
 
 enum PBTerrestrialTechMask {
     PB_TERRESTRIAL_TECH_INVALID = 0;
+    //terrestrialTechMask = PB_TERRESTRIAL_TECH_GTP_WWAN
     PB_TERRESTRIAL_TECH_GTP_WWAN = 1;
+    //terrestrialTechMask = PB_TERRESTRIAL_TECH_GTP_WWAN_PREMIUM
+    PB_TERRESTRIAL_TECH_GTP_WWAN_PREMIUM = 2;
+    //terrestrialTechMask = PB_TERRESTRIAL_TECH_GTP_WIFI
+    PB_TERRESTRIAL_TECH_GTP_WIFI = 4;
+    //terrestrialTechMask = PB_TERRESTRIAL_TECH_GTP_WIFI_PREMIUN
+    PB_TERRESTRIAL_TECH_GTP_WIFI_PREMIUN = 8;
 };
 
 enum PBLocApiGnssLocationPosDataMask {
