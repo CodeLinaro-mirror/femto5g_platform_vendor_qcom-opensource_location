@@ -2924,6 +2924,9 @@ uint32_t LocationApiPbMsgConv::getGnssSignalTypeMaskFromPB(
     if (pbGnssSignalTypeMask & PB_GNSS_SIGNAL_BEIDOU_B2BQ_BIT) {
         gnssSignalTypeMask |= GNSS_SIGNAL_BEIDOU_B2BQ;
     }
+    if (pbGnssSignalTypeMask & PB_GNSS_SIGNAL_NAVIC_L1_BIT) {
+        gnssSignalTypeMask |= GNSS_SIGNAL_NAVIC_L1;
+    }
     LocApiPb_LOGv("LocApiPB: pbGnssSignalTypeMask:%x, gnssSignalTypeMask:%x",
             pbGnssSignalTypeMask, gnssSignalTypeMask);
     return gnssSignalTypeMask;

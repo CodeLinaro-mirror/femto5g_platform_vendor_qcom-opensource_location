@@ -1642,6 +1642,8 @@ enum GnssSignalTypes {
     GNSS_SIGNAL_TYPE_BEIDOU_B2B_I = 20,
     /**  GNSS signal is of BEIDOU B2B_Q RF band.  <br/>   */
     GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q = 21,
+    /**  GNSS signal is of NAVIC L1 RF band.  <br/>   */
+    GNSS_SIGNAL_TYPE_NAVIC_L1 = 22,
     /** Maximum number of signal types. <br/>   */
     GNSS_MAX_NUMBER_OF_SIGNAL_TYPES
 };
