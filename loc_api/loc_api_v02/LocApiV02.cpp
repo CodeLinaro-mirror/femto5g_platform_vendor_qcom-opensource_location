@@ -6628,7 +6628,7 @@ void LocApiV02::processGnssBandsSupportedInd(
 
         IF_LOC_LOGV {
             for (int i = 0; i < gnssCapabNotification.count; i++) {
-                LOC_LOGv("cap[%d] sv type=%s freq=%.2f code type=%s",
+                LOC_LOGv("cap[%d] sv type=%d freq=%.2f code type=%d",
                         i, gnssCapabNotification.gnssSignalType[i].svType,
                         gnssCapabNotification.gnssSignalType[i].carrierFrequencyHz,
                         gnssCapabNotification.gnssSignalType[i].codeType);
