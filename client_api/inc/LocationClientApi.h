@@ -757,6 +757,9 @@ typedef uint64_t LCAGnssLocationInfoFlagMask;
 #define LCA_GNSS_LOCATION_INFO_PROTECT_VERTICAL_BIT                         (1ULL<<38)
     /** GnssLocation has valid GnssLocation::dgnssStationId. <br/> */
 #define LCA_GNSS_LOCATION_INFO_DGNSS_STATION_ID_BIT                         (1ULL<<39)
+/** GnssLocation has valid GnssLocation::leapSecondsUnc. <br/> */
+#define LCA_GNSS_LOCATION_INFO_LEAP_SECONDS_UNC_BIT                         (1ULL<<42)
+
 
 /** Specify the reliability level of
  *  GnssLocation::horReliability and
@@ -1498,6 +1501,11 @@ struct GnssLocation : public Location {
      *  - Other values reserved. <br/>
      */
     std::vector<uint16_t> dgnssStationId;
+
+    /** Uncertainty for the GNSS leap second.
+     *  Units -- Seconds */
+    uint8_t leapSecondsUnc;
+
 
     /* Default constructor to initalize GnssLocation structure */
     inline GnssLocation() :
