@@ -87,8 +87,8 @@ enum LocationApiMsgVersion {
     LOCAPI_MSG_VER_MAJOR = 1;
     // Minor - New features / API addition, new message/elemtent addition.
     // Bump the last byte of version i.e. x.2 to x.3
-    // Minor version 21: Support Ephemeris reporting for LCA
-    LOCAPI_MSG_VER_MINOR = 21;
+    // Minor version 22: Support Map matched feedback data
+    LOCAPI_MSG_VER_MINOR = 22;
 }
 
 // ============================================================================
@@ -196,6 +196,7 @@ enum PBELocMsgID {
     PB_E_INTAPI_INJECT_LOCATION_MSG_ID = 215;
     PB_E_INTAPI_CONFIG_MERKLE_TREE_MSG_ID = 216;
     PB_E_INTAPI_CONFIG_OSNMA_ENABLEMENT_MSG_ID = 217;
+    PB_E_INTAPI_CONFIG_MAP_MATCHED_FEEDBACK_MSG_ID = 218;
 
     // integration API config retrieval request/response
     PB_E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID  = 300;
@@ -766,6 +767,11 @@ message PBLocAPIPingTestReqMsg {
 message PBLocAPIPingTestIndMsg {
     uint32 numberOfPing = 1;
     repeated uint32 data = 2;
+}
+
+// defintion for message with msg id of PB_E_INTAPI_CONFIG_MAP_MATCHED_FEEDBACK_MSG_ID
+message PBLocInjectMmfDataReqMsg {
+    PBGnssMapMatchedData gnssMmfData = 1;
 }
 
 //*******************************
