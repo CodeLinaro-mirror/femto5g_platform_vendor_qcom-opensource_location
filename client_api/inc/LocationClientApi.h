@@ -234,6 +234,9 @@ enum GnssLocationInfoFlagMask { // Recommend use LCAGnssLocationInfoFlagMask by 
     /** GnssLocation has valid GnssLocation::sprotectVertical.
      *  <br/> */
     GNSS_LOCATION_INFO_PROTECT_VERTICAL_BIT             = (1ULL<<38),
+    /** GnssLocation has valid GnssLocation::dgnssStationId.
+     *  <br/> */
+    GNSS_LOCATION_INFO_DGNSS_STATION_ID_BIT             = (1ULL<<39),
 };
 // DEPRECATION - BACKWARD COMPATIBILITY SECTION
 class Geofence;
@@ -385,6 +388,9 @@ enum LocationFlagsMask {
     LOCATION_HAS_GPTP_TIME_BIT         = (1<<12),
     /** GnssLocation has valid Location::elapsedgPTPTimeUnc. <br/> */
     LOCATION_HAS_GPTP_TIME_UNC_BIT     = (1<<13),
+    /** Location has valid Location::sessionStatus  <br/> */
+    LOCATION_HAS_SESSION_STATUS_BIT    = (1<<14),
+
 };
 
 /**
@@ -572,6 +578,9 @@ enum GnssSignalTypeMask {
     GNSS_SIGNAL_BEIDOU_B2BI_BIT         = (1<<22),
     /** GNSS signal is of BEIDOU B2B_Q RF band. <br/>   */
     GNSS_SIGNAL_BEIDOU_B2BQ_BIT         = (1<<23),
+    /** GNSS signal is of NAVIC L1 RF band. <br/>   */
+    GNSS_SIGNAL_NAVIC_L1_BIT            = (1<<24),
+
 };
 
 /** Specify LocationClientApi function call processing status.
@@ -1177,6 +1186,17 @@ enum PositioningEngineMask {
     VP_POSITIONING_ENGINE       = (1 << 3)
 };
 
+/** Specify the session status. <br/> */
+enum LocSessionStatus {
+    /** Session is successful. <br/> */
+    LOC_SESS_SUCCESS      = 0,
+    /** Session is still in progress, the reported has not yet
+    achieved the needed criteria. <br/>*/
+    LOC_SESS_INTERMEDIATE = 1,
+    /** Session has failed. <br/>*/
+    LOC_SESS_FAILURE      = 2,
+};
+
 /** Specify the location info received by client via
  *  startPositionSession(uint32_t, uint32_t
  *  LocationCb, ResponseCb). <br/>   */
@@ -1184,6 +1204,9 @@ struct Location {
     /** Bitwise OR of LocationFlagsMask to specify the valid
      *  fields. <br/>   */
     LocationFlagsMask flags;
+    /** Indicates whether session is success, failure or
+     *  intermediate. <br/>   */
+    LocSessionStatus sessionStatus;
     /** UTC timestamp for location fix since January 1, 1970, in
      *  unit of milliseconds. <br/>   */
     uint64_t timestamp;
@@ -1326,17 +1349,6 @@ enum DrSolutionStatusMask {
     DR_SOLUTION_STATUS_WARNING_FACTORY_DATA_INCONSISTENT   = (1<<15)
 };
 
-/** Specify the session status. <br/> */
-enum LocSessionStatus {
-    /** Session is successful. <br/> */
-    LOC_SESS_SUCCESS      = 0,
-    /** Session is still in progress, the reported has not yet
-    achieved the needed criteria. <br/>*/
-    LOC_SESS_INTERMEDIATE = 1,
-    /** Session has failed. <br/>*/
-    LOC_SESS_FAILURE      = 2,
-};
-
 /** Specify the location info received by client via
  *  startPositionSession(uint32_t, const
  *  GnssReportCbs&, ResponseCb) and
@@ -1345,9 +1357,9 @@ enum LocSessionStatus {
  *  <br/>
  */
 struct GnssLocation : public Location {
-    /** Bitwise OR of GnssLocationInfoFlagMask for param
+    /** Bitwise OR of LCAGnssLocationInfoFlagMask for param
      *  validity. <br/>   */
-    GnssLocationInfoFlagMask gnssInfoFlags;
+    LCAGnssLocationInfoFlagMask gnssInfoFlags;
     /** Altitude wrt mean sea level, in unit of meters. <br/>   */
     float altitudeMeanSeaLevel;
     /** Position dilusion of precision, range: 0 (highest accuracy)
@@ -1459,9 +1471,6 @@ struct GnssLocation : public Location {
      *  true:  Altitude is assumed; there may not be enough
      *         satellites to determine the precise altitude. <br/> */
     bool altitudeAssumed;
-    /** Indicates whether session is success, failure or
-     *  intermediate. <br/> */
-    LocSessionStatus sessionStatus;
     /** Integrity risk used for protection level parameters. <br/>
      *  Unit of 2.5e-10. Valid range is [1 to (4e9-1)].
      *  </br> Other values means integrity risk is disabled and
@@ -1492,7 +1501,7 @@ struct GnssLocation : public Location {
 
     /* Default constructor to initalize GnssLocation structure */
     inline GnssLocation() :
-            Location({}), gnssInfoFlags((GnssLocationInfoFlagMask)0),
+            Location({}), gnssInfoFlags(0),
             altitudeMeanSeaLevel(0.0f), pdop(0.0f), hdop(0.0f),
             vdop(0.0f), gdop(0.0f), tdop(0.0f), magneticDeviation(0.0f),
             horReliability(LOCATION_RELIABILITY_NOT_SET),
@@ -1515,7 +1524,7 @@ struct GnssLocation : public Location {
             llaVRPBased({}),
             enuVelocityVRPBased{0.0f, 0.0f, 0.0f},
             drSolutionStatusMask((DrSolutionStatusMask)0),
-            altitudeAssumed(false), sessionStatus(LOC_SESS_FAILURE),
+            altitudeAssumed(false),
             integrityRiskUsed(0), protectAlongTrack(0.0f),
             protectCrossTrack(0.0f), protectVertical(0.0f) {
     }
@@ -1633,6 +1642,8 @@ enum GnssSignalTypes {
     GNSS_SIGNAL_TYPE_BEIDOU_B2B_I = 20,
     /**  GNSS signal is of BEIDOU B2B_Q RF band.  <br/>   */
     GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q = 21,
+    /**  GNSS signal is of NAVIC L1 RF band.  <br/>   */
+    GNSS_SIGNAL_TYPE_NAVIC_L1 = 22,
     /** Maximum number of signal types. <br/>   */
     GNSS_MAX_NUMBER_OF_SIGNAL_TYPES
 };
@@ -1643,7 +1654,19 @@ enum GnssDataMask {
     /** Jammer Indicator is available. <br/>   */
     GNSS_DATA_JAMMER_IND_BIT = (1ULL << 0),
     /** AGC is available. <br/>   */
-    GNSS_DATA_AGC_BIT = (1ULL << 1)
+    GNSS_DATA_AGC_BIT = (1ULL << 1),
+};
+
+/** Indicate RF Automatic Gain Control Status <br/>   */
+enum AgcStatus {
+    /**< AGC status is unknown <br/> */
+    AGC_STATUS_UNKNOWN = 0,
+    /**< AGC status is No saturation <br/> */
+    AGC_STATUS_NO_SATURATION = 1,
+    /**< AGC status is Front end gain maximum saturation <br/> */
+    AGC_STATUS_FRONT_END_GAIN_MAXIMUM_SATURATION = 2,
+    /**< AGC status is Front end gain minimum saturation <br/> */
+    AGC_STATUS_FRONT_END_GAIN_MINIMUM_SATURATION = 3,
 };
 
 /** Specify the additional GNSS data that can be provided
@@ -1673,6 +1696,12 @@ struct GnssData {
     double        jammerInd[GNSS_MAX_NUMBER_OF_SIGNAL_TYPES];
     /** Automatic gain control metric, in unit of dB.  <br/>   */
     double        agc[GNSS_MAX_NUMBER_OF_SIGNAL_TYPES];
+    /** RF Automatic gain control status for L1 band.  <br/>   */
+    AgcStatus     agcStatusL1;
+    /** RF Automatic gain control status for L2 band.  <br/>   */
+    AgcStatus     agcStatusL2;
+    /** RF Automatic gain control status for L5 band.  <br/>   */
+    AgcStatus     agcStatusL5;
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
     string toString() const;
@@ -2059,6 +2088,12 @@ struct GnssMeasurements {
     std::vector<GnssMeasurementsData> measurements;
     /** NHz measurements indicator */
     bool isNhz;
+    /** RF Automatic gain control status for L1 band.  <br/>   */
+    AgcStatus     agcStatusL1;
+    /** RF Automatic gain control status for L2 band.  <br/>   */
+    AgcStatus     agcStatusL2;
+    /** RF Automatic gain control status for L5 band.  <br/>   */
+    AgcStatus     agcStatusL5;
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
     string toString() const;
