@@ -95,6 +95,10 @@ public:
 
     virtual std::future<CommonAPI::CallStatus> configConstellationsAsync(const std::vector< LocIdlAPI::IDLGnssSvIdInfo > &_svList, ConfigConstellationsAsyncCallback _callback, const CommonAPI::CallInfo *_info);
 
+    virtual void injectMapMatchedFeedbackData(LocIdlAPI::MapMatchingFeedbackData _mmfData, CommonAPI::CallStatus &_internalCallStatus, LocIdlAPI::IDLLocationResponse &_resp, const CommonAPI::CallInfo *_info);
+
+    virtual std::future<CommonAPI::CallStatus> injectMapMatchedFeedbackDataAsync(const LocIdlAPI::MapMatchingFeedbackData &_mmfData, InjectMapMatchedFeedbackDataAsyncCallback _callback, const CommonAPI::CallInfo *_info);
+
     virtual void getOwnVersion(uint16_t &_major, uint16_t &_minor) const;
 
     virtual std::future<void> getCompletionFuture();
