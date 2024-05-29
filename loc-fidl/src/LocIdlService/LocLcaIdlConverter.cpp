@@ -568,8 +568,10 @@ uint32_t parseIDLSignalType (
     if (lcaSignalType & GNSS_SIGNAL_BEIDOU_B2BQ_BIT) {
         gnssSignalTypeMask |= LocIdlAPI::IDLGnssSignalTypeMask::IDL_GNSS_SIGNAL_BEIDOU_B2BQ_BIT;
     }
+    if (lcaSignalType & GNSS_SIGNAL_TYPE_NAVIC_L1) {
+        gnssSignalTypeMask |= LocIdlAPI::IDLGnssSignalTypeMask::GSTM_NAVIC_L1_BIT;
+    }
     return gnssSignalTypeMask;
-
 }
 
 vector< LocIdlAPI::IDLGnssMeasUsageInfo > parseIDLMeasUsageInfo
@@ -994,9 +996,13 @@ LocIdlAPI::IDLLocationReport LocLcaIdlConverter::parseLocReport(const ::GnssLoca
     idlLocReport.setBaseLineLength(0.0);
     idlLocReport.setAgeMsecOfCorrections(0.0);
     idlLocReport.setCurrReportingRate(0);
-    LOC_LOGd("Position report %"PRIu64" ", lcaLoc.timestamp);
 
+    if (lcaLoc.gnssInfoFlags & LCA_GNSS_LOCATION_INFO_LEAP_SECONDS_UNC_BIT) {
+        idlLocReport.setLeapSecondsUnc(lcaLoc.leapSecondsUnc);
+        locFlags |= LocIdlAPI::IDLLCALocationInfoFlagMask::LREFM_LEAP_SECONDS_UNC_BIT;
+    }
     idlLocReport.setLocationInfoFlags(locFlags);
+    LOC_LOGd("Position report %"PRIu64" ", lcaLoc.timestamp);
 
     return idlLocReport;
 }
@@ -1535,8 +1541,8 @@ LocIdlAPI::IDLGnssData LocLcaIdlConverter::parseGnssData
     vector<uint32_t> dataMaskVal;
     vector<double> jammerIndVal;
     vector<double> agcVal;
-    for (uint8_t idx = 0; idx < LocIdlAPI::IDLGnssSignalTypes::\
-            IDL_GNSS_MAX_NUMBER_OF_SIGNAL_TYPES; idx++) {
+    for (uint8_t idx = 0; idx < (LocIdlAPI::IDLGnssSignalTypes::\
+            IDL_GNSS_MAX_NUMBER_OF_SIGNAL_TYPES - 1); idx++) {
 
          dataMaskVal.push_back(parseIDLDataMask(gnssData.gnssDataMask[idx]));
          jammerIndVal.push_back(gnssData.jammerInd[idx]);
