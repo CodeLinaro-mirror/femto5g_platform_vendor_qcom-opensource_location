@@ -12,6 +12,11 @@
     [
         {
             "name" : "location-fidl-client",
+            "id" : "0x01"
+        },
+
+        {
+            "name" : "location-fidl-test-client",
             "id" : "0x02"
         }
     ],
