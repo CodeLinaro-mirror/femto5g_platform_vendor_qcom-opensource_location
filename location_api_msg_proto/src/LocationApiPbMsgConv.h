@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -488,6 +488,82 @@ public:
         pbLocApiPingTestIndMsg.clear_data();
     }
 
+    inline void freeUpPBLocAPIEphIndMsg(PBLocAPIEphIndMsg &pbLocApiEphInd) const {
+
+        PBGnssEphemerisNotification gnssEphNotif =
+                pbLocApiEphInd.gnssephemerisnotification();
+        gnssEphNotif.clear_systemtime();
+
+        PBEphInfoUnion ephUnion = gnssEphNotif.ephunion();
+        switch (gnssEphNotif.gnssconstellation()) {
+            case PB_GNSS_LOC_SV_SYSTEM_GPS:
+            {
+                PBGpsEphemerisResponse gpsResp =  ephUnion.gpsephemeris();
+                for (uint32_t i = 0; i < gpsResp.gpsephemerisdata_size(); i++) {
+                    PBGpsEphemeris gpsEph = gpsResp.gpsephemerisdata(i);
+                    gpsEph.clear_commonephemerisdata();
+                }
+                gpsResp.clear_gpsephemerisdata();
+                ephUnion.clear_gpsephemeris();
+                break;
+            }
+            case PB_GNSS_LOC_SV_SYSTEM_GALILEO:
+            {
+                PBGalileoEphemerisResponse galResp =  ephUnion.galileoephemeris();
+                for (uint32_t i = 0; i < galResp.galephemerisdata_size(); i++) {
+                    PBGalileoEphemeris galEph = galResp.galephemerisdata(i);
+                    galEph.clear_commonephemerisdata();
+                }
+                galResp.clear_galephemerisdata();
+                ephUnion.clear_galileoephemeris();
+                break;
+            }
+            case PB_GNSS_LOC_SV_SYSTEM_GLONASS:
+            {
+                PBGlonassEphemerisResponse gloResp =  ephUnion.glonassephemeris();
+                gloResp.clear_gloephemerisdata();
+                ephUnion.clear_glonassephemeris();
+                break;
+            }
+            case PB_GNSS_LOC_SV_SYSTEM_BDS:
+            {
+                PBBdsEphemerisResponse bdsResp =  ephUnion.bdsephemeris();
+                for (uint32_t i = 0; i < bdsResp.bdsephemerisdata_size(); i++) {
+                    PBBdsEphemeris bdsEph = bdsResp.bdsephemerisdata(i);
+                    bdsEph.clear_commonephemerisdata();
+                }
+                bdsResp.clear_bdsephemerisdata();
+                ephUnion.clear_bdsephemeris();
+                break;
+            }
+            case PB_GNSS_LOC_SV_SYSTEM_QZSS:
+            {
+                PBQzssEphemerisResponse qzssResp =  ephUnion.qzssephemeris();
+                for (uint32_t i = 0; i < qzssResp.qzssephemerisdata_size(); i++) {
+                    PBGpsEphemeris qzssEph = qzssResp.qzssephemerisdata(i);
+                    qzssEph.clear_commonephemerisdata();
+                }
+                qzssResp.clear_qzssephemerisdata();
+                ephUnion.clear_qzssephemeris();
+                break;
+            }
+            case PB_GNSS_LOC_SV_SYSTEM_NAVIC:
+            {
+                PBNavicEphemerisResponse navicResp =  ephUnion.navicephemeris();
+                for (uint32_t i = 0; i < navicResp.navicephemerisdata_size(); i++) {
+                    PBNavicEphemeris navicEph = navicResp.navicephemerisdata(i);
+                    navicEph.clear_commonephemerisdata();
+                }
+                navicResp.clear_navicephemerisdata();
+                ephUnion.clear_navicephemeris();
+                break;
+            }
+        }
+        gnssEphNotif.clear_ephunion();
+        // PBGnssMeasurementsNotification gnssMeasurementsNotification = 1;
+        pbLocApiEphInd.clear_gnssephemerisnotification();
+    }
+
     // **** helper function to convert from protobuf struct to normal struct.
     // PBCollectiveResPayload to CollectiveResPayload
     int pbConvertToCollectiveResPayload(const PBCollectiveResPayload &pbClctResPayload,
@@ -621,6 +697,10 @@ public:
     PBXtraDataStatus getPBEnumForXtraDataStatus(const XtraDataStatus &xtraDataStatus) const;
     // GnssSignalTypeMask to PBGnssSignalTypeMask
     uint32_t getPBMaskForGnssSignalTypeMask(const uint32_t &gnssSignalTypeMask) const;
+    int pbConvertToGnssEphNotif(const PBGnssEphemerisNotification &pbGnssEphNotif,
+        GnssSvEphemerisReport &gnssEphNotif) const;
+    int convertGnssEphNotifToPB(const GnssSvEphemerisReport &gnssEphNotif,
+        PBGnssEphemerisNotification* pbGnssEphNotif) const;
 
 private:
     bool mPbDebugLogEnabled;
@@ -699,6 +779,35 @@ private:
             const std::vector<std::vector<double>>& doubleArrays,
             PB2DimensionDoubleVector* pbDoubleArrarys) const;
 
+    // HAL to PB EPH functions
+    PBGnssEphAction getPBEphAction (const GnssEphAction& ephAction) const;
+    PBGalEphSignalSource convertDataSignalSourceToPB(
+            const GalEphSignalSource &ephSignal) const;
+    int convertCommanEphToPB (const GnssEphCommon &commanEph,
+            PBGnssEphCommon *pbCommanEph) const ;
+    int convertGpsEphDataToPB(const GpsEphemeris &halEphInfo,
+            PBGpsEphemeris *pbEphInfo) const;
+    int convertGpsEphResponseToPB(const GpsEphemerisResponse  &halResp,
+            PBGpsEphemerisResponse*  pbEphResp) const;
+    int convertBdsEphDataToPB(const BdsEphemeris &halEphInfo,
+            PBBdsEphemeris *pbEphInfo) const;
+    int convertBdsEphResponseToPB(const BdsEphemerisResponse  &halResp,
+            PBBdsEphemerisResponse*  pbEphResp) const;
+    int convertGalileoEphDataToPB(const GalileoEphemeris &halEphInfo,
+            PBGalileoEphemeris *pbEphInfo) const;
+    int convertGlonassEphDataToPB(const GlonassEphemeris &halEphInfo,
+            PBGlonassEphemeris *pbEphInfo) const;
+    int convertGloEphResponseToPB(const GlonassEphemerisResponse  &halResp,
+    PBGlonassEphemerisResponse*  pbEphResp) const;
+    int convertGalEphResponseToPB(const GalileoEphemerisResponse  &halResp,
+            PBGalileoEphemerisResponse*  pbEphResp) const;
+    int convertQzssEphResponseToPB(const QzssEphemerisResponse  &halResp,
+            PBQzssEphemerisResponse*  pbEphResp) const;
+    int convertNavicEphDataToPB(const NavicEphemeris &halEphInfo,
+            PBNavicEphemeris *pbEphInfo) const;
+    int convertNavicEphResponseToPB(const NavicEphemerisResponse  &halResp,
+            PBNavicEphemerisResponse*  pbEphResp) const;
+
     // **** helper function for mask conversion to protobuf masks
     // LeverArmTypeMask to PBLIALeverArmTypeMask
     uint32_t getPBMaskForLeverArmTypeMask(const uint32_t &leverArmTypeMask) const;
@@ -768,6 +877,7 @@ private:
             const GnssMeasurementsMultipathIndicator &gnssMeasMultiPathIndic) const;
     PBLocApiGnss_LocSvSystemEnumType getPBEnumForGnssLocSvSystem(
             const Gnss_LocSvSystemEnumType &gnssLocSvSysEnumType) const;
+    PBAgcStatus getPBEnumForAgcStatus(const AgcStatus &agcStatus) const;
     // PBLocationSessionStatus from/to loc_sess_status
     PBLocationSessionStatus getPBEnumForLocSessionStatus(const loc_sess_status &status) const;
     PBGnssEphemerisType getPBEnumForGnssEphemerisType(
@@ -859,6 +969,7 @@ private:
             const PBGnssEphemerisSource& pbGnssEphemerisSource) const;
     GnssEphemerisHealth getEnumForPBGnssEphemerisHealth(
             const PBGnssEphemerisHealth& pbGnssEphemerisHealth) const;
+    AgcStatus getEnumForPBAgcStatus(const PBAgcStatus &pbAgcStatus) const;
 
     // ** Special enum conversion
     // PBLocApiGnss_LocSvSystemEnumType to GnssSvType
@@ -938,6 +1049,37 @@ private:
     int pbConvertTo2DimensionDoubleVector(
             const PB2DimensionDoubleVector& pbDoubleArrarys,
             std::vector<std::vector<double>>& doubleArrays) const;
+
+    // To PB to HAL Eph report
+    GnssEphAction pbConvertToEphAction (const PBGnssEphAction& pbEphAction) const;
+    int pbConvertToCommanEph(const PBGnssEphCommon &pbCommanEph,
+        GnssEphCommon &commanEph) const;
+    int pbConvertToGpsEphResponse(const PBGpsEphemerisResponse  &pbEphResp,
+        GpsEphemerisResponse  &halResp) const;
+    int pbConvertToGpsEphData(const PBGpsEphemeris &pbEphInfo,
+        GpsEphemeris &halEphInfo) const;
+    int pbConvertToBdsEphData(const PBBdsEphemeris &pbEphInfo,
+        BdsEphemeris &halEphInfo) const;
+    int pbConvertToBdsEphResponse(const PBBdsEphemerisResponse &pbEphResp,
+        BdsEphemerisResponse  &halResp) const;
+    int pbConvertToGlonassEphData(const  PBGlonassEphemeris &pbEphInfo,
+        GlonassEphemeris &halEphInfo) const;
+    int pbConvertToGloEphResponse(const PBGlonassEphemerisResponse  &pbEphResp,
+        GlonassEphemerisResponse  &halResp) const;
+    int pbConvertToGalileoEphData(const  PBGalileoEphemeris &pbEphInfo,
+        GalileoEphemeris &halEphInfo) const;
+    int pbConvertToGalEphResponse(const PBGalileoEphemerisResponse  &pbEphResp,
+        GalileoEphemerisResponse  &halResp) const;
+    int pbConvertToQzssEphResponse(const PBQzssEphemerisResponse  &pbEphResp,
+        QzssEphemerisResponse  &halResp) const;
+    int pbConvertToNavicEphData(const PBNavicEphemeris &pbEphInfo,
+        NavicEphemeris &halEphInfo) const;
+    int pbConvertToNavicEphResponse(const PBNavicEphemerisResponse  &pbEphResp,
+        NavicEphemerisResponse  &halResp) const;
+    int pbConvertToSystemTime(const PBLocApiGnssSystemTimeStructType &pbSystemTime,
+        GnssSystemTimeStructType &halSystemTime) const;
+    GalEphSignalSource pbConvertToDataSourceSignal(
+        const PBGalEphSignalSource &pbSignal) const;
 };
 
 #endif /* LOCATION_API_PBMSGCONV_H */

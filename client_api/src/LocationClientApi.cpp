@@ -28,7 +28,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -107,6 +107,7 @@ class TrackingSessCbHandler {
                     gnssReportCbs.gnssMeasurementsCallback,
                     gnssReportCbs.gnssNHzMeasurementsCallback,
                     gnssReportCbs.gnssDcReportCallback,
+                    gnssReportCbs.gnssEphReportCallback,
                     intervalInMs);
         }
 
@@ -161,6 +162,7 @@ class TrackingSessCbHandler {
                                 engineReportCbs.gnssMeasurementsCallback,
                                 engineReportCbs.gnssNHzMeasurementsCallback,
                                 engineReportCbs.gnssDcReportCallback,
+                                engineReportCbs.gnssEphReportCallback,
                                 intervalInMs);
         }
 
@@ -176,6 +178,7 @@ class TrackingSessCbHandler {
                                  GnssMeasurementsCb gnssMeasurementsCallback,
                                  GnssMeasurementsCb gnssNHzMeasurementsCallback,
                                  GnssDcReportCb gnssDcReportCallback,
+                                 GnssEphReportCb gnssEphReportCallback,
                                  uint32_t intervalInMs);
 };
 
@@ -183,7 +186,8 @@ void TrackingSessCbHandler::initializeCommonCbs(LocationClientApiImpl *pClientAp
         ResponseCb rspCb, GnssSvCb gnssSvCallback, GnssNmeaCb gnssNmeaCallback,
         GnssDataCb gnssDataCallback, GnssMeasurementsCb gnssMeasurementsCallback,
         GnssMeasurementsCb gnssNHzMeasurementsCallback,
-        GnssDcReportCb gnssDcReportCallback, uint32_t intervalInMs) {
+        GnssDcReportCb gnssDcReportCallback, GnssEphReportCb gnssEphReportCallback,
+        uint32_t intervalInMs) {
     // callback masks
     if (rspCb) {
         mCallbackOptions.responseCb = [rspCb](::LocationError err, uint32_t id) {
@@ -259,6 +263,17 @@ void TrackingSessCbHandler::initializeCommonCbs(LocationClientApiImpl *pClientAp
                         LocationClientApiImpl::parseDcReport(n);
             gnssDcReportCallback(gnssDcReport);
             pClientApiImpl->getLogger().log(gnssDcReport);
+        };
+    }
+
+    if (gnssEphReportCallback) {
+        mCallbackOptions.svEphemerisCb =
+                [pClientApiImpl, gnssEphReportCallback](
+                const ::GnssSvEphemerisReport &n) {
+            GnssEphemeris gnssEphInfo =
+                    LocationClientApiImpl::parseGnssEphemerisInfo(n);
+            gnssEphReportCallback(gnssEphInfo);
+            pClientApiImpl->getLogger().log(gnssEphInfo);
         };
     }
 }
@@ -1410,6 +1425,8 @@ string Location::toString() const {
     out += FIELDVAL_DEC(speedAccuracy);
     out += FIELDVAL_DEC(bearingAccuracy);
     out += FIELDVAL_MASK(techMask, LocationTechnologyMask_tbl);
+    out += FIELDVAL_DEC(elapsedgPTPTime);
+    out += FIELDVAL_DEC(elapsedgPTPTimeUnc);
 
     return out;
 }
@@ -1484,8 +1501,6 @@ string GnssLocation::toString() const {
         out += to_string(dgnssId);
         count++;
     }
-    out += FIELDVAL_DEC(elapsedgPTPTime);
-    out += FIELDVAL_DEC(elapsedgPTPTimeUnc);
     return out;
 }
 
@@ -1517,6 +1532,9 @@ string GnssData::toString() const {
         out += FIELDVAL_DEC(jammerInd[i]);
         out += FIELDVAL_DEC(agc[i]);
     }
+    out += FIELDVAL_DEC(agcStatusL1);
+    out += FIELDVAL_DEC(agcStatusL2);
+    out += FIELDVAL_DEC(agcStatusL5);
 
     return out;
 }
@@ -1589,6 +1607,9 @@ string GnssMeasurements::toString() const {
     }
 
     out += FIELDVAL_DEC(isNhz);
+    out += FIELDVAL_DEC(agcStatusL1);
+    out += FIELDVAL_DEC(agcStatusL2);
+    out += FIELDVAL_DEC(agcStatusL5);
     return out;
 }
 
@@ -1645,6 +1666,220 @@ string GnssDcReport::toString() const {
         free(ptr);
     }
 
+    return out;
+}
+
+DECLARE_TBL(GnssEphSource) = {
+    {GNSS_EPH_SRC_UNKNOWN, "SRC_UNKNOWN"},
+    {GNSS_EPH_SRC_OTA, "SRC_OTA"},
+    {GNSS_EPH_SRC_MAX, "SRC_MAX"},
+};
+
+DECLARE_TBL(GnssEphAction) = {
+    {GNSS_EPH_ACTION_UNKNOWN, "ACTION_UNKNOWN"},
+    {GNSS_EPH_ACTION_UPDATE, "ACTION_UPDATE"},
+    {GNSS_EPH_ACTION_DELETE, "ACTION_DELETE"},
+    {GNSS_EPH_ACTION_MAX, "ACTION_MAX"}
+};
+
+DECLARE_TBL(GalEphSignalSource) = {
+    {GAL_EPH_SIGNAL_SRC_UNKNOWN, "UNKNOWN"},
+    {GAL_EPH_SIGNAL_SRC_E1B, "SRC_E1B"},
+    {GAL_EPH_SIGNAL_SRC_E5A, "SRC_E5A"},
+    {GAL_EPH_SIGNAL_SRC_E5B, "SRC_E5B"}
+};
+
+string GnssEphCommonInfo::toString() const {
+    string out;
+    out.reserve(8096);
+    out += FIELDVAL_DEC(gnssSvId);
+    out += FIELDVAL_DEC(ephSource);
+    out += FIELDVAL_DEC(action);
+    out += FIELDVAL_DEC(IODE);
+    out += FIELDVAL_DEC(aSqrt);
+    out += FIELDVAL_DEC(deltaN);
+    out += FIELDVAL_DEC(m0);
+    out += FIELDVAL_DEC(eccentricity);
+    out += FIELDVAL_DEC(omega0);
+    out += FIELDVAL_DEC(i0);
+    out += FIELDVAL_DEC(omega);
+    out += FIELDVAL_DEC(omegaDot);
+    out += FIELDVAL_DEC(iDot);
+    out += FIELDVAL_DEC(cUc);
+    out += FIELDVAL_DEC(cUs);
+    out += FIELDVAL_DEC(cRc);
+    out += FIELDVAL_DEC(cRs);
+    out += FIELDVAL_DEC(cIc);
+    out += FIELDVAL_DEC(cIs);
+    out += FIELDVAL_DEC(toe);
+    out += FIELDVAL_DEC(toc);
+    out += FIELDVAL_DEC(af0);
+    out += FIELDVAL_DEC(af1);
+    out += FIELDVAL_DEC(af2);
+    return out;
+}
+
+string GpsQzssEphemeris::toString() const {
+
+    string out;
+    out.reserve(256);
+    out += commonEphemerisData.toString();
+    out += FIELDVAL_DEC(signalHealth);
+    out += FIELDVAL_DEC(URAI);
+    out += FIELDVAL_DEC(codeL2);
+    out += FIELDVAL_DEC(dataFlagL2P);
+    out += FIELDVAL_DEC(tgd);
+    out += FIELDVAL_DEC(fitInterval);
+    out += FIELDVAL_DEC(IODC);
+    return out;
+}
+
+string GlonassEphemeris::toString() const {
+
+    string out;
+    out.reserve(256);
+    out += FIELDVAL_DEC(gnssSvId);
+    out += FIELDVAL_DEC(ephSource);
+    out += FIELDVAL_DEC(action);
+    out += FIELDVAL_DEC(bnHealth);
+    out += FIELDVAL_DEC(lnHealth);
+    out += FIELDVAL_DEC(tb);
+    out += FIELDVAL_DEC(ft);
+    out += FIELDVAL_DEC(gloM);
+    out += FIELDVAL_DEC(enAge);
+    out += FIELDVAL_DEC(gloFrequency);
+    out += FIELDVAL_DEC(p1);
+    out += FIELDVAL_DEC(p2);
+    out += FIELDVAL_DEC(deltaTau);
+    out += FIELDVAL_DEC(position[0]);
+    out += FIELDVAL_DEC(position[1]);
+    out += FIELDVAL_DEC(position[2]);
+    out += FIELDVAL_DEC(velocity[0]);
+    out += FIELDVAL_DEC(velocity[1]);
+    out += FIELDVAL_DEC(velocity[2]);
+    out += FIELDVAL_DEC(acceleration[0]);
+    out += FIELDVAL_DEC(acceleration[1]);
+    out += FIELDVAL_DEC(acceleration[2]);
+    out += FIELDVAL_DEC(tauN);
+    out += FIELDVAL_DEC(gamma);
+    out += FIELDVAL_DEC(toe);
+    out += FIELDVAL_DEC(nt);
+    return out;
+}
+
+string BdsEphemeris::toString() const {
+
+    string out;
+    out.reserve(256);
+    out += commonEphemerisData.toString();
+    out += FIELDVAL_DEC(svHealth);
+    out += FIELDVAL_DEC(AODC);
+    out += FIELDVAL_DEC(tgd1);
+    out += FIELDVAL_DEC(tgd2);
+    out += FIELDVAL_DEC(URAI);
+    return out;
+}
+
+string GalileoEphemeris::toString() const {
+
+    string out;
+    out.reserve(256);
+    out += commonEphemerisData.toString();
+    out += FIELDVAL_DEC(dataSourceSignal);
+    out += FIELDVAL_DEC(sisIndex);
+    out += FIELDVAL_DEC(bgdE1E5a);
+    out += FIELDVAL_DEC(bgdE1E5b);
+    out += FIELDVAL_DEC(svHealth);
+    return out;
+}
+
+string QzssEphemeris::toString() const {
+    string out;
+    out.reserve(256);
+    out += qzssEphData.toString();
+    return out;
+}
+
+string NavicEphemeris::toString() const {
+
+    string out;
+    out.reserve(256);
+    out += commonEphemerisData.toString();
+    out += FIELDVAL_DEC(weekNum);
+    out += FIELDVAL_DEC(iodec);
+    out += FIELDVAL_DEC(l5Health);
+    out += FIELDVAL_DEC(sHealth);
+    out += FIELDVAL_DEC(inclinationAngleRad);
+    out += FIELDVAL_DEC(urai);
+    out += FIELDVAL_DEC(tgd);
+    return out;
+}
+
+string GnssEphemeris::toString() const {
+    string out;
+    out.reserve(8192);
+
+    out += FIELDVAL_ENUM(gnssConstellation, Gnss_LocSvSystemEnumType_tbl);
+    out += FIELDVAL_DEC(isSystemTimeValid);
+    out += systemTime.toString();
+
+    uint32_t ind = 0;
+    switch (gnssConstellation) {
+        case GNSS_LOC_SV_SYSTEM_GPS:
+            for (auto eph : gpsEphemerisData) {
+                out += "gpsEphemerisData[";
+                out += to_string(ind);
+                out += "]: ";
+                out += eph.toString();
+                ind++;
+            }
+            break;
+        case GNSS_LOC_SV_SYSTEM_GALILEO:
+            for (auto eph : galEphemerisData) {
+                out += "galileoEphemerisData[";
+                out += to_string(ind);
+                out += "]: ";
+                out += eph.toString();
+                ind++;
+            }
+            break;
+        case GNSS_LOC_SV_SYSTEM_GLONASS:
+            for (auto eph : gloEphemerisData) {
+                out += "glonassEphemerisData[";
+                out += to_string(ind);
+                out += "]: ";
+                out += eph.toString();
+                ind++;
+            }
+            break;
+        case GNSS_LOC_SV_SYSTEM_BDS:
+            for (auto eph : bdsEphemerisData) {
+                out += "bdsEphemerisData[";
+                out += to_string(ind);
+                out += "]: ";
+                out += eph.toString();
+                ind++;
+            }
+            break;
+        case GNSS_LOC_SV_SYSTEM_QZSS:
+            for (auto eph : qzssEphemerisData) {
+                out += "qzssEphemerisData[";
+                out += to_string(ind);
+                out += "]: ";
+                out += eph.toString();
+                ind++;
+            }
+            break;
+        case GNSS_LOC_SV_SYSTEM_NAVIC:
+            for (auto eph : navicEphemerisData) {
+                out += "navicEphemerisData[";
+                out += to_string(ind);
+                out += "]: ";
+                out += eph.toString();
+                ind++;
+            }
+            break;
+    }
     return out;
 }
 
