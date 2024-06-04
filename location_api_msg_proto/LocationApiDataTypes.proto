@@ -79,8 +79,8 @@ enum LocationApiDataTypesVersion {
     LOCAPI_DATA_TYPES_VER_MAJOR = 1;
     // Minor - New features / API addition, new message/elemtent addition.
     // Bump the last byte of version i.e. x.2 to x.3
-    // Minor version 45: Support Map Matching Feedback Data structures
-    LOCAPI_DATA_TYPES_VER_MINOR = 45;
+    // Minor version 46: Rectify reporting rate variable name
+    LOCAPI_DATA_TYPES_VER_MINOR = 46;
 }
 
 // ============================================================================
@@ -248,7 +248,7 @@ enum PBGnssLocationInfoExtFlagMask {
     PB_GNSS_LOCATION_INFO_BASE_LINE_LENGTH_BIT    = 0x80; // valid base station-receiver distance
     PB_GNSS_LOCATION_INFO_AGE_OF_CORRECTION_BIT   = 0x100; // valid age of Correction
     PB_GNSS_LOCATION_INFO_LEAP_SECONDS_UNC_BIT    = 0x200; // valid leap Second Unc
-    PB_GNSS_LOCATION_INFO_CURRENT_REPORT_RATE_BIT = 0x400; // valid current reporting rate
+    PB_GNSS_LOCATION_INFO_REPORT_INTERVAL_BIT     = 0x400; // valid current reporting interval
 };
 
 enum PBGnssLocationNavSolutionMask {
@@ -1232,8 +1232,8 @@ message PBGnssLocationInfoNotification {
     uint64 ageMsecOfCorrections = 49;
     // Leap Second Uncertainity- Unit - seconds
     uint32 leapSecondsUnc = 50;
-    // Current reporting rate, validity is set via extFlags
-    uint32 currReportingRate = 51;
+    // Current reporting interval, validity is set via extFlags
+    uint32 posReportingInterval = 51;
 }
 
 message PBGnssDataNotification {
