@@ -96,13 +96,13 @@ fi
 ## SRCREV = "a6189acd18b00611c1dc7042299ad75486f08a1a"
 ## PV = "3.3.0+git${SRCPV}"
 
-if [ -e $wsp_path"sources/meta-qti-eap/recipes-location/location/gps-utils_git.bb" ]
+if [ -e $wsp_path"sources/meta-qti-eap/recipes-location/location/qcom-gps-utils_git.bb" ]
 then
     manifest_info="LE-EAP"
 elif [ -e "$wsp_path/../poky/qti-conf/set_bb_env.sh" ]
 then
     manifest_info="LE-PDK"
-elif [ -e $wsp_path"meta-qti-bsp/meta-qti-base/recipes-location/location/gps-utils_git.bb" ]
+elif [ -e $wsp_path"meta-qti-bsp/meta-qti-base/recipes-location/location/qcom-gps-utils_git.bb" ]
 then
     manifest_info="LV"
 else

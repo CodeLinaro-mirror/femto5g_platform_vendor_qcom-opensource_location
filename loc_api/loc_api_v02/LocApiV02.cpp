@@ -6625,33 +6625,13 @@ void LocApiV02::processGnssBandsSupportedInd(
                 }
             }
         }
-        const char* svTypeString[] = { "UNKNOWN", "GPS", "SBAS",
-                                "GLONASS", "QZSS", "BEIDOU", "GALILEO", "NAVIC" };
-        const char* codeTypeString[] =
-                {"A", "B", "C", "I", "L", "M", "P", "Q", "S", "W", "X", "Y", "Z"};
 
-        for (int i = 0; i < gnssCapabNotification.count; i++) {
-            if (gnssCapabNotification.gnssSignalType[i].svType > GNSS_SV_TYPE_NAVIC) {
-                gnssCapabNotification.gnssSignalType[i].svType = GNSS_SV_TYPE_UNKNOWN;
-            }
-            if (gnssCapabNotification.gnssSignalType[i].codeType >
-                GNSS_MEASUREMENTS_CODE_TYPE_OTHER) {
-                gnssCapabNotification.gnssSignalType[i].codeType =
-                        GNSS_MEASUREMENTS_CODE_TYPE_OTHER;
-                gnssCapabNotification.gnssSignalType[i].otherCodeTypeName[0] = '\0';
-            }
-
-            if (GNSS_MEASUREMENTS_CODE_TYPE_OTHER
-                != gnssCapabNotification.gnssSignalType[i].codeType) {
-                LOC_LOGv("cap[%d] type=%s freq=%.2f code=%s", i,
-                    svTypeString[gnssCapabNotification.gnssSignalType[i].svType],
-                    gnssCapabNotification.gnssSignalType[i].carrierFrequencyHz,
-                    codeTypeString[gnssCapabNotification.gnssSignalType[i].codeType]);
-            } else {
-                LOC_LOGv("cap[%d] type=%s freq=%.2f code=%s", i,
-                    svTypeString[gnssCapabNotification.gnssSignalType[i].svType],
-                    gnssCapabNotification.gnssSignalType[i].carrierFrequencyHz,
-                    gnssCapabNotification.gnssSignalType[i].otherCodeTypeName);
+        IF_LOC_LOGV {
+            for (int i = 0; i < gnssCapabNotification.count; i++) {
+                LOC_LOGv("cap[%d] sv type=%d freq=%.2f code type=%d",
+                        i, gnssCapabNotification.gnssSignalType[i].svType,
+                        gnssCapabNotification.gnssSignalType[i].carrierFrequencyHz,
+                        gnssCapabNotification.gnssSignalType[i].codeType);
             }
         }
 
@@ -6729,11 +6709,11 @@ GnssMeasurementsCodeType LocApiV02::getCodeType(qmiLocGnssSignalTypeMaskT_v02 gn
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GLONASS_G2_V02:
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GALILEO_E1_C_V02:
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1CA_V02:
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1S_V02:
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_SBAS_L1_CA_V02:
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_NAVIC_L5_V02:
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_NAVIC_L1_V02:
         return GNSS_MEASUREMENTS_CODE_TYPE_C;
+    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1S_V02:
+        return GNSS_MEASUREMENTS_CODE_TYPE_Z;
 
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L2C_L_V02:
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L2C_L_V02:
@@ -6743,17 +6723,19 @@ GnssMeasurementsCodeType LocApiV02::getCodeType(qmiLocGnssSignalTypeMaskT_v02 gn
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GALILEO_E5A_Q_V02:
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GALILEO_E5B_Q_V02:
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L5_Q_V02:
+    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q_V02:
         return GNSS_MEASUREMENTS_CODE_TYPE_Q;
 
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B1_I_V02:
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_I_V02:
+        return GNSS_MEASUREMENTS_CODE_TYPE_D;
+    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B1_I_V02:
         return GNSS_MEASUREMENTS_CODE_TYPE_I;
 
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B1C_V02:
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2A_Q_V02:
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q_V02:
     // this one is not yet supported
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L1C_V02:
+    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_NAVIC_L1_V02:
         return GNSS_MEASUREMENTS_CODE_TYPE_P;
 
     /* no plan to support  */
@@ -7308,6 +7290,10 @@ bool LocApiV02 :: convertGnssMeasurements(
             measurementData.codeType = GNSS_MEASUREMENTS_CODE_TYPE_Z; break;
         case eQMI_LOC_GNSS_CODE_TYPE_N_V02:
             measurementData.codeType = GNSS_MEASUREMENTS_CODE_TYPE_N; break;
+        case eQMI_LOC_GNSS_CODE_TYPE_D_V02:
+            measurementData.codeType = GNSS_MEASUREMENTS_CODE_TYPE_D; break;
+        case eQMI_LOC_GNSS_CODE_TYPE_E_V02:
+            measurementData.codeType = GNSS_MEASUREMENTS_CODE_TYPE_E; break;
         default:
             measurementData.codeType = GNSS_MEASUREMENTS_CODE_TYPE_OTHER; break;
         }
@@ -10950,22 +10936,17 @@ LocApiV02::startTimeBasedTracking(const TrackingOptions& options, LocApiResponse
 
     // power mode
     mPowerMode = options.powerMode;
-    if (!(GNSS_POWER_MODE_DEFAULT == options.powerMode && options.tbm == 0)) {
-        start_msg.powerMode_valid = 1;
-        start_msg.powerMode.powerMode = convertPowerMode(options.powerMode);
-        // Force low accuracy for background power modes
-        if (GNSS_POWER_MODE_M3 == options.powerMode ||
-                GNSS_POWER_MODE_M4 == options.powerMode ||
-                GNSS_POWER_MODE_M5 == options.powerMode) {
-            start_msg.horizontalAccuracyLevel =  eQMI_LOC_ACCURACY_LOW_V02;
-        }
-        // Force TBM = TBF for power mode M4
-        if (GNSS_POWER_MODE_M4 == options.powerMode) {
-            start_msg.powerMode.timeBetweenMeasurement = start_msg.minInterval;
-        } else {
-            start_msg.powerMode.timeBetweenMeasurement = options.tbm;
-        }
+
+    start_msg.powerMode_valid = 1;
+    start_msg.powerMode.powerMode = convertPowerMode(options.powerMode);
+    // Force low accuracy for background power modes
+    if (GNSS_POWER_MODE_M3 == options.powerMode ||
+            GNSS_POWER_MODE_M4 == options.powerMode ||
+            GNSS_POWER_MODE_M5 == options.powerMode) {
+        start_msg.horizontalAccuracyLevel =  eQMI_LOC_ACCURACY_LOW_V02;
     }
+
+    start_msg.powerMode.timeBetweenMeasurement = start_msg.minInterval;
 
     //special req type
     if (SPECIAL_REQ_INVALID != options.specialReq) {

@@ -940,7 +940,13 @@ DECLARE_TBL(LocationFlagsMask) = {
     {LOCATION_HAS_VERTICAL_ACCURACY_BIT, "VERT_ACCURACY"},
     {LOCATION_HAS_SPEED_ACCURACY_BIT, "SPEED_ACCURACY"},
     {LOCATION_HAS_BEARING_ACCURACY_BIT, "BEARING_ACCURACY"},
-    {LOCATION_HAS_BEARING_ACCURACY_BIT, "TS"}
+    {LOCATION_HAS_TIMESTAMP_BIT, "TS"},
+    {LOCATION_HAS_ELAPSED_REAL_TIME_BIT, "ELAPSED_REAL_TIME"},
+    {LOCATION_HAS_ELAPSED_REAL_TIME_UNC_BIT, "ELAPSED_REAL_TIME_UNC"},
+    {LOCATION_HAS_TIME_UNC_BIT, "TIME_UNC"},
+    {LOCATION_HAS_GPTP_TIME_BIT, "GPTP_TIME"},
+    {LOCATION_HAS_GPTP_TIME_UNC_BIT, "GPTP_TIME_UNC"},
+    {LOCATION_HAS_SESSION_STATUS_BIT, "SESSION_STATUS"},
 };
 // LocationTechnologyMask
 DECLARE_TBL(LocationTechnologyMask) = {
@@ -1033,7 +1039,8 @@ DECLARE_TBL(GnssSignalTypes) = {
     {GNSS_SIGNAL_TYPE_NAVIC_L5, "NAVIC_L5"},
     {GNSS_SIGNAL_TYPE_BEIDOU_B2A_Q, "BDS_B2AQ"},
     {GNSS_SIGNAL_TYPE_BEIDOU_B2B_I, "BDS_B2BI"},
-    {GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q, "BDS_B2BQ"}
+    {GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q, "BDS_B2BQ"},
+    {GNSS_SIGNAL_TYPE_NAVIC_L1, "NAVIC_L1"}
 };
 // GnssSvType
 DECLARE_TBL(GnssSvType) = {
@@ -1421,7 +1428,7 @@ string LLAInfo::toString() const {
 
 string Location::toString() const {
     string out;
-    out.reserve(256);
+    out.reserve(512);
 
     out += FIELDVAL_MASK(flags, LocationFlagsMask_tbl);
     out += FIELDVAL_DEC(timestamp);
@@ -1437,7 +1444,7 @@ string Location::toString() const {
     out += FIELDVAL_MASK(techMask, LocationTechnologyMask_tbl);
     out += FIELDVAL_DEC(elapsedgPTPTime);
     out += FIELDVAL_DEC(elapsedgPTPTimeUnc);
-
+    out += FIELDVAL_MASK(sessionStatus, LocSessionStatus_tbl);
     return out;
 }
 

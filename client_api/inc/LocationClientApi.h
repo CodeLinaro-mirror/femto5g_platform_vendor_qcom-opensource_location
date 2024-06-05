@@ -388,6 +388,9 @@ enum LocationFlagsMask {
     LOCATION_HAS_GPTP_TIME_BIT         = (1<<12),
     /** GnssLocation has valid Location::elapsedgPTPTimeUnc. <br/> */
     LOCATION_HAS_GPTP_TIME_UNC_BIT     = (1<<13),
+    /** Location has valid Location::sessionStatus  <br/> */
+    LOCATION_HAS_SESSION_STATUS_BIT    = (1<<14),
+
 };
 
 /**
@@ -1183,6 +1186,17 @@ enum PositioningEngineMask {
     VP_POSITIONING_ENGINE       = (1 << 3)
 };
 
+/** Specify the session status. <br/> */
+enum LocSessionStatus {
+    /** Session is successful. <br/> */
+    LOC_SESS_SUCCESS      = 0,
+    /** Session is still in progress, the reported has not yet
+    achieved the needed criteria. <br/>*/
+    LOC_SESS_INTERMEDIATE = 1,
+    /** Session has failed. <br/>*/
+    LOC_SESS_FAILURE      = 2,
+};
+
 /** Specify the location info received by client via
  *  startPositionSession(uint32_t, uint32_t
  *  LocationCb, ResponseCb). <br/>   */
@@ -1190,6 +1204,9 @@ struct Location {
     /** Bitwise OR of LocationFlagsMask to specify the valid
      *  fields. <br/>   */
     LocationFlagsMask flags;
+    /** Indicates whether session is success, failure or
+     *  intermediate. <br/>   */
+    LocSessionStatus sessionStatus;
     /** UTC timestamp for location fix since January 1, 1970, in
      *  unit of milliseconds. <br/>   */
     uint64_t timestamp;
@@ -1332,17 +1349,6 @@ enum DrSolutionStatusMask {
     DR_SOLUTION_STATUS_WARNING_FACTORY_DATA_INCONSISTENT   = (1<<15)
 };
 
-/** Specify the session status. <br/> */
-enum LocSessionStatus {
-    /** Session is successful. <br/> */
-    LOC_SESS_SUCCESS      = 0,
-    /** Session is still in progress, the reported has not yet
-    achieved the needed criteria. <br/>*/
-    LOC_SESS_INTERMEDIATE = 1,
-    /** Session has failed. <br/>*/
-    LOC_SESS_FAILURE      = 2,
-};
-
 /** Specify the location info received by client via
  *  startPositionSession(uint32_t, const
  *  GnssReportCbs&, ResponseCb) and
@@ -1465,9 +1471,6 @@ struct GnssLocation : public Location {
      *  true:  Altitude is assumed; there may not be enough
      *         satellites to determine the precise altitude. <br/> */
     bool altitudeAssumed;
-    /** Indicates whether session is success, failure or
-     *  intermediate. <br/> */
-    LocSessionStatus sessionStatus;
     /** Integrity risk used for protection level parameters. <br/>
      *  Unit of 2.5e-10. Valid range is [1 to (4e9-1)].
      *  </br> Other values means integrity risk is disabled and
@@ -1521,7 +1524,7 @@ struct GnssLocation : public Location {
             llaVRPBased({}),
             enuVelocityVRPBased{0.0f, 0.0f, 0.0f},
             drSolutionStatusMask((DrSolutionStatusMask)0),
-            altitudeAssumed(false), sessionStatus(LOC_SESS_FAILURE),
+            altitudeAssumed(false),
             integrityRiskUsed(0), protectAlongTrack(0.0f),
             protectCrossTrack(0.0f), protectVertical(0.0f) {
     }
@@ -1639,6 +1642,8 @@ enum GnssSignalTypes {
     GNSS_SIGNAL_TYPE_BEIDOU_B2B_I = 20,
     /**  GNSS signal is of BEIDOU B2B_Q RF band.  <br/>   */
     GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q = 21,
+    /**  GNSS signal is of NAVIC L1 RF band.  <br/>   */
+    GNSS_SIGNAL_TYPE_NAVIC_L1 = 22,
     /** Maximum number of signal types. <br/>   */
     GNSS_MAX_NUMBER_OF_SIGNAL_TYPES
 };
