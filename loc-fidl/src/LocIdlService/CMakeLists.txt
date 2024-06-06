@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 2.8)
 set(PRJ_NAME LocIdlAPI)
 
 set(CMAKE_VERBOSE_MAKEFILE on)
+include(CheckCXXCompilerFlag)
 
 OPTION(USE_FILE "Set to OFF to disable file logging" OFF )
 message(STATUS "USE_FILE is set to value: ${USE_FILE}")
@@ -86,10 +87,19 @@ else()
 #    pkg_check_modules(DBus REQUIRED dbus-1>=1.4)
 endif()
 
-SYSR_INCLUDE_DIR(gps-utils)
+SYSR_INCLUDE_DIR(qcom-gps-utils)
 SYSR_INCLUDE_DIR(location-client-api)
 SYSR_INCLUDE_DIR(open-avb)
 SYSR_INCLUDE_DIR(location-integration-api)
+
+check_cxx_compiler_flag("-DPOWER_DAEMON_MGR_ENABLED" FLAG_POWER_DAEMON_MGR_ENABLED)
+
+if (FLAG_POWER_DAEMON_MGR_ENABLED)
+    add_definitions(-DPOWER_DAEMON_MGR_ENABLED)
+    SYSR_INCLUDE_DIR(powermanager)
+else()
+    message(STATUS "Flag -DPOWER_DAEMON_MGR_ENABLED is not supported.")
+endif()
 
 # SOME/IP
 find_package (CommonAPI-SomeIP 3.2.0 REQUIRED)
@@ -108,7 +118,7 @@ set(PRJ_NAME_SERVICE ${PRJ_NAME}Service)
 FILE(GLOB PRJ_PROXY_GEN_SRCS ${PRJ_SRC_GEN_COMMONAPI_PATH}/*Proxy.cpp)
 FILE(GLOB PRJ_STUB_GEN_SRCS ${PRJ_SRC_GEN_COMMONAPI_PATH}/*Stub*.cpp)
 FILE(GLOB PRJ_STUB_IMPL_SRCS ${PRJ_SRC_COMMONAPI_PATH}/*Stub*.cpp)
-set(PRJ_SERVICE_SRCS ${PRJ_SRC_PATH}/${PRJ_NAME_SERVICE}.cpp ${PRJ_SRC_PATH}/${PRJ_NAME}StubImpl.cpp ${PRJ_STUB_GEN_SRCS} ${PRJ_STUB_IMPL_SRCS} ${PRJ_SRC_PATH}/LocLcaIdlConverter.cpp)
+set(PRJ_SERVICE_SRCS ${PRJ_SRC_PATH}/${PRJ_NAME_SERVICE}.cpp ${PRJ_SRC_PATH}/${PRJ_NAME}StubImpl.cpp ${PRJ_STUB_GEN_SRCS} ${PRJ_STUB_IMPL_SRCS} ${PRJ_SRC_PATH}/LocLcaIdlConverter.cpp ${PRJ_SRC_PATH}/LocIdlPowerEvtManager.cpp)
 
 # Boost
 #find_package( Boost 1.71 COMPONENTS system thread log REQUIRED )
@@ -155,7 +165,11 @@ endif()
 
 # Build service
 add_executable(${PRJ_NAME_SERVICE} ${PRJ_SERVICE_SRCS})
-target_link_libraries(${PRJ_NAME_SERVICE} ${LINK_LIBRARIES})
+if (FLAG_POWER_DAEMON_MGR_ENABLED)
+    target_link_libraries(${PRJ_NAME_SERVICE} ${LINK_LIBRARIES} powermanager)
+else ()
+    target_link_libraries(${PRJ_NAME_SERVICE} ${LINK_LIBRARIES})
+endif()
 
 # Build DBus library
 #add_library (${PRJ_NAME}-dbus SHARED ${PRJ_DBUS_LIB_SRCS})

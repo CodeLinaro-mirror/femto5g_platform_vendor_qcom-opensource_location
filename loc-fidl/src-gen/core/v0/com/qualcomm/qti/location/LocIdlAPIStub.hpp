@@ -152,11 +152,12 @@ public:
     typedef std::function<void ()> stopPositionSessionReply_t;
     typedef std::function<void (LocIdlAPI::IDLLocationResponse _resp)> deleteAidingDataReply_t;
     typedef std::function<void (LocIdlAPI::IDLLocationResponse _resp)> configConstellationsReply_t;
+    typedef std::function<void (LocIdlAPI::IDLLocationResponse _resp)> injectMapMatchedFeedbackDataReply_t;
 
     virtual ~LocIdlAPIStub() {}
     void lockInterfaceVersionAttribute(bool _lockAccess) { static_cast<void>(_lockAccess); }
     bool hasElement(const uint32_t _id) const {
-        return (_id < 13);
+        return (_id < 14);
     }
     virtual const CommonAPI::Version& getInterfaceVersion(std::shared_ptr<CommonAPI::ClientId> _client) = 0;
 
@@ -225,6 +226,8 @@ public:
     virtual void deleteAidingData(const std::shared_ptr<CommonAPI::ClientId> _client, uint32_t _aidingDataMask, deleteAidingDataReply_t _reply) = 0;
     /// This is the method that will be called on remote calls on the method configConstellations.
     virtual void configConstellations(const std::shared_ptr<CommonAPI::ClientId> _client, std::vector< LocIdlAPI::IDLGnssSvIdInfo > _svList, configConstellationsReply_t _reply) = 0;
+    /// This is the method that will be called on remote calls on the method injectMapMatchedFeedbackData.
+    virtual void injectMapMatchedFeedbackData(const std::shared_ptr<CommonAPI::ClientId> _client, LocIdlAPI::MapMatchingFeedbackData _mmfData, injectMapMatchedFeedbackDataReply_t _reply) = 0;
 
 
     using CommonAPI::Stub<LocIdlAPIStubAdapter, LocIdlAPIStubRemoteEvent>::initStubAdapter;
@@ -248,6 +251,6 @@ private:
 
 
 // Compatibility
-namespace v0_1 = v0;
+namespace v0_2 = v0;
 
 #endif // V0_COM_QUALCOMM_QTI_LOCATION_Loc_Idl_API_STUB_HPP_

@@ -45,6 +45,8 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 using namespace std;
 using namespace v0::com::qualcomm::qti::location;
+
+class LocIdlAPIService;
 class LocIdlAPIStubImpl: public v0::com::qualcomm::qti::location::LocIdlAPIStub {
 
 public:
@@ -76,6 +78,9 @@ public:
     virtual void configConstellations(const std::shared_ptr<CommonAPI::ClientId> client,
             std::vector< LocIdlAPI::IDLGnssSvIdInfo > svList,
             configConstellationsReply_t reply);
+    virtual void injectMapMatchedFeedbackData(const std::shared_ptr<CommonAPI::ClientId> client,
+            LocIdlAPI::MapMatchingFeedbackData mmfData, injectMapMatchedFeedbackDataReply_t reply);
+
     uint32_t mCapsMask;
 
     const LocIdlAPIService* mApiService;

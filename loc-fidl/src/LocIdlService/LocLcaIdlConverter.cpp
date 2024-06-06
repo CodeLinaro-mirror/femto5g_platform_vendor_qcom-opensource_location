@@ -577,7 +577,7 @@ vector< LocIdlAPI::IDLGnssMeasUsageInfo > parseIDLMeasUsageInfo
     for (int idx = 0; idx < measUsageInfo.size() && idx < IDL_MAX_GNSS_MEAS; idx++) {
         LocIdlAPI::IDLGnssMeasUsageInfo idlMeasInfo = {};
         idlMeasInfo.setGnssConstellation(
-                parseIDLGnssConstellation(measUsageInfo[idx].gnssConstellation));
+                (uint16_t)parseIDLGnssConstellation(measUsageInfo[idx].gnssConstellation));
         idlMeasInfo.setGnssSignalType(::parseIDLSignalType(measUsageInfo[idx].gnssSignalType));
         idlMeasInfo.setGnssSvId(measUsageInfo[idx].gnssSvId);
 
@@ -832,15 +832,28 @@ LocIdlAPI::IDLLocationReport LocLcaIdlConverter::parseLocReport(const ::GnssLoca
     }
     if (lcaLoc.gnssInfoFlags & GNSS_LOCATION_INFO_NUM_SV_USED_IN_POSITION_BIT) {
         idlLocReport.setNumSvUsedInPosition(lcaLoc.numSvUsedInPosition);
+        idlLocReport.setSvUsedInPosition(::parseIDLSvUsedInPosition(lcaLoc.svUsedInPosition));
         locFlags |= LocIdlAPI::IDLLCALocationInfoFlagMask::IDL_LOC_INFO_NUM_SV_USED_IN_POS;
     }
 
-    idlLocReport.setSvUsedInPosition(::parseIDLSvUsedInPosition(lcaLoc.svUsedInPosition));
-    idlLocReport.setNavSolutionMask(::parseIDLNavSolutionMask(lcaLoc.navSolutionMask));
-    idlLocReport.setPosTechMask(::parseIDLPosTechMask(lcaLoc.posTechMask));
-    idlLocReport.setBodyFrameData(::parseIDLBodyFrameData(lcaLoc.bodyFrameData));
+    if (lcaLoc.gnssInfoFlags & LCA_GNSS_LOCATION_INFO_GNSS_SV_USED_DATA_BIT) {
+        idlLocReport.setMeasUsageInfo(::parseIDLMeasUsageInfo(lcaLoc.measUsageInfo));
+        locFlags |= LocIdlAPI::IDLLCALocationInfoFlagMask::IDL_LOC_INFO_GNSS_SV_USED_DATA;
+    }
+    if (lcaLoc.gnssInfoFlags & LCA_GNSS_LOCATION_INFO_NAV_SOLUTION_MASK_BIT) {
+        idlLocReport.setNavSolutionMask(::parseIDLNavSolutionMask(lcaLoc.navSolutionMask));
+        locFlags |= LocIdlAPI::IDLLCALocationInfoFlagMask::IDL_LOC_INFO_NAV_SOLUTION_MASK_BIT;
+    }
+    if (lcaLoc.gnssInfoFlags & LCA_GNSS_LOCATION_INFO_POS_TECH_MASK_BIT) {
+        idlLocReport.setPosTechMask(::parseIDLPosTechMask(lcaLoc.posTechMask));
+        locFlags |= LocIdlAPI::IDLLCALocationInfoFlagMask::IDL_LCA_GNSS_LOCATION_INFO_POS_TECH_MASK;
+    }
+    if (lcaLoc.gnssInfoFlags & LCA_GNSS_LOCATION_INFO_POS_DYNAMICS_DATA_BIT) {
+        idlLocReport.setBodyFrameData(::parseIDLBodyFrameData(lcaLoc.bodyFrameData));
+        locFlags |= LocIdlAPI::IDLLCALocationInfoFlagMask::IDL_LOC_INFO_POS_DYNAMICS_DATA;
+    }
+
     idlLocReport.setGnssSystemTime(::parseGnssSystemTime(lcaLoc.gnssSystemTime));
-    idlLocReport.setMeasUsageInfo(::parseIDLMeasUsageInfo(lcaLoc.measUsageInfo));
 
     if (lcaLoc.gnssInfoFlags & GNSS_LOCATION_INFO_LEAP_SECONDS_BIT) {
         idlLocReport.setLeapSeconds(lcaLoc.leapSeconds);
@@ -966,8 +979,10 @@ LocIdlAPI::IDLLocationReport LocLcaIdlConverter::parseLocReport(const ::GnssLoca
         gptpGetCurPtpTime(&gptp_time_ns);
         int64_t latency = gptp_time_ns - lcaLoc.elapsedgPTPTime;
     }
-
-    LOC_LOGe("Position report %"PRIu64" ", lcaLoc.timestamp);
+    idlLocReport.setBaseLineLength(0.0);
+    idlLocReport.setAgeMsecOfCorrections(0.0);
+    idlLocReport.setCurrReportingRate(0);
+    LOC_LOGd("Position report %"PRIu64" ", lcaLoc.timestamp);
 
     idlLocReport.setLocationInfoFlags(locFlags);
 

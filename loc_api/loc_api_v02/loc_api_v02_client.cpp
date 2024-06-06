@@ -29,7 +29,7 @@
  /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -77,8 +77,9 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "qmi_cci_target.h"
 #include "qmi_cci_common.h"
 #define LOG_NDEBUG 0
-#define LOG_TAG "LocSvc_api_v02"
 #endif //_ANDROID_
+
+#define LOG_TAG "LocSvc_api_v02"
 
 #include <loc_pla.h>
 #include "loc_api_v02_client.h"
