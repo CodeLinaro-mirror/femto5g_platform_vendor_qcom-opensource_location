@@ -27,7 +27,7 @@
  */
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
-Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -130,6 +130,8 @@ enum LocConfigTypeEnum{
     /** Config OSNMA enablement status used by the standard
      *  position engine (SPE). <br/> */
     CONFIG_OSNMA_ENABLEMENT = 18,
+    /** Config Map Matched Feedback used by DRE/PPE engine */
+    CONFIG_MAP_MATCHED_FEEDBACK = 19,
     /** Max config enum supported. <br/> */
     CONFIG_ENUM_MAX = 99,
 
@@ -914,6 +916,72 @@ struct XtraConfigParams {
      * 0 to disable diag logging <br/>
      * 1 to enable diag logging <br/> */
     uint32_t xtraDaemonDiagLoggingStatus;
+};
+
+enum mmfDataValidity {
+    LOC_HAS_VALID_MMFD_UTC_TIME     = (1<<0),
+    LOC_HAS_VALID_MMFD_LAT_DIFF     = (1<<1),
+    LOC_HAS_VALID_MMFD_LONG_DIFF    = (1<<2),
+    LOC_HAS_VALID_MMFD_TUNNEL       = (1<<3),
+    LOC_HAS_VALID_MMFD_BEARING      = (1<<4),
+    LOC_HAS_VALID_MMFD_ALTITUDE     = (1<<5),
+    LOC_HAS_VALID_MMFD_HOR_ACC      = (1<<6),
+    LOC_HAS_VALID_MMFD_ALT_ACC      = (1<<7),
+    LOC_HAS_VALID_MMFD_BEARING_ACC  = (1<<8),
+};
+
+struct mapMatchedFeedbackData {
+    /** Validity fields for MMF data fields to follow
+     *  Flags defined uisng enum mmfDataValidity */
+    uint64_t validityMask;
+
+    /** Unix epoch time of the location fix for which map-match
+     *  feedback is being sent, since the start of the Unix epoch
+     *  (00:00:00 January 1, 1970 UTC).
+     *  Unit: Milli-seconds */
+    uint64_t utcTimestampMs;
+
+    /** Latitude difference = map matched latitude - reported latitude
+     *  Unit: Degrees
+     *  Range: [-90.0, 90.0] */
+    double mapMatchedLatitudeDifference;
+
+    /** Longitude difference = map matched longitude - reported longitude
+     *  Unit: Degrees
+     *  Range: [-180.0, 180.0] */
+    double mapMatchedLongitudeDifference;
+
+    /** Bearing: The horizontal direction of travel of the device with
+     *  respect to north and is unrelated to the device orientation.
+     *  Unit: Degrees
+     *  range: [0, 360) */
+    float bearing;
+
+    /** Absolute Altitude above the WGS 84 reference ellipsoid
+        Unit: meters */
+    double altitude;
+
+    /** Horizontal accuracy radius defined with the
+     *  68th percentile confidence level.
+     *  Unit: meter
+     *  Range: 0 or greater */
+    float horizontalAccuracy;
+
+    /** Altitude accuracy. Defined with 68% confidence level.
+     *  Unit:meter
+     *  Range: 0 or greater */
+    float altitudeAccuracy;
+
+    /** Estimated bearing accuracy defined with
+     *  68 percentile confidence level (1 sigma).
+     *  Unit: Degrees
+     *  Range [0, 360) */
+    float bearingAccuracy;
+
+    /** Road Type. Decision to use the MMF data depends on isTunnel
+     *  Value: True or False */
+    bool isTunnel;
+
 };
 
 class LocationIntegrationApiImpl;
@@ -1944,6 +2012,23 @@ public:
 
     */
     bool registerGnssSignalTypesUpdate(bool registerUpdate);
+
+    /** @brief
+        API to support passing map-matched Feedback data to the DRE engine.
+        Clients should use the below API to pass Map-matched data that will
+        be used by the DRE engine to compute position reports.<br/>
+
+        @param
+        mapMatchedFeedbackData: structure to store MMF data fields
+                        <br/>
+
+        @return true, if the API request has been accepted.
+                <br/>
+
+        @return false, if the API request has not been accepted for
+                further processing. <br/>
+    */
+    bool injectMapMatchedData (const mapMatchedFeedbackData& mapData);
 
     /** @example example1:testGetConfigApi
     * <pre>
