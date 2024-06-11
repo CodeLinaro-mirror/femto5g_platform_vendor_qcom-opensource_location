@@ -717,6 +717,9 @@ locClientEventMaskType LocApiV02 :: adjustLocClientEventMask(locClientEventMaskT
                                            QMI_LOC_EVENT_MASK_GNSS_NHZ_MEASUREMENT_REPORT_V02 |
                                            QMI_LOC_EVENT_MASK_GNSS_SV_POLYNOMIAL_REPORT_V02 |
                                            QMI_LOC_EVENT_MASK_EPHEMERIS_REPORT_V02 |
+#ifdef __ANDROID__
+                                           QMI_LOC_EVENT_MASK_NEXT_LS_INFO_REPORT_V02 |
+#endif
                                            QMI_LOC_EVENT_MASK_LATENCY_INFORMATION_REPORT_V02 |
                                            QMI_LOC_EVENT_MASK_ENGINE_DEBUG_DATA_REPORT_V02;
         // clear GNSS_EVENT_REPORT mask because QMI_LOC_EVENT_MASK_FEATURE_STATUS_V02 is set
