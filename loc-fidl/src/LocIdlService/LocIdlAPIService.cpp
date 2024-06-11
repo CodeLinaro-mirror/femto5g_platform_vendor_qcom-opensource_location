@@ -125,8 +125,9 @@ class LocationTrackingSessCbHandler {
                 }
                 if (reportCbMask &
                         LocIdlAPI::IDLGnssReportCbInfoMask::IDL_NMEA_CB_INFO_BIT) {
-                    mCallbackOptions.gnssNmeaCallback =
-                            [pClientApiService](uint64_t timestamp, const std::string nmea) {
+                    mCallbackOptions.nmeaSentencesCallback =
+                            [pClientApiService](::LocOutputEngineType engType,
+                                    uint64_t timestamp, const std::string nmea) {
                         if (pClientApiService->mService) {
                             pClientApiService->mService->fireGnssNmeaEvent(timestamp, nmea);
                         }
