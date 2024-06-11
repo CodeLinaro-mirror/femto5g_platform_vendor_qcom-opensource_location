@@ -9785,10 +9785,18 @@ LocApiV02::setConstellationControl(const GnssSvTypeConfig& config,
     setConstellationConfigMsg.enableMask_valid = true;
     setConstellationConfigMsg.enableMask = config.enabledSvTypesMask;
 
+    bool disableSupported = ContextBase::isFeatureSupported(
+            LOC_SUPPORTED_FEATURE_CONSTELLATION_DISABLEMENT);
+    if (disableSupported) {
+       setConstellationConfigMsg.disableMask_valid = true;
+       setConstellationConfigMsg.disableMask = config.blacklistedSvTypesMask;
+    }
+
     // disableMask is not supported in modem
     // if we set disableMask, QMI call will return error
-    LOC_LOGE("setConstellationControl: "
+    LOC_LOGE("setConstellationControl: disableSupported %d,"
              "enable: %d 0x%" PRIx64 ", blacklisted: %d 0x%" PRIx64 "",
+             disableSupported,
              setConstellationConfigMsg.enableMask_valid,
              setConstellationConfigMsg.enableMask,
              setConstellationConfigMsg.disableMask_valid,
