@@ -577,7 +577,7 @@ vector< LocIdlAPI::IDLGnssMeasUsageInfo > parseIDLMeasUsageInfo
     for (int idx = 0; idx < measUsageInfo.size() && idx < IDL_MAX_GNSS_MEAS; idx++) {
         LocIdlAPI::IDLGnssMeasUsageInfo idlMeasInfo = {};
         idlMeasInfo.setGnssConstellation(
-                parseIDLGnssConstellation(measUsageInfo[idx].gnssConstellation));
+                (uint16_t)parseIDLGnssConstellation(measUsageInfo[idx].gnssConstellation));
         idlMeasInfo.setGnssSignalType(::parseIDLSignalType(measUsageInfo[idx].gnssSignalType));
         idlMeasInfo.setGnssSvId(measUsageInfo[idx].gnssSvId);
 
@@ -966,8 +966,10 @@ LocIdlAPI::IDLLocationReport LocLcaIdlConverter::parseLocReport(const ::GnssLoca
         gptpGetCurPtpTime(&gptp_time_ns);
         int64_t latency = gptp_time_ns - lcaLoc.elapsedgPTPTime;
     }
-
-    LOC_LOGe("Position report %"PRIu64" ", lcaLoc.timestamp);
+    idlLocReport.setBaseLineLength(0.0);
+    idlLocReport.setAgeMsecOfCorrections(0.0);
+    idlLocReport.setCurrReportingRate(0);
+    LOC_LOGd("Position report %"PRIu64" ", lcaLoc.timestamp);
 
     idlLocReport.setLocationInfoFlags(locFlags);
 
