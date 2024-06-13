@@ -21,7 +21,6 @@ ENDIF(USE_CONSOLE)
 add_definitions(-D__LINUX__)
 add_definitions(-DOFF_TARGET)
 add_definitions(-std=c++14)
-add_definitions(-DUSE_GLIB)
 add_definitions(-DBASE_PATH=/var/tmp/location)
 add_definitions(-DUSE_ANDROID_LOGGING)
 
@@ -87,10 +86,11 @@ else()
 #    pkg_check_modules(DBus REQUIRED dbus-1>=1.4)
 endif()
 
-SYSR_INCLUDE_DIR(gps-utils)
+SYSR_INCLUDE_DIR(qcom-gps-utils)
 SYSR_INCLUDE_DIR(location-client-api)
 SYSR_INCLUDE_DIR(open-avb)
 SYSR_INCLUDE_DIR(location-integration-api)
+SYSR_INCLUDE_DIR(loc-diag-iface-hdr)
 
 check_cxx_compiler_flag("-DPOWER_DAEMON_MGR_ENABLED" FLAG_POWER_DAEMON_MGR_ENABLED)
 
@@ -118,7 +118,7 @@ set(PRJ_NAME_SERVICE ${PRJ_NAME}Service)
 FILE(GLOB PRJ_PROXY_GEN_SRCS ${PRJ_SRC_GEN_COMMONAPI_PATH}/*Proxy.cpp)
 FILE(GLOB PRJ_STUB_GEN_SRCS ${PRJ_SRC_GEN_COMMONAPI_PATH}/*Stub*.cpp)
 FILE(GLOB PRJ_STUB_IMPL_SRCS ${PRJ_SRC_COMMONAPI_PATH}/*Stub*.cpp)
-set(PRJ_SERVICE_SRCS ${PRJ_SRC_PATH}/${PRJ_NAME_SERVICE}.cpp ${PRJ_SRC_PATH}/${PRJ_NAME}StubImpl.cpp ${PRJ_STUB_GEN_SRCS} ${PRJ_STUB_IMPL_SRCS} ${PRJ_SRC_PATH}/LocLcaIdlConverter.cpp ${PRJ_SRC_PATH}/LocIdlPowerEvtManager.cpp)
+set(PRJ_SERVICE_SRCS ${PRJ_SRC_PATH}/${PRJ_NAME_SERVICE}.cpp ${PRJ_SRC_PATH}/${PRJ_NAME}StubImpl.cpp ${PRJ_STUB_GEN_SRCS} ${PRJ_STUB_IMPL_SRCS} ${PRJ_SRC_PATH}/LocLcaIdlConverter.cpp ${PRJ_SRC_PATH}/LocIdlPowerEvtManager.cpp ${PRJ_SRC_PATH}/LocIdlServiceLog.cpp)
 
 # Boost
 #find_package( Boost 1.71 COMPONENTS system thread log REQUIRED )
