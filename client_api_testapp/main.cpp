@@ -312,12 +312,13 @@ static void onGtpLocationCb(const location_client::Location& location) {
     if (detailedOutputEnabled) {
         printf("<<< onGtpLocationCb: %s\n", location.toString().c_str());
     } else {
-        printf("<<< onGtpLocationCb time=%" PRIu64" mask=0x%x lat=%f lon=%f alt=%f\n",
+        printf("<<< onGtpLocationCb time=%" PRIu64" mask=0x%x lat=%f lon=%f alt=%f horAcc=%f\n",
                location.timestamp,
                location.flags,
                location.latitude,
                location.longitude,
-               location.altitude);
+               location.altitude,
+               location.horizontalAccuracy);
     }
 }
 
