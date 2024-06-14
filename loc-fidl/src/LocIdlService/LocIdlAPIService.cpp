@@ -52,19 +52,12 @@ using namespace v0::com::qualcomm::qti::location;
 using namespace location_client;
 
 static bool capabilitiesReceived = false;
-static uint32_t numGnssLocationCb = 0;
-static uint32_t numGnssDataCb = 0;
 static uint32_t posCount = 0;
 static uint32_t latentPosCount = 0;
+static bool exitFromMemUsageMsgTask = false;
 /** Latency threshold for Position reports in msec */
 #define MAX_POSITION_LATENCY   20
 #define IDL_MAX_RETRY 5
-
-/** Keep cont of number of start session requests, this variable
- *  shall be incremented on each startSession and decremented on
- *  every stop Session, Stop session request shall be sent to LCA
- *  only if this variable is 0 */
-static uint32_t numControlRequests = 0;
 
 static void onConfigResponseCb(location_integration::LocConfigTypeEnum      requestType,
                                location_integration::LocIntegrationResponse response) {
@@ -82,23 +75,33 @@ class LocationTrackingSessCbHandler {
                     mCallbackOptions.gnssLocationCallback =
                             [pClientApiService] (const ::GnssLocation n) {
                         //Convert Location report from LCA to FIDL format
-                        LocIdlAPI::IDLLocationReport idlLocRpt =
-                                pClientApiService->parseLocationReport(n);
-                        posCount++;
-                        struct timespec curBootTime = {};
-                        clock_gettime(CLOCK_BOOTTIME, &curBootTime);
-                        int64_t curBootTimeNs = ((int64_t)curBootTime.tv_sec * 1000000000) +
-                                (int64_t)curBootTime.tv_nsec;
-                        int64_t latencyMs = (curBootTimeNs - n.elapsedRealTimeNs)/1000000;
-                        if (latencyMs > MAX_POSITION_LATENCY) {
-                              latentPosCount++;
+                        if (pClientApiService->mLcaIdlConverter) {
+                            LocIdlAPI::IDLLocationReport idlLocRpt =
+                                    pClientApiService->parseLocationReport(n);
+                            posCount++;
+                            struct timespec curBootTime = {};
+                            clock_gettime(CLOCK_BOOTTIME, &curBootTime);
+                            int64_t curBootTimeNs = ((int64_t)curBootTime.tv_sec * 1000000000) +
+                                    (int64_t)curBootTime.tv_nsec;
+                            int16_t latencyMs = 0;
+                            latencyMs = (int16_t)((curBootTimeNs - n.elapsedRealTimeNs)/1000000);
+                            if (latencyMs > MAX_POSITION_LATENCY) {
+                                  latentPosCount++;
+                            }
+                            if (posCount % 600 == 0) {
+                                LOC_LOGe("%"PRId64" out of %"PRId64" Position samples are"
+                                         " latent by 20 msec",
+                                        latentPosCount, posCount);
+                            }
+                            idlLocRpt.setReportingLatency(latencyMs);
+                            if (pClientApiService->mDiagLogIface) {
+                                pClientApiService->mDiagLogIface->diagLogGnssReportInfo(
+                                    OUTPUT_PVT_REPORT, latencyMs, latentPosCount);
+                            }
+                            if (pClientApiService->mService) {
+                                pClientApiService->mService->fireLocationReportEvent(idlLocRpt);
+                            }
                         }
-                        if (posCount % 600 == 0) {
-                            LOC_LOGe("%"PRId64" out of %"PRId64" Position samples are"
-                                     " latent by 20 msec",
-                                    latentPosCount, posCount);
-                        }
-                        pClientApiService->mService->fireLocationReportEvent(idlLocRpt);
                     };
                 }
                 if (reportCbMask &
@@ -107,42 +110,68 @@ class LocationTrackingSessCbHandler {
                             [pClientApiService](const std::vector<::GnssSv>& gnssSvs) {
                         std::vector<LocIdlAPI::IDLGnssSv> idlSVReportVector;
                         LOC_LOGd("Number of SV's recevived -- %d", gnssSvs.size());
-                        for (auto GnssSv : gnssSvs) {
-                            //Convert Location report from LCA to FIDL format
-                            LocIdlAPI::IDLGnssSv idlSVRpt =
-                                pClientApiService->parseGnssSvReport(GnssSv);
-                            idlSVReportVector.push_back(idlSVRpt);
+                        if (pClientApiService->mLcaIdlConverter) {
+                            for (auto GnssSv : gnssSvs) {
+                                //Convert Location report from LCA to FIDL format
+                                LocIdlAPI::IDLGnssSv idlSVRpt =
+                                    pClientApiService->parseGnssSvReport(GnssSv);
+                                idlSVReportVector.push_back(idlSVRpt);
+                            }
+                            if (pClientApiService->mService) {
+                                pClientApiService->mService->fireGnssSvEvent(idlSVReportVector);
+                            }
                         }
-                        pClientApiService->mService->fireGnssSvEvent(idlSVReportVector);
                     };
                 }
                 if (reportCbMask &
                         LocIdlAPI::IDLGnssReportCbInfoMask::IDL_NMEA_CB_INFO_BIT) {
                     mCallbackOptions.gnssNmeaCallback =
                             [pClientApiService](uint64_t timestamp, const std::string nmea) {
-                        pClientApiService->mService->fireGnssNmeaEvent(timestamp, nmea);
+                        if (pClientApiService->mService) {
+                            pClientApiService->mService->fireGnssNmeaEvent(timestamp, nmea);
+                        }
                     };
                 }
                 if (reportCbMask &
                         LocIdlAPI::IDLGnssReportCbInfoMask::IDL_1HZ_MEAS_CB_INFO_BIT) {
                     mCallbackOptions.gnssMeasurementsCallback =
                             [pClientApiService](const ::GnssMeasurements gnssMeasurements) {
-                        LocIdlAPI::IDLGnssMeasurements idlGnssMeasurement =
-                                pClientApiService->parseGnssMeasurements(gnssMeasurements);
-                        pClientApiService->mService->fireGnssMeasurementsEvent(idlGnssMeasurement);
+                        if (pClientApiService->mLcaIdlConverter) {
+                            LocIdlAPI::IDLGnssMeasurements idlGnssMeasurement =
+                                    pClientApiService->parseGnssMeasurements(gnssMeasurements);
+                            struct timespec curBootTime = {};
+                            clock_gettime(CLOCK_BOOTTIME, &curBootTime);
+                            int64_t curBootTimeNs = ((int64_t)curBootTime.tv_sec * 1000000000) +
+                                    (int64_t)curBootTime.tv_nsec;
+                            int16_t latencyMs = 0;
+                            latencyMs = (int16_t)((curBootTimeNs -
+                                    gnssMeasurements.clock.elapsedRealTime)/1000000);
+                            idlGnssMeasurement.setReportingLatency(latencyMs);
+                            if (pClientApiService->mDiagLogIface) {
+                                pClientApiService->mDiagLogIface->diagLogGnssReportInfo(
+                                        OUTPUT_MEAS_REPORT, latencyMs, 0);
+                            }
+                            if (pClientApiService->mService) {
+                                pClientApiService->mService->fireGnssMeasurementsEvent(
+                                        idlGnssMeasurement);
+                            }
+                        }
                     };
                 }
                  // GnssDataCb
                  if (reportCbMask & LocIdlAPI::IDLGnssReportCbInfoMask::IDL_DATA_CB_INFO_BIT) {
-                     mCallbackOptions.gnssDataCallback =
-                             [pClientApiService] (const ::GnssData n) {
-                         numGnssDataCb++;
-                         //Convert GnssData report from LCA to FIDL format
-                         LocIdlAPI::IDLGnssData idlGnssDataRpt =
-                                 pClientApiService->parseGnssDataReport(n);
-                         pClientApiService->mService->fireGnssDataEvent(idlGnssDataRpt);
-                     };
-                 }
+                    mCallbackOptions.gnssDataCallback =
+                            [pClientApiService] (const ::GnssData n) {
+                        //Convert GnssData report from LCA to FIDL format
+                        if (pClientApiService->mLcaIdlConverter) {
+                            LocIdlAPI::IDLGnssData idlGnssDataRpt =
+                                    pClientApiService->parseGnssDataReport(n);
+                            if (pClientApiService->mService) {
+                                pClientApiService->mService->fireGnssDataEvent(idlGnssDataRpt);
+                            }
+                        }
+                    };
+                }
             }
         }
 
@@ -155,14 +184,18 @@ class LocationTrackingSessCbHandler {
                     LocIdlAPI::IDLEngineReportCbMask::IDL_ENGINE_LOCATION_CB_INFO_BIT) {
                     mEngineCallbackOptions.engLocationsCallback =
                             [pClientApiService] (const std::vector<::GnssLocation> &engLocations) {
-
-                        std::vector<LocIdlAPI::IDLLocationReport> idlEngLocVector;
-                        for (auto gnssLocation : engLocations) {
-                            LocIdlAPI::IDLLocationReport idlLocRpt =
-                                    pClientApiService->parseLocationReport(gnssLocation);
-                            idlEngLocVector.push_back(idlLocRpt);
+                        if (pClientApiService->mLcaIdlConverter) {
+                            std::vector<LocIdlAPI::IDLLocationReport> idlEngLocVector;
+                            for (auto gnssLocation : engLocations) {
+                                LocIdlAPI::IDLLocationReport idlLocRpt =
+                                        pClientApiService->parseLocationReport(gnssLocation);
+                                idlEngLocVector.push_back(idlLocRpt);
+                            }
+                            if (pClientApiService->mService) {
+                                pClientApiService->mService->fireEngineLocationsEvent(
+                                        idlEngLocVector);
+                            }
                         }
-                        pClientApiService->mService->fireEngineLocationsEvent(idlEngLocVector);
                     };
                 }
 
@@ -203,9 +236,7 @@ LocIdlAPI::IDLLocationReport LocIdlAPIService::parseLocationReport
     const location_client::GnssLocation &lcaLoc
 
 ) const {
-
     return (mLcaIdlConverter->parseLocReport(lcaLoc));
-
 }
 
 LocIdlAPI::IDLGnssSv LocIdlAPIService::parseGnssSvReport
@@ -219,9 +250,7 @@ LocIdlAPI::IDLGnssMeasurements LocIdlAPIService::parseGnssMeasurements
 (
     const location_client::GnssMeasurements& gnssMeasurements
 ) const {
-
     return (mLcaIdlConverter->parseMeasurements(gnssMeasurements));
-
 }
 
 LocIdlAPI::IDLGnssData LocIdlAPIService::parseGnssDataReport
@@ -248,21 +277,28 @@ LocIdlAPIService::LocIdlAPIService():
         mPowerEventObserver(nullptr),
 #endif
         mLcaIdlConverter(new LocLcaIdlConverter()),
-        mGnssReportMask(0)
+        mDiagLogIface(new LocIdlServiceLog()),
+        mGnssReportMask(0),
+        numControlRequests(0),
+        mMemoryMonitorMsgTask(new MsgTask("LocIDLServiceMem")),
+        serviceRegisterationStatus(false)
 {
-
+    if (mDiagLogIface) {
+        mDiagLogIface->initializeDiagIface();
+    }
 }
 
 LocIdlAPIService::~LocIdlAPIService()
 {
-
+    exitFromMemUsageMsgTask = true;
+    sleep(IDL_MEMORY_CHECK_INTERVAL_SEC);
 }
 
 void LocIdlAPIService::onPowerEvent(IDLPowerStateType powerEvent) {
     LOC_LOGi("Recieved Power Event %d", powerEvent);
     struct PowerEventMsg : public LocMsg {
 
-         LocIdlAPIService* mIDLService;
+        LocIdlAPIService* mIDLService;
         IDLPowerStateType mPowerEvent;
         inline PowerEventMsg(LocIdlAPIService* IDLService,
                 IDLPowerStateType event) :
@@ -270,21 +306,91 @@ void LocIdlAPIService::onPowerEvent(IDLPowerStateType powerEvent) {
             mIDLService(IDLService),
             mPowerEvent(event){};
         inline virtual void proc() const {
-            switch (mPowerEvent) {
-                 case IDL_POWER_STATE_SUSPEND:
-                 case IDL_POWER_STATE_SHUTDOWN:
-                     mIDLService->unRegisterWithFIDLService();
-                     break;
-                 case IDL_POWER_STATE_RESUME:
-                     mIDLService->registerWithFIDLService();
-                     break;
-             }
+            bool retVal = false;
+            uint8_t serviceStatus = SERVICE_STAUS_UNKNOWN;
+            if (mIDLService) {
+                switch (mPowerEvent) {
+                    case POWER_STATE_SUSPEND:
+                    case POWER_STATE_SHUTDOWN:
+                        retVal = mIDLService->unRegisterWithFIDLService();
+                        if (retVal) {
+                            serviceStatus = UNREGISTER_SERVICE_SUCCESS;
+                            mIDLService->serviceRegisterationStatus = false;
+                        } else {
+                            serviceStatus = UNREGISTER_SERVICE_FAILED;
+                            mIDLService->serviceRegisterationStatus = true;
+                        }
+                        break;
+                    case POWER_STATE_RESUME:
+                        retVal = mIDLService->registerWithFIDLService();
+                        if (retVal) {
+                            serviceStatus = REGISTER_SERVICE_SUCCESS;
+                            mIDLService->serviceRegisterationStatus = true;
+                        } else {
+                            serviceStatus =REGISTER_SERVICE_FAILED;
+                            mIDLService->serviceRegisterationStatus = false;
+                        }
+                        break;
+                    default:
+                        LOC_LOGd(" Unknown Power Event: %d !!", mPowerEvent);
+                }
+                if (mIDLService->mDiagLogIface) {
+                    mIDLService->mDiagLogIface->diagLogPowerEventInfo(mPowerEvent, serviceStatus);
+                }
+            }
         }
     };
-
     mMsgTask->sendMsg(new PowerEventMsg(this, powerEvent));
+}
 
+void LocIdlAPIService::updateSystemStatus(uint32_t totalRss) {
+    bool gptpSyncStatus = false;
+    if (gptpInit()) {
+        gptpSyncStatus = gptpGetSyncStatus();
+    }
+    if (mDiagLogIface) {
+        mDiagLogIface->updateSystemHealth(totalRss,  gptpSyncStatus);
+    }
+}
 
+void LocIdlAPIService::monitorMemoryUsage () {
+     struct MonitorMemoryUsageMsg : public LocMsg {
+        LocIdlAPIService* mIdlService;
+        inline MonitorMemoryUsageMsg(LocIdlAPIService* idlService):
+            LocMsg(),
+            mIdlService(idlService){};
+        inline virtual void proc() const {
+            const char *pFileName = "/proc/self/statm";
+            const uint16_t pageSize = 4; //4K
+            unsigned long size = 0, rssPages = 0, totalRSS = 0;
+            unsigned long share = 0, text = 0, lib = 0, data = 0, dt = 0;
+            if (mIdlService) {
+                do {
+                    FILE *fp = fopen(pFileName, "r");
+                    if (NULL != fp) {
+                        if (7 == fscanf(fp, "%ld %ld %ld %ld %ld %ld %ld",
+                               &size, &rssPages, &share, &text, &lib, &data, &dt)) {
+                            totalRSS = rssPages * pageSize;
+                            mIdlService->updateSystemStatus(totalRSS);
+                        } else {
+                            LOC_LOGe("Failed to read data from %s!! error: %s",
+                                    pFileName, strerror(errno));
+                        }
+                        fclose(fp);
+                    } else {
+                        LOC_LOGe("Failed to open the file %s!! error: %s",
+                                    pFileName, strerror(errno));
+                    } if (exitFromMemUsageMsgTask) {
+                         LOC_LOGd("Normal exit from monitorMemoryUsage");
+                         break;
+                    }
+                     sleep(IDL_MEMORY_CHECK_INTERVAL_SEC); //Sleep and re-attempt
+                } while (true);
+                LOC_LOGe("Exiting monitorMemoryUsage...!");
+            }
+        }
+    };
+    mMemoryMonitorMsgTask->sendMsg(new MonitorMemoryUsageMsg(this));
 }
 bool LocIdlAPIService::init()
 {
@@ -296,7 +402,10 @@ bool LocIdlAPIService::init()
             mLCAService(LCAService){};
 
         inline virtual void proc() const {
-            mLCAService->createLocIdlService();
+            if (mLCAService) {
+                mLCAService->createLocIdlService();
+                mLCAService->monitorMemoryUsage();
+            }
         }
     };
 
@@ -315,6 +424,9 @@ bool LocIdlAPIService::createLocIdlService()
             LOC_LOGd("<<< onCapabilitiesCb mask string=%s ",
                     LocationClientApi::capabilitiesToString(mask).c_str());
             pClientApiService->processCapabilities(mask);
+            if (pClientApiService->mDiagLogIface)
+                pClientApiService->mDiagLogIface->diagLogCapabilityInfo(
+                        LocationClientApi::capabilitiesToString(mask));
         };
         // Create LCA instance
         mLcaInstance = new LocationClientApi(capabilitiesCb);
@@ -336,7 +448,7 @@ bool LocIdlAPIService::createLocIdlService()
         }
     }
 #endif
-    registerWithFIDLService();
+    serviceRegisterationStatus = registerWithFIDLService();
 
     return true;
 }
@@ -347,11 +459,13 @@ bool LocIdlAPIService::processCapabilities(::LocationCapabilitiesMask mask)
 
         LocIdlAPIService* mLCAService;
         ::LocationCapabilitiesMask mMask;
+        string mCapsMask;
         inline ProcessCapsMsg(LocIdlAPIService* LCAService,
-                ::LocationCapabilitiesMask mask) :
+                ::LocationCapabilitiesMask mask, string capsMask) :
             LocMsg(),
             mLCAService(LCAService),
-            mMask(mask){};
+            mMask(mask),
+            mCapsMask(capsMask){};
         inline virtual void proc() const {
             //convert capabilities from LCA to FIDL format
             uint32_t idlCapsMask = 0;
@@ -365,13 +479,15 @@ bool LocIdlAPIService::processCapabilities(::LocationCapabilitiesMask mask)
             //Update Capabilities to clients
             if (mLCAService->mService) {
                 mLCAService->mService->fireGnssCapabilitiesMaskAttributeChanged(idlCapsMask);
+                mLCAService->mDiagLogIface->diagLogCapabilityInfo(mCapsMask);
             } else {
                 LOC_LOGe("mLCAService->mService == NULL !! \n");
             }
         }
     };
 
-    mMsgTask->sendMsg(new ProcessCapsMsg(this, mask));
+    mMsgTask->sendMsg(new ProcessCapsMsg(this, mask,
+            LocationClientApi::capabilitiesToString(mask)));
     return true;
 }
 
@@ -389,19 +505,27 @@ bool LocIdlAPIService::registerWithFIDLService()
     std::string instance = "com.qualcomm.qti.location.LocIdlAPI";
     std::string connection = "location-fidl-service";
 
-    mService = std::make_shared<LocIdlAPIStubImpl>(this);
-
-    bool successfullyRegistered = runtime->registerService(domain, instance, mService, connection);
-
-    while (!successfullyRegistered) {
-        LOC_LOGe("Register IDL Service failed, trying again in 100 milliseconds !!");
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        successfullyRegistered = runtime->registerService(domain, instance, mService, connection);
+    bool successfullyRegistered = false;
+    if (!serviceRegisterationStatus) {
+        mService = std::make_shared<LocIdlAPIStubImpl>(this);
+        if (runtime && mService) {
+            successfullyRegistered = runtime->registerService(domain, instance,
+                    mService, connection);
+            while (!successfullyRegistered) {
+                LOC_LOGe("Register IDL Service failed, trying again in 100 milliseconds !!");
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                successfullyRegistered = runtime->registerService(domain,
+                        instance, mService, connection);
+            }
+            LOC_LOGd("Successfully Registered Service!");
+        } else {
+            LOC_LOGe(" Either mService or runtime is NULL !! ");
+        }
+    } else {
+       successfullyRegistered = true;
     }
 
-    LOC_LOGd("Successfully Registered Service!");
-
-    return true;
+    return successfullyRegistered;
 }
 
 bool LocIdlAPIService::unRegisterWithFIDLService()
@@ -413,19 +537,21 @@ bool LocIdlAPIService::unRegisterWithFIDLService()
     std::string domain = "local";
     std::string instance = "com.qualcomm.qti.location.LocIdlAPI";
     std::string connection = "location-fidl-service";
-
-    bool successfullyUnRegistered = runtime->unregisterService(domain,
-            v0::com::qualcomm::qti::location::LocIdlAPI::getInterface(), instance);
-    uint8_t count =  1;
-    while (!successfullyUnRegistered && count <= IDL_MAX_RETRY) {
-        LOC_LOGi("UnRegister IDL Service failed, No. of retires: %d !!", count);
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    bool successfullyUnRegistered = false;
+    if (serviceRegisterationStatus) {
         successfullyUnRegistered = runtime->unregisterService(domain,
                 v0::com::qualcomm::qti::location::LocIdlAPI::getInterface(), instance);
-        count++;
+        uint8_t count =  1;
+            while (!successfullyUnRegistered && count <= IDL_MAX_RETRY) {
+                LOC_LOGi("UnRegister IDL Service failed, No. of retires: %d !!", count);
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                successfullyUnRegistered = runtime->unregisterService(domain,
+                        v0::com::qualcomm::qti::location::LocIdlAPI::getInterface(), instance);
+                count++;
+            }
+        LOC_LOGi("Successfully UnRegistered Service!");
     }
-    LOC_LOGi("Successfully UnRegistered Service!");
-    return true;
+    return successfullyUnRegistered;
 }
 
 LocIdlAPI::IDLLocationResponse LocIdlAPIService::parseIDLResponse(
@@ -489,22 +615,36 @@ void LocIdlAPIService::startPositionSession
             mGnssReportCbMask(gnssReportCallbackMask),
             mReply(reply){};
         inline virtual void proc() const {
-            numControlRequests++;
-            mLCAService->mGnssReportMask |= mGnssReportCbMask;
+            if (mLCAService) {
+                mLCAService->numControlRequests++;
+                mLCAService->mGnssReportMask |= mGnssReportCbMask;
+                LOC_LOGi("==== startPositionSession intervalMs %u GnssReportCbMask 0X%X"
+                         " LCAReportMask 0X%X numControlRequests %u", mIntervalInMs,
+                         mGnssReportCbMask, mLCAService->mGnssReportMask,
+                         mLCAService->numControlRequests);
+                LocationTrackingSessCbHandler cbHandler(mLCAService, mLCAService->mGnssReportMask);
+                ResponseCb rspCb = [client=mClient, reply=mReply] (::LocationResponse response) {
+                    LOC_LOGd("==== responseCb %d", response);
+                    //convert response from LCA to FIDL format
+                    LocIdlAPI::IDLLocationResponse resp = mInstance->parseIDLResponse(response);
+                    reply(resp);
+                };
 
-            LOC_LOGi("==== startPositionSession intervalMs %u GnssReportCbMask 0X%X"
-                     " LCAReportMask 0X%X numControlRequests %u", mIntervalInMs, mGnssReportCbMask,
-                     mLCAService->mGnssReportMask, numControlRequests);
-            LocationTrackingSessCbHandler cbHandler(mLCAService, mLCAService->mGnssReportMask);
-            ResponseCb rspCb = [client=mClient, reply=mReply] (::LocationResponse response) {
-                LOC_LOGd("==== responseCb %d", response);
-                //convert response from LCA to FIDL format
-                LocIdlAPI::IDLLocationResponse resp = mInstance->parseIDLResponse(response);
-                reply(resp);
-            };
-
-            mLCAService->mLcaInstance->startPositionSession(mIntervalInMs,
-                    cbHandler.getLocationCbs(), rspCb);
+                if (mLCAService->mLcaInstance) {
+                    mLCAService->mLcaInstance->startPositionSession(mIntervalInMs,
+                            cbHandler.getLocationCbs(), rspCb);
+                }
+                diagControlCommandInfo idlSessionInfo = {};
+                idlSessionInfo.sessionRequestType = SESSION_START_REQUEST;
+                idlSessionInfo.intervalMs = mIntervalInMs;
+                idlSessionInfo.requestedCallbackMask = mGnssReportCbMask;
+                idlSessionInfo.updatedCallbackMask = mLCAService->mGnssReportMask;
+                idlSessionInfo.numControlRequests = mLCAService->numControlRequests;
+                if (mLCAService->mDiagLogIface) {
+                    mLCAService->mDiagLogIface->diagLogSessionInfo(idlSessionInfo,
+                            mClient->hashCode());
+                }
+            }
         }
     };
     mMsgTask->sendMsg(new StartFusedPosMsg(this, client, intervalInMs,
@@ -541,23 +681,26 @@ void LocIdlAPIService::startPositionSession
             mEngReportCallbackMask(engReportCallbackMask),
             mReply(reply){};
         inline virtual void proc() const {
-            numControlRequests++;
-            LOC_LOGi("==== startPositionSession Engine Specific %u 0X%X 0X%X ",
-                    mIntervalInMs, mLocReqEngMask, mEngReportCallbackMask);
-            LocationTrackingSessCbHandler cbHandler(mLCAService, mLocReqEngMask,
-                    mEngReportCallbackMask);
-            ResponseCb rspCb = [client=mClient, reply=mReply] (::LocationResponse response) {
-                LOC_LOGd("==== responseCb %d", response);
-                //convert response from LCA to FIDL format
-                LocIdlAPI::IDLLocationResponse resp = mInstance->parseIDLResponse(response);
-                reply(resp);
-            };
+            if (mLCAService) {
+                mLCAService->numControlRequests++;
+                LOC_LOGi("==== startPositionSession Engine Specific %u 0X%X 0X%X ",
+                        mIntervalInMs, mLocReqEngMask, mEngReportCallbackMask);
+                LocationTrackingSessCbHandler cbHandler(mLCAService, mLocReqEngMask,
+                        mEngReportCallbackMask);
+                ResponseCb rspCb = [client=mClient, reply=mReply] (::LocationResponse response) {
+                    LOC_LOGd("==== responseCb %d", response);
+                    //convert response from LCA to FIDL format
+                    LocIdlAPI::IDLLocationResponse resp = mInstance->parseIDLResponse(response);
+                    reply(resp);
+                };
 
-            mLCAService->mLcaInstance->startPositionSession(mIntervalInMs,
-                    cbHandler.getLcaLocReqEngMask(),
-                    cbHandler.getEngineLocationCbs(),
-                    rspCb);
-
+                if (mLCAService->mLcaInstance) {
+                    mLCAService->mLcaInstance->startPositionSession(mIntervalInMs,
+                            cbHandler.getLcaLocReqEngMask(),
+                            cbHandler.getEngineLocationCbs(),
+                            rspCb);
+                }
+            }
         }
     };
 
@@ -583,13 +726,27 @@ void LocIdlAPIService::stopPositionSession
             mClient(client),
             mReply(reply){};
         inline virtual void proc() const {
-            numControlRequests--;
-            if (!numControlRequests) {
-                LOC_LOGd(" Sending STOP Session request !!");
-                mLCAService->mLcaInstance->stopPositionSession();
-                posCount = 0;
-                latentPosCount = 0;
-                mLCAService->mGnssReportMask = 0;
+            if (mLCAService) {
+                if (mLCAService->numControlRequests > 0) {
+                    mLCAService->numControlRequests--;
+                    diagControlCommandInfo idlSessionInfo = {};
+                    idlSessionInfo.sessionRequestType = SESSION_STOP_REQUEST;
+                    idlSessionInfo.numControlRequests = mLCAService->numControlRequests;
+                    if (mLCAService->mDiagLogIface) {
+                        mLCAService->mDiagLogIface->diagLogSessionInfo(
+                                idlSessionInfo, mClient->hashCode());
+                    }
+                    if (!mLCAService->numControlRequests) {
+                        LOC_LOGd(" Sending STOP Session request !!");
+                        mLCAService->mLcaInstance->stopPositionSession();
+                        posCount = 0;
+                        latentPosCount = 0;
+                        mLCAService->mGnssReportMask = 0;
+                    }
+                } else {
+                    LOC_LOGe(" Faulty STOP request numOfRequests %d",
+                            mLCAService->numControlRequests);
+                }
             }
             mReply();
        }
@@ -615,6 +772,9 @@ void LocIdlAPIService::LIAdeleteAidingData
         } else {
             reply(LocIdlAPI::IDLLocationResponse::IDL_LOC_RESP_UNKOWN_FAILURE);
         }
+    }
+    if (mDiagLogIface) {
+        mDiagLogIface->diagLogDeleteAidingRequest(client->hashCode(), aidingDataMask);
     }
 }
 
@@ -675,6 +835,9 @@ void LocIdlAPIService::LIAconfigConstellations
             reply(LocIdlAPI::IDLLocationResponse::IDL_LOC_RESP_UNKOWN_FAILURE);
         }
     }
+    if (mDiagLogIface) {
+        mDiagLogIface->diagLogConfigConstellationRequest(client->hashCode(), svListSrc);
+    }
 }
 
 int main() {
@@ -688,7 +851,6 @@ int main() {
     } else {
         LOC_LOGe(" GPTP init failed ");
     }
-
     // Waiting for calls
     int fd[2], n = 0;
     char buffer[10];
