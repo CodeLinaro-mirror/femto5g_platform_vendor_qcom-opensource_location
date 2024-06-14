@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -1947,6 +1947,9 @@ void LocationIntegrationApiImpl::processRegisterGnssSignalTypesRespCb(
         }
         if (msg->mSignalTypeMask & ::GNSS_SIGNAL_BEIDOU_B2BQ) {
             gnssSignalTypeMask |= location_client::GNSS_SIGNAL_BEIDOU_B2BQ_BIT;
+        }
+        if (msg->mSignalTypeMask & ::GNSS_SIGNAL_NAVIC_L1) {
+            gnssSignalTypeMask |= location_client::GNSS_SIGNAL_NAVIC_L1_BIT;
         }
         LOC_LOGd("received GNSS signal Types : %x, send out supported GNSS signal types: %x",
                 msg->mSignalTypeMask, gnssSignalTypeMask);
