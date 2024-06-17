@@ -160,6 +160,9 @@ template struct loc_core::LocApiResponseData<LocApiBatchData>;
 template struct loc_core::LocApiResponseData<LocApiGeofenceData>;
 template struct loc_core::LocApiResponseData<LocGpsLocation>;
 
+// Leap Second Uncertainity value in seconds during leap Second roll-over
+#define LOC_LEAP_SEC_UNC_GAURD_VALUE (3)
+
 /* minimum number of measurements with
   mask QMI_LOC_MASK_MEAS_STATUS_GNSS_FRESH_MEAS_VALID */
 #define MIN_REFRESH_MEASUREMENTS (3)
@@ -3112,13 +3115,27 @@ void LocApiV02 :: reportPosition (
                     else if ((gnssSvIdUsed >= NAVIC_SV_PRN_MIN) &&
                              (gnssSvIdUsed <= NAVIC_SV_PRN_MAX))
                     {
-                        locationExtended.gnss_sv_used_ids.navic_sv_used_ids_mask |=
-                                (1ULL << (gnssSvIdUsed - NAVIC_SV_PRN_MIN));
+                        uint64_t bit = (1ULL << (gnssSvIdUsed - NAVIC_SV_PRN_MIN));
+                        locationExtended.gnss_sv_used_ids.navic_sv_used_ids_mask |= bit;
                         locationExtended.measUsageInfo[idx].gnssConstellation =
                                 GNSS_LOC_SV_SYSTEM_NAVIC;
-                        locationExtended.measUsageInfo[idx].gnssSignalType =
-                                (multiBandTypesAvailable ?
-                                gnssSignalTypeMask : GNSS_SIGNAL_NAVIC_L5);
+
+                        locationExtended.measUsageInfo[idx].gnssSignalType = GNSS_SIGNAL_NAVIC_L5;
+                        if (multiBandTypesAvailable) {
+                            locationExtended.measUsageInfo[idx].gnssSignalType =
+                                    gnssSignalTypeMask;
+
+                            if (locationExtended.measUsageInfo[idx].gnssSignalType &
+                                    GNSS_SIGNAL_NAVIC_L5) {
+                                locationExtended.gnss_mb_sv_used_ids.navic_l5_sv_used_ids_mask
+                                        |= bit;
+                            }
+                            if (locationExtended.measUsageInfo[idx].gnssSignalType &
+                                    GNSS_SIGNAL_NAVIC_L1) {
+                                locationExtended.gnss_mb_sv_used_ids.navic_l1_sv_used_ids_mask
+                                        |= bit;
+                            }
+                        }
                     }
                 }
 
@@ -3336,6 +3353,15 @@ void LocApiV02 :: reportPosition (
             locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_SYSTEM_TICK_UNC;
             locationExtended.systemTickUnc = location_report_ptr->systemTickUnc;
         }
+        if (location_report_ptr->leapSecUnc_valid) {
+            locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_LEAP_SECONDS_UNC;
+            if (location_report_ptr->leapSecUnc == LOC_LEAP_SEC_UNC_GAURD_VALUE &&
+                    location_report_ptr->timestampUtc_valid) {
+                locationExtended.leapSecondsUnc = 0;
+            } else {
+                locationExtended.leapSecondsUnc = location_report_ptr->leapSecUnc;
+            }
+        }
 
         loc_sess_status sessStatus =
                 (location_report_ptr->sessionStatus == eQMI_LOC_SESS_STATUS_IN_PROGRESS_V02) ?
@@ -3470,6 +3496,10 @@ double LocApiV02::convertSignalTypeToCarrierFrequency(
 
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_NAVIC_L5_V02:
         carrierFrequency = NAVIC_L5_CARRIER_FREQUENCY;
+        break;
+
+    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_NAVIC_L1_V02:
+        carrierFrequency = NAVIC_L1_CARRIER_FREQUENCY;
         break;
 
     default:
@@ -3729,6 +3759,7 @@ void  LocApiV02 :: reportSv (
                             rfLoss = rfLossNV[RF_LOSS_GAL_E5_CONF]/10.0;
                             break;
                         case GNSS_SIGNAL_NAVIC_L5:
+                        case GNSS_SIGNAL_NAVIC_L1:
                             rfLoss = rfLossNV[RF_LOSS_NAVIC_CONF]/10.0;
                             break;
                         default:
@@ -6690,6 +6721,7 @@ void LocApiV02::updateGnssCapabNotification(GnssCapabNotification& gnssCapabNoti
         break;
 
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_NAVIC_L5_V02:
+    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_NAVIC_L1_V02:
         gnssCapabNotification.gnssSignalType[gnssCapabNotification.count].svType =
                 GNSS_SV_TYPE_NAVIC;
         break;
@@ -6712,6 +6744,7 @@ GnssMeasurementsCodeType LocApiV02::getCodeType(qmiLocGnssSignalTypeMaskT_v02 gn
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1S_V02:
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_SBAS_L1_CA_V02:
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_NAVIC_L5_V02:
+    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_NAVIC_L1_V02:
         return GNSS_MEASUREMENTS_CODE_TYPE_C;
 
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L2C_L_V02:
@@ -12109,6 +12142,9 @@ GnssSignalTypeMask LocApiV02::convertQmiGnssSignalType(
     }
     if (qmiGnssSignalType & QMI_LOC_MASK_GNSS_SIGNAL_TYPE_NAVIC_L5_V02) {
         gnssSignalType |= GNSS_SIGNAL_NAVIC_L5;
+    }
+    if (qmiGnssSignalType & QMI_LOC_MASK_GNSS_SIGNAL_TYPE_NAVIC_L1_V02) {
+        gnssSignalType |= GNSS_SIGNAL_NAVIC_L1;
     }
     if (qmiGnssSignalType & QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2A_Q_V02) {
         gnssSignalType |= GNSS_SIGNAL_BEIDOU_B2AQ;
