@@ -433,7 +433,7 @@ void DeInitHandles()
 {
     CommonAPI::CallStatus callStatus;
 
-    if (sessionStarted) {
+    if (sessionStarted && myProxy) {
         if (mask & LocIdlAPI::IDLGnssReportCbInfoMask::IDL_DATA_CB_INFO_BIT) {
             myProxy->getGnssDataEvent().unsubscribe(dataSubscription);
         }
@@ -451,6 +451,8 @@ void DeInitHandles()
         }
 
         myProxy->stopPositionSession(callStatus, &info);
+    } else {
+        cout << "Either session not started or mProxy is NULL !! "<< endl;
     }
     if (mIsGptpInitialized) {
         mIsGptpInitialized = false;
@@ -463,6 +465,9 @@ void DeInitHandles()
 void signalHandler(int signal) {
     cout << "signalHandler " <<endl;
     DeInitHandles();
+    if (myProxy) {
+        myProxy.reset();
+    }
     exit(0);
     return;
 }
@@ -530,59 +535,62 @@ void regSigHandler()
 
 void subscribeGnssResports()
 {
+    if (myProxy) {
+        myProxy->getProxyStatusEvent().subscribe([&] (const CommonAPI::AvailabilityStatus status) {
+            switch (status) {
+            case CommonAPI::AvailabilityStatus::UNKNOWN:
+                std::cout << "Unkown" << endl;
+                break;
+            case CommonAPI::AvailabilityStatus::NOT_AVAILABLE:
+                std::cout << "NOT_AVAILABLE" << endl;
+                break;
+            case CommonAPI::AvailabilityStatus::AVAILABLE:
+                std::cout << "AVAILABLE" << endl;
+                break;
+            }
+        });
+        // Subscribe for receiving values
+        myProxy->getGnssCapabilitiesMaskAttribute().getChangedEvent().subscribe(
+            [&](const uint32_t &val) {
+                    cout << "Received caps change event: " << val << endl;
+                });
 
-    myProxy->getProxyStatusEvent().subscribe([&] (const CommonAPI::AvailabilityStatus status) {
-        switch (status) {
-        case CommonAPI::AvailabilityStatus::UNKNOWN:
-            std::cout << "Unkown" << endl;
-            break;
-        case CommonAPI::AvailabilityStatus::NOT_AVAILABLE:
-            std::cout << "NOT_AVAILABLE" << endl;
-            break;
-        case CommonAPI::AvailabilityStatus::AVAILABLE:
-            std::cout << "AVAILABLE" << endl;
-            break;
-        }
-    });
-    // Subscribe for receiving values
-    myProxy->getGnssCapabilitiesMaskAttribute().getChangedEvent().subscribe(
-        [&](const uint32_t &val) {
-                cout << "Received caps change event: " << val << endl;
+        if (mask & LocIdlAPI::IDLGnssReportCbInfoMask::IDL_DATA_CB_INFO_BIT) {
+            dataSubscription = myProxy->getGnssDataEvent().subscribe(
+            [&](const LocIdlAPI::IDLGnssData& gnssData){
+                printGnssData(gnssData);
             });
+        }
 
-    if (mask & LocIdlAPI::IDLGnssReportCbInfoMask::IDL_DATA_CB_INFO_BIT) {
-        dataSubscription = myProxy->getGnssDataEvent().subscribe(
-        [&](const LocIdlAPI::IDLGnssData& gnssData){
-            printGnssData(gnssData);
-        });
-    }
+        if (mask & LocIdlAPI::IDLGnssReportCbInfoMask::IDL_LOC_CB_INFO_BIT) {
+            pvtSubscription = myProxy->getLocationReportEvent().subscribe(
+            [&](const LocIdlAPI::IDLLocationReport &_locationReport) {
+                printPosResport(_locationReport);
+            });
+        }
 
-    if (mask & LocIdlAPI::IDLGnssReportCbInfoMask::IDL_LOC_CB_INFO_BIT) {
-        pvtSubscription = myProxy->getLocationReportEvent().subscribe(
-        [&](const LocIdlAPI::IDLLocationReport &_locationReport) {
-            printPosResport(_locationReport);
-        });
-    }
+        if (mask & LocIdlAPI::IDLGnssReportCbInfoMask::IDL_1HZ_MEAS_CB_INFO_BIT) {
+            measSubscription = myProxy->getGnssMeasurementsEvent().subscribe(
+            [&](const LocIdlAPI::IDLGnssMeasurements& gnssMeasurements) {
+                printMeasurement(gnssMeasurements);
+            });
+        }
 
-    if (mask & LocIdlAPI::IDLGnssReportCbInfoMask::IDL_1HZ_MEAS_CB_INFO_BIT) {
-        measSubscription = myProxy->getGnssMeasurementsEvent().subscribe(
-        [&](const LocIdlAPI::IDLGnssMeasurements& gnssMeasurements) {
-            printMeasurement(gnssMeasurements);
-        });
-    }
+        if (mask & LocIdlAPI::IDLGnssReportCbInfoMask::IDL_SV_CB_INFO_BIT) {
+            svSubscription = myProxy->getGnssSvEvent().subscribe(
+            [&](const vector<LocIdlAPI::IDLGnssSv> &gnssSv) {
+                printSVInfo(gnssSv);
+            });
+        }
 
-    if (mask & LocIdlAPI::IDLGnssReportCbInfoMask::IDL_SV_CB_INFO_BIT) {
-        svSubscription = myProxy->getGnssSvEvent().subscribe(
-        [&](const vector<LocIdlAPI::IDLGnssSv> &gnssSv) {
-            printSVInfo(gnssSv);
-        });
-    }
-
-    if (mask & LocIdlAPI::IDLGnssReportCbInfoMask::IDL_NMEA_CB_INFO_BIT) {
-        nmeaSubscription = myProxy->getGnssNmeaEvent().subscribe(
-        [&](const uint64_t timestamp, const string nmea){
-            printNmea(timestamp, nmea);
-        });
+        if (mask & LocIdlAPI::IDLGnssReportCbInfoMask::IDL_NMEA_CB_INFO_BIT) {
+            nmeaSubscription = myProxy->getGnssNmeaEvent().subscribe(
+            [&](const uint64_t timestamp, const string nmea){
+                printNmea(timestamp, nmea);
+            });
+        }
+    } else {
+        cout << " mProxy is NULL !! "<< endl;
     }
 }
 
@@ -594,13 +602,17 @@ void sessionStart()
     info.sender_ = 1234;
 
     sleep(1);
-    myProxy->startPositionSession(_intervalInMs, mask, callStatus, resp, &info);
-    if (callStatus != CommonAPI::CallStatus::SUCCESS) {
-        cout << "startPositionSession() Remote call failed! callStatus "
-        "" << (int)callStatus << endl;
-        sessionStarted = false;
+    if (myProxy) {
+        myProxy->startPositionSession(_intervalInMs, mask, callStatus, resp, &info);
+        if (callStatus != CommonAPI::CallStatus::SUCCESS) {
+            cout << "startPositionSession() Remote call failed! callStatus "
+            "" << (int)callStatus << endl;
+            sessionStarted = false;
+        } else {
+            sessionStarted = true;
+        }
     } else {
-        sessionStarted = true;
+        cout << " mProxy is NULL !! "<< endl;
     }
 }
 
@@ -647,5 +659,8 @@ int main(int argc, char* argv[])
     if (sessionStarted)
         sleep(delay);
     DeInitHandles();
+    if (myProxy) {
+        myProxy.reset();
+    }
     return 0;
 }

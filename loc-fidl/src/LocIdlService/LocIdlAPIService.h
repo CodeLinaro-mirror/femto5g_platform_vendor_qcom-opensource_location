@@ -54,7 +54,7 @@ using namespace std;
 using namespace loc_util;
 using namespace location_integration;
 
-
+// Enum to define supported Power states in power-daemon
 enum IDLPowerStateType {
     IDL_POWER_STATE_UNKNOWN = 0,
     IDL_POWER_STATE_SUSPEND = 1,
@@ -63,6 +63,7 @@ enum IDLPowerStateType {
     IDL_POWER_STATE_DEEP_SLEEP_ENTRY = 4,
     IDL_POWER_STATE_DEEP_SLEEP_EXIT = 5
 };
+
 #ifdef POWER_DAEMON_MGR_ENABLED
 class LocIdlPowerEvtHandler;
 #endif
@@ -152,6 +153,7 @@ private:
     MsgTask* mMsgTask;
     LocLcaIdlConverter* mLcaIdlConverter;
     LocationIntegrationApi* mLIAInstance;
+    mutable uint32_t mGnssReportMask;
     LocIdlAPIService();
     ~LocIdlAPIService();
 };
