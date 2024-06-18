@@ -15,7 +15,6 @@ cc_library_shared {
     srcs: [
         "src/LocationIntegrationApi.cpp",
         "src/LocationIntegrationApiImpl.cpp",
-        "src/LocationIntegrationApiDiagLog.cpp"
     ],
 
     cflags: [
@@ -39,7 +38,6 @@ cc_library_shared {
         "liblocation_api_headers",
         "liblocation_api_msg.headers",
         "liblocation_client_api.impl_headers",
-        "libloc_diag_iface_headers",
     ],
 }
 

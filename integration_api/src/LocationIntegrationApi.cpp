@@ -68,7 +68,9 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <LocationDataTypes.h>
 #include <LocationIntegrationApi.h>
 #include <LocationIntegrationApiImpl.h>
+#ifndef _ANDROID_
 #include <LocationIntegrationApiDiagLog.h>
+#endif
 #include <log_util.h>
 #include <loc_pla.h>
 namespace location_integration {
@@ -1104,8 +1106,11 @@ bool LocationIntegrationApi::injectMapMatchedData(const mapMatchedFeedbackData& 
             mmfData.validityMask |= LDT_MMF_DATA_VALID_BEARING_ACC;
             mmfData.bearingAccuracy = mapData.bearingAccuracy;
         }
+
+#ifndef _ANDROID_
         LocationIntegrationApiDiagLog  mLogger;
         mLogger.diagLogMmfData(mapData);
+#endif
 
         return (mApiImpl->gnssInjectMmfData(mmfData) == 0);
     } else {
