@@ -1450,7 +1450,7 @@ void LocationApiService::configAidingDataDeletion(LocConfigAidingDataDeletionReq
     }
     std::lock_guard<std::recursive_mutex> lock(mMutex);
 
-    LOC_LOGi(">-- client %s, deleteAll %d",
+    LOC_LOGe(">-- Warning client %s, deleteAll %d",
              pMsg->mSocketName, pMsg->mAidingData.deleteAll);
 
     uint32_t sessionId = mLocationControlApi->gnssDeleteAidingData(pMsg->mAidingData);
