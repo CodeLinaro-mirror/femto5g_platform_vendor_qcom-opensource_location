@@ -1925,6 +1925,11 @@ uint32_t LocationApiPbMsgConv::getPBMaskForGnssLocationInfoExtFlagMask(
     if (gnssLocInfoFlagMask & LDT_GNSS_LOCATION_INFO_DGNSS_STATION_ID_BIT) {
         pbGnssLocInfoFlagMask |= PB_GNSS_LOCATION_INFO_DGNSS_STATION_ID_MASK_BIT;
     }
+
+    if (gnssLocInfoFlagMask & LDT_GNSS_LOCATION_INFO_LEAP_SECONDS_UNC_BIT) {
+        pbGnssLocInfoFlagMask |= PB_GNSS_LOCATION_INFO_LEAP_SECONDS_UNC_BIT;
+    }
+
     return pbGnssLocInfoFlagMask;
 }
 
@@ -3336,6 +3341,9 @@ uint64_t LocationApiPbMsgConv::getGnssLocationInfoFlagMaskFromPB(
     if (pbGnssLocInfoExtFlagMask & PB_GNSS_LOCATION_INFO_DGNSS_STATION_ID_MASK_BIT) {
         gnssLocInfoFlagMask |= LDT_GNSS_LOCATION_INFO_DGNSS_STATION_ID_BIT;
     }
+    if (pbGnssLocInfoExtFlagMask & PB_GNSS_LOCATION_INFO_LEAP_SECONDS_UNC_BIT) {
+        gnssLocInfoFlagMask |= LDT_GNSS_LOCATION_INFO_LEAP_SECONDS_UNC_BIT;
+    }
     LocApiPb_LOGv("LocApiPB: pbGnssLocInfoFlagMask:0x%x, pbGnssLocInfoExtFlagMask:0x%x, "
                   "gnssLocInfoFlagMask:0x%" PRIu64"", pbGnssLocInfoFlagMask,
                   pbGnssLocInfoExtFlagMask, gnssLocInfoFlagMask);
@@ -4466,6 +4474,10 @@ int LocationApiPbMsgConv::convertGnssLocInfoNotifToPB(
     for (uint32_t iter = 0; iter < gnssLocInfoNotif.numOfDgnssStationId; iter++) {
         pbGnssLocInfoNotif->add_dgnssstationid(gnssLocInfoNotif.dgnssStationId[iter]);
     }
+
+    // uint32    leapSecondsUnc = 50;
+    pbGnssLocInfoNotif->set_leapsecondsunc(gnssLocInfoNotif.leapSecondsUnc);
+
     LocApiPb_LOGv("LocApiPB: gnssLocInfoNotif - GLocInfoFlgMask:%" PRIu64", pdop:%f, hdop:%f, "
             "vdop:%f",
             gnssLocInfoNotif.flags, gnssLocInfoNotif.pdop, gnssLocInfoNotif.hdop,
@@ -5675,7 +5687,10 @@ int LocationApiPbMsgConv::pbConvertToGnssLocInfoNotif(
     }
     gnssLocInfoNotif.numOfDgnssStationId = i;
 
-    LOC_LOGv("LocApiPB: pbGnssLocInfoNotif -GLocInfoFlgMask:0x%" PRIx64 ", pdop:%f, "
+   // uint32    leapSecondsUnc = 50;
+   gnssLocInfoNotif.leapSecondsUnc = pbGnssLocInfoNotif.leapsecondsunc();
+
+   LOC_LOGv("LocApiPB: pbGnssLocInfoNotif -GLocInfoFlgMask:0x%" PRIx64 ", pdop:%f, "
             "hdop:%f, vdop:%f",
             gnssLocInfoNotif.flags, gnssLocInfoNotif.pdop, gnssLocInfoNotif.hdop,
             gnssLocInfoNotif.vdop);

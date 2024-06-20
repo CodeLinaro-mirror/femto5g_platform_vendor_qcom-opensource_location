@@ -103,12 +103,28 @@ class TrackingSessCbHandler {
             }
 
             initializeCommonCbs(pClientApiImpl, rspCb, gnssReportCbs.gnssSvCallback,
-                    gnssReportCbs.gnssNmeaCallback, gnssReportCbs.gnssDataCallback,
+                    gnssReportCbs.gnssNmeaCallback,
+                    gnssReportCbs.gnssDataCallback,
                     gnssReportCbs.gnssMeasurementsCallback,
                     gnssReportCbs.gnssNHzMeasurementsCallback,
                     gnssReportCbs.gnssDcReportCallback,
                     gnssReportCbs.gnssEphReportCallback,
                     intervalInMs);
+
+            if (gnssReportCbs.nmeaSentencesCallback) {
+                mCallbackOptions.gnssNmeaCb =
+                        [pClientApiImpl, nmeaSentencesCallback =
+                                gnssReportCbs.nmeaSentencesCallback](
+                                ::GnssNmeaNotification n) {
+                    uint64_t timestamp = n.timestamp;
+                    LocOutputEngineType locOutputEngType = (LocOutputEngineType)n.locOutputEngType;
+                    std::string nmea(n.nmea);
+                    LOC_LOGv("<<< message = nmea[%s]", nmea.c_str());
+                    nmeaSentencesCallback(locOutputEngType, timestamp, nmea);
+                    pClientApiImpl->getLogger().log(
+                            timestamp, nmea.size(), nmea.c_str(), locOutputEngType);
+                };
+            }
         }
 
         TrackingSessCbHandler(LocationClientApiImpl *pClientApiImpl, ResponseCb rspCb,
@@ -134,8 +150,29 @@ class TrackingSessCbHandler {
                     engineLocCb(engLocationsVector);
                 };
             }
+            if (!engineReportCbs.nmeaSentencesCallback && !engineReportCbs.engineNmeaCallback
+                    && engineReportCbs.gnssNmeaCallback) {
+                initializeCommonCbs(pClientApiImpl, rspCb,
+                    engineReportCbs.gnssSvCallback,
+                    engineReportCbs.gnssNmeaCallback,
+                    engineReportCbs.gnssDataCallback,
+                    engineReportCbs.gnssMeasurementsCallback,
+                    engineReportCbs.gnssNHzMeasurementsCallback,
+                    engineReportCbs.gnssDcReportCallback,
+                    engineReportCbs.gnssEphReportCallback,
+                    intervalInMs);
+            } else {
+                initializeCommonCbs(pClientApiImpl, rspCb,
+                    engineReportCbs.gnssSvCallback, 0,
+                    engineReportCbs.gnssDataCallback,
+                    engineReportCbs.gnssMeasurementsCallback,
+                    engineReportCbs.gnssNHzMeasurementsCallback,
+                    engineReportCbs.gnssDcReportCallback,
+                    engineReportCbs.gnssEphReportCallback,
+                    intervalInMs);
+            }
 
-            if (engineReportCbs.engineNmeaCallback) {
+            if (!engineReportCbs.nmeaSentencesCallback && engineReportCbs.engineNmeaCallback) {
                 mCallbackOptions.engineNmeaCb =
                 [pClientApiImpl, engineNmeaCallback = engineReportCbs.engineNmeaCallback](
                         const ::GnssNmeaNotification& n) {
@@ -152,18 +189,22 @@ class TrackingSessCbHandler {
                     }
                     pClientApiImpl->getLogger().log(timestamp, nmea.size(), nmea.c_str(),
                             locOutputEngType);
+                };
+            } else if (engineReportCbs.nmeaSentencesCallback) {
+                mCallbackOptions.engineNmeaCb =
+                [pClientApiImpl, nmeaSentencesCallback =
+                        engineReportCbs.nmeaSentencesCallback](
+                        ::GnssNmeaNotification n) {
+                    uint64_t timestamp = n.timestamp;
+                    LocOutputEngineType locOutputEngType = (LocOutputEngineType)n.locOutputEngType;
+                    std::string nmea(n.nmea);
+                    LOC_LOGv("<<< message = nmea[%s] locOutputEngType = %d", nmea.c_str(),
+                        locOutputEngType);
+                    nmeaSentencesCallback(locOutputEngType, timestamp, nmea);
+                    pClientApiImpl->getLogger().log(timestamp, nmea.size(), nmea.c_str(),
+                            locOutputEngType);
                };
             }
-
-            initializeCommonCbs(pClientApiImpl, rspCb,
-                                engineReportCbs.gnssSvCallback,
-                                engineReportCbs.gnssNmeaCallback,
-                                engineReportCbs.gnssDataCallback,
-                                engineReportCbs.gnssMeasurementsCallback,
-                                engineReportCbs.gnssNHzMeasurementsCallback,
-                                engineReportCbs.gnssDcReportCallback,
-                                engineReportCbs.gnssEphReportCallback,
-                                intervalInMs);
         }
 
         LocationCallbacks& getLocationCbs() { return mCallbackOptions; }
@@ -1518,6 +1559,7 @@ string GnssLocation::toString() const {
         out += to_string(dgnssId);
         count++;
     }
+    out += FIELDVAL_DEC(leapSecondsUnc);
     return out;
 }
 

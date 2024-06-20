@@ -160,6 +160,9 @@ template struct loc_core::LocApiResponseData<LocApiBatchData>;
 template struct loc_core::LocApiResponseData<LocApiGeofenceData>;
 template struct loc_core::LocApiResponseData<LocGpsLocation>;
 
+// Leap Second Uncertainity value in seconds during leap Second roll-over
+#define LOC_LEAP_SEC_UNC_GAURD_VALUE (3)
+
 /* minimum number of measurements with
   mask QMI_LOC_MASK_MEAS_STATUS_GNSS_FRESH_MEAS_VALID */
 #define MIN_REFRESH_MEASUREMENTS (3)
@@ -3349,6 +3352,15 @@ void LocApiV02 :: reportPosition (
             locationExtended.systemTick = location_report_ptr->systemTick;
             locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_SYSTEM_TICK_UNC;
             locationExtended.systemTickUnc = location_report_ptr->systemTickUnc;
+        }
+        if (location_report_ptr->leapSecUnc_valid) {
+            locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_LEAP_SECONDS_UNC;
+            if (location_report_ptr->leapSecUnc == LOC_LEAP_SEC_UNC_GAURD_VALUE &&
+                    location_report_ptr->timestampUtc_valid) {
+                locationExtended.leapSecondsUnc = 0;
+            } else {
+                locationExtended.leapSecondsUnc = location_report_ptr->leapSecUnc;
+            }
         }
 
         loc_sess_status sessStatus =
@@ -10366,13 +10378,16 @@ void LocApiV02::geofenceStatusEvent(const qmiLocEventGeofenceGenAlertIndMsgT_v02
         "GEOFENCE_GEN_ALERT_GNSS_UNAVAILABLE",
         "GEOFENCE_GEN_ALERT_GNSS_AVAILABLE",
         "GEOFENCE_GEN_ALERT_OOS",
-        "GEOFENCE_GEN_ALERT_TIME_INVALID"
+        "GEOFENCE_GEN_ALERT_TIME_INVALID",
+        "GEOFENCE_GEN_ALERT_REQUESTED_GNSS_FIX",
+        "GEOFENCE_GEN_ALERT_REQUESTED_CPI_FIX"
     };
     int index = alertInfo->geofenceAlert;
-    if (index < 0 || index > 4) {
+    int lenOfArray = (sizeof(names) / sizeof(names[0]));
+    if (index < 0 || index >= lenOfArray) {
         index = 0;
     }
-    LOC_LOGv("GEOFENCE_GEN_ALERT - %s", names[index]);
+    LOC_LOGd("GEOFENCE_GEN_ALERT - %s", names[index]);
 
     GeofenceStatusAvailable available = GEOFENCE_STATUS_AVAILABILE_NO;
     switch (alertInfo->geofenceAlert) {
