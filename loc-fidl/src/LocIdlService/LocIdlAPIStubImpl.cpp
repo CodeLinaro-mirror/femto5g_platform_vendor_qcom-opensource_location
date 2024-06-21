@@ -110,3 +110,9 @@ void LocIdlAPIStubImpl::configConstellations(const std::shared_ptr<CommonAPI::Cl
     // This API is currently not supported.
     reply(LocIdlAPI::IDLLocationResponse::IDL_LOC_RESP_NOT_SUPPORTED);
 }
+
+void LocIdlAPIStubImpl::injectMapMatchedFeedbackData(
+        const std::shared_ptr<CommonAPI::ClientId> client,
+        LocIdlAPI::MapMatchingFeedbackData mmfData, injectMapMatchedFeedbackDataReply_t reply) {
+   reply(LocIdlAPI::IDLLocationResponse::IDL_LOC_RESP_NOT_SUPPORTED);
+}
