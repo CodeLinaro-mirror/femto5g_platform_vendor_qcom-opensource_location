@@ -895,6 +895,10 @@ GnssLocation LocationClientApiImpl::parseLocationInfo(
         flags |= LCA_GNSS_LOCATION_INFO_DGNSS_STATION_ID_BIT;
     }
 
+    if (LDT_GNSS_LOCATION_INFO_LEAP_SECONDS_UNC_BIT & halLocationInfo.flags) {
+        flags |= LCA_GNSS_LOCATION_INFO_LEAP_SECONDS_UNC_BIT;
+    }
+
     locationInfo.gnssInfoFlags = flags;
     locationInfo.altitudeMeanSeaLevel = halLocationInfo.altitudeMeanSeaLevel;
     locationInfo.pdop = halLocationInfo.pdop;
@@ -971,6 +975,9 @@ GnssLocation LocationClientApiImpl::parseLocationInfo(
             halLocationInfo.navSolutionMask) {
         flags |= LOCATION_NAV_CORRECTION_ONLY_SBAS_CORRECTED_SV_USED_BIT;
     }
+    if (::LOCATION_NAV_MMF_AIDED_POSITION & halLocationInfo.navSolutionMask) {
+        flags |= LOCATION_NAV_MMF_AIDED_POSITION;
+    }
     locationInfo.navSolutionMask = (GnssLocationNavSolutionMask)flags;
 
     locationInfo.posTechMask = locationInfo.techMask;
@@ -978,6 +985,7 @@ GnssLocation LocationClientApiImpl::parseLocationInfo(
             halLocationInfo.bodyFrameData, halLocationInfo.bodyFrameDataExt);
     locationInfo.gnssSystemTime = parseSystemTime(halLocationInfo.gnssSystemTime);
     locationInfo.leapSeconds = halLocationInfo.leapSeconds;
+    locationInfo.leapSecondsUnc = halLocationInfo.leapSecondsUnc;
 
     return locationInfo;
 }
@@ -2092,11 +2100,6 @@ void LocationClientApiImpl::startPositionSession(
             if (mApiImpl->isInBatching()) {
                 mApiImpl->mLocationCbs.responseCb(
                         ::LOCATION_ERROR_EXCLUSIVE_SESSION_IN_PROGRESS, 0);
-                return;
-            }
-            //only one nmea callback should be registered
-            if (mCallbacksOption.gnssNmeaCb && mCallbacksOption.engineNmeaCb) {
-                mCallbacksOption.responseCb(::LOCATION_ERROR_INVALID_PARAMETER, 0);
                 return;
             }
             // set up the flag to indicate that responseCb is pending

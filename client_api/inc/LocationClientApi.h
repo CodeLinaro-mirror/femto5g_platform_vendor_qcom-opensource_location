@@ -464,7 +464,9 @@ enum GnssLocationNavSolutionMask {
     LOCATION_NAV_CORRECTION_RTK_FIXED_BIT  = (1<<7),
     /** Only SBAS corrected SVs was used to calculate
         GnssLocation. <br/> */
-    LOCATION_NAV_CORRECTION_ONLY_SBAS_CORRECTED_SV_USED_BIT = (1<<8)
+    LOCATION_NAV_CORRECTION_ONLY_SBAS_CORRECTED_SV_USED_BIT = (1<<8),
+     /** MMF Aiding used to calculate GnssLocation */
+    LOCATION_NAV_MMF_AIDED_POSITION  = (1<<9)
 };
 
 /** Specify the valid fields in
@@ -757,6 +759,9 @@ typedef uint64_t LCAGnssLocationInfoFlagMask;
 #define LCA_GNSS_LOCATION_INFO_PROTECT_VERTICAL_BIT                         (1ULL<<38)
     /** GnssLocation has valid GnssLocation::dgnssStationId. <br/> */
 #define LCA_GNSS_LOCATION_INFO_DGNSS_STATION_ID_BIT                         (1ULL<<39)
+/** GnssLocation has valid GnssLocation::leapSecondsUnc. <br/> */
+#define LCA_GNSS_LOCATION_INFO_LEAP_SECONDS_UNC_BIT                         (1ULL<<42)
+
 
 /** Specify the reliability level of
  *  GnssLocation::horReliability and
@@ -1346,7 +1351,11 @@ enum DrSolutionStatusMask {
     DR_SOLUTION_STATUS_WARNING_USER_DYNAMICS_INSUFFICIENT  = (1<<14),
     /** DRE solution dis-engaged due to inconsistent
       *  factory data <br/> */
-    DR_SOLUTION_STATUS_WARNING_FACTORY_DATA_INCONSISTENT   = (1<<15)
+    DR_SOLUTION_STATUS_WARNING_FACTORY_DATA_INCONSISTENT   = (1<<15),
+    /** No recent map matching feedback data */
+    DR_SOLUTION_STATUS_WARNING_MMF_UNAVAILABLE             = (1<<16),
+    /** Map matching feedback is available but not usable */
+    DR_SOLUTION_STATUS_WARNING_MMF_NOT_USABLE              = (1<<17)
 };
 
 /** Specify the location info received by client via
@@ -1498,6 +1507,11 @@ struct GnssLocation : public Location {
      *  - Other values reserved. <br/>
      */
     std::vector<uint16_t> dgnssStationId;
+
+    /** Uncertainty for the GNSS leap second.
+     *  Units -- Seconds */
+    uint8_t leapSecondsUnc;
+
 
     /* Default constructor to initalize GnssLocation structure */
     inline GnssLocation() :
@@ -2849,6 +2863,23 @@ typedef std::function<void(
 )> EngineNmeaCb;
 
 /** @brief
+    NmeaSentencesCb is for receiving the whole set of NMEA strings
+    for one position report or one SV report in a single string when
+    LocationClientApi is in a positioning session. <br/>
+    @param engType: engine type that NMEA is derived from
+    @param timestamp: timestamp that NMEA sentence is
+                    generated. <br/>
+    @param nmea: nmea strings generated from position and SV
+           report. <br/>
+*/
+typedef std::function<void(
+    LocOutputEngineType engType,
+    uint64_t timestamp,
+    const std::string& nmea
+)> NmeaSentencesCb;
+
+
+/** @brief
     GnssDataCb is for receiving GnssData, e.g.:
     jammer information when LocationClientApi is in a
     positioning session. <br/>
@@ -2951,16 +2982,6 @@ struct GnssReportCbs {
     GnssLocationCb gnssLocationCallback;
     /** Callback to receive GnssSv from modem GNSS engine. <br/> */
     GnssSvCb gnssSvCallback;
-    /** Callback to receive NMEA sentences. <br/>
-     *  NMEA will be generated from GnssSv and position report.
-     *  <br/>
-     *  When there are multiple engines running on the system,
-     *  position related NMEA sentences will be generated from the
-     *  fused position report. <br/>
-     *  When there is only SPE engine running on the system,
-     *  position related NMEA sentences will be generated from the
-     *  position report from modem GNSS engine report. <br/> */
-    GnssNmeaCb gnssNmeaCallback;
     /** Callback to receive GnssData from modem GNSS engine.
      *  <br/> */
     GnssDataCb gnssDataCallback;
@@ -2976,6 +2997,31 @@ struct GnssReportCbs {
     /** Callback to receive Ephemeris report from modem
      *  GNSS engine. <br/> */
     GnssEphReportCb gnssEphReportCallback;
+    /** Callback to receive NMEA sentences. <br/>
+     *  NMEA will be generated from GnssSv and position report.
+     *  <br/>
+     *  When there are multiple engines running on the system,
+     *  position related NMEA sentences will be generated from the
+     *  fused position report. <br/>
+     *  When there is only SPE engine running on the system,
+     *  position related NMEA sentences will be generated from the
+     *  position report from modem GNSS engine report. <br/> */
+    GnssNmeaCb gnssNmeaCallback;
+     /** Callback to receive NMEA string. <br/>
+     *  NMEA will be generated from GnssSv and position report.
+     *  When there are multiple engines running on the system,
+     *  position related NMEA sentences will be generated from the
+     *  fused position report. <br/>
+     *  When there is only SPE engine running on the system,
+     *  position related NMEA sentences will be generated from the
+     *  position report from modem GNSS engine report.
+     *  User should pick one of nmea callback,
+     *  either GnssNmeaCb or NmeaSentencesCb.
+     *  If user subcribes for both of GnssNmeaCb and NmeaSentencesCb
+     *  NMEA will be reported out using NmeaSentencesCb.
+     *  Recommend to use NmeaSentencesCb. <br/> */
+    NmeaSentencesCb nmeaSentencesCallback;
+
 };
 
 /** Specify the set of callbacks to receive the reports when
@@ -2988,16 +3034,6 @@ struct EngineReportCbs {
     EngineLocationsCb engLocationsCallback;
     /** Callback to receive GnssSv from modem GNSS engine. <br/> */
     GnssSvCb gnssSvCallback;
-    /** Callback to receive NMEA sentences. <br/>
-     *  NMEA will be generated from GnssSv and position report.
-     *  <br/>
-     *  When there are multiple engines running on the system,
-     *  position related NMEA sentences will be generated from the
-     *  fused position report. <br/>
-     *  When there is only SPE engine running on the system,
-     *  position related NMEA sentences will be generated from the
-     *  position report from modem GNSS engine report. <br/> */
-    GnssNmeaCb gnssNmeaCallback;
     /** Callback to receive GnssData from modem GNSS engine.
      *  <br/> */
     GnssDataCb gnssDataCallback;
@@ -3010,19 +3046,43 @@ struct EngineReportCbs {
     /** Callback to receive disaster and crisis report from modem
      *  GNSS engine. <br/> */
     GnssDcReportCb gnssDcReportCallback;
+    /** Callback to receive Ephemeris report from modem
+     *  GNSS engine. <br/> */
+    GnssEphReportCb gnssEphReportCallback;
+    /** Callback to receive NMEA sentences. <br/>
+     *  NMEA will be generated from GnssSv and position report.
+     *  <br/>
+     *  When there are multiple engines running on the system,
+     *  position related NMEA sentences will be generated from the
+     *  fused position report. <br/>
+     *  When there is only SPE engine running on the system,
+     *  position related NMEA sentences will be generated from the
+     *  position report from modem GNSS engine report. <br/> */
+    GnssNmeaCb gnssNmeaCallback;
     /**
      * Receive NMEA related to position report from all registered engines
      * if those engines are configured to generate NMEA report via
      * API configOutputNmeaTypes(NmeaTypesMask, GeodeticDatumType, LocReqEngineTypeMask)
      * The SV report will come from GNSS engine.
-     * User should pick one nmea callback, either GnssNmeaCb or EngineNmeaCb
-     * to use. Don't register both at the same time, otherwise
-     * LOCATION_ERROR_INVALID_PARAMETER will be thrown.
-     * Recommend to use EngineNmeaCb. <br/> */
+     * User should pick one nmea callback, either GnssNmeaCb or EngineNmeaCb to use.
+     * NMEA data will be reported out via EngineNmeaCb for only 2 use cases
+     *     a.) If only EngineNmeaCb is subscribed
+     *     b.) If both EngineNmeaCb & GnssNmeaCb are subscribed & NmeaSentencesCb is not subscribed
+     * Recommend to use NmeaSentencesCb. <br/> */
     EngineNmeaCb engineNmeaCallback;
-    /** Callback to receive Ephemeris report from modem
-     *  GNSS engine. <br/> */
-    GnssEphReportCb gnssEphReportCallback;
+    /**
+     * Receive all NMEA related to position report from all
+     * registered engines in a single string.
+     * This callback shall be used to get NMEA for supported
+     * configurations (Mulitple engines enables, Only SPE running, engines
+     * configured tp report out via configOutputNmeaTypes)
+     * User should pick one of nmea callback,
+     * either GnssNmeaCb or EngineNmeaCb or NmeaSentencesCb.
+     * NMEA data will be reported out via NmeaSentencesCb always if
+     * NmeaSentencesCb is subscribed, regardless whether
+     * gnssNmeaCb and/or EngineNmeaCb is subscribed or not.
+     * Recommend to use NmeaSentencesCb. <br/> */
+    NmeaSentencesCb nmeaSentencesCallback;
 };
 
 /**
