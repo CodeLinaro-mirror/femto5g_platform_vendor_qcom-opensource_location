@@ -1949,6 +1949,9 @@ void LocationIntegrationApiImpl::processRegisterGnssSignalTypesRespCb(
         if (msg->mSignalTypeMask & ::GNSS_SIGNAL_BEIDOU_B2BQ) {
             gnssSignalTypeMask |= location_client::GNSS_SIGNAL_BEIDOU_B2BQ_BIT;
         }
+        if (msg->mSignalTypeMask & ::GNSS_SIGNAL_NAVIC_L1) {
+            gnssSignalTypeMask |= location_client::GNSS_SIGNAL_NAVIC_L1_BIT;
+        }
         LOC_LOGd("received GNSS signal Types : %x, send out supported GNSS signal types: %x",
                 msg->mSignalTypeMask, gnssSignalTypeMask);
         mIntegrationCbs.gnssSignalTypesCb((location_client::GnssSignalTypeMask)gnssSignalTypeMask);

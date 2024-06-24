@@ -147,6 +147,15 @@ public:
         }
         _reply(resp);
     }
+    COMMONAPI_EXPORT virtual void injectMapMatchedFeedbackData(const std::shared_ptr<CommonAPI::ClientId> _client, LocIdlAPI::MapMatchingFeedbackData _mmfData, injectMapMatchedFeedbackDataReply_t _reply) {
+        (void)_client;
+        (void)_mmfData;
+        LocIdlAPI::IDLLocationResponse resp = LocIdlAPI::IDLLocationResponse::IDL_LOC_RESP_UNKNOWN;
+        if (!resp.validate()) {
+            return;
+        }
+        _reply(resp);
+    }
 
 
 protected:
@@ -218,6 +227,6 @@ private:
 
 
 // Compatibility
-namespace v0_1 = v0;
+namespace v0_2 = v0;
 
 #endif // V0_COM_QUALCOMM_QTI_LOCATION_Loc_Idl_API_STUB_DEFAULT
