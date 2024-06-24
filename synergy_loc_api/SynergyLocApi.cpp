@@ -2719,3 +2719,51 @@ SynergyLocApi::stopDistanceBasedTracking(uint32_t sessionId,
         }
     }));
 }
+
+
+void SynergyLocApi::updateSystemPowerState(PowerStateType powerState){
+    sendMsg(new LocApiMsg([this, powerState] () {
+
+    enum loc_api_adapter_err rtv = LOC_API_ADAPTER_ERR_SUCCESS;
+    LocationError err = LOCATION_ERROR_SUCCESS;
+
+    LOC_LOGd("updatePowerState: power state %d", powerState);
+
+    if (nullptr != sllReqIf) {
+
+        switch (powerState) {
+           case POWER_STATE_SUSPEND:
+               if (nullptr != sllReqIf->sllStopFix) {
+                   sllReqIf->sllStopFix((void *)this);
+               }
+               break;
+           case POWER_STATE_RESUME:
+               if (nullptr != sllReqIf->sllStartFix) {
+                   sllPosMode posMode;
+
+                   posMode.mode = LOC_POSITION_MODE_STANDALONE;
+                   posMode.recurrence = LOC_GPS_POSITION_RECURRENCE_PERIODIC;
+                   posMode.min_interval = 100;
+                   posMode.preferred_accuracy = 100;
+                   posMode.preferred_time = 120000;
+                   posMode.share_position = true;
+                   posMode.powerMode = GNSS_POWER_MODE_M2;
+                   posMode.timeBetweenMeasurements = 1000;
+
+                   rtv = sllReqIf->sllStartFix(posMode,((void *)this));
+                   if (LOC_API_ADAPTER_ERR_SUCCESS == rtv) {
+                       err = LOCATION_ERROR_SUCCESS;
+                   }
+               }
+               break;
+           case POWER_STATE_SHUTDOWN:
+               if (nullptr != sllReqIf->sllStopFix) {
+                   sllReqIf->sllStopFix((void *)this);
+               }
+               break;
+           default:
+               break;
+       }
+    }
+    }));
+}
