@@ -40,6 +40,11 @@ define org.genivi.commonapi.someip.deployment for interface com.qualcomm.qti.loc
         SomeIpReliable = true
     }
 
+    method injectMapMatchedFeedbackData {
+        SomeIpMethodID = 32006 /** 0x7D06 */
+        SomeIpReliable = true
+    }
+
     broadcast GnssMeasurements {
         SomeIpEventID = 33001  /** 0x80E9 */
         SomeIpEventGroups = { 33000 }
@@ -210,6 +215,10 @@ define org.genivi.commonapi.someip.deployment for interface com.qualcomm.qti.loc
 
     enumeration IDLLocSessionStatus {
         SomeIpEnumWidth = 4
+    }
+
+    enumeration MapMatchingFeedbackDataValidity {
+        SomeIpEnumWidth = 8
     }
 }
 

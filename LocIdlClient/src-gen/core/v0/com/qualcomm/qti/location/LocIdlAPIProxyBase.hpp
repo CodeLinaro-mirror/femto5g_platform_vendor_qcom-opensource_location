@@ -73,6 +73,7 @@ public:
     typedef std::function<void(const CommonAPI::CallStatus&)> StopPositionSessionAsyncCallback;
     typedef std::function<void(const CommonAPI::CallStatus&, const LocIdlAPI::IDLLocationResponse&)> DeleteAidingDataAsyncCallback;
     typedef std::function<void(const CommonAPI::CallStatus&, const LocIdlAPI::IDLLocationResponse&)> ConfigConstellationsAsyncCallback;
+    typedef std::function<void(const CommonAPI::CallStatus&, const LocIdlAPI::IDLLocationResponse&)> InjectMapMatchedFeedbackDataAsyncCallback;
 
     virtual GnssCapabilitiesMaskAttribute& getGnssCapabilitiesMaskAttribute() = 0;
     virtual GnssMeasurementsEvent& getGnssMeasurementsEvent() = 0;
@@ -92,6 +93,8 @@ public:
     virtual std::future<CommonAPI::CallStatus> deleteAidingDataAsync(const uint32_t &_aidingDataMask, DeleteAidingDataAsyncCallback _callback = nullptr, const CommonAPI::CallInfo *_info = nullptr) = 0;
     virtual void configConstellations(std::vector< LocIdlAPI::IDLGnssSvIdInfo > _svList, CommonAPI::CallStatus &_internalCallStatus, LocIdlAPI::IDLLocationResponse &_resp, const CommonAPI::CallInfo *_info = nullptr) = 0;
     virtual std::future<CommonAPI::CallStatus> configConstellationsAsync(const std::vector< LocIdlAPI::IDLGnssSvIdInfo > &_svList, ConfigConstellationsAsyncCallback _callback = nullptr, const CommonAPI::CallInfo *_info = nullptr) = 0;
+    virtual void injectMapMatchedFeedbackData(LocIdlAPI::MapMatchingFeedbackData _mmfData, CommonAPI::CallStatus &_internalCallStatus, LocIdlAPI::IDLLocationResponse &_resp, const CommonAPI::CallInfo *_info = nullptr) = 0;
+    virtual std::future<CommonAPI::CallStatus> injectMapMatchedFeedbackDataAsync(const LocIdlAPI::MapMatchingFeedbackData &_mmfData, InjectMapMatchedFeedbackDataAsyncCallback _callback = nullptr, const CommonAPI::CallInfo *_info = nullptr) = 0;
 
     virtual std::future<void> getCompletionFuture() = 0;
 };
@@ -104,6 +107,6 @@ public:
 
 
 // Compatibility
-namespace v0_1 = v0;
+namespace v0_2 = v0;
 
 #endif // V0_COM_QUALCOMM_QTI_LOCATION_Loc_Idl_API_PROXY_BASE_HPP_

@@ -349,18 +349,22 @@ void LocIdlClientDevice::sendNmeaRespEvent(const uint64_t timestamp, const strin
     uint64_t clk_bootTime = 0;
     uint64_t gptp_time_ns = 0;
 
-    msg = new EventMsgNmeaPkt();
-    if (nullptr == msg)
-        return;
-
-    strlcpy(msg->nmeaRpt.nmea, nmea.c_str(), MAX_NMEA_STRING_SIZE);
-    msg->nmeaRpt.length = nmea.length();
-    msg->nmeaRpt.timestamp = timestamp;
-
+    stringstream ss(nmea);
+    string nmeaStr;
+    while (std::getline(ss, nmeaStr, '\n')) {
+        msg = nullptr;
+        msg = new EventMsgNmeaPkt();
+        if (nullptr == msg)
+            return;
+        nmeaStr += '\n';
+        strlcpy(msg->nmeaRpt.nmea, nmeaStr.c_str(), MAX_NMEA_STRING_SIZE);
+        msg->nmeaRpt.length = nmeaStr.length();
+        msg->nmeaRpt.timestamp = timestamp;
+        sendEventsIpcHelper(msg, sizeof(EventMsgNmeaPkt));
+    }
     getClockBootTimeNs(clk_bootTime);
     getGptpTimeNs(gptp_time_ns);
     mDiagObj.diagLogNmeaInfo(timestamp, nmea, clk_bootTime, gptp_time_ns, false);
-    sendEventsIpcHelper(msg, sizeof(EventMsgNmeaPkt));
 }
 
 void LocIdlClientDevice::sendGnssDataRespEvent(const LocIdlAPI::IDLGnssData& gnssData)
@@ -377,7 +381,7 @@ void LocIdlClientDevice::sendGnssDataRespEvent(const LocIdlAPI::IDLGnssData& gns
     dataNotify.size = dataMask.size() - 1;
     gnssDataDiag.size = dataNotify.size;
 
-    for  (int i = 0; i < (dataMask.size() - 1); i++) {
+    for  (int i = 0; i < (dataMask.size() - 1) && i < GNSS_LOC_MAX_NUMBER_OF_SIGNAL_TYPES; i++) {
         dataNotify.gnssDataMask[i] = (uint32_t)dataMask[i];
         gnssDataDiag.gnssDiagDataMask[i] = (uint32_t)dataMask[i];
         dataNotify.jammerInd[i] = (double)jammerInd[i];
@@ -401,6 +405,7 @@ void LocIdlClientDevice::handleClose()
 void LocIdlClientDevice::handleOpen(ReqOpen &open)
 {
     LOC_LOGV("%s] --> ", __func__);
+    mask = open.requestedMask;
     if (states == ClientDeviceStates::DEVICE_STATE_IN_SESSION)
     {
         sessionStop();
@@ -409,9 +414,8 @@ void LocIdlClientDevice::handleOpen(ReqOpen &open)
     else if (states != ClientDeviceStates::DEVICE_STATE_READY)
     {
         sendRespEvent(IdlClinetRequests::CLNT_REQ_OPEN, false);
+        return;
     }
-
-    mask = open.requestedMask;
     sendRespEvent(IdlClinetRequests::CLNT_REQ_OPEN, true);
 }
 

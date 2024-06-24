@@ -121,18 +121,23 @@ void LocIdlClientDevice::getLocationRpt(const LocIdlAPI::IDLLocationReport &_loc
     }
     if (flags & LocIdlAPI::IDLLocationFlagsMask::IDL_HAS_ELAPSED_REAL_TIME_BIT) {
         uint64_t boot_time_ns = 0;
-        uint64_t rx_ptp_time_ns = 0;
         uint64_t  tx_ptp_time_ns = _locationReport.getElapsedgPTPTime();
-        if (nullptr != gPTPReqIf) {
-            gPTPReqIf->gptpGetBootTimeFromPtpTimeIf(&boot_time_ns, tx_ptp_time_ns);
-            gPTPReqIf->gptpGetCurPtpTimeIf(&rx_ptp_time_ns);
+        if ((nullptr == gPTPReqIf) ||
+           (false == gPTPReqIf->gptpGetBootTimeFromPtpTimeIf(&boot_time_ns, tx_ptp_time_ns))) {
+            boot_time_ns = tx_ptp_time_ns;
         }
-        ulpLoc.gpsLocation.elapsedRealTime = boot_time_ns + (rx_ptp_time_ns - tx_ptp_time_ns);
+        ulpLoc.gpsLocation.elapsedRealTime = boot_time_ns;
 
         LOC_LOGD("%s] --> elapsedRealTime:%ld, ", __func__, ulpLoc.gpsLocation.elapsedRealTime);
 
         gnssPosDiag.flags |=  LOC_IDL_CLIENT_DIAG_LOCATION_HAS_ELAPSED_REAL_TIME_BIT;
         gnssPosDiag.elapsedRealTimeNs = ulpLoc.gpsLocation.elapsedRealTime;
+    }
+    if (flags & LocIdlAPI::IDLLocationFlagsMask::IDL_ELAPSED_REAL_TIME_UNC_BIT) {
+        ulpLoc.gpsLocation.elapsedRealTimeUnc = _locationReport.getElapsedgPTPTimeUnc();
+
+        gnssPosDiag.flags |=  LOC_IDL_CLIENT_DIAG_LOCATION_HAS_ELAPSED_REAL_TIME_UNC_BIT;
+        gnssPosDiag.elapsedRealTimeUncNs = ulpLoc.gpsLocation.elapsedRealTimeUnc;
     }
     if (flags & LocIdlAPI::IDLLocationFlagsMask::IDL_HAS_TIME_UNC_BIT) {
         gnssPosDiag.gnssInfoFlags |=  LOC_IDL_CLIENT_DIAG_GNSS_LOCATION_INFO_TIME_UNC_BIT;
@@ -160,6 +165,7 @@ void LocIdlClientDevice::getLocationExtendedRpt(
     memset(&gpsLocExt, 0x00, sizeof(GpsLocationExtended));
     gpsLocExt.size = sizeof(GpsLocationExtended);
     gpsLocExt.flags = 0;
+    gnssPosDiag.reportingLatency = _locationReport.getReportingLatency();
 
     uint64_t lFlags = _locationReport.getLocationInfoFlags();
     if (lFlags &  LocIdlAPI::IDLLCALocationInfoFlagMask::IDL_LOC_INFO_ALTITUDE_MEAN_SEA_LEVEL) {
@@ -277,7 +283,6 @@ void LocIdlClientDevice::getLocationExtendedRpt(
         gpsLocExt.navSolutionMask = 0;
 
         gnssPosDiag.gnssInfoFlags |= LOC_IDL_CLIENT_DIAG_GNSS_LOCATION_INFO_NAV_SOLUTION_MASK_BIT;
-        gnssPosDiag.navSolutionMask = (locIdlClientDiagNavSolutionMask)navSolMask;
 
         if (navSolMask & LocIdlAPI::IDLLocationReportNavSolutionMask::IDL_SBAS_CORR_IONO) {
             gpsLocExt.navSolutionMask |= LOC_NAV_MASK_SBAS_CORRECTION_IONO;
@@ -816,6 +821,18 @@ void LocIdlClientDevice::getLocationExtendedRpt(
         gnssPosDiag.gnssInfoFlags |=  LOC_IDL_CLIENT_DIAG_GNSS_LOCATION_INFO_GPTP_TIME_UNC_BIT;
         gnssPosDiag.elapsedgPTPTimeUnc = _locationReport.getElapsedgPTPTimeUnc();
     }
+    if (lFlags &  LocIdlAPI::IDLLCALocationInfoFlagMask::IDL_LOC_INFO_BASE_LINE_LENGTH_BIT) {
+        gnssPosDiag.gnssInfoFlags |=  LOC_IDL_CLIENT_DIAG_GNSS_LOCATION_INFO_BASE_LINE_LENGTH_BIT;
+        gnssPosDiag.baseLineLength = _locationReport.getBaseLineLength();
+    }
+    if (lFlags &  LocIdlAPI::IDLLCALocationInfoFlagMask::IDL_LOC_INFO_AGE_OF_CORRECTION_BIT) {
+        gnssPosDiag.gnssInfoFlags |=  LOC_IDL_CLIENT_DIAG_GNSS_LOCATION_INFO_AGE_OF_CORRECTION_BIT;
+        gnssPosDiag.ageMsecOfCorrections = _locationReport.getAgeMsecOfCorrections();
+    }
+    if (lFlags &  LocIdlAPI::IDLLCALocationInfoFlagMask::IDL_LOC_INFO_CURR_REPORT_RATE_BIT) {
+        gnssPosDiag.gnssInfoFlags |=  LOC_IDL_CLIENT_DIAG_GNSS_LOCATION_INFO_CURR_REPORT_RATE_BIT;
+        gnssPosDiag.currReportingRate = _locationReport.getCurrReportingRate();
+    }
 }
 
 void LocIdlClientDevice::getMeasurementSet(const LocIdlAPI::IDLGnssMeasurements& gnssMeasurement,
@@ -838,6 +855,7 @@ void LocIdlClientDevice::getMeasurementSet(const LocIdlAPI::IDLGnssMeasurements&
 
     gnssMeasDiag.count = measData.size();
     gnssMeasDiag.isNhz = gnssMeasurement.getIsNHz();
+    gnssMeasDiag.reportingLatency = gnssMeasurement.getReportingLatency();
 
     for (uint16_t idx = 0; idx < measData.size() && idx < GNSS_MEASUREMENTS_MAX; idx++) {
         svMeasurementSet.gnssMeasNotification.measurements[idx].size = sizeof(GnssMeasurementsData);
@@ -1212,12 +1230,32 @@ void LocIdlClientDevice::getMeasurementSet(const LocIdlAPI::IDLGnssMeasurements&
     }
     if (flag &
     LocIdlAPI::IDLGnssMeasurementsClockFlagsMask::IDL_MEAS_CLK_FLAGS_ELAPSED_GPTP_TIME_BIT) {
+        uint64_t boot_time_ns = 0;
+        uint64_t  tx_ptp_time_ns = clk.getElapsedgPTPTime();
+        if ((nullptr == gPTPReqIf) ||
+           (false == gPTPReqIf->gptpGetBootTimeFromPtpTimeIf(&boot_time_ns, tx_ptp_time_ns))) {
+           boot_time_ns = tx_ptp_time_ns;
+        }
+
+        svMeasurementSet.gnssMeasNotification.clock.flags |=
+                    GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_BIT;
+        svMeasurementSet.gnssMeasNotification.clock.elapsedRealTime = boot_time_ns;
+
+        gnssMeasDiag.clock.flags |=
+                LOC_IDL_CLIENT_DIAG_GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_BIT;
+        gnssMeasDiag.clock.elapsedRealTime = boot_time_ns;
         gnssMeasDiag.clock.flags |=
                 LOC_IDL_CLIENT_DIAG_GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_GPTP_TIME_BIT;
         gnssMeasDiag.clock.elapsedgPTPTime = clk.getElapsedgPTPTime();
     }
     if (flag &
     LocIdlAPI::IDLGnssMeasurementsClockFlagsMask::IDL_MEAS_CLK_FLAGS_ELAPSED_GPTP_TIME_UNC_BIT) {
+        svMeasurementSet.gnssMeasNotification.clock.elapsedRealTimeUnc =
+                        clk.getElapsedgPTPTimeUnc();
+
+        gnssMeasDiag.clock.flags |=
+            LOC_IDL_CLIENT_DIAG_GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_UNC_BIT;
+        gnssMeasDiag.clock.elapsedRealTimeUnc =    clk.getElapsedgPTPTimeUnc();
         gnssMeasDiag.clock.flags |=
                 LOC_IDL_CLIENT_DIAG_GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_GPTP_TIME_UNC_BIT;
         gnssMeasDiag.clock.elapsedgPTPTimeUnc = clk.getElapsedgPTPTimeUnc();

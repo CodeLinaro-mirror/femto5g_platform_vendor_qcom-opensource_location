@@ -142,5 +142,9 @@ define org.genivi.commonapi.core.deployment for interface com.qualcomm.qti.locat
     enumeration IDLGnssConstellationType {
         EnumBackingType = UInt64
     }
+
+    enumeration MapMatchingFeedbackDataValidity {
+        EnumBackingType = UInt64
+    }
 }
 

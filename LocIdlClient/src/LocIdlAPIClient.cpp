@@ -375,6 +375,7 @@ void printPosResport(const LocIdlAPI::IDLLocationReport &_locationReport)
         cout << "AgeMsecOfCorrections  " << _locationReport.getAgeMsecOfCorrections() << endl;
         cout << "CurrReportingRate  " << _locationReport.getCurrReportingRate() << endl;
         cout << "ReportingLatency  " << _locationReport.getReportingLatency() << endl;
+        cout << "leapSecondsUnc  " << _locationReport.getLeapSecondsUnc() << endl;
         cout << "-------" << endl;
     }
 }
@@ -428,22 +429,25 @@ void printSVInfo(const vector<LocIdlAPI::IDLGnssSv> &gnssSv)
 
 void printNmea(const uint64_t timestamp, const string &nmea)
 {
-    static unsigned int nmeaCount;
     static bool printNmeaHeader = true;
     string segment;
+    stringstream ss(nmea);
+    string nmeaStr;
 
-    nmeaCount += 1;
+    while (std::getline(ss, nmeaStr, '\n')) {
+        nmeaStr += '\n';
 
-    if (verbose) {
-        cout << "NMEA, " << timestamp <<", "<< nmea<< endl;
-    } else {
-        if (printNmeaHeader) {
-            cout << "Type, Timestamp, ID" << endl;
-            printNmeaHeader = false;
+        if (verbose) {
+            cout << "NMEA, " << timestamp <<", "<< nmeaStr<< endl;
+        } else {
+            if (printNmeaHeader) {
+                cout << "Type, Timestamp, ID" << endl;
+                printNmeaHeader = false;
+            }
+            stringstream stnmea(nmeaStr);
+            getline(stnmea, segment, ',');
+            cout << "NMEA, "<< timestamp <<", "<< segment<< endl;
         }
-        stringstream stnmea(nmea);
-        getline(stnmea, segment, ',');
-        cout << "NMEA, "<< timestamp <<", "<< segment<< endl;
     }
 }
 
@@ -451,7 +455,7 @@ void DeInitHandles()
 {
     CommonAPI::CallStatus callStatus;
 
-    if (sessionStarted) {
+    if (sessionStarted && myProxy) {
         if (mask & LocIdlAPI::IDLGnssReportCbInfoMask::IDL_DATA_CB_INFO_BIT) {
             myProxy->getGnssDataEvent().unsubscribe(dataSubscription);
         }
@@ -486,6 +490,9 @@ void signalHandler(int signal)
 {
     cout << "signalHandler " <<endl;
     DeInitHandles();
+    if (myProxy) {
+        myProxy.reset();
+    }
     exit(0);
     return;
 }
@@ -553,6 +560,11 @@ void regSigHandler()
 
 void subscribeGnssResports()
 {
+    if (!myProxy) {
+      cout << " mProxy is NULL !! "<< endl;
+      return;
+    }
+
     // Subscribe for receiving values
     myProxy->getGnssCapabilitiesMaskAttribute().getChangedEvent().subscribe(
         [&](const uint32_t &val) {
@@ -601,6 +613,11 @@ void sessionStart()
     LocIdlAPI::IDLLocationResponse resp;
     CommonAPI::CallStatus callStatus;
     info.sender_ = 0xEE00;
+
+    if (!myProxy) {
+      cout << " mProxy is NULL !! "<< endl;
+      return;
+    }
 
     sleep(1);
     myProxy->startPositionSession(_intervalInMs, mask, callStatus, resp, &info);
@@ -652,5 +669,8 @@ int main(int argc, char* argv[])
     if (sessionStarted)
         sleep(delay);
     DeInitHandles();
+    if (myProxy) {
+        myProxy.reset();
+    }
     return 0;
 }
