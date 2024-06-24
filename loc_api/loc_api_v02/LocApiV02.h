@@ -691,6 +691,11 @@ public:
 
   virtual void configOsnmaEnablement(bool enable, LocApiResponse* adapterResponse=nullptr);
 
+  virtual void getNtnConfigSignalMask(LocApiResponse* adapterResponse = nullptr);
+
+  virtual void setNtnConfigSignalMask(GnssSignalTypeMask gpsSignalTypeConfigMask,
+          LocApiResponse* adapterResponse = nullptr);
+
   virtual void getConstellationMultiBandConfig(uint32_t sessionId,
                                       LocApiResponse* adapterResponse=nullptr);
 

@@ -28,7 +28,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -64,8 +64,8 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *THIS IS AN AUTO GENERATED FILE. DO NOT ALTER IN ANY WAY
  *====*====*====*====*====*====*====*====*====*====*====*====*====*====*====*/
 
-/* This file was generated with Tool version 6.14.9 
-   It was generated on: Tue Apr 23 2024 (Spin 0)
+/* This file was generated with Tool version 6.14.9
+   It was generated on: Wed May  8 2024 (Spin 0)
    From IDL File: location_service_v02.idl */
 
 #include "stdint.h"
@@ -9773,6 +9773,38 @@ static const uint8_t qmiLocSetOsnmaStateReqMsgT_data_v02[] = {
   QMI_IDL_OFFSET8(qmiLocSetOsnmaStateReqMsgT_v02, enable)
 };
 
+static const uint8_t qmiLocSetNtnStatusReqMsgT_data_v02[] = {
+  QMI_IDL_TLV_FLAGS_LAST_TLV | 0x01,
+   QMI_IDL_GENERIC_8_BYTE,
+  QMI_IDL_OFFSET8(qmiLocSetNtnStatusReqMsgT_v02, signalType)
+};
+
+static const uint8_t qmiLocSetNtnStatusIndMsgT_data_v02[] = {
+  0x01,
+   QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(qmiLocSetNtnStatusIndMsgT_v02, status),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | 0x02,
+   QMI_IDL_GENERIC_8_BYTE,
+  QMI_IDL_OFFSET8(qmiLocSetNtnStatusIndMsgT_v02, signalType)
+};
+
+static const uint8_t qmiLocGetNtnStatusIndMsgT_data_v02[] = {
+  0x01,
+   QMI_IDL_GENERIC_4_BYTE,
+  QMI_IDL_OFFSET8(qmiLocGetNtnStatusIndMsgT_v02, status),
+
+  QMI_IDL_TLV_FLAGS_LAST_TLV | 0x02,
+   QMI_IDL_GENERIC_8_BYTE,
+  QMI_IDL_OFFSET8(qmiLocGetNtnStatusIndMsgT_v02, signalType)
+};
+
+static const uint8_t qmiLocNtnConfigUpdateIndMsgT_data_v02[] = {
+  QMI_IDL_TLV_FLAGS_LAST_TLV | 0x01,
+   QMI_IDL_GENERIC_8_BYTE,
+  QMI_IDL_OFFSET8(qmiLocNtnConfigUpdateIndMsgT_v02, signalType)
+};
+
 /* Type Table */
 static const qmi_idl_type_table_entry  loc_type_table_v02[] = {
   {sizeof(qmiLocApplicationIdStructT_v02), qmiLocApplicationIdStructT_data_v02},
@@ -10206,7 +10238,11 @@ static const qmi_idl_message_table_entry loc_message_table_v02[] = {
   {sizeof(qmiLocSetSdkFeatureConfigIndMsgT_v02), qmiLocSetSdkFeatureConfigIndMsgT_data_v02},
   {sizeof(qmiLocGnssBandsSupportedIndMsgT_v02), qmiLocGnssBandsSupportedIndMsgT_data_v02},
   {sizeof(qmiLocOsnmaPublicKeyMerkleTreeReqMsgT_v02), qmiLocOsnmaPublicKeyMerkleTreeReqMsgT_data_v02},
-  {sizeof(qmiLocSetOsnmaStateReqMsgT_v02), qmiLocSetOsnmaStateReqMsgT_data_v02}
+  {sizeof(qmiLocSetOsnmaStateReqMsgT_v02), qmiLocSetOsnmaStateReqMsgT_data_v02},
+  {sizeof(qmiLocSetNtnStatusReqMsgT_v02), qmiLocSetNtnStatusReqMsgT_data_v02},
+  {sizeof(qmiLocSetNtnStatusIndMsgT_v02), qmiLocSetNtnStatusIndMsgT_data_v02},
+  {sizeof(qmiLocGetNtnStatusIndMsgT_v02), qmiLocGetNtnStatusIndMsgT_data_v02},
+  {sizeof(qmiLocNtnConfigUpdateIndMsgT_v02), qmiLocNtnConfigUpdateIndMsgT_data_v02}
 };
 
 /* Range Table */
@@ -10379,7 +10415,9 @@ static const qmi_idl_service_message_table_entry loc_service_command_messages_v0
   {QMI_LOC_GET_TRIBAND_STATE_REQ_V02, QMI_IDL_TYPE16(0, 0), 0},
   {QMI_LOC_SET_SDK_FEATURE_CONFIG_REQ_V02, QMI_IDL_TYPE16(0, 319), 12379},
   {QMI_LOC_OSNMA_PUBLIC_KEY_MERKLE_TREE_REQ_V02, QMI_IDL_TYPE16(0, 322), 270},
-  {QMI_LOC_SET_OSNMA_STATE_REQ_V02, QMI_IDL_TYPE16(0, 323), 4}
+  {QMI_LOC_SET_OSNMA_STATE_REQ_V02, QMI_IDL_TYPE16(0, 323), 4},
+  {QMI_LOC_SET_NTN_STATUS_REQ_V02, QMI_IDL_TYPE16(0, 324), 11},
+  {QMI_LOC_GET_NTN_STATUS_REQ_V02, QMI_IDL_TYPE16(0, 0), 0}
 };
 
 static const qmi_idl_service_message_table_entry loc_service_response_messages_v02[] = {
@@ -10530,7 +10568,9 @@ static const qmi_idl_service_message_table_entry loc_service_response_messages_v
   {QMI_LOC_GET_TRIBAND_STATE_RESP_V02, QMI_IDL_TYPE16(0, 1), 7},
   {QMI_LOC_SET_SDK_FEATURE_CONFIG_RESP_V02, QMI_IDL_TYPE16(0, 1), 7},
   {QMI_LOC_OSNMA_PUBLIC_KEY_MERKLE_TREE_RESP_V02, QMI_IDL_TYPE16(0, 1), 7},
-  {QMI_LOC_SET_OSNMA_STATE_RESP_V02, QMI_IDL_TYPE16(0, 1), 7}
+  {QMI_LOC_SET_OSNMA_STATE_RESP_V02, QMI_IDL_TYPE16(0, 1), 7},
+  {QMI_LOC_SET_NTN_STATUS_RESP_V02, QMI_IDL_TYPE16(0, 1), 7},
+  {QMI_LOC_GET_NTN_STATUS_RESP_V02, QMI_IDL_TYPE16(0, 1), 7}
 };
 
 static const qmi_idl_service_message_table_entry loc_service_indication_messages_v02[] = {
@@ -10731,7 +10771,10 @@ static const qmi_idl_service_message_table_entry loc_service_indication_messages
   {QMI_LOC_SET_SDK_FEATURE_CONFIG_IND_V02, QMI_IDL_TYPE16(0, 320), 18},
   {QMI_LOC_GNSS_BANDS_SUPPORTED_IND_V02, QMI_IDL_TYPE16(0, 321), 22},
   {QMI_LOC_OSNMA_PUBLIC_KEY_MERKLE_TREE_IND_V02, QMI_IDL_TYPE16(0, 2), 7},
-  {QMI_LOC_SET_OSNMA_STATE_IND_V02, QMI_IDL_TYPE16(0, 2), 7}
+  {QMI_LOC_SET_OSNMA_STATE_IND_V02, QMI_IDL_TYPE16(0, 2), 7},
+  {QMI_LOC_SET_NTN_STATUS_IND_V02, QMI_IDL_TYPE16(0, 325), 18},
+  {QMI_LOC_GET_NTN_STATUS_IND_V02, QMI_IDL_TYPE16(0, 326), 18},
+  {QMI_LOC_NTN_CONFIG_UPDATE_IND_V02, QMI_IDL_TYPE16(0, 327), 11}
 };
 
 /*Service Object*/
@@ -10745,7 +10788,7 @@ struct qmi_idl_service_object loc_qmi_idl_service_object_v02 = {
     sizeof(loc_service_indication_messages_v02)/sizeof(qmi_idl_service_message_table_entry) },
   { loc_service_command_messages_v02, loc_service_response_messages_v02, loc_service_indication_messages_v02},
   &loc_qmi_idl_type_table_object_v02,
-  0xAA,
+  0xAB,
   NULL
 };
 

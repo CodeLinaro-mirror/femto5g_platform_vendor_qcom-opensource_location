@@ -68,6 +68,9 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <LocationDataTypes.h>
 #include <LocationIntegrationApi.h>
 #include <LocationIntegrationApiImpl.h>
+#ifndef _ANDROID_
+#include <LocationIntegrationApiDiagLog.h>
+#endif
 #include <log_util.h>
 #include <loc_pla.h>
 namespace location_integration {
@@ -1057,6 +1060,59 @@ bool LocationIntegrationApi::configOsnmaEnablement(bool isEnabled) {
 bool LocationIntegrationApi::registerGnssSignalTypesUpdate(bool registerUpdate) {
     if (mApiImpl) {
         return (mApiImpl->registerGnssSignalTypesUpdate(registerUpdate) == 0);
+    } else {
+        LOC_LOGe ("NULL mApiImpl");
+        return false;
+    }
+}
+
+bool LocationIntegrationApi::injectMapMatchedData(const mapMatchedFeedbackData& mapData) {
+
+    if (mApiImpl) {
+        GnssMapMatchedData mmfData = {};
+        if (LOC_HAS_VALID_MMFD_UTC_TIME & mapData.validityMask) {
+            mmfData.validityMask |= LDT_MMF_DATA_VALID_UTC_TIME;
+            mmfData.utcTimestampMs = mapData.utcTimestampMs;
+        }
+        if (LOC_HAS_VALID_MMFD_LAT_DIFF & mapData.validityMask) {
+            mmfData.validityMask |= LDT_MMF_DATA_VALID_LAT_DIFF;
+            mmfData.mapMatchedLatitudeDifference = mapData.mapMatchedLatitudeDifference;
+        }
+        if (LOC_HAS_VALID_MMFD_LONG_DIFF & mapData.validityMask) {
+            mmfData.validityMask |= LDT_MMF_DATA_VALID_LONG_DIFF;
+            mmfData.mapMatchedLongitudeDifference = mapData.mapMatchedLongitudeDifference;
+        }
+        if (LOC_HAS_VALID_MMFD_TUNNEL & mapData.validityMask) {
+            mmfData.validityMask |= LDT_MMF_DATA_VALID_TUNNEL;
+            mmfData.isTunnel = mapData.isTunnel;
+        }
+        if (LOC_HAS_VALID_MMFD_BEARING & mapData.validityMask) {
+            mmfData.validityMask |= LDT_MMF_DATA_VALID_BEARING;
+            mmfData.bearing = mapData.bearing;
+        }
+        if (LOC_HAS_VALID_MMFD_ALTITUDE & mapData.validityMask) {
+            mmfData.validityMask |= LDT_MMF_DATA_VALID_ALTITUDE;
+            mmfData.altitude = mapData.altitude;
+        }
+        if (LOC_HAS_VALID_MMFD_HOR_ACC & mapData.validityMask) {
+            mmfData.validityMask |= LDT_MMF_DATA_VALID_HOR_ACC;
+            mmfData.horizontalAccuracy = mapData.horizontalAccuracy;
+        }
+        if (LOC_HAS_VALID_MMFD_ALT_ACC & mapData.validityMask) {
+            mmfData.validityMask |= LDT_MMF_DATA_VALID_ALT_ACC;
+            mmfData.altitudeAccuracy = mapData.altitudeAccuracy;
+        }
+        if (LOC_HAS_VALID_MMFD_BEARING_ACC & mapData.validityMask) {
+            mmfData.validityMask |= LDT_MMF_DATA_VALID_BEARING_ACC;
+            mmfData.bearingAccuracy = mapData.bearingAccuracy;
+        }
+
+#ifndef _ANDROID_
+        LocationIntegrationApiDiagLog  mLogger;
+        mLogger.diagLogMmfData(mapData);
+#endif
+
+        return (mApiImpl->gnssInjectMmfData(mmfData) == 0);
     } else {
         LOC_LOGe ("NULL mApiImpl");
         return false;

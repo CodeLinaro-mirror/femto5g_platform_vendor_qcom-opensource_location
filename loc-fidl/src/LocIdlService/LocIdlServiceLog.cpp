@@ -220,7 +220,7 @@ void LocIdlServiceLog::diagLogCapabilityInfo(string capabilityMask) {
     diagServiceInfoStruct*  capsInfo = NULL;
     diagBuffSrc bufferSrc;
     size = sizeof(diagServiceInfoStruct)- sizeof(capsInfo->serviceReport) +
-                   sizeof(diagCapabilityReceivedInfo);
+                   sizeof(diagCapabilityReceivedInfo) +  capabilityMask.size() -1;
     if (locDiagIfaceHandle) {
         capsInfo = (diagServiceInfoStruct*)locDiagIfaceHandle->logAlloc(
                  LOG_LOCATION_IDL_SERVICE_REPORT_C,
