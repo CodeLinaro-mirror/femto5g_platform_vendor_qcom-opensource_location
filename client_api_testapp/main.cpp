@@ -290,19 +290,18 @@ static void onResponseCb(location_client::LocationResponse response) {
 
 static void onLocationCb(const location_client::Location& location) {
     numFixes++;
-    // There is no sessionStatus for LCA Location. So check for horizontal accuracy of
-    // less than 20meters for a successful fix count.
-    if ((location.flags & LOCATION_HAS_ACCURACY_BIT) && (location.horizontalAccuracy <= 20)) {
-        numValidFixes++;
+    if (LOC_SESS_SUCCESS == location.sessionStatus) {
+         numValidFixes++;
     }
     if (outputEnabled) {
         if (detailedOutputEnabled) {
             printf("<<< onLocationCb cnt=(%u/%u): %s\n", numValidFixes, numFixes,
                     location.toString().c_str());
         } else {
-            printf("<<< onLocationCb cnt=(%u/%u): time=%" PRIu64" mask=0x%x lat=%f lon=%f alt=%f"
-                   " horzacc=%f\n",
+            printf("<<< onLocationCb cnt=(%u/%u): session status %d time=%" PRIu64
+                   " mask=0x%x lat=%f lon=%f alt=%f horzacc=%f\n",
                    numValidFixes, numFixes,
+                   location.sessionStatus,
                    location.timestamp,
                    location.flags,
                    location.latitude,
@@ -379,9 +378,10 @@ static void onGnssLocationCb(const location_client::GnssLocation& location) {
             printf("<<< onGnssLocationCb cnt=(%u/%u): %s\n", numValidFixes, numFixes,
                     location.toString().c_str());
         } else {
-            printf("<<< onGnssLocationCb cnt=(%u/%u): time=%" PRIu64" mask=0x%x lat=%f lon=%f "
-                   "alt=%f\n",
+            printf("<<< onGnssLocationCb cnt=(%u/%u): session status %d time=%" PRIu64
+                   " mask=0x%x lat=%f lon=%f alt=%f\n",
                     numValidFixes, numFixes,
+                    location.sessionStatus,
                     location.timestamp,
                     location.flags,
                     location.latitude,
