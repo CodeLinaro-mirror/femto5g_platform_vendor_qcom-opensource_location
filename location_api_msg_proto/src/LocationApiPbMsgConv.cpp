@@ -332,6 +332,9 @@ ELocMsgID LocationApiPbMsgConv::getEnumForPBELocMsgID(const PBELocMsgID &pbLocMs
         case PB_E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_RESP_MSG_ID:
             eLocMsgId = E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_RESP_MSG_ID;
             break;
+        case PB_E_INTAPI_CONFIG_MAP_MATCHED_FEEDBACK_MSG_ID:
+            eLocMsgId = E_INTAPI_CONFIG_MAP_MATCHED_FEEDBACK_MSG_ID;
+            break;
         default:
             break;
     }
@@ -543,6 +546,24 @@ LocOutputEngineType LocationApiPbMsgConv::getEnumForPBLocOutputEngineType(
     return locOpEngType;
 }
 
+AgcStatus LocationApiPbMsgConv::getEnumForPBAgcStatus(const PBAgcStatus &pbAgcStatus) const {
+    AgcStatus agcStatus = AGC_STATUS_UNKNOWN;
+    switch (pbAgcStatus) {
+        case PB_AGC_STATUS_NO_SATURATION:
+            agcStatus = AGC_STATUS_NO_SATURATION;
+            break;
+        case PB_AGC_STATUS_FRONT_END_GAIN_MAXIMUM_SATURATION:
+            agcStatus = AGC_STATUS_FRONT_END_GAIN_MAXIMUM_SATURATION;
+            break;
+        case PB_AGC_STATUS_FRONT_END_GAIN_MINIMUM_SATURATION:
+            agcStatus = AGC_STATUS_FRONT_END_GAIN_MINIMUM_SATURATION;
+            break;
+        default:
+            break;
+    }
+    LocApiPb_LOGv("LocApiPB: pbAgcStatus:%d, agcStatus:%d", pbAgcStatus, agcStatus);
+    return agcStatus;
+}
 // HAL position mask from PB position engine mask
 LocEngineRunState LocationApiPbMsgConv::getEnumForPBLocEngineRunState(
             const PBLocEngineRunState &pbLocEngRunState) const {
@@ -1114,6 +1135,9 @@ PBELocMsgID LocationApiPbMsgConv::getPBEnumForELocMsgID(const ELocMsgID &eLocMsg
         case E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_RESP_MSG_ID:
             pbLocMsgId = PB_E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_RESP_MSG_ID;
             break;
+        case E_INTAPI_CONFIG_MAP_MATCHED_FEEDBACK_MSG_ID:
+            pbLocMsgId = PB_E_INTAPI_CONFIG_MAP_MATCHED_FEEDBACK_MSG_ID;
+            break;
         default:
             break;
     }
@@ -1330,6 +1354,25 @@ PBLocApiGnss_LocSvSystemEnumType LocationApiPbMsgConv::getPBEnumForGnssLocSvSyst
     LocApiPb_LOGv("LocApiPB: gnssLocSvSysEnumType:%d, pbGnssLocSvSysEnumType:%d",
             gnssLocSvSysEnumType, pbGnssLocSvSysEnumType);
     return pbGnssLocSvSysEnumType;
+}
+
+PBAgcStatus LocationApiPbMsgConv::getPBEnumForAgcStatus(const AgcStatus &agcStatus) const {
+     PBAgcStatus pbAgcStatus = PB_AGC_STATUS_UNKNOWN;
+     switch (agcStatus) {
+        case AGC_STATUS_NO_SATURATION:
+            pbAgcStatus = PB_AGC_STATUS_NO_SATURATION;
+            break;
+        case AGC_STATUS_FRONT_END_GAIN_MAXIMUM_SATURATION:
+            pbAgcStatus = PB_AGC_STATUS_FRONT_END_GAIN_MAXIMUM_SATURATION;
+            break;
+        case AGC_STATUS_FRONT_END_GAIN_MINIMUM_SATURATION:
+            pbAgcStatus = PB_AGC_STATUS_FRONT_END_GAIN_MINIMUM_SATURATION;
+            break;
+        default:
+            break;
+     }
+    LocApiPb_LOGv("LocApiPB: agcStatus:%x, pbAgcStatus:%x", agcStatus, pbAgcStatus);
+    return pbAgcStatus;
 }
 
 // GnssSvType to PBLocApiGnss_LocSvSystemEnumType
@@ -1703,6 +1746,9 @@ uint32_t LocationApiPbMsgConv::getPBMaskForLocationFlagsMask(const uint32_t &loc
     if (locFlagsMask & LOCATION_HAS_GPTP_TIME_UNC_BIT) {
         pbLocFlagsMask |= PB_LOCATION_HAS_GPTP_TIME_UNC_BIT;
     }
+    if (locFlagsMask & LOCATION_HAS_SESSION_STATUS_BIT) {
+        pbLocFlagsMask |= PB_LOCATION_HAS_SESSION_STATUS_BIT;
+    }
 
     LocApiPb_LOGv("LocApiPB: locFlagsMask:%x, pbLocFlagsMask:%x", locFlagsMask, pbLocFlagsMask);
     return pbLocFlagsMask;
@@ -1885,6 +1931,11 @@ uint32_t LocationApiPbMsgConv::getPBMaskForGnssLocationInfoExtFlagMask(
     if (gnssLocInfoFlagMask & LDT_GNSS_LOCATION_INFO_DGNSS_STATION_ID_BIT) {
         pbGnssLocInfoFlagMask |= PB_GNSS_LOCATION_INFO_DGNSS_STATION_ID_MASK_BIT;
     }
+
+    if (gnssLocInfoFlagMask & LDT_GNSS_LOCATION_INFO_LEAP_SECONDS_UNC_BIT) {
+        pbGnssLocInfoFlagMask |= PB_GNSS_LOCATION_INFO_LEAP_SECONDS_UNC_BIT;
+    }
+
     return pbGnssLocInfoFlagMask;
 }
 
@@ -1918,6 +1969,10 @@ uint32_t LocationApiPbMsgConv::getPBMaskForGnssLocationNavSolutionMask(
     if (gnssLocNavSolnMask & LOCATION_NAV_CORRECTION_ONLY_SBAS_CORRECTED_SV_USED_BIT) {
         pbGnssLocNavSolnMask |= PB_LOCATION_NAV_CORRECTION_ONLY_SBAS_CORRECTED_SV_USED_BIT;
     }
+    if (gnssLocNavSolnMask & LOCATION_NAV_MMF_AIDED_POSITION) {
+        pbGnssLocNavSolnMask |= PB_LOCATION_NAV_MMF_AIDED_POSITION;
+    }
+
     LocApiPb_LOGv("LocApiPB: gnssLocNavSolnMask:%x, pbGnssLocNavSolnMask:%x",
             gnssLocNavSolnMask, pbGnssLocNavSolnMask);
     return pbGnssLocNavSolnMask;
@@ -2384,6 +2439,10 @@ uint32_t LocationApiPbMsgConv::getPBMaskForGnssSignalTypeMask(
     if (gnssSignalTypeMask & GNSS_SIGNAL_BEIDOU_B2BQ) {
         pbGnssSignalTypeMask |= PB_GNSS_SIGNAL_BEIDOU_B2BQ_BIT;
     }
+    if (gnssSignalTypeMask & GNSS_SIGNAL_NAVIC_L1) {
+        pbGnssSignalTypeMask |= PB_GNSS_SIGNAL_NAVIC_L1_BIT;
+    }
+
     LocApiPb_LOGv("LocApiPB: gnssSignalTypeMask:%x, pbGnssSignalTypeMask:%x",
             gnssSignalTypeMask, pbGnssSignalTypeMask);
     return pbGnssSignalTypeMask;
@@ -2495,6 +2554,12 @@ uint32_t LocationApiPbMsgConv::getPBMaskForDrSolutionStatusMask(
     }
     if (drSolnStatusMask & DRE_WARNING_FACTORY_DATA_INCONSISTENT) {
         pbDrSolnStatusMask |= PB_DRE_WARNING_FACTORY_DATA_INCONSISTENT;
+    }
+    if (drSolnStatusMask & DRE_WARNING_MMF_UNAVAILABLE) {
+        pbDrSolnStatusMask |= PB_DRE_WARNING_MMF_UNAVAILABLE;
+    }
+    if (drSolnStatusMask & DRE_WARNING_MMF_NOT_USABLE) {
+        pbDrSolnStatusMask |= PB_DRE_WARNING_MMF_NOT_USABLE;
     }
 
     LocApiPb_LOGv("LocApiPB: drSolnStatusMask:%x, pbDrSolnStatusMask:%x",
@@ -2880,6 +2945,9 @@ uint32_t LocationApiPbMsgConv::getGnssSignalTypeMaskFromPB(
     if (pbGnssSignalTypeMask & PB_GNSS_SIGNAL_BEIDOU_B2BQ_BIT) {
         gnssSignalTypeMask |= GNSS_SIGNAL_BEIDOU_B2BQ;
     }
+    if (pbGnssSignalTypeMask & PB_GNSS_SIGNAL_NAVIC_L1_BIT) {
+        gnssSignalTypeMask |= GNSS_SIGNAL_NAVIC_L1;
+    }
     LocApiPb_LOGv("LocApiPB: pbGnssSignalTypeMask:%x, gnssSignalTypeMask:%x",
             pbGnssSignalTypeMask, gnssSignalTypeMask);
     return gnssSignalTypeMask;
@@ -2973,6 +3041,9 @@ uint32_t LocationApiPbMsgConv::getLocationFlagsMaskFromPB(const uint32_t &pbLocF
     }
     if (pbLocFlagsMask & PB_LOCATION_HAS_GPTP_TIME_UNC_BIT) {
         locFlagsMask |= LOCATION_HAS_GPTP_TIME_UNC_BIT;
+    }
+    if (pbLocFlagsMask & PB_LOCATION_HAS_SESSION_STATUS_BIT) {
+        locFlagsMask |= LOCATION_HAS_SESSION_STATUS_BIT;
     }
     LocApiPb_LOGv("LocApiPB: pbLocFlagsMask:%x, locFlagsMask:%x", pbLocFlagsMask, locFlagsMask);
     return locFlagsMask;
@@ -3286,6 +3357,9 @@ uint64_t LocationApiPbMsgConv::getGnssLocationInfoFlagMaskFromPB(
     if (pbGnssLocInfoExtFlagMask & PB_GNSS_LOCATION_INFO_DGNSS_STATION_ID_MASK_BIT) {
         gnssLocInfoFlagMask |= LDT_GNSS_LOCATION_INFO_DGNSS_STATION_ID_BIT;
     }
+    if (pbGnssLocInfoExtFlagMask & PB_GNSS_LOCATION_INFO_LEAP_SECONDS_UNC_BIT) {
+        gnssLocInfoFlagMask |= LDT_GNSS_LOCATION_INFO_LEAP_SECONDS_UNC_BIT;
+    }
     LocApiPb_LOGv("LocApiPB: pbGnssLocInfoFlagMask:0x%x, pbGnssLocInfoExtFlagMask:0x%x, "
                   "gnssLocInfoFlagMask:0x%" PRIu64"", pbGnssLocInfoFlagMask,
                   pbGnssLocInfoExtFlagMask, gnssLocInfoFlagMask);
@@ -3324,6 +3398,10 @@ uint32_t LocationApiPbMsgConv::getGnssLocationNavSolutionMaskFromPB(
     if (pbGnssLocNavSoln & PB_LOCATION_NAV_CORRECTION_ONLY_SBAS_CORRECTED_SV_USED_BIT) {
         gnssLocNavSoln |= LOCATION_NAV_CORRECTION_ONLY_SBAS_CORRECTED_SV_USED_BIT;
     }
+    if (pbGnssLocNavSoln & PB_LOCATION_NAV_MMF_AIDED_POSITION) {
+        gnssLocNavSoln |= LOCATION_NAV_MMF_AIDED_POSITION;
+    }
+
     LocApiPb_LOGv("LocApiPB: pbGnssLocNavSoln:%x, gnssLocNavSoln:%x", pbGnssLocNavSoln,
             gnssLocNavSoln);
     return gnssLocNavSoln;
@@ -3590,6 +3668,12 @@ uint32_t LocationApiPbMsgConv::getDrSolutionStatusMaskFromPB(
     }
     if (pbDrSolnStatusMask & PB_DRE_WARNING_FACTORY_DATA_INCONSISTENT) {
         drSolnStatusMask |= DRE_WARNING_FACTORY_DATA_INCONSISTENT;
+    }
+    if (pbDrSolnStatusMask & PB_DRE_WARNING_MMF_UNAVAILABLE) {
+        drSolnStatusMask |= DRE_WARNING_MMF_UNAVAILABLE;
+    }
+    if (pbDrSolnStatusMask  & PB_DRE_WARNING_MMF_NOT_USABLE) {
+        drSolnStatusMask |= DRE_WARNING_MMF_NOT_USABLE;
     }
 
     LocApiPb_LOGv("LocApiPB: pbDrSolnStatusMask:%x, drSolnStatusMask:%x",
@@ -4123,14 +4207,15 @@ int LocationApiPbMsgConv::convertLocationToPB(const Location &location,
     // uint64 elapsedgPTPTimeUnc  = 17;
     pbLocation->set_elapsedgptptimeunc(location.elapsedgPTPTimeUnc);
 
-    LOC_LOGd("LocApiPB: location - Timestamp: %" PRIu64" Lat:%lf, Lon:%lf, Alt:%lf, TechMask:%x",
-            location.timestamp, location.latitude, location.longitude, location.altitude,
-            location.techMask);
+    // LocSessionStatus sessionStatus = 18;
+    pbLocation->set_sessionstatus(
+            getPBEnumForLocSessionStatus(location.sessionStatus));
+
     LocApiPb_LOGd("LocApiPB: location - speed:%f, bear:%f, HorzAcc:%f, VertAcc:%f, SpeedAcc:%f, "
-                  "BearAcc:%f, time unc msec %f elapsedgPTPTime %" PRIu64" nsec ",
-                  location.speed, location.bearing, location.accuracy, location.verticalAccuracy,
-                  location.speedAccuracy, location.bearingAccuracy, location.timeUncMs,
-                  location.elapsedgPTPTime);
+            "BearAcc:%f, time unc msec %f elapsedgPTPTime %" PRIu64" nsec, sessionStatus: %d",
+            location.speed, location.bearing, location.accuracy, location.verticalAccuracy,
+            location.speedAccuracy, location.bearingAccuracy, location.timeUncMs,
+            location.elapsedgPTPTime, (int)location.sessionStatus);
     return 0;
 }
 
@@ -4415,6 +4500,10 @@ int LocationApiPbMsgConv::convertGnssLocInfoNotifToPB(
     for (uint32_t iter = 0; iter < gnssLocInfoNotif.numOfDgnssStationId; iter++) {
         pbGnssLocInfoNotif->add_dgnssstationid(gnssLocInfoNotif.dgnssStationId[iter]);
     }
+
+    // uint32    leapSecondsUnc = 50;
+    pbGnssLocInfoNotif->set_leapsecondsunc(gnssLocInfoNotif.leapSecondsUnc);
+
     LocApiPb_LOGv("LocApiPB: gnssLocInfoNotif - GLocInfoFlgMask:%" PRIu64", pdop:%f, hdop:%f, "
             "vdop:%f",
             gnssLocInfoNotif.flags, gnssLocInfoNotif.pdop, gnssLocInfoNotif.hdop,
@@ -4530,6 +4619,12 @@ int LocationApiPbMsgConv::convertGnssMeasNotifToPB(
 
     // bool isNhz = 3;
     pbGnssMeasNotif->set_isnhz(gnssMeasNotif.isNhz);
+    // PBAgcStatus agcStatusL1 = 4;
+    pbGnssMeasNotif->set_agcstatusl1(getPBEnumForAgcStatus(gnssMeasNotif.agcStatusL1));
+    // PBAgcStatus agcStatusL2 = 5;
+    pbGnssMeasNotif->set_agcstatusl2(getPBEnumForAgcStatus(gnssMeasNotif.agcStatusL2));
+    // PBAgcStatus agcStatusL5 = 6;
+    pbGnssMeasNotif->set_agcstatusl5(getPBEnumForAgcStatus(gnssMeasNotif.agcStatusL5));
 
     return 0;
 }
@@ -4555,6 +4650,12 @@ int LocationApiPbMsgConv::convertGnssDataNotifToPB(const GnssDataNotification &g
         pbGnssDataNotif->add_jammerind(gnssDataNotif.jammerInd[i]);
         pbGnssDataNotif->add_agc(gnssDataNotif.agc[i]);
     }
+    // PBAgcStatus agcStatusL1 = 5;
+    pbGnssDataNotif->set_agcstatusl1(getPBEnumForAgcStatus(gnssDataNotif.agcStatusL1));
+    // PBAgcStatus agcStatusL2 = 6;
+    pbGnssDataNotif->set_agcstatusl2(getPBEnumForAgcStatus(gnssDataNotif.agcStatusL2));
+    // PBAgcStatus agcStatusL5 = 7;
+    pbGnssDataNotif->set_agcstatusl5(getPBEnumForAgcStatus(gnssDataNotif.agcStatusL5));
     return 0;
 }
 
@@ -5406,12 +5507,14 @@ int LocationApiPbMsgConv::pbConvertToLocation(const PBLocation &pbLoc, Location 
     // uint64 elapsedgPTPTimeUnc  = 17;
     loc.elapsedgPTPTimeUnc = pbLoc.elapsedgptptimeunc();
 
-    LOC_LOGd("LocApiPB: pbLoc - Timestamp: %" PRIu64" Lat:%lf, Lon:%lf, Alt:%lf, TechMask:%x",
-            loc.timestamp, loc.latitude, loc.longitude, loc.altitude, loc.techMask);
+    // LocSessionStatus sessionStatus = 18;
+    loc.sessionStatus = getLocSessionStatusFromPB(
+            pbLoc.sessionstatus());
+
     LocApiPb_LOGd("LocApiPB: pbLoc - speed:%f, bearing:%f, HorzAcc:%f, VertAcc:%f, SpeedAcc:%f, "
-                  "BearAcc:%f, time unc ms %f, elapsedGPTPTime:%" PRIu64" ", loc.speed, loc.bearing,
-                   loc.accuracy, loc.verticalAccuracy, loc.speedAccuracy, loc.bearingAccuracy,
-                   loc.timeUncMs, loc.elapsedgPTPTime);
+            "BearAcc:%f, time unc ms %f, elapsedGPTPTime:%" PRIu64" , sessionStatus %d",
+            loc.speed, loc.bearing, loc.accuracy, loc.verticalAccuracy, loc.speedAccuracy,
+            loc.bearingAccuracy, loc.timeUncMs, loc.elapsedgPTPTime, (int)loc.sessionStatus);
     return 0;
 }
 
@@ -5610,6 +5713,9 @@ int LocationApiPbMsgConv::pbConvertToGnssLocInfoNotif(
     }
     gnssLocInfoNotif.numOfDgnssStationId = i;
 
+   // uint32    leapSecondsUnc = 50;
+   gnssLocInfoNotif.leapSecondsUnc = pbGnssLocInfoNotif.leapsecondsunc();
+
    LOC_LOGv("LocApiPB: pbGnssLocInfoNotif -GLocInfoFlgMask:0x%" PRIx64 ", pdop:%f, "
             "hdop:%f, vdop:%f",
             gnssLocInfoNotif.flags, gnssLocInfoNotif.pdop, gnssLocInfoNotif.hdop,
@@ -5736,6 +5842,12 @@ int LocationApiPbMsgConv::pbConvertToGnssMeasNotification(
 
     // bool isNhz = 3;
     gnssMeasNotif.isNhz = pbGnssMeasNotif.isnhz();
+    // bool agcStatusL1 = 4;
+    gnssMeasNotif.agcStatusL1 = getEnumForPBAgcStatus(pbGnssMeasNotif.agcstatusl1());
+    // bool agcStatusL2 = 5;
+    gnssMeasNotif.agcStatusL2 = getEnumForPBAgcStatus(pbGnssMeasNotif.agcstatusl2());
+    // bool agcStatusL5 = 6;
+    gnssMeasNotif.agcStatusL5 = getEnumForPBAgcStatus(pbGnssMeasNotif.agcstatusl5());
 
     LOC_LOGv("LocApiPB: pbGnssMeasNotif - count:%u, isNhz:%d", count, gnssMeasNotif.isNhz);
 
@@ -8007,5 +8119,80 @@ int LocationApiPbMsgConv::pbConvertToGnssEphNotif(
                     gnssEphNotif.ephInfo.navicEphemeris);
             break;
     }
+    return 0;
+}
+
+int LocationApiPbMsgConv::convertGnssMmfDataToPB(const GnssMapMatchedData mmfData,
+    PBGnssMapMatchedData* pbMmfData) const {
+
+    if (pbMmfData) {
+        //uint64 validityMask = 1;
+        pbMmfData->set_validitymask(mmfData.validityMask);
+
+        //uint64 utcTimestampMs = 2;
+        pbMmfData->set_utctimestampms(mmfData.utcTimestampMs);
+
+        // float  mapMatchedLatitudeDifference = 3;
+        pbMmfData->set_mapmatchedlatitudedifference(mmfData.mapMatchedLatitudeDifference);
+
+        // float  mapMatchedLongitudeDifference = 4;
+        pbMmfData->set_mapmatchedlongitudedifference(mmfData.mapMatchedLongitudeDifference);
+
+        // bool   isTunnel = 5;
+        pbMmfData->set_istunnel(mmfData.isTunnel);
+
+        // float  bearing = 6;
+        pbMmfData->set_bearing(mmfData.bearing);
+
+        // double altitude = 7;
+        pbMmfData->set_altitude(mmfData.altitude);
+
+        // float  horizontalAccuracy = 8;
+        pbMmfData->set_horizontalaccuracy(mmfData.horizontalAccuracy);
+
+        // float  altitudeAccuracy = 9;
+        pbMmfData->set_altitudeaccuracy(mmfData.altitudeAccuracy);
+
+        // float  bearingAccuracy = 10;
+        pbMmfData->set_bearingaccuracy(mmfData.bearingAccuracy);
+        return 0;
+    } else {
+        return 1;
+    }
+}
+
+int LocationApiPbMsgConv::pbConvertToGnssMmfData(const PBGnssMapMatchedData& pbMmfData,
+    GnssMapMatchedData& mmfData) const {
+
+    //uint64 validityMask = 1;
+    mmfData.validityMask = pbMmfData.validitymask();
+
+    //uint64 utcTimestampMs = 2;
+    mmfData.utcTimestampMs = pbMmfData.utctimestampms();
+
+    // float  mapMatchedLatitudeDifference = 3;
+    mmfData.mapMatchedLatitudeDifference = pbMmfData.mapmatchedlatitudedifference();
+
+
+    // float  mapMatchedLongitudeDifference = 4;
+    mmfData.mapMatchedLongitudeDifference = pbMmfData.mapmatchedlongitudedifference();
+
+    // bool   isTunnel = 5;
+    mmfData.isTunnel = pbMmfData.istunnel();
+
+    // float  bearing = 6;
+    mmfData.bearing = pbMmfData.bearing();
+
+    // double altitude = 7;
+    mmfData.altitude = pbMmfData.altitude();
+
+    // float  horizontalAccuracy = 8;
+    mmfData.horizontalAccuracy = pbMmfData.horizontalaccuracy();
+
+    // float  altitudeAccuracy = 9;
+    mmfData.altitudeAccuracy = pbMmfData.altitudeaccuracy();
+
+    // float  bearingAccuracy = 10;
+    mmfData.bearingAccuracy = pbMmfData.bearingaccuracy();
     return 0;
 }

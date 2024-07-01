@@ -103,12 +103,28 @@ class TrackingSessCbHandler {
             }
 
             initializeCommonCbs(pClientApiImpl, rspCb, gnssReportCbs.gnssSvCallback,
-                    gnssReportCbs.gnssNmeaCallback, gnssReportCbs.gnssDataCallback,
+                    gnssReportCbs.gnssNmeaCallback,
+                    gnssReportCbs.gnssDataCallback,
                     gnssReportCbs.gnssMeasurementsCallback,
                     gnssReportCbs.gnssNHzMeasurementsCallback,
                     gnssReportCbs.gnssDcReportCallback,
                     gnssReportCbs.gnssEphReportCallback,
                     intervalInMs);
+
+            if (gnssReportCbs.nmeaSentencesCallback) {
+                mCallbackOptions.gnssNmeaCb =
+                        [pClientApiImpl, nmeaSentencesCallback =
+                                gnssReportCbs.nmeaSentencesCallback](
+                                ::GnssNmeaNotification n) {
+                    uint64_t timestamp = n.timestamp;
+                    LocOutputEngineType locOutputEngType = (LocOutputEngineType)n.locOutputEngType;
+                    std::string nmea(n.nmea);
+                    LOC_LOGv("<<< message = nmea[%s]", nmea.c_str());
+                    nmeaSentencesCallback(locOutputEngType, timestamp, nmea);
+                    pClientApiImpl->getLogger().log(
+                            timestamp, nmea.size(), nmea.c_str(), locOutputEngType);
+                };
+            }
         }
 
         TrackingSessCbHandler(LocationClientApiImpl *pClientApiImpl, ResponseCb rspCb,
@@ -134,8 +150,29 @@ class TrackingSessCbHandler {
                     engineLocCb(engLocationsVector);
                 };
             }
+            if (!engineReportCbs.nmeaSentencesCallback && !engineReportCbs.engineNmeaCallback
+                    && engineReportCbs.gnssNmeaCallback) {
+                initializeCommonCbs(pClientApiImpl, rspCb,
+                    engineReportCbs.gnssSvCallback,
+                    engineReportCbs.gnssNmeaCallback,
+                    engineReportCbs.gnssDataCallback,
+                    engineReportCbs.gnssMeasurementsCallback,
+                    engineReportCbs.gnssNHzMeasurementsCallback,
+                    engineReportCbs.gnssDcReportCallback,
+                    engineReportCbs.gnssEphReportCallback,
+                    intervalInMs);
+            } else {
+                initializeCommonCbs(pClientApiImpl, rspCb,
+                    engineReportCbs.gnssSvCallback, 0,
+                    engineReportCbs.gnssDataCallback,
+                    engineReportCbs.gnssMeasurementsCallback,
+                    engineReportCbs.gnssNHzMeasurementsCallback,
+                    engineReportCbs.gnssDcReportCallback,
+                    engineReportCbs.gnssEphReportCallback,
+                    intervalInMs);
+            }
 
-            if (engineReportCbs.engineNmeaCallback) {
+            if (!engineReportCbs.nmeaSentencesCallback && engineReportCbs.engineNmeaCallback) {
                 mCallbackOptions.engineNmeaCb =
                 [pClientApiImpl, engineNmeaCallback = engineReportCbs.engineNmeaCallback](
                         ::GnssNmeaNotification n) {
@@ -152,18 +189,22 @@ class TrackingSessCbHandler {
                     }
                     pClientApiImpl->getLogger().log(timestamp, nmea.size(), nmea.c_str(),
                             locOutputEngType);
+                };
+            } else if (engineReportCbs.nmeaSentencesCallback) {
+                mCallbackOptions.engineNmeaCb =
+                [pClientApiImpl, nmeaSentencesCallback =
+                        engineReportCbs.nmeaSentencesCallback](
+                        ::GnssNmeaNotification n) {
+                    uint64_t timestamp = n.timestamp;
+                    LocOutputEngineType locOutputEngType = (LocOutputEngineType)n.locOutputEngType;
+                    std::string nmea(n.nmea);
+                    LOC_LOGv("<<< message = nmea[%s] locOutputEngType = %d", nmea.c_str(),
+                        locOutputEngType);
+                    nmeaSentencesCallback(locOutputEngType, timestamp, nmea);
+                    pClientApiImpl->getLogger().log(timestamp, nmea.size(), nmea.c_str(),
+                            locOutputEngType);
                };
             }
-
-            initializeCommonCbs(pClientApiImpl, rspCb,
-                                engineReportCbs.gnssSvCallback,
-                                engineReportCbs.gnssNmeaCallback,
-                                engineReportCbs.gnssDataCallback,
-                                engineReportCbs.gnssMeasurementsCallback,
-                                engineReportCbs.gnssNHzMeasurementsCallback,
-                                engineReportCbs.gnssDcReportCallback,
-                                engineReportCbs.gnssEphReportCallback,
-                                intervalInMs);
         }
 
         LocationCallbacks& getLocationCbs() { return mCallbackOptions; }
@@ -940,7 +981,13 @@ DECLARE_TBL(LocationFlagsMask) = {
     {LOCATION_HAS_VERTICAL_ACCURACY_BIT, "VERT_ACCURACY"},
     {LOCATION_HAS_SPEED_ACCURACY_BIT, "SPEED_ACCURACY"},
     {LOCATION_HAS_BEARING_ACCURACY_BIT, "BEARING_ACCURACY"},
-    {LOCATION_HAS_BEARING_ACCURACY_BIT, "TS"}
+    {LOCATION_HAS_TIMESTAMP_BIT, "TS"},
+    {LOCATION_HAS_ELAPSED_REAL_TIME_BIT, "ELAPSED_REAL_TIME"},
+    {LOCATION_HAS_ELAPSED_REAL_TIME_UNC_BIT, "ELAPSED_REAL_TIME_UNC"},
+    {LOCATION_HAS_TIME_UNC_BIT, "TIME_UNC"},
+    {LOCATION_HAS_GPTP_TIME_BIT, "GPTP_TIME"},
+    {LOCATION_HAS_GPTP_TIME_UNC_BIT, "GPTP_TIME_UNC"},
+    {LOCATION_HAS_SESSION_STATUS_BIT, "SESSION_STATUS"},
 };
 // LocationTechnologyMask
 DECLARE_TBL(LocationTechnologyMask) = {
@@ -1033,7 +1080,8 @@ DECLARE_TBL(GnssSignalTypes) = {
     {GNSS_SIGNAL_TYPE_NAVIC_L5, "NAVIC_L5"},
     {GNSS_SIGNAL_TYPE_BEIDOU_B2A_Q, "BDS_B2AQ"},
     {GNSS_SIGNAL_TYPE_BEIDOU_B2B_I, "BDS_B2BI"},
-    {GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q, "BDS_B2BQ"}
+    {GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q, "BDS_B2BQ"},
+    {GNSS_SIGNAL_TYPE_NAVIC_L1, "NAVIC_L1"}
 };
 // GnssSvType
 DECLARE_TBL(GnssSvType) = {
@@ -1056,38 +1104,48 @@ DECLARE_TBL(Gnss_LocSvSystemEnumType) = {
     {GNSS_LOC_SV_SYSTEM_QZSS,    "QZSS"},
     {GNSS_LOC_SV_SYSTEM_NAVIC,   "NAVIC"}
 };
-// GnssLocationInfoFlagMask
-DECLARE_TBL(GnssLocationInfoFlagMask) = {
-    {GNSS_LOCATION_INFO_ALTITUDE_MEAN_SEA_LEVEL_BIT, "ALT_SEA_LEVEL"},
-    {GNSS_LOCATION_INFO_ALTITUDE_MEAN_SEA_LEVEL_BIT, "DOP"},
-    {GNSS_LOCATION_INFO_MAGNETIC_DEVIATION_BIT, "MAG_DEV"},
-    {GNSS_LOCATION_INFO_HOR_RELIABILITY_BIT, "HOR_RELIAB"},
-    {GNSS_LOCATION_INFO_VER_RELIABILITY_BIT, "VER_RELIAB"},
-    {GNSS_LOCATION_INFO_HOR_ACCURACY_ELIP_SEMI_MAJOR_BIT, "HOR_ACCU_ELIP_SEMI_MAJOR"},
-    {GNSS_LOCATION_INFO_HOR_ACCURACY_ELIP_SEMI_MINOR_BIT, "HOR_ACCU_ELIP_SEMI_MINOR"},
-    {GNSS_LOCATION_INFO_HOR_ACCURACY_ELIP_AZIMUTH_BIT, "HOR_ACCU_ELIP_AZIMUTH"},
-    {GNSS_LOCATION_INFO_GNSS_SV_USED_DATA_BIT, "GNSS_SV_USED"},
-    {GNSS_LOCATION_INFO_NAV_SOLUTION_MASK_BIT, "NAV_SOLUTION"},
-    {GNSS_LOCATION_INFO_POS_TECH_MASK_BIT, "POS_TECH"},
-    {GNSS_LOCATION_INFO_SV_SOURCE_INFO_BIT, "SV_SOURCE"},
-    {GNSS_LOCATION_INFO_POS_DYNAMICS_DATA_BIT, "POS_DYNAMICS"},
-    {GNSS_LOCATION_INFO_EXT_DOP_BIT, "EXT_DOP"},
-    {GNSS_LOCATION_INFO_NORTH_STD_DEV_BIT, "NORTH_STD_DEV"},
-    {GNSS_LOCATION_INFO_EAST_STD_DEV_BIT, "EAST_STD_DEV"},
-    {GNSS_LOCATION_INFO_EAST_STD_DEV_BIT, "NORTH_VEL"},
-    {GNSS_LOCATION_INFO_EAST_VEL_BIT, "EAST_VEL"},
-    {GNSS_LOCATION_INFO_UP_VEL_BIT, "UP_VEL"},
-    {GNSS_LOCATION_INFO_NORTH_VEL_UNC_BIT, "NORTH_VEL_UNC"},
-    {GNSS_LOCATION_INFO_EAST_VEL_UNC_BIT, "EAST_VEL_UNC"},
-    {GNSS_LOCATION_INFO_UP_VEL_UNC_BIT, "UP_VEL_UNC"},
-    {GNSS_LOCATION_INFO_LEAP_SECONDS_BIT, "LEAP_SECONDS"},
-    {GNSS_LOCATION_INFO_TIME_UNC_BIT, "TIME_UNC"},
-    {GNSS_LOCATION_INFO_NUM_SV_USED_IN_POSITION_BIT, "NUM_SV_USED_IN_FIX"},
-    {GNSS_LOCATION_INFO_CALIBRATION_CONFIDENCE_PERCENT_BIT, "CAL_CONF_PRECENT"},
-    {GNSS_LOCATION_INFO_CALIBRATION_STATUS_BIT, "CAL_STATUS"},
-    {GNSS_LOCATION_INFO_OUTPUT_ENG_TYPE_BIT, "OUTPUT_ENG_TYPE"},
-    {GNSS_LOCATION_INFO_OUTPUT_ENG_MASK_BIT, "OUTPUT_ENG_MASK"},
-    {GNSS_LOCATION_INFO_CONFORMITY_INDEX_BIT, "CONFORMITY_INDEX"}
+// LCAGnssLocationInfoFlagMask
+DECLARE_TBL(LCAGnssLocationInfoFlagMask) = {
+    {LCA_GNSS_LOCATION_INFO_ALTITUDE_MEAN_SEA_LEVEL_BIT, "ALT_SEA_LEVEL"},
+    {LCA_GNSS_LOCATION_INFO_ALTITUDE_MEAN_SEA_LEVEL_BIT, "DOP"},
+    {LCA_GNSS_LOCATION_INFO_MAGNETIC_DEVIATION_BIT, "MAG_DEV"},
+    {LCA_GNSS_LOCATION_INFO_HOR_RELIABILITY_BIT, "HOR_RELIAB"},
+    {LCA_GNSS_LOCATION_INFO_VER_RELIABILITY_BIT, "VER_RELIAB"},
+    {LCA_GNSS_LOCATION_INFO_HOR_ACCURACY_ELIP_SEMI_MAJOR_BIT, "HOR_ACCU_ELIP_SEMI_MAJOR"},
+    {LCA_GNSS_LOCATION_INFO_HOR_ACCURACY_ELIP_SEMI_MINOR_BIT, "HOR_ACCU_ELIP_SEMI_MINOR"},
+    {LCA_GNSS_LOCATION_INFO_HOR_ACCURACY_ELIP_AZIMUTH_BIT, "HOR_ACCU_ELIP_AZIMUTH"},
+    {LCA_GNSS_LOCATION_INFO_GNSS_SV_USED_DATA_BIT, "GNSS_SV_USED"},
+    {LCA_GNSS_LOCATION_INFO_NAV_SOLUTION_MASK_BIT, "NAV_SOLUTION"},
+    {LCA_GNSS_LOCATION_INFO_POS_TECH_MASK_BIT, "POS_TECH"},
+    {LCA_GNSS_LOCATION_INFO_SV_SOURCE_INFO_BIT, "SV_SOURCE"},
+    {LCA_GNSS_LOCATION_INFO_POS_DYNAMICS_DATA_BIT, "POS_DYNAMICS"},
+    {LCA_GNSS_LOCATION_INFO_EXT_DOP_BIT, "EXT_DOP"},
+    {LCA_GNSS_LOCATION_INFO_NORTH_STD_DEV_BIT, "NORTH_STD_DEV"},
+    {LCA_GNSS_LOCATION_INFO_EAST_STD_DEV_BIT, "EAST_STD_DEV"},
+    {LCA_GNSS_LOCATION_INFO_EAST_STD_DEV_BIT, "NORTH_VEL"},
+    {LCA_GNSS_LOCATION_INFO_EAST_VEL_BIT, "EAST_VEL"},
+    {LCA_GNSS_LOCATION_INFO_UP_VEL_BIT, "UP_VEL"},
+    {LCA_GNSS_LOCATION_INFO_NORTH_VEL_UNC_BIT, "NORTH_VEL_UNC"},
+    {LCA_GNSS_LOCATION_INFO_EAST_VEL_UNC_BIT, "EAST_VEL_UNC"},
+    {LCA_GNSS_LOCATION_INFO_UP_VEL_UNC_BIT, "UP_VEL_UNC"},
+    {LCA_GNSS_LOCATION_INFO_LEAP_SECONDS_BIT, "LEAP_SECONDS"},
+    {LCA_GNSS_LOCATION_INFO_TIME_UNC_BIT, "TIME_UNC"},
+    {LCA_GNSS_LOCATION_INFO_NUM_SV_USED_IN_POSITION_BIT, "NUM_SV_USED_IN_FIX"},
+    {LCA_GNSS_LOCATION_INFO_CALIBRATION_CONFIDENCE_PERCENT_BIT, "CAL_CONF_PRECENT"},
+    {LCA_GNSS_LOCATION_INFO_CALIBRATION_STATUS_BIT, "CAL_STATUS"},
+    {LCA_GNSS_LOCATION_INFO_OUTPUT_ENG_TYPE_BIT, "OUTPUT_ENG_TYPE"},
+    {LCA_GNSS_LOCATION_INFO_OUTPUT_ENG_MASK_BIT, "OUTPUT_ENG_MASK"},
+    {LCA_GNSS_LOCATION_INFO_CONFORMITY_INDEX_BIT, "CONFORMITY_INDEX"},
+    {LCA_GNSS_LOCATION_INFO_LLA_VRP_BASED_BIT, "LLA_VRP_BASED"},
+    {LCA_GNSS_LOCATION_INFO_ENU_VELOCITY_VRP_BASED_BIT, "ENU_VELOCITY_VRP_BASED"},
+    {LCA_GNSS_LOCATION_INFO_DR_SOLUTION_STATUS_MASK_BIT, "DR_SOLUTION_STATUS_MASK"},
+    {LCA_GNSS_LOCATION_INFO_ALTITUDE_ASSUMED_BIT, "ALTITUDE_ASSUMED"},
+    {LCA_GNSS_LOCATION_INFO_SESSION_STATUS_BIT, "SESSION_STATUS"},
+    {LCA_GNSS_LOCATION_INFO_INTEGRITY_RISK_USED_BIT, "INTEGRITY_RISK_USED"},
+    {LCA_GNSS_LOCATION_INFO_PROTECT_ALONG_TRACK_BIT, "PROTECT_ALONG_TRACK"},
+    {LCA_GNSS_LOCATION_INFO_PROTECT_CROSS_TRACK_BIT, "PROTECT_CROSS_TRACK"},
+    {LCA_GNSS_LOCATION_INFO_PROTECT_VERTICAL_BIT, "PROTECT_VERTICA"},
+    {LCA_GNSS_LOCATION_INFO_DGNSS_STATION_ID_BIT, "DGNSS_STATION_ID"}
 };
 // LocationReliability
 DECLARE_TBL(LocationReliability) = {
@@ -1262,7 +1320,9 @@ DECLARE_TBL(DrSolutionStatusMask) = {
     {DR_SOLUTION_STATUS_ERROR_GENERIC, "ERROR_GENERIC"},
     {DR_SOLUTION_STATUS_WARNING_SENSOR_TEMP_OUT_OF_RANGE, "WARNING_SENSOR_TEMP_OUT_OF_RANGE"},
     {DR_SOLUTION_STATUS_WARNING_USER_DYNAMICS_INSUFFICIENT, "WARNING_USER_DYNAMICS_INSUFFICIENT"},
-    {DR_SOLUTION_STATUS_WARNING_FACTORY_DATA_INCONSISTENT, "WARNING_FACTORY_DATA_INCONSISTENT"}
+    {DR_SOLUTION_STATUS_WARNING_FACTORY_DATA_INCONSISTENT, "WARNING_FACTORY_DATA_INCONSISTENT"},
+    {DR_SOLUTION_STATUS_WARNING_MMF_UNAVAILABLE, "WARNING_MMF_UNAVAILABLE"},
+    {DR_SOLUTION_STATUS_WARNING_MMF_NOT_USABLE, "MMF_NOT_USABLE"},
 };
 
 DECLARE_TBL(GnssDcReportType) = {
@@ -1411,7 +1471,7 @@ string LLAInfo::toString() const {
 
 string Location::toString() const {
     string out;
-    out.reserve(256);
+    out.reserve(512);
 
     out += FIELDVAL_MASK(flags, LocationFlagsMask_tbl);
     out += FIELDVAL_DEC(timestamp);
@@ -1427,7 +1487,7 @@ string Location::toString() const {
     out += FIELDVAL_MASK(techMask, LocationTechnologyMask_tbl);
     out += FIELDVAL_DEC(elapsedgPTPTime);
     out += FIELDVAL_DEC(elapsedgPTPTimeUnc);
-
+    out += FIELDVAL_MASK(sessionStatus, LocSessionStatus_tbl);
     return out;
 }
 
@@ -1436,7 +1496,7 @@ string GnssLocation::toString() const {
     out.reserve(8096);
 
     out += Location::toString();
-    out += FIELDVAL_MASK(gnssInfoFlags, GnssLocationInfoFlagMask_tbl);
+    out += FIELDVAL_MASK(gnssInfoFlags, LCAGnssLocationInfoFlagMask_tbl);
     out += FIELDVAL_DEC(altitudeMeanSeaLevel);
     out += FIELDVAL_DEC(pdop);
     out += FIELDVAL_DEC(hdop);
@@ -1501,6 +1561,7 @@ string GnssLocation::toString() const {
         out += to_string(dgnssId);
         count++;
     }
+    out += FIELDVAL_DEC(leapSecondsUnc);
     return out;
 }
 
@@ -1532,6 +1593,9 @@ string GnssData::toString() const {
         out += FIELDVAL_DEC(jammerInd[i]);
         out += FIELDVAL_DEC(agc[i]);
     }
+    out += FIELDVAL_DEC(agcStatusL1);
+    out += FIELDVAL_DEC(agcStatusL2);
+    out += FIELDVAL_DEC(agcStatusL5);
 
     return out;
 }
@@ -1604,6 +1668,9 @@ string GnssMeasurements::toString() const {
     }
 
     out += FIELDVAL_DEC(isNhz);
+    out += FIELDVAL_DEC(agcStatusL1);
+    out += FIELDVAL_DEC(agcStatusL2);
+    out += FIELDVAL_DEC(agcStatusL5);
     return out;
 }
 

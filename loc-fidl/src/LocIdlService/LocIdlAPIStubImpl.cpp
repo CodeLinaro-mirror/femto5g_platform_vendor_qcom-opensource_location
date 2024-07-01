@@ -71,7 +71,9 @@ void LocIdlAPIStubImpl::startPositionSession
 {
     std::cout << "==== startPositionSession1 _intervalInMs " << intervalInMs <<\
             "_gnssReportCallbackMask " << gnssReportCallbackMask << std::endl;
-    mApiService->startPositionSession(client, intervalInMs, gnssReportCallbackMask, reply);
+    if (mApiService) {
+        mApiService->startPositionSession(client, intervalInMs, gnssReportCallbackMask, reply);
+    }
 }
 
 void LocIdlAPIStubImpl::startPositionSession
@@ -83,7 +85,9 @@ void LocIdlAPIStubImpl::startPositionSession
 {
     std::cout << "==== startPositionSession2 _intervalInMs " << intervalInMs\
             << " locReqEngMask " << locReqEngMask << std::endl;
-    mApiService->startPositionSession(client, intervalInMs, engReportCallbackMask, reply);
+    if (mApiService) {
+        mApiService->startPositionSession(client, intervalInMs, engReportCallbackMask, reply);
+    }
 }
 
 void LocIdlAPIStubImpl::stopPositionSession
@@ -92,20 +96,32 @@ void LocIdlAPIStubImpl::stopPositionSession
     stopPositionSessionReply_t reply
 )
 {
-    mApiService->stopPositionSession(client, reply);
+    if (mApiService) {
+        mApiService->stopPositionSession(client, reply);
+    }
     reply();
-
 }
 
 void LocIdlAPIStubImpl::deleteAidingData(const std::shared_ptr<CommonAPI::ClientId> client,
     uint32_t aidingDataMask,
     deleteAidingDataReply_t reply) {
-    mApiService->LIAdeleteAidingData(client, aidingDataMask, reply);
+    if (mApiService) {
+        mApiService->LIAdeleteAidingData(client, aidingDataMask, reply);
+    }
 }
 
 /// This is the method that will be called on remote calls on the method configConstellations.
 void LocIdlAPIStubImpl::configConstellations(const std::shared_ptr<CommonAPI::ClientId> client,
     std::vector< LocIdlAPI::IDLGnssSvIdInfo > svList,
     configConstellationsReply_t reply) {
-    mApiService->LIAconfigConstellations(client, svList, reply);
+    // This API is currently not supported.
+    reply(LocIdlAPI::IDLLocationResponse::IDL_LOC_RESP_NOT_SUPPORTED);
+}
+
+void LocIdlAPIStubImpl::injectMapMatchedFeedbackData(
+        const std::shared_ptr<CommonAPI::ClientId> client,
+        LocIdlAPI::MapMatchingFeedbackData mmfData, injectMapMatchedFeedbackDataReply_t reply) {
+    if (mApiService) {
+        mApiService->injectMapMatchedFeedbackData(client, mmfData, reply);
+    }
 }

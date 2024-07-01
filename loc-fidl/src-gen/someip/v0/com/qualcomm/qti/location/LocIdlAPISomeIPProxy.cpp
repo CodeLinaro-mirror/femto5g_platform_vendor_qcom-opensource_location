@@ -35,10 +35,10 @@ std::shared_ptr<CommonAPI::SomeIP::Proxy> createLocIdlAPISomeIPProxy(
 
 void initializeLocIdlAPISomeIPProxy() {
     CommonAPI::SomeIP::AddressTranslator::get()->insert(
-        "local:com.qualcomm.qti.location.LocIdlAPI:v0_1:com.qualcomm.qti.location.LocIdlAPI",
-        0x1234, 0x5678, 0, 1);
+        "local:com.qualcomm.qti.location.LocIdlAPI:v0_2:com.qualcomm.qti.location.LocIdlAPI",
+        0xee00, 0x1, 0, 2);
     CommonAPI::SomeIP::Factory::get()->registerProxyCreateMethod(
-        "com.qualcomm.qti.location.LocIdlAPI:v0_1",
+        "com.qualcomm.qti.location.LocIdlAPI:v0_2",
         &createLocIdlAPISomeIPProxy);
 }
 
@@ -50,14 +50,14 @@ LocIdlAPISomeIPProxy::LocIdlAPISomeIPProxy(
     const CommonAPI::SomeIP::Address &_address,
     const std::shared_ptr<CommonAPI::SomeIP::ProxyConnection> &_connection)
         : CommonAPI::SomeIP::Proxy(_address, _connection),
-          gnssCapabilitiesMask_(*this, CommonAPI::SomeIP::eventgroup_id_t(0x9472), CommonAPI::SomeIP::event_id_t(0x80f2), CommonAPI::SomeIP::method_id_t(0xbb8), true, CommonAPI::SomeIP::reliability_type_e::RT_RELIABLE, false, CommonAPI::SomeIP::method_id_t(0xbb9), true, static_cast< CommonAPI::SomeIP::IntegerDeployment<uint32_t>* >(nullptr)),
-          gnssMeasurements_(*this, 0x9472, CommonAPI::SomeIP::event_id_t(0x9471), CommonAPI::SomeIP::event_type_e::ET_EVENT , CommonAPI::SomeIP::reliability_type_e::RT_UNRELIABLE, false, std::make_tuple(&::v0::com::qualcomm::qti::location::LocIdlAPI_::IDLGnssMeasurementsDeployment)),
-          locationReport_(*this, 0x9472, CommonAPI::SomeIP::event_id_t(0x9475), CommonAPI::SomeIP::event_type_e::ET_EVENT , CommonAPI::SomeIP::reliability_type_e::RT_UNRELIABLE, false, std::make_tuple(&::v0::com::qualcomm::qti::location::LocIdlAPI_::IDLLocationReportDeployment)),
-          engineLocations_(*this, 0x9472, CommonAPI::SomeIP::event_id_t(0x9476), CommonAPI::SomeIP::event_type_e::ET_EVENT , CommonAPI::SomeIP::reliability_type_e::RT_UNRELIABLE, false, std::make_tuple(&::v0::com::qualcomm::qti::location::LocIdlAPI_::EngineLocations_engLocationsDeployment)),
-          gnssSv_(*this, 0x9472, CommonAPI::SomeIP::event_id_t(0x9477), CommonAPI::SomeIP::event_type_e::ET_EVENT , CommonAPI::SomeIP::reliability_type_e::RT_UNRELIABLE, false, std::make_tuple(&::v0::com::qualcomm::qti::location::LocIdlAPI_::GnssSv_gnssSvsDeployment)),
-          gnssNmea_(*this, 0x9472, CommonAPI::SomeIP::event_id_t(0x9478), CommonAPI::SomeIP::event_type_e::ET_EVENT , CommonAPI::SomeIP::reliability_type_e::RT_UNRELIABLE, false, std::make_tuple(static_cast< CommonAPI::SomeIP::IntegerDeployment<uint64_t>* >(nullptr), static_cast< CommonAPI::SomeIP::StringDeployment* >(nullptr))),
-          engineNmea_(*this, 0x9472, CommonAPI::SomeIP::event_id_t(0x9479), CommonAPI::SomeIP::event_type_e::ET_EVENT , CommonAPI::SomeIP::reliability_type_e::RT_UNRELIABLE, false, std::make_tuple(&::v0::com::qualcomm::qti::location::LocIdlAPI_::IDLLocOutputEngineTypeDeployment, static_cast< CommonAPI::SomeIP::IntegerDeployment<uint64_t>* >(nullptr), static_cast< CommonAPI::SomeIP::StringDeployment* >(nullptr))),
-          gnssData_(*this, 0x9472, CommonAPI::SomeIP::event_id_t(0x947a), CommonAPI::SomeIP::event_type_e::ET_EVENT , CommonAPI::SomeIP::reliability_type_e::RT_UNRELIABLE, false, std::make_tuple(static_cast< ::v0::com::qualcomm::qti::location::LocIdlAPI_::IDLGnssDataDeployment_t* >(nullptr)))
+          gnssCapabilitiesMask_(*this, CommonAPI::SomeIP::eventgroup_id_t(0x80e8), CommonAPI::SomeIP::event_id_t(0x80f2), CommonAPI::SomeIP::method_id_t(0xbb8), true, CommonAPI::SomeIP::reliability_type_e::RT_RELIABLE, false, CommonAPI::SomeIP::method_id_t(0xbb9), true, static_cast< CommonAPI::SomeIP::IntegerDeployment<uint32_t>* >(nullptr)),
+          gnssMeasurements_(*this, 0x80e8, CommonAPI::SomeIP::event_id_t(0x80e9), CommonAPI::SomeIP::event_type_e::ET_EVENT , CommonAPI::SomeIP::reliability_type_e::RT_UNRELIABLE, false, std::make_tuple(&::v0::com::qualcomm::qti::location::LocIdlAPI_::IDLGnssMeasurementsDeployment)),
+          locationReport_(*this, 0x80e8, CommonAPI::SomeIP::event_id_t(0x80ea), CommonAPI::SomeIP::event_type_e::ET_EVENT , CommonAPI::SomeIP::reliability_type_e::RT_UNRELIABLE, false, std::make_tuple(&::v0::com::qualcomm::qti::location::LocIdlAPI_::IDLLocationReportDeployment)),
+          engineLocations_(*this, 0x80e8, CommonAPI::SomeIP::event_id_t(0x80eb), CommonAPI::SomeIP::event_type_e::ET_EVENT , CommonAPI::SomeIP::reliability_type_e::RT_UNRELIABLE, false, std::make_tuple(&::v0::com::qualcomm::qti::location::LocIdlAPI_::EngineLocations_engLocationsDeployment)),
+          gnssSv_(*this, 0x80e8, CommonAPI::SomeIP::event_id_t(0x80ec), CommonAPI::SomeIP::event_type_e::ET_EVENT , CommonAPI::SomeIP::reliability_type_e::RT_UNRELIABLE, false, std::make_tuple(&::v0::com::qualcomm::qti::location::LocIdlAPI_::GnssSv_gnssSvsDeployment)),
+          gnssNmea_(*this, 0x80e8, CommonAPI::SomeIP::event_id_t(0x80ed), CommonAPI::SomeIP::event_type_e::ET_EVENT , CommonAPI::SomeIP::reliability_type_e::RT_UNRELIABLE, false, std::make_tuple(static_cast< CommonAPI::SomeIP::IntegerDeployment<uint64_t>* >(nullptr), static_cast< CommonAPI::SomeIP::StringDeployment* >(nullptr))),
+          engineNmea_(*this, 0x80e8, CommonAPI::SomeIP::event_id_t(0x80ee), CommonAPI::SomeIP::event_type_e::ET_EVENT , CommonAPI::SomeIP::reliability_type_e::RT_UNRELIABLE, false, std::make_tuple(&::v0::com::qualcomm::qti::location::LocIdlAPI_::IDLLocOutputEngineTypeDeployment, static_cast< CommonAPI::SomeIP::IntegerDeployment<uint64_t>* >(nullptr), static_cast< CommonAPI::SomeIP::StringDeployment* >(nullptr))),
+          gnssData_(*this, 0x80e8, CommonAPI::SomeIP::event_id_t(0x80ef), CommonAPI::SomeIP::event_type_e::ET_EVENT , CommonAPI::SomeIP::reliability_type_e::RT_UNRELIABLE, false, std::make_tuple(static_cast< ::v0::com::qualcomm::qti::location::LocIdlAPI_::IDLGnssDataDeployment_t* >(nullptr)))
 {
 }
 
@@ -114,7 +114,7 @@ void LocIdlAPISomeIPProxy::startPositionSession(uint32_t _intervalInMs, uint32_t
         >
     >::callMethodWithReply(
         *this,
-        CommonAPI::SomeIP::method_id_t(0x7532),
+        CommonAPI::SomeIP::method_id_t(0x7d01),
         true,
         false,
         (_info ? _info : &CommonAPI::SomeIP::defaultCallInfo),
@@ -147,7 +147,7 @@ std::future<CommonAPI::CallStatus> LocIdlAPISomeIPProxy::startPositionSessionAsy
         >
     >::callMethodAsync(
         *this,
-        CommonAPI::SomeIP::method_id_t(0x7532),
+        CommonAPI::SomeIP::method_id_t(0x7d01),
         true,
         false,
         (_info ? _info : &CommonAPI::SomeIP::defaultCallInfo),
@@ -187,7 +187,7 @@ void LocIdlAPISomeIPProxy::startPositionSession(uint32_t _intervalInMs, uint32_t
         >
     >::callMethodWithReply(
         *this,
-        CommonAPI::SomeIP::method_id_t(0x7533),
+        CommonAPI::SomeIP::method_id_t(0x7d02),
         true,
         false,
         (_info ? _info : &CommonAPI::SomeIP::defaultCallInfo),
@@ -225,7 +225,7 @@ std::future<CommonAPI::CallStatus> LocIdlAPISomeIPProxy::startPositionSessionAsy
         >
     >::callMethodAsync(
         *this,
-        CommonAPI::SomeIP::method_id_t(0x7533),
+        CommonAPI::SomeIP::method_id_t(0x7d02),
         true,
         false,
         (_info ? _info : &CommonAPI::SomeIP::defaultCallInfo),
@@ -245,7 +245,7 @@ void LocIdlAPISomeIPProxy::stopPositionSession(CommonAPI::CallStatus &_internalC
         >
     >::callMethodWithReply(
         *this,
-        CommonAPI::SomeIP::method_id_t(0x7534),
+        CommonAPI::SomeIP::method_id_t(0x7d03),
         false,
         false,
         (_info ? _info : &CommonAPI::SomeIP::defaultCallInfo),
@@ -260,7 +260,7 @@ std::future<CommonAPI::CallStatus> LocIdlAPISomeIPProxy::stopPositionSessionAsyn
         >
     >::callMethodAsync(
         *this,
-        CommonAPI::SomeIP::method_id_t(0x7534),
+        CommonAPI::SomeIP::method_id_t(0x7d03),
         false,
         false,
         (_info ? _info : &CommonAPI::SomeIP::defaultCallInfo),
@@ -289,7 +289,7 @@ void LocIdlAPISomeIPProxy::deleteAidingData(uint32_t _aidingDataMask, CommonAPI:
         >
     >::callMethodWithReply(
         *this,
-        CommonAPI::SomeIP::method_id_t(0x7531),
+        CommonAPI::SomeIP::method_id_t(0x7d04),
         true,
         false,
         (_info ? _info : &CommonAPI::SomeIP::defaultCallInfo),
@@ -317,7 +317,7 @@ std::future<CommonAPI::CallStatus> LocIdlAPISomeIPProxy::deleteAidingDataAsync(c
         >
     >::callMethodAsync(
         *this,
-        CommonAPI::SomeIP::method_id_t(0x7531),
+        CommonAPI::SomeIP::method_id_t(0x7d04),
         true,
         false,
         (_info ? _info : &CommonAPI::SomeIP::defaultCallInfo),
@@ -347,7 +347,7 @@ void LocIdlAPISomeIPProxy::configConstellations(std::vector< LocIdlAPI::IDLGnssS
         >
     >::callMethodWithReply(
         *this,
-        CommonAPI::SomeIP::method_id_t(0x7535),
+        CommonAPI::SomeIP::method_id_t(0x7d05),
         true,
         false,
         (_info ? _info : &CommonAPI::SomeIP::defaultCallInfo),
@@ -375,7 +375,7 @@ std::future<CommonAPI::CallStatus> LocIdlAPISomeIPProxy::configConstellationsAsy
         >
     >::callMethodAsync(
         *this,
-        CommonAPI::SomeIP::method_id_t(0x7535),
+        CommonAPI::SomeIP::method_id_t(0x7d05),
         true,
         false,
         (_info ? _info : &CommonAPI::SomeIP::defaultCallInfo),
@@ -387,9 +387,67 @@ std::future<CommonAPI::CallStatus> LocIdlAPISomeIPProxy::configConstellationsAsy
         std::make_tuple(deploy_resp));
 }
 
+void LocIdlAPISomeIPProxy::injectMapMatchedFeedbackData(LocIdlAPI::MapMatchingFeedbackData _mmfData, CommonAPI::CallStatus &_internalCallStatus, LocIdlAPI::IDLLocationResponse &_resp, const CommonAPI::CallInfo *_info) {
+    CommonAPI::Deployable< LocIdlAPI::MapMatchingFeedbackData, ::v0::com::qualcomm::qti::location::LocIdlAPI_::MapMatchingFeedbackDataDeployment_t> deploy_mmfData(_mmfData, static_cast< ::v0::com::qualcomm::qti::location::LocIdlAPI_::MapMatchingFeedbackDataDeployment_t* >(nullptr));
+    CommonAPI::Deployable< LocIdlAPI::IDLLocationResponse, ::v0::com::qualcomm::qti::location::LocIdlAPI_::IDLLocationResponseDeployment_t> deploy_resp(&::v0::com::qualcomm::qti::location::LocIdlAPI_::IDLLocationResponseDeployment);
+    CommonAPI::SomeIP::ProxyHelper<
+        CommonAPI::SomeIP::SerializableArguments<
+            CommonAPI::Deployable<
+                LocIdlAPI::MapMatchingFeedbackData,
+                ::v0::com::qualcomm::qti::location::LocIdlAPI_::MapMatchingFeedbackDataDeployment_t
+            >
+        >,
+        CommonAPI::SomeIP::SerializableArguments<
+            CommonAPI::Deployable<
+                LocIdlAPI::IDLLocationResponse,
+                ::v0::com::qualcomm::qti::location::LocIdlAPI_::IDLLocationResponseDeployment_t
+            >
+        >
+    >::callMethodWithReply(
+        *this,
+        CommonAPI::SomeIP::method_id_t(0x7d06),
+        true,
+        false,
+        (_info ? _info : &CommonAPI::SomeIP::defaultCallInfo),
+        deploy_mmfData,
+        _internalCallStatus,
+        deploy_resp);
+    _resp = deploy_resp.getValue();
+}
+
+std::future<CommonAPI::CallStatus> LocIdlAPISomeIPProxy::injectMapMatchedFeedbackDataAsync(const LocIdlAPI::MapMatchingFeedbackData &_mmfData, InjectMapMatchedFeedbackDataAsyncCallback _callback, const CommonAPI::CallInfo *_info) {
+    CommonAPI::Deployable< LocIdlAPI::MapMatchingFeedbackData, ::v0::com::qualcomm::qti::location::LocIdlAPI_::MapMatchingFeedbackDataDeployment_t> deploy_mmfData(_mmfData, static_cast< ::v0::com::qualcomm::qti::location::LocIdlAPI_::MapMatchingFeedbackDataDeployment_t* >(nullptr));
+    CommonAPI::Deployable< LocIdlAPI::IDLLocationResponse, ::v0::com::qualcomm::qti::location::LocIdlAPI_::IDLLocationResponseDeployment_t> deploy_resp(&::v0::com::qualcomm::qti::location::LocIdlAPI_::IDLLocationResponseDeployment);
+    return CommonAPI::SomeIP::ProxyHelper<
+        CommonAPI::SomeIP::SerializableArguments<
+            CommonAPI::Deployable<
+                LocIdlAPI::MapMatchingFeedbackData,
+                ::v0::com::qualcomm::qti::location::LocIdlAPI_::MapMatchingFeedbackDataDeployment_t
+            >
+        >,
+        CommonAPI::SomeIP::SerializableArguments<
+            CommonAPI::Deployable<
+                LocIdlAPI::IDLLocationResponse,
+                ::v0::com::qualcomm::qti::location::LocIdlAPI_::IDLLocationResponseDeployment_t
+            >
+        >
+    >::callMethodAsync(
+        *this,
+        CommonAPI::SomeIP::method_id_t(0x7d06),
+        true,
+        false,
+        (_info ? _info : &CommonAPI::SomeIP::defaultCallInfo),
+        deploy_mmfData,
+        [_callback] (CommonAPI::CallStatus _internalCallStatus, CommonAPI::Deployable< LocIdlAPI::IDLLocationResponse, ::v0::com::qualcomm::qti::location::LocIdlAPI_::IDLLocationResponseDeployment_t > _resp) {
+            if (_callback)
+                _callback(_internalCallStatus, _resp.getValue());
+        },
+        std::make_tuple(deploy_resp));
+}
+
 void LocIdlAPISomeIPProxy::getOwnVersion(uint16_t& ownVersionMajor, uint16_t& ownVersionMinor) const {
     ownVersionMajor = 0;
-    ownVersionMinor = 1;
+    ownVersionMinor = 2;
 }
 
 std::future<void> LocIdlAPISomeIPProxy::getCompletionFuture() {

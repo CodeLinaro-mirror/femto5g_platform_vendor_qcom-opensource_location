@@ -338,6 +338,7 @@ enum ELocMsgID {
     E_INTAPI_CONFIG_XTRA_PARAMS_MSG_ID = 215,
     E_INTAPI_CONFIG_MERKLE_TREE_MSG_ID = 216,
     E_INTAPI_CONFIG_OSNMA_ENABLEMENT_MSG_ID = 217,
+    E_INTAPI_CONFIG_MAP_MATCHED_FEEDBACK_MSG_ID = 218,
 
     // integration API config retrieval request/response
     E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID  = 300,
@@ -1460,6 +1461,21 @@ struct LocConfigOsnmaEnablementReqMsg: LocAPIMsgHeader {
 
     LocConfigOsnmaEnablementReqMsg(const char* name,
             const PBLocConfigOsnmaEnablementReqMsg &pbConfigOsnmaEnablementMsg,
+            const LocationApiPbMsgConv *pbMsgConv);
+
+    int serializeToProtobuf(string& protoStr) override;
+};
+
+struct LocInjectMmfDataReqMsg: LocAPIMsgHeader
+{
+    GnssMapMatchedData gnssMapData;
+
+    inline LocInjectMmfDataReqMsg(const char* name, GnssMapMatchedData mapData,
+            const LocationApiPbMsgConv *pbMsgConv) :
+        LocAPIMsgHeader(name, E_INTAPI_CONFIG_MAP_MATCHED_FEEDBACK_MSG_ID, pbMsgConv),
+        gnssMapData(mapData) { }
+    LocInjectMmfDataReqMsg(const char* name,
+            const PBLocInjectMmfDataReqMsg &pbInjectMmfDataReqMsg,
             const LocationApiPbMsgConv *pbMsgConv);
 
     int serializeToProtobuf(string& protoStr) override;
