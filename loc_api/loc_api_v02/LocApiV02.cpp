@@ -3527,6 +3527,17 @@ void LocApiV02 :: reportPosition (
             LOC_LOGv("no dgnss station id");
         }
 
+        if (location_report_ptr->payload_valid) {
+            locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_EXTENDED_DATA;
+            locationExtended.extendedDataLen = location_report_ptr->payload_len;
+            if (locationExtended.extendedDataLen <= sizeof(locationExtended.extendedData)) {
+                memcpy(locationExtended.extendedData,
+                        location_report_ptr->payload,
+                        location_report_ptr->payload_len);
+            }
+
+        }
+
         LOC_LOGv("report position mask: 0x%" PRIx64 ", dgnss info: 0x%x %d %d %d %d,",
                  locationExtended.flags,
                  locationExtended.dgnssConstellationUsage,

@@ -2472,6 +2472,9 @@ uint64_t LocationApiPbMsgConv::getGnssLocationInfoFlagMaskFromPB(
     if (pbGnssLocInfoExtFlagMask & PB_GNSS_LOCATION_INFO_AGE_OF_CORRECTION_BIT) {
         gnssLocInfoFlagMask |= GNSS_LOCATION_INFO_AGE_OF_CORRECTION_BIT;
     }
+    if (pbGnssLocInfoExtFlagMask & PB_GNSS_LOCATION_INFO_EXTENDED_DATA_BIT) {
+        gnssLocInfoFlagMask |= GNSS_LOCATION_INFO_EXTENDED_DATA_BIT;
+    }
     LocApiPb_LOGv("LocApiPB: pbGnssLocInfoFlagMask:%x, gnssLocInfoFlagMask:%x",
             pbGnssLocInfoFlagMask, gnssLocInfoFlagMask);
     return gnssLocInfoFlagMask;
@@ -3247,6 +3250,9 @@ uint32_t LocationApiPbMsgConv::getPBMaskForGnssLocationInfoExtFlagMask(
     if (gnssLocInfoFlagMask & GNSS_LOCATION_INFO_AGE_OF_CORRECTION_BIT) {
         pbGnssLocInfoFlagMask |= PB_GNSS_LOCATION_INFO_AGE_OF_CORRECTION_BIT;
     }
+    if (gnssLocInfoFlagMask & GNSS_LOCATION_INFO_EXTENDED_DATA_BIT) {
+        pbGnssLocInfoFlagMask |= PB_GNSS_LOCATION_INFO_EXTENDED_DATA_BIT;
+    }
     return pbGnssLocInfoFlagMask;
 }
 
@@ -3467,9 +3473,12 @@ int LocationApiPbMsgConv::convertGnssLocInfoNotifToPB(
 
    // uint64 ageOfCorrections = 49;
     pbGnssLocInfoNotif->set_agemsecofcorrections(gnssLocInfoNotif.ageMsecOfCorrections);
-
-    LocApiPb_LOGd("LocApiPB: gnssLocInfoNotif - GLocInfoFlgMask:%" PRIu64 " "
-                  "pdop:%f, hdop:%f, vdop:%f ",
+    // bytes gnssExtendedData= 52;
+    if (GNSS_LOCATION_INFO_EXTENDED_DATA_BIT & gnssLocInfoNotif.flags) {
+        pbGnssLocInfoNotif->set_gnssextendeddata(gnssLocInfoNotif.extendedData,
+                gnssLocInfoNotif.extendedDataLen);
+    }
+    LocApiPb_LOGd("LocApiPB: gnssLocInfoNotif - GLocInfoFlgMask:%u, pdop:%f, hdop:%f, vdop:%f",
             gnssLocInfoNotif.flags, gnssLocInfoNotif.pdop, gnssLocInfoNotif.hdop,
             gnssLocInfoNotif.vdop);
     LocApiPb_LOGd("LocApiPB: gnssLocInfoNotif - HorReliab:%d, VerReliab:%d, HorUnc-SemiMajor:%f "
@@ -4569,6 +4578,19 @@ int LocationApiPbMsgConv::pbConvertToGnssLocInfoNotif(
 
     //  uint64 ageOfCorrections = 49;
     gnssLocInfoNotif.ageMsecOfCorrections = pbGnssLocInfoNotif.agemsecofcorrections();
+    // bytes gnssExtendedData = 52;
+    if (GNSS_LOCATION_INFO_EXTENDED_DATA_BIT & gnssLocInfoNotif.flags) {
+        const std::string& extendedDataStr = pbGnssLocInfoNotif.gnssextendeddata();
+        gnssLocInfoNotif.extendedDataLen = extendedDataStr.length();
+        if (gnssLocInfoNotif.extendedDataLen > 0 &&
+                (gnssLocInfoNotif.extendedDataLen <= sizeof(gnssLocInfoNotif.extendedData))) {
+            memcpy(gnssLocInfoNotif.extendedData, extendedDataStr.c_str(), extendedDataStr.length());
+        } else {
+            LOC_LOGw("received incorrect payload for oemDreData %d", extendedDataStr.length());
+        }
+    }
+
+
     LOC_LOGd("LocApiPB: pbGnssLocInfoNotif -GLocInfoFlgMask:%u, pdop:%f, hdop:%f, vdop:%f",
             gnssLocInfoNotif.flags, gnssLocInfoNotif.pdop, gnssLocInfoNotif.hdop,
             gnssLocInfoNotif.vdop);

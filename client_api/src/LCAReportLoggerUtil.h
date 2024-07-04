@@ -81,6 +81,7 @@ public:
     typedef void (*LogGnssNmea)(uint64_t timestamp, uint32_t length, const char* nmea);
     typedef void (*LogGnssMeas)(const GnssMeasurements& gnssMeasurements);
     typedef void (*LogGnssEphemeris)(const GnssEphemeris& ephInfo);
+    typedef void (*LogGnssExtendedDataInfo)(uint8_t type, const std::vector<uint8_t> &gnssExtendedDataVector);
 
     LCAReportLoggerUtil();
     void log(const GnssLocation& gnssLocation, const LocationCapabilitiesMask& capMask);
@@ -88,6 +89,7 @@ public:
     void log(uint64_t timestamp, uint32_t length, const char* nmea);
     void log(const GnssMeasurements& gnssMeasurements);
     void log(const GnssEphemeris& ephInfo);
+    void log(uint8_t type, const std::vector<uint8_t> &gnssExtendedDataVector);
 
 private:
     LogGnssLocation mLogLocation;
@@ -95,6 +97,7 @@ private:
     LogGnssNmea mLogNmea;
     LogGnssMeas mLogMeas;
     LogGnssEphemeris mLogEph;
+    LogGnssExtendedDataInfo mLogOemDREInfo;
 };
 
 
