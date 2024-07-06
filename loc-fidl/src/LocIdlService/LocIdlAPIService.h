@@ -146,6 +146,13 @@ public:
     ) const;
 
     void onPowerEvent(IDLPowerStateType powerEvent);
+    void injectMapMatchedFeedbackData
+    (
+        const std::shared_ptr<CommonAPI::ClientId> client,
+        LocIdlAPI::MapMatchingFeedbackData& mapData,
+        LocIdlAPIStub::injectMapMatchedFeedbackDataReply_t reply
+    ) const;
+
 
     /** To start a new thread to monito memory
      *  usahe every 2second  by LocIDlService  */

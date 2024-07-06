@@ -30,7 +30,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -76,7 +76,6 @@ DECLARE_TBL(loc_v02_event_name) =
     NAME_VAL(QMI_LOC_STOP_REQ_V02),
     NAME_VAL(QMI_LOC_EVENT_POSITION_REPORT_IND_V02),
     NAME_VAL(QMI_LOC_EVENT_GNSS_SV_INFO_IND_V02),
-    NAME_VAL(QMI_LOC_EVENT_NMEA_IND_V02),
     NAME_VAL(QMI_LOC_EVENT_NI_NOTIFY_VERIFY_REQ_IND_V02),
     NAME_VAL(QMI_LOC_EVENT_INJECT_TIME_REQ_IND_V02),
     NAME_VAL(QMI_LOC_EVENT_INJECT_PREDICTED_ORBITS_REQ_IND_V02),
@@ -100,8 +99,6 @@ DECLARE_TBL(loc_v02_event_name) =
     NAME_VAL(QMI_LOC_GET_ENGINE_LOCK_REQ_V02),
     NAME_VAL(QMI_LOC_SET_SBAS_CONFIG_REQ_V02),
     NAME_VAL(QMI_LOC_GET_SBAS_CONFIG_REQ_V02),
-    NAME_VAL(QMI_LOC_SET_NMEA_TYPES_REQ_V02),
-    NAME_VAL(QMI_LOC_GET_NMEA_TYPES_REQ_V02),
     NAME_VAL(QMI_LOC_SET_LOW_POWER_MODE_REQ_V02),
     NAME_VAL(QMI_LOC_GET_LOW_POWER_MODE_REQ_V02),
     NAME_VAL(QMI_LOC_REGISTER_MASTER_CLIENT_REQ_V02),
@@ -294,6 +291,12 @@ DECLARE_TBL(loc_v02_event_name) =
     NAME_VAL(QMI_LOC_SET_OSNMA_STATE_REQ_V02),
     NAME_VAL(QMI_LOC_SET_OSNMA_STATE_RESP_V02),
     NAME_VAL(QMI_LOC_SET_OSNMA_STATE_IND_V02),
+    NAME_VAL(QMI_LOC_SET_NTN_STATUS_REQ_V02),
+    NAME_VAL(QMI_LOC_SET_NTN_STATUS_RESP_V02),
+    NAME_VAL(QMI_LOC_SET_NTN_STATUS_IND_V02),
+    NAME_VAL(QMI_LOC_GET_NTN_STATUS_REQ_V02),
+    NAME_VAL(QMI_LOC_GET_NTN_STATUS_RESP_V02),
+    NAME_VAL(QMI_LOC_GET_NTN_STATUS_IND_V02),
 };
 
 const char* loc_get_v02_event_name(uint32_t event)

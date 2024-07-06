@@ -242,8 +242,6 @@ private:
 
   GnssMeasurements*  mGnssMeasurements;
   bool mPreferredSignalTypeReceived;
-  int  mMsInWeek;
-  bool mAgcIsPresent;
   timeBiases mTimeBiases;
   std::unordered_map<uint16_t, GnssSvPolynomial> mSvPolynomialMap;
   qmiLocPlatformPowerStateEnumT_v02 mPlatformPowerState;
@@ -294,7 +292,7 @@ private:
       uint8_t gloFrequency);
 
   /*convert GnssMeasurement type from QMI LOC to loc eng format*/
-  bool convertGnssMeasurements (
+  void convertGnssMeasurements (
       const qmiLocEventGnssSvMeasInfoIndMsgT_v02& gnss_measurement_report_ptr,
       int index, bool isExt, bool validDgnssSvMeas, bool validMlInference);
 
@@ -314,7 +312,7 @@ private:
       const qmiLocEventGnssSvMeasInfoIndMsgT_v02& gnss_measurement_info);
 
   /*convert LocGnssClock type from QMI LOC to loc eng format*/
-  int convertGnssClock (GnssMeasurementsClock& clock,
+  void convertGnssClock (GnssMeasurementsClock& clock,
       const qmiLocEventGnssSvMeasInfoIndMsgT_v02& gnss_measurement_info);
 
   /* convert dgnss constellation mask from QMI loc to loc eng format */
@@ -385,10 +383,6 @@ private:
   void reportFixSessionState (
     const qmiLocEventFixSessionStateIndMsgT_v02 *fix_session_state_ptr);
 
-  /* convert NMEA report to loc eng format and send the converted
-     report to loc eng */
-  void reportNmea (const qmiLocEventNmeaIndMsgT_v02 *nmea_report_ptr);
-
   /* convert and report an ATL request to loc engine */
   void reportAtlRequest(
     const qmiLocEventLocationServerConnectionReqIndMsgT_v02
@@ -419,11 +413,9 @@ private:
       }
       memset(&mTimeBiases, 0, sizeof(mTimeBiases));
       mPreferredSignalTypeReceived = false;
-      mMsInWeek = -1;
-      mAgcIsPresent = false;
   }
 
-  bool convertJammerIndicator(
+  void convertJammerIndicator(
         const qmiLocEventGnssSvMeasInfoIndMsgT_v02& gnss_measurement_report_ptr,
         double& agcLevelDb,
         GnssMeasurementsDataFlagsMask& flags,
@@ -596,9 +588,6 @@ public:
                    LocAGpsType agpsType, LocApnTypeMask mask);
   virtual void atlCloseStatus(int handle, int is_succ);
   virtual LocationError setSUPLVersionSync(GnssConfigSuplVersion version);
-
-  virtual enum loc_api_adapter_err setNMEATypesSync(uint32_t typesMask);
-
   virtual LocationError setLPPConfigSync(GnssConfigLppProfileMask profileMask);
 
 
@@ -690,6 +679,11 @@ public:
           LocApiResponse* adapterResponse=nullptr);
 
   virtual void configOsnmaEnablement(bool enable, LocApiResponse* adapterResponse=nullptr);
+
+  virtual void getNtnConfigSignalMask(LocApiResponse* adapterResponse = nullptr);
+
+  virtual void setNtnConfigSignalMask(GnssSignalTypeMask gpsSignalTypeConfigMask,
+          LocApiResponse* adapterResponse = nullptr);
 
   virtual void getConstellationMultiBandConfig(uint32_t sessionId,
                                       LocApiResponse* adapterResponse=nullptr);

@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2021, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2021 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -182,7 +182,6 @@ typedef enum
   - GetEngineLock
   - GetSbasConfigReq
   - GetRegisteredEvents
-  - GetNmeaTypes
   - GetLowPowerMode
   - GetXtraTSessionControl
   - GetRegisteredEvents
@@ -218,7 +217,7 @@ typedef union
    /**< Starts a positioning session.
 
         The client receives the following indications: position report,
-        satellite report, fix session report, and NMEA report (if applicable).
+        satellite report, fix session report, and other report (if applicable).
 
         To send this request, set the reqId field in locClientSendReq() to
         QMI_LOC_START_REQ_V02. */
@@ -302,16 +301,6 @@ typedef union
 
         To send this request, set the reqId field in locClientSendReq() to
         QMI_LOC_SET_SBAS_CONFIG_REQ_V02 . */
-
-   const qmiLocSetNmeaTypesReqMsgT_v02* pSetNmeaTypesReq;
-   /**< Sets the NMEA types configuration.
-
-        If the request is accepted by the service, the client receives the
-        following indication containing a response:
-        QMI_LOC_SET_NMEA_TYPES_IND_V02.
-
-        To send this request, set the reqId field in locClientSendReq() to
-        QMI_LOC_SET_NMEA_TYPES_REQ_V02. */
 
    const qmiLocSetLowPowerModeReqMsgT_v02* pSetLowPowerModeReq;
    /**< Sets the Low Power mode configuration.
@@ -877,6 +866,9 @@ typedef union
     const qmiLocSetOsnmaStateReqMsgT_v02
             *pOsnmaEnablementReq;
     /*QMI_LOC_OSNMA_ENABLEMENT_REQ_V02*/
+    const qmiLocSetNtnStatusReqMsgT_v02
+            *pSetNtnStatusReq;
+    /*QMI_LOC_SET_NTN_STATUS_REQ_V02*/
 }locClientReqUnionType;
 
 
@@ -905,15 +897,6 @@ typedef union
 
         The eventIndId field in the event indication callback is set to
         QMI_LOC_EVENT_GNSS_INFO_IND_V02. */
-
-   const qmiLocEventNmeaIndMsgT_v02* pNmeaReportEvent;
-   /**< Contains an NMEA report sentence.
-
-        The entire NMEA report consisting of multiple sentences is sent at a
-        1 Hz rate. This event is generated after QMI_LOC_START_REQ_V02 is sent.
-
-        The eventIndId field in the event indication callback is set to
-        QMI_LOC_EVENT_NMEA_IND_V02. */
 
    const qmiLocEventNiNotifyVerifyReqIndMsgT_v02* pNiNotifyVerifyReqEvent;
    /**< Notifies a location client when the network triggers a positioning
@@ -1229,6 +1212,9 @@ typedef union
    const qmiLocGnssBandsSupportedIndMsgT_v02* pGnssBandsSupportedIndMsg;
    /** Sent by the engine to inform the supported bands and the preferred one
     QMI_LOC_GNSS_BANDS_SUPPORTED_IND_V02 */
+   const qmiLocNtnConfigUpdateIndMsgT_v02* pNtnConfigUpdateIndMsg;
+   /** Sent by the engine to inform the NTN config upodate event
+    QMI_LOC_NTN_CONFIG_UPDATE_IND_V02 */
 }locClientEventIndUnionType;
 
 
@@ -1316,18 +1302,6 @@ typedef union
 
         The respIndId field in the response indication callback is set to
         QMI_LOC_GET_SBAS_CONFIG_IND_V02. */
-
-   const qmiLocSetNmeaTypesIndMsgT_v02* pSetNmeaTypesInd;
-   /**< Response to the QMI_LOC_SET_NMEA_TYPES_REQ_V02 request.
-
-        The respIndId field in the response indication callback is set to
-        QMI_LOC_SET_NMEA_TYPES_IND_V02. */
-
-   const qmiLocGetNmeaTypesIndMsgT_v02* pGetNmeaTypesInd;
-   /**< Response to the QMI_LOC_GET_NMEA_TYPES_REQ_V02 request.
-
-        The respIndId field in the response indication callback is set to
-        QMI_LOC_GET_NMEA_TYPES_IND_V02. */
 
    const qmiLocSetLowPowerModeIndMsgT_v02* pSetLowPowerModeInd;
    /**< Response to the QMI_LOC_SET_LOW_POWER_MODE_REQ_V02 request.
@@ -1719,6 +1693,10 @@ typedef union
     const qmiLocInjectPlatformPowerStateIndMsgT_v02 *pInjectPlatformPowerStateInd;
     /* QMI_LOC_INJECT_PLATFORM_POWER_STATE_IND_V02 */
 
+    const qmiLocSetNtnStatusIndMsgT_v02 *pSetNtnStatusInd;
+    /* QMI_LOC_SET_NTN_STATUS_IND_V02 */
+    const qmiLocGetNtnStatusIndMsgT_v02 *pGetNtnStatusInd;
+    /* QMI_LOC_GET_NTN_STATUS_IND_V02 */
 }locClientRespIndUnionType;
 
 /** @} */ /* end_addtogroup data_types */
