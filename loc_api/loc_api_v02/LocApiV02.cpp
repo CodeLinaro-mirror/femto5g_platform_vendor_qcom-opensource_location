@@ -5509,6 +5509,8 @@ void LocApiV02::reportGnssMeasurementData(
         m1HzMeasurementsInfo.clock.flags = measInfo.clock.flags;
         m1HzMeasurementsInfo.clock.timeNs = measInfo.clock.timeNs;
         m1HzMeasurementsInfo.clock.fullBiasNs = measInfo.clock.fullBiasNs;
+        // Clear previous measurement data.
+        m1HzMeasurementsInfo.measurements.clear();
         for (int meas = 0; (meas < measInfo.count) && (meas < GNSS_MEASUREMENTS_MAX); meas++) {
             GnssBasicMeasurementsData measurement = {};
             measurement.svId = measInfo.measurements[meas].svId;
