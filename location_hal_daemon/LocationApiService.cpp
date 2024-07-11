@@ -627,11 +627,15 @@ void LocationApiService::processClientMsg(const char* data, uint32_t length) {
         }
 
         case E_INTAPI_CONFIG_ENGINE_INTEGRITY_RISK_MSG_ID : {
-            if (sizeof(LocConfigEngineIntegrityRiskReqMsg) != length) {
-                LOC_LOGe("invalid LocConfigEngineIntegrityRiskReqMsg");
-                break;
+            PBLocConfigEngineIntegrityRiskReqMsg pbLocConfEngineIntegrityRisk;
+            if (0 == pbLocConfEngineIntegrityRisk.ParseFromString(pbLocApiMsg.payload())) {
+                LOC_LOGe("Failed to parse pbLocConfEngineIntegrityRisk from payload!!");
+                return;
             }
-            configEngineIntegrityRisk(reinterpret_cast<LocConfigEngineIntegrityRiskReqMsg*>(pMsg));
+            LocConfigEngineIntegrityRiskReqMsg msg(sockName.c_str(),
+                                                   pbLocConfEngineIntegrityRisk,
+                                                   &mPbufMsgConv);
+            configEngineIntegrityRisk(reinterpret_cast<LocConfigEngineIntegrityRiskReqMsg*>(&msg));
             break;
         }
 
@@ -658,6 +662,10 @@ void LocationApiService::processClientMsg(const char* data, uint32_t length) {
 
         default: {
             LOC_LOGe("Unknown message with id: %d ", eLocMsgid);
+            LocHalDaemonClientHandler* pClient = getClient(sockName);
+            if (pClient) {
+                pClient->onControlResponseCb(LOCATION_ERROR_NOT_SUPPORTED, eLocMsgid);
+            }
             break;
         }
     }

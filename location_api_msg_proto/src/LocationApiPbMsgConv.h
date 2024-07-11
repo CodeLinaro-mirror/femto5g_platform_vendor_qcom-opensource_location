@@ -615,6 +615,10 @@ public:
         GnssSvEphemerisReport &gnssEphNotif) const;
     int convertGnssEphNotifToPB(const GnssSvEphemerisReport &gnssEphNotif,
         PBGnssEphemerisNotification* pbGnssEphNotif) const;
+    // PositioningEngineMask to/from PB PositioningEngineMask
+    uint32_t getPBMaskForPositioningEngineMask(const uint32_t &posEngMask) const;
+    uint32_t getEnumForPBPositioningEngineMask(const uint32_t &pbPosEngMask) const;
+
 private:
     bool mPbDebugLogEnabled;
     bool mPbVerboseLogEnabled;
@@ -706,8 +710,6 @@ private:
             PBNavicEphemerisResponse*  pbEphResp) const;
 
     // **** helper function for mask conversion to protobuf masks
-    // PositioningEngineMask to PBLocApiPositioningEngineMask
-    uint32_t getPBMaskForPositioningEngineMask(const uint32_t &posEngMask) const;
     // LeverArmTypeMask to PBLIALeverArmTypeMask
     uint32_t getPBMaskForLeverArmTypeMask(const uint32_t &leverArmTypeMask) const;
     // LocReqEngineTypeMask to PBLocReqEngineTypeMask
