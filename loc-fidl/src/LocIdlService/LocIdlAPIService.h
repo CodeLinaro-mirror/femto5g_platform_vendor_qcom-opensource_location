@@ -43,6 +43,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "log_util.h"
 #include "LocLcaIdlConverter.h"
 #include "LocationIntegrationApi.h"
+#include "LocIdlServiceLog.h"
 
 #ifdef POWER_DAEMON_MGR_ENABLED
 #include "LocIdlPowerEvtManager.h"
@@ -53,6 +54,8 @@ using namespace v0::com::qualcomm::qti::location;
 using namespace std;
 using namespace loc_util;
 using namespace location_integration;
+
+#define IDL_MEMORY_CHECK_INTERVAL_SEC (2)
 
 // Enum to define supported Power states in power-daemon
 enum IDLPowerStateType {
@@ -68,6 +71,7 @@ enum IDLPowerStateType {
 class LocIdlPowerEvtHandler;
 #endif
 class LocIdlAPIStubImpl;
+class LocIdlServiceLog;
 
 class LocIdlAPIService {
 public:
@@ -142,20 +146,47 @@ public:
     ) const;
 
     void onPowerEvent(IDLPowerStateType powerEvent);
+    void injectMapMatchedFeedbackData
+    (
+        const std::shared_ptr<CommonAPI::ClientId> client,
+        LocIdlAPI::MapMatchingFeedbackData& mapData,
+        LocIdlAPIStub::injectMapMatchedFeedbackDataReply_t reply
+    ) const;
+
+
+    /** To start a new thread to monito memory
+     *  usahe every 2second  by LocIDlService  */
+    void monitorMemoryUsage();
+    /** To pass the system health status to Diag structure */
+    void updateSystemStatus(uint32_t totalRss);
 
 #ifdef POWER_DAEMON_MGR_ENABLED
     LocIdlPowerEvtHandler* mPowerEventObserver;
 #endif
+    LocIdlServiceLog* mDiagLogIface;
+    LocLcaIdlConverter* mLcaIdlConverter;
 
 private:
     static LocIdlAPIService *mInstance;
     LocationClientApi* mLcaInstance;
     MsgTask* mMsgTask;
-    LocLcaIdlConverter* mLcaIdlConverter;
+    MsgTask* mMemoryMonitorMsgTask;
     LocationIntegrationApi* mLIAInstance;
     mutable uint32_t mGnssReportMask;
+    /** Keep cont of number of start session requests, this variable
+     *  shall be incremented on each startSession and decremented on
+     *  every stop Session, Stop session request shall be sent to LCA
+     *  only if this variable is 0 */
+    mutable uint32_t numControlRequests;
+
+    /** Keeps track if service is registered or not
+     *  True: Service registered Successfully
+     *  False: Service not registered */
+    mutable bool serviceRegisterationStatus;
+
     LocIdlAPIService();
     ~LocIdlAPIService();
+
 };
 
 
