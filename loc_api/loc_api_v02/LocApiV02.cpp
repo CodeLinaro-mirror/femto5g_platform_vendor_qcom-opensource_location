@@ -8660,16 +8660,6 @@ LocApiV02::setConstellationControl(const GnssSvTypeConfig& config,
                                    LocApiResponse *adapterResponse)
 {
     sendMsg(new LocApiMsg([this, config, adapterResponse] () {
-
-    // QMI will return INVALID parameter if enabledSvTypesMask is 0,
-    // so we just return back to the caller as this is no-op
-    if (0 == config.enabledSvTypesMask) {
-        if (NULL != adapterResponse) {
-            adapterResponse->returnToSender(LOCATION_ERROR_SUCCESS);
-        }
-        return;
-    }
-
     locClientStatusEnumType status = eLOC_CLIENT_FAILURE_GENERAL;
     locClientReqUnionType req_union = {};
 
@@ -8685,6 +8675,7 @@ LocApiV02::setConstellationControl(const GnssSvTypeConfig& config,
 
     bool disableSupported = ContextBase::isFeatureSupported(
             LOC_SUPPORTED_FEATURE_CONSTELLATION_DISABLEMENT);
+
     if (disableSupported) {
        setConstellationConfigMsg.disableMask_valid = true;
        if (mPreferredSvSystemType != GNSS_SV_TYPE_GPS) {
