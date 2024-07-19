@@ -26,9 +26,8 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 /*
-Changes from Qualcomm Innovation Center are provided under the following license:
-
-Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
+Copyright (c) 2023-2024 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -197,6 +196,7 @@ private:
     void onGnssMeasurementsCb(GnssMeasurementsNotification gnssMeasurementsNotification);
     void onLocationSystemInfoCb(LocationSystemInfo);
     void onLocationApiDestroyCompleteCb();
+    void onGnssSvEphemerisCb(const GnssSvEphemerisReport &notification);
 
     // send ipc message to this client for serialized payload
     bool sendMessage(const char* msg, size_t msglen, ELocMsgID msg_id) {
