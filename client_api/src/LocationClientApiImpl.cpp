@@ -2101,11 +2101,6 @@ void LocationClientApiImpl::startPositionSession(
                         ::LOCATION_ERROR_EXCLUSIVE_SESSION_IN_PROGRESS, 0);
                 return;
             }
-            //only one nmea callback should be registered
-            if (mCallbacksOption.gnssNmeaCb && mCallbacksOption.engineNmeaCb) {
-                mCallbacksOption.responseCb(::LOCATION_ERROR_INVALID_PARAMETER, 0);
-                return;
-            }
             // set up the flag to indicate that responseCb is pending
             mApiImpl->mPositionSessionResponseCbPending = true;
 
