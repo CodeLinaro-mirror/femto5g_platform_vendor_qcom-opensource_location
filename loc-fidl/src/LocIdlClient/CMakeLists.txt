@@ -86,7 +86,7 @@ else()
 #    pkg_check_modules(DBus REQUIRED dbus-1>=1.4)
 endif()
 
-SYSR_INCLUDE_DIR(gps-utils)
+SYSR_INCLUDE_DIR(qcom-gps-utils)
 
 # SOME/IP
 find_package (CommonAPI-SomeIP 3.2.0 REQUIRED)
@@ -176,7 +176,6 @@ set(EXAMPLE_CONFIG_FILES
 
 set(EXAMPLE_CONFIG_FILES
     "vsomeip-client.json"
-    "vsomeip-location.json"
     "commonapi4someip.ini"
     "vsomeip-local.json"
 )
