@@ -4783,13 +4783,14 @@ void LocApiV02::reportLocationRequestNotification(
         const char* nfwClient[] = { "NFW_CLIENT_CP", "NFW_CLIENT_SUPL", "NFW_CLIENT_IMS",
                                     "NFW_CLIENT_SIM", "NFW_CLIENT_MDT", "NFW_CLIENT_TLOC",
                                     "NFW_CLIENT_OTHER", "NFW_CLIENT_RLOC", "NFW_CLIENT_V2X",
-                                    "NFW_CLIENT_R1", "NFW_CLIENT_R2", "NFW_CLIENT_R3" };
+                                    "NFW_CLIENT_R1", "NFW_CLIENT_R2", "NFW_CLIENT_R3",
+                                    "NFW_CLIENT_NTN" };
         char packageName[LOC_MAX_PARAM_STRING];
 
         // proxyAppPackageName is "" for emergency
         if (ContextBase::isFeatureSupported(LOC_SUPPORTED_FEATURE_MULTIPLE_ATTRIBUTION_APPS) &&
             loc_req_notif->protocolStack >= eQMI_LOC_CTRL_PLANE_V02 &&
-            loc_req_notif->protocolStack <= eQMI_LOC_R3_V02 &&
+            loc_req_notif->protocolStack <= eQMI_LOC_NTN_V02 &&
             eQMI_LOC_OTHER_V02 != loc_req_notif->protocolStack) {
 
             if (mPackageName[loc_req_notif->protocolStack].empty()) {
@@ -5422,6 +5423,8 @@ void LocApiV02::reportGnssMeasurementData(
         m1HzMeasurementsInfo.clock.flags = measInfo.clock.flags;
         m1HzMeasurementsInfo.clock.timeNs = measInfo.clock.timeNs;
         m1HzMeasurementsInfo.clock.fullBiasNs = measInfo.clock.fullBiasNs;
+        // Clear previous measurement data.
+        m1HzMeasurementsInfo.measurements.clear();
         for (int meas = 0; (meas < measInfo.count) && (meas < GNSS_MEASUREMENTS_MAX); meas++) {
             GnssBasicMeasurementsData measurement = {};
             measurement.svId = measInfo.measurements[meas].svId;
@@ -9656,10 +9659,18 @@ LocApiV02::setConstellationControl(const GnssSvTypeConfig& config,
     setConstellationConfigMsg.enableMask_valid = true;
     setConstellationConfigMsg.enableMask = config.enabledSvTypesMask;
 
+    bool disableSupported = ContextBase::isFeatureSupported(
+            LOC_SUPPORTED_FEATURE_CONSTELLATION_DISABLEMENT);
+    if (disableSupported) {
+       setConstellationConfigMsg.disableMask_valid = true;
+       setConstellationConfigMsg.disableMask = config.blacklistedSvTypesMask;
+    }
+
     // disableMask is not supported in modem
     // if we set disableMask, QMI call will return error
-    LOC_LOGE("setConstellationControl: "
+    LOC_LOGE("setConstellationControl: disableSupported %d,"
              "enable: %d 0x%" PRIx64 ", blacklisted: %d 0x%" PRIx64 "",
+             disableSupported,
              setConstellationConfigMsg.enableMask_valid,
              setConstellationConfigMsg.enableMask,
              setConstellationConfigMsg.disableMask_valid,
