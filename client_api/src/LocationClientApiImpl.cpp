@@ -975,6 +975,9 @@ GnssLocation LocationClientApiImpl::parseLocationInfo(
             halLocationInfo.navSolutionMask) {
         flags |= LOCATION_NAV_CORRECTION_ONLY_SBAS_CORRECTED_SV_USED_BIT;
     }
+    if (::LOCATION_NAV_MMF_AIDED_POSITION & halLocationInfo.navSolutionMask) {
+        flags |= LOCATION_NAV_MMF_AIDED_POSITION;
+    }
     locationInfo.navSolutionMask = (GnssLocationNavSolutionMask)flags;
 
     locationInfo.posTechMask = locationInfo.techMask;

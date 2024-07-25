@@ -357,6 +357,9 @@ void printPosResport(const LocIdlAPI::IDLLocationReport &_locationReport)
                cout << "DgnssStationId        " << dgnss[idx] << endl;
         }
         cout << "ElapsedPTPTimeNs  " << _locationReport.getElapsedgPTPTime() << endl;
+        cout << "ReportingLatency  " << _locationReport.getReportingLatency() << endl;
+        cout << "LeapSecondsUnc    " << _locationReport.getLeapSecondsUnc() << endl;
+        cout << "CurrReportingRate " << _locationReport.getCurrReportingRate() << endl;
         cout << "-------" << endl;
     }
 }
