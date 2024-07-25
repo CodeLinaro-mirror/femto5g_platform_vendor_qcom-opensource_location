@@ -1196,9 +1196,16 @@ struct LocConfigEngineIntegrityRiskReqMsg: LocAPIMsgHeader
 
     inline LocConfigEngineIntegrityRiskReqMsg(const char* name,
                                               PositioningEngineMask engType,
-                                              uint32_t integrityRisk) :
-        LocAPIMsgHeader(name, E_INTAPI_CONFIG_ENGINE_INTEGRITY_RISK_MSG_ID),
+                                              uint32_t integrityRisk,
+                                              const LocationApiPbMsgConv *pbMsgConv) :
+        LocAPIMsgHeader(name, E_INTAPI_CONFIG_ENGINE_INTEGRITY_RISK_MSG_ID, pbMsgConv),
         mEngType(engType), mIntegrityRisk(integrityRisk) { }
+
+    LocConfigEngineIntegrityRiskReqMsg(const char* name,
+            const PBLocConfigEngineIntegrityRiskReqMsg &pbIntegrityMsg,
+            const LocationApiPbMsgConv *pbMsgConv);
+
+    int serializeToProtobuf(string& protoStr) override;
 };
 
 /******************************************************************************

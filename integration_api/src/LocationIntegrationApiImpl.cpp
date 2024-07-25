@@ -1031,17 +1031,23 @@ uint32_t LocationIntegrationApiImpl::configEngineIntegrityRisk(
             LOC_LOGd("eng type %d, integrity risk %u", mEngType, mIntegrityRisk);
 
             LocConfigEngineIntegrityRiskReqMsg msg(mApiImpl->mSocketName,
-                                                   mEngType, mIntegrityRisk);
-            if (mApiImpl->sendConfigMsgToHalDaemon(CONFIG_ENGINE_INTEGRITY_RISK,
-                                                   reinterpret_cast<uint8_t*>(&msg),
-                                                   sizeof(msg))) {
-                if (mApiImpl->mEngIntegrityRiskConfigMap.find(mEngType) ==
-                            std::end(mApiImpl->mEngIntegrityRiskConfigMap)) {
-                    mApiImpl->mEngIntegrityRiskConfigMap.emplace(mEngType, mIntegrityRisk);
-                } else {
-                    // change the state for the eng
-                    mApiImpl->mEngIntegrityRiskConfigMap[mEngType] = mIntegrityRisk;
+                                                   mEngType, mIntegrityRisk,
+                                                   &mApiImpl->mPbufMsgConv);
+            string pbStr;
+            if (msg.serializeToProtobuf(pbStr)) {
+                if (mApiImpl->sendConfigMsgToHalDaemon(CONFIG_ENGINE_INTEGRITY_RISK,
+                                            reinterpret_cast<uint8_t*>((uint8_t *)pbStr.c_str()),
+                                            pbStr.size())) {
+                    if (mApiImpl->mEngIntegrityRiskConfigMap.find(mEngType) ==
+                                std::end(mApiImpl->mEngIntegrityRiskConfigMap)) {
+                        mApiImpl->mEngIntegrityRiskConfigMap.emplace(mEngType, mIntegrityRisk);
+                    } else {
+                        // change the state for the eng
+                        mApiImpl->mEngIntegrityRiskConfigMap[mEngType] = mIntegrityRisk;
+                    }
                 }
+            } else {
+                 LOC_LOGe("LocConfigEngineIntegrityRiskReqMsg serializeToProtobuf failed");
             }
         }
 
@@ -1240,7 +1246,7 @@ void LocationIntegrationApiImpl::processHalReadyMsg() {
     // resend integrity risk config request
     for (auto it = mEngIntegrityRiskConfigMap.begin();
             it != mEngIntegrityRiskConfigMap.end(); ++it) {
-        LocConfigEngineIntegrityRiskReqMsg msg(mSocketName, it->first, it->second);
+        LocConfigEngineIntegrityRiskReqMsg msg(mSocketName, it->first, it->second, &mPbufMsgConv);
         sendConfigMsgToHalDaemon(CONFIG_ENGINE_INTEGRITY_RISK,
                                   reinterpret_cast<uint8_t*>(&msg),
                                   sizeof(msg));

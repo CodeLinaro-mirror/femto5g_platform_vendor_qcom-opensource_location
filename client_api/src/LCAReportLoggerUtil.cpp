@@ -110,6 +110,12 @@ LCAReportLoggerUtil::LCAReportLoggerUtil():
         if (nullptr == mLogEph) {
             LOC_LOGw("DiagIface mLogEph is null");
         }
+        mLogOemDREInfo= (LogGnssExtendedDataInfo)dlGetSymFromLib(
+                libHandle, libname, "LogGnssExtendedDataInfo");
+        if (nullptr == mLogOemDREInfo) {
+            LOC_LOGw("DiagIface mLogOemDREInfo is null");
+        }
+
     }
 }
 
@@ -142,6 +148,12 @@ void LCAReportLoggerUtil::log(const GnssMeasurements& gnssMeasurements) {
 void LCAReportLoggerUtil::log(const GnssEphemeris& ephInfo) {
     if (mLogEph != nullptr) {
         mLogEph(ephInfo);
+    }
+}
+
+void LCAReportLoggerUtil::log(uint8_t type, const std::vector<uint8_t> &gnssExtendedDataVector) {
+    if (mLogOemDREInfo != nullptr) {
+        mLogOemDREInfo(type, gnssExtendedDataVector);
     }
 }
 } // namespace loc_client

@@ -264,6 +264,7 @@ private:
     GnssMeasurementsCb      mGnssMeasurementsCb;
     GnssMeasurementsCb      mGnssNHzMeasurementsCb;
     GnssEphReportCb         mSvEphemerisCb;
+    GNSSExtendedDataInfoCb        mGNSSExtendedDataInfoCb;
 
     GnssEnergyConsumedCb    mGnssEnergyConsumedInfoCb;
     ResponseCb              mGnssEnergyConsumedResponseCb;

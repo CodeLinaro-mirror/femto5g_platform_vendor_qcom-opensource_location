@@ -116,6 +116,7 @@ enum ReportType {
     MEAS_REPORT     = 1 << 4,
     NHZ_MEAS_REPORT = 1 << 5,
     EPHEMERIS_REPORT   = 1 << 8,
+    EXTENDED_DATA_REPORT = 1 << 9,
 };
 
 enum TrackingSessionType {
@@ -361,6 +362,10 @@ static void onGnssEphemerisCb(const location_client::GnssEphemeris& ephInfo) {
     numGnssEphemerisCb++;
     printf("<<< onGnssEphemerisCb  cnt=%u Constellation=%d \n", numGnssEphemerisCb,
             ephInfo.gnssConstellation);
+}
+
+static void onGNSSExtendedDataInfoCb(const std::vector<uint8_t>& payload) {
+    printf("<<<  onGNSSExtendedDataInfoCb payload size %d \n", payload.size());
 }
 
 static void printHelp() {
@@ -813,6 +818,10 @@ static bool checkForAutoStart(int argc, char *argv[]) {
                     reportcbs.gnssEphReportCallback =
                             GnssEphReportCb(onGnssEphemerisCb);
                 }
+                if (reportType & EXTENDED_DATA_REPORT) {
+                    reportcbs.gnssExtendedDataInfoCallback =
+                            GNSSExtendedDataInfoCb(onGNSSExtendedDataInfoCb);
+                }
                 pLcaClient->startPositionSession(interval, reqEngMask,
                                                        reportcbs, onResponseCb);
             }
@@ -858,6 +867,7 @@ int main(int argc, char *argv[]) {
     enginecbs.gnssDataCallback = GnssDataCb(onGnssDataCb);
     enginecbs.gnssEphReportCallback =
                             GnssEphReportCb(onGnssEphemerisCb);
+    enginecbs.gnssExtendedDataInfoCallback = GNSSExtendedDataInfoCb(onGNSSExtendedDataInfoCb);
 
     // create location integratin API
     LocIntegrationCbs intCbs;

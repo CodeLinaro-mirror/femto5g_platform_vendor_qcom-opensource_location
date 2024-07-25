@@ -1674,7 +1674,8 @@ void LocationClientApiImpl::updateCallbackFunctions(const ClientCallbacks& cbs,
     mLocationCb = cbs.locationcb;
     mBatchingCb = cbs.batchingcb;
     mGfBreachCb = cbs.gfbreachcb;
-
+    LOC_LOGe("reportCbType %d gnssExtendedDataInfoCallback %p",
+            reportCbType, cbs.engreportcbs.gnssExtendedDataInfoCallback);
     if (REPORT_CB_GNSS_INFO == reportCbType) {
         mGnssLocationCb     = cbs.gnssreportcbs.gnssLocationCallback;
         mGnssSvCb           = cbs.gnssreportcbs.gnssSvCallback;
@@ -1691,6 +1692,7 @@ void LocationClientApiImpl::updateCallbackFunctions(const ClientCallbacks& cbs,
         mGnssMeasurementsCb = cbs.engreportcbs.gnssMeasurementsCallback;
         mGnssNHzMeasurementsCb = cbs.engreportcbs.gnssNHzMeasurementsCallback;
         mSvEphemerisCb      = cbs.engreportcbs.gnssEphReportCallback;
+        mGNSSExtendedDataInfoCb = cbs.engreportcbs.gnssExtendedDataInfoCallback;
     }
 }
 
@@ -2875,15 +2877,37 @@ void IpcListener::onReceive(const char* data, uint32_t length,
                     }
 
                     std::vector<GnssLocation> engLocationsVector;
+                    std::vector<uint8_t> extendedDataVector;
                     for (int i=0; i< pEngLocationsInfoIndMsg->count; i++) {
                         GnssLocation gnssLocation =
                             parseLocationInfo(pEngLocationsInfoIndMsg->engineLocationsInfo[i]);
                         engLocationsVector.push_back(gnssLocation);
                         mApiImpl.mLogger.log(gnssLocation, mApiImpl.mCapsMask);
+                        //check SPE engine has ExtendedData data payload
+                        if ((LOC_OUTPUT_ENGINE_SPE == gnssLocation.locOutputEngType) &&
+                                 mApiImpl.mGNSSExtendedDataInfoCb) {
+                            const ::GnssLocationInfoNotification &halLocationInfo =
+                                    pEngLocationsInfoIndMsg->engineLocationsInfo[i];
+
+                            if ((halLocationInfo.flags & GNSS_LOCATION_INFO_EXTENDED_DATA_BIT) &&
+                                     halLocationInfo.extendedDataLen > 0) {
+                                //Copy extendedData to extendedDatastr
+                                if (halLocationInfo.extendedDataLen <= sizeof(halLocationInfo.extendedData)) {
+                                    extendedDataVector.insert(extendedDataVector.end(),
+                                            &halLocationInfo.extendedData[0],
+                                            &halLocationInfo.extendedData[halLocationInfo.extendedDataLen]);
+                                }
+                            }
+                        }
                     }
 
                     if (mApiImpl.mEngLocationsCb) {
                         mApiImpl.mEngLocationsCb(engLocationsVector);
+                    }
+                    // Call ExtendedData Data callback
+                    if (mApiImpl.mGNSSExtendedDataInfoCb && extendedDataVector.size() > 0) {
+                        mApiImpl.mLogger.log(1, extendedDataVector);
+                        mApiImpl.mGNSSExtendedDataInfoCb(extendedDataVector);
                     }
                 }
                 break;
