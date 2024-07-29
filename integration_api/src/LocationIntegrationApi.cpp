@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -68,6 +68,9 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <LocationDataTypes.h>
 #include <LocationIntegrationApi.h>
 #include <LocationIntegrationApiImpl.h>
+#ifndef _ANDROID_
+#include <LocationIntegrationApiDiagLog.h>
+#endif
 #include <log_util.h>
 #include <loc_pla.h>
 namespace location_integration {
@@ -110,6 +113,7 @@ bool LocationIntegrationApi::configConstellations(
     } else {
         constellationEnablementConfig.size = sizeof(constellationEnablementConfig);
         constellationEnablementConfig.enabledSvTypesMask =
+                GNSS_SV_TYPES_MASK_GPS_BIT|
                 GNSS_SV_TYPES_MASK_GLO_BIT|GNSS_SV_TYPES_MASK_BDS_BIT|
                 GNSS_SV_TYPES_MASK_QZSS_BIT|GNSS_SV_TYPES_MASK_GAL_BIT;
         blacklistSvConfig.size = sizeof(GnssSvIdConfig);
@@ -121,6 +125,11 @@ bool LocationIntegrationApi::configConstellations(
             GnssSvId initialSvId = 0;
             uint16_t svIndexOffset = 0;
             switch (it.constellation) {
+            case GNSS_CONSTELLATION_TYPE_GPS:
+                svTypeMask = (GnssSvTypesMask) GNSS_SV_TYPES_MASK_GPS_BIT;
+                svMaskPtr = &blacklistSvConfig.gpsBlacklistSvMask;
+                initialSvId = GNSS_SV_CONFIG_GPS_INITIAL_SV_ID;
+                break;
             case GNSS_CONSTELLATION_TYPE_GLONASS:
                 svTypeMask = (GnssSvTypesMask) GNSS_SV_TYPES_MASK_GLO_BIT;
                 svMaskPtr = &blacklistSvConfig.gloBlacklistSvMask;
@@ -192,11 +201,13 @@ bool LocationIntegrationApi::configConstellations(
     }
 
     LOC_LOGd("constellation config size=%d, enabledMask=0x%" PRIx64 ", disabledMask=0x%" PRIx64 ", "
+             "gps blacklist mask =0x%" PRIx64 ", "
              "glo blacklist mask =0x%" PRIx64 ", qzss blacklist mask =0x%" PRIx64 ", "
              "bds blacklist mask =0x%" PRIx64 ", gal blacklist mask =0x%" PRIx64 ", "
              "sbas blacklist mask =0x%" PRIx64 ", Navic blacklist mask =0x%" PRIx64 ", ",
              constellationEnablementConfig.size, constellationEnablementConfig.enabledSvTypesMask,
              constellationEnablementConfig.blacklistedSvTypesMask,
+             blacklistSvConfig.gpsBlacklistSvMask,
              blacklistSvConfig.gloBlacklistSvMask, blacklistSvConfig.qzssBlacklistSvMask,
              blacklistSvConfig.bdsBlacklistSvMask, blacklistSvConfig.galBlacklistSvMask,
              blacklistSvConfig.sbasBlacklistSvMask, blacklistSvConfig.navicBlacklistSvMask);
@@ -1049,6 +1060,59 @@ bool LocationIntegrationApi::configOsnmaEnablement(bool isEnabled) {
 bool LocationIntegrationApi::registerGnssSignalTypesUpdate(bool registerUpdate) {
     if (mApiImpl) {
         return (mApiImpl->registerGnssSignalTypesUpdate(registerUpdate) == 0);
+    } else {
+        LOC_LOGe ("NULL mApiImpl");
+        return false;
+    }
+}
+
+bool LocationIntegrationApi::injectMapMatchedData(const mapMatchedFeedbackData& mapData) {
+
+    if (mApiImpl) {
+        GnssMapMatchedData mmfData = {};
+        if (LOC_HAS_VALID_MMFD_UTC_TIME & mapData.validityMask) {
+            mmfData.validityMask |= LDT_MMF_DATA_VALID_UTC_TIME;
+            mmfData.utcTimestampMs = mapData.utcTimestampMs;
+        }
+        if (LOC_HAS_VALID_MMFD_LAT_DIFF & mapData.validityMask) {
+            mmfData.validityMask |= LDT_MMF_DATA_VALID_LAT_DIFF;
+            mmfData.mapMatchedLatitudeDifference = mapData.mapMatchedLatitudeDifference;
+        }
+        if (LOC_HAS_VALID_MMFD_LONG_DIFF & mapData.validityMask) {
+            mmfData.validityMask |= LDT_MMF_DATA_VALID_LONG_DIFF;
+            mmfData.mapMatchedLongitudeDifference = mapData.mapMatchedLongitudeDifference;
+        }
+        if (LOC_HAS_VALID_MMFD_TUNNEL & mapData.validityMask) {
+            mmfData.validityMask |= LDT_MMF_DATA_VALID_TUNNEL;
+            mmfData.isTunnel = mapData.isTunnel;
+        }
+        if (LOC_HAS_VALID_MMFD_BEARING & mapData.validityMask) {
+            mmfData.validityMask |= LDT_MMF_DATA_VALID_BEARING;
+            mmfData.bearing = mapData.bearing;
+        }
+        if (LOC_HAS_VALID_MMFD_ALTITUDE & mapData.validityMask) {
+            mmfData.validityMask |= LDT_MMF_DATA_VALID_ALTITUDE;
+            mmfData.altitude = mapData.altitude;
+        }
+        if (LOC_HAS_VALID_MMFD_HOR_ACC & mapData.validityMask) {
+            mmfData.validityMask |= LDT_MMF_DATA_VALID_HOR_ACC;
+            mmfData.horizontalAccuracy = mapData.horizontalAccuracy;
+        }
+        if (LOC_HAS_VALID_MMFD_ALT_ACC & mapData.validityMask) {
+            mmfData.validityMask |= LDT_MMF_DATA_VALID_ALT_ACC;
+            mmfData.altitudeAccuracy = mapData.altitudeAccuracy;
+        }
+        if (LOC_HAS_VALID_MMFD_BEARING_ACC & mapData.validityMask) {
+            mmfData.validityMask |= LDT_MMF_DATA_VALID_BEARING_ACC;
+            mmfData.bearingAccuracy = mapData.bearingAccuracy;
+        }
+
+#ifndef _ANDROID_
+        LocationIntegrationApiDiagLog  mLogger;
+        mLogger.diagLogMmfData(mapData);
+#endif
+
+        return (mApiImpl->gnssInjectMmfData(mmfData) == 0);
     } else {
         LOC_LOGe ("NULL mApiImpl");
         return false;

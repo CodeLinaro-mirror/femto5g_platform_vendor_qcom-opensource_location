@@ -224,6 +224,8 @@ const char* LocApiMsgString(ELocMsgID msgId) {
         return "E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_REQ_MSG_ID";
     case E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_RESP_MSG_ID:
         return "E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_RESP_MSG_ID";
+    case E_INTAPI_CONFIG_MAP_MATCHED_FEEDBACK_MSG_ID:
+        return "E_INTAPI_CONFIG_MAP_MATCHED_FEEDBACK_MSG_ID";
     default:
         return "unknown ELocMsgID";
     }
@@ -3528,6 +3530,71 @@ int LocAPIPingTestIndMsg::serializeToProtobuf(string& protoStr) {
     return protoStr.size();
 }
 
+// Decode PBLocInjectMmfDataReqMsg -> LocInjectMmfDataReqMsg
+LocInjectMmfDataReqMsg::LocInjectMmfDataReqMsg(const char* name,
+            const PBLocInjectMmfDataReqMsg &pbLocApiMmfIndMsg,
+            const LocationApiPbMsgConv *pbMsgConv):
+        LocAPIMsgHeader(name, E_INTAPI_CONFIG_MAP_MATCHED_FEEDBACK_MSG_ID, pbMsgConv) {
+    if (nullptr == pLocApiPbMsgConv) {
+        LOC_LOGe("pLocApiPbMsgConv is null!");
+        return;
+    }
+    // >>>> PBLocInjectMmfDataReqReqMsg conversion
+    // PBGnssMapMatchedData gnssMmfData = 1;
+    pLocApiPbMsgConv->pbConvertToGnssMmfData(pbLocApiMmfIndMsg.gnssmmfdata(),
+            gnssMapData);
+}
+
+// Decode LocInjectMmfDataReqMsg -> PBLocInjectMmfDataReqMsg
+int LocInjectMmfDataReqMsg ::serializeToProtobuf(string& protoStr) {
+    PBLocAPIMsgHeader pLocApiMsgHdr;
+    PBLocInjectMmfDataReqMsg pbLocApiMmfInd;
+
+    if (nullptr == pLocApiPbMsgConv) {
+        LOC_LOGe("pLocApiPbMsgConv is null!");
+        return 0;
+    }
+    // string      mSocketName = 1;
+    pLocApiMsgHdr.set_msocketname(mSocketName);
+    // PBELocMsgID  msgId = 2;
+    pLocApiMsgHdr.set_msgid(pLocApiPbMsgConv->getPBEnumForELocMsgID(msgId));
+    // uint32   msgVersion = 3;
+    pLocApiMsgHdr.set_msgversion(msgVersion);
+
+    // PBGnssMapMatchedData gnssMmfData = 1;
+    PBGnssMapMatchedData* mmfData =
+            pbLocApiMmfInd.mutable_gnssmmfdata();
+    if (nullptr != mmfData) {
+        if (pLocApiPbMsgConv->convertGnssMmfDataToPB(gnssMapData,
+                mmfData)) {
+            LOC_LOGe("convertGnssMmfDataToPB failed");
+            free(mmfData);
+            return 0;
+        }
+    } else {
+        LOC_LOGe("mutable_gnssmmfdata failed");
+        return 0;
+    }
+
+    string pbStr;
+    if (!pbLocApiMmfInd.SerializeToString(&pbStr)) {
+        LOC_LOGe("SerializeToString on pbLocApiEphInd failed!");
+        return 0;
+    }
+    // bytes       payload = 4;
+    pLocApiMsgHdr.set_payload(pbStr);
+
+    // uint32   payloadSize = 5;
+    pLocApiMsgHdr.set_payloadsize(sizeof(LocInjectMmfDataReqMsg));
+
+    if (!pLocApiMsgHdr.SerializeToString(&protoStr)) {
+        LOC_LOGe("SerializeToString on pLocApiMsgHdr failed!");
+        return 0;
+    }
+    // free memory
+    pLocApiPbMsgConv->freeUpPBLocInjectMmfDataReqMsg(pbLocApiMmfInd);
+    return protoStr.size();
+}
 
 // SERIALIZE PROTOBUF TO RIGID FORMAT
 // **********************************
