@@ -271,6 +271,7 @@ void TrackingSessCbHandler::initializeCommonCbs(LocationClientApiImpl *pClientAp
                 [pClientApiImpl, gnssDataCallback] (const ::GnssDataNotification& n) {
             GnssData gnssData = LocationClientApiImpl::parseGnssData(n);
             gnssDataCallback(gnssData);
+            pClientApiImpl->getLogger().log(gnssData);
        };
     }
     if (gnssMeasurementsCallback) {
