@@ -803,6 +803,18 @@ void LocationApiService::processClientMsg(const char* data, uint32_t length) {
             break;
         }
 
+        case E_INTAPI_CONFIG_MAP_MATCHED_FEEDBACK_MSG_ID: {
+            PBLocInjectMmfDataReqMsg pbLocMmfDataMsg;
+            if (0 == pbLocMmfDataMsg.ParseFromString(pbLocApiMsg.payload())) {
+                LOC_LOGe("Failed to parse pbLocMmfDataMsg from payload!!");
+                return;
+            }
+            LocInjectMmfDataReqMsg msg(sockName.c_str(), pbLocMmfDataMsg,
+                    &mPbufMsgConv);
+            configMmfData(reinterpret_cast<LocInjectMmfDataReqMsg*>(&msg));
+            break;
+        }
+
         default: {
             LOC_LOGe("Unknown message with id: %d ", eLocMsgid);
             break;
@@ -1450,7 +1462,7 @@ void LocationApiService::configAidingDataDeletion(LocConfigAidingDataDeletionReq
     }
     std::lock_guard<std::recursive_mutex> lock(mMutex);
 
-    LOC_LOGi(">-- client %s, deleteAll %d",
+    LOC_LOGe(">-- Warning client %s, deleteAll %d",
              pMsg->mSocketName, pMsg->mAidingData.deleteAll);
 
     uint32_t sessionId = mLocationControlApi->gnssDeleteAidingData(pMsg->mAidingData);
@@ -1636,6 +1648,20 @@ void LocationApiService::configOsnmaEnablement(const LocConfigOsnmaEnablementReq
 
     uint32_t sessionId = mLocationControlApi->configOsnmaEnablement(pMsg->mEnable);
 
+    addConfigRequestToMap(sessionId, pMsg);
+}
+
+void LocationApiService::configMmfData(const LocInjectMmfDataReqMsg* pMsg) {
+
+    if (!pMsg) {
+        return;
+    }
+    std::lock_guard<std::recursive_mutex> lock(mMutex);
+
+    LOC_LOGi(">-- client %s, MapMatchedFeedback Data ",
+             pMsg->mSocketName);
+
+    uint32_t sessionId = mLocationControlApi->gnssInjectMmfData(pMsg->gnssMapData);
     addConfigRequestToMap(sessionId, pMsg);
 }
 

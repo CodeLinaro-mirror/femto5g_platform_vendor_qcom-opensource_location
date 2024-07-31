@@ -125,6 +125,14 @@ public:
         std::tuple< ::v0::com::qualcomm::qti::location::LocIdlAPI_::IDLLocationResponseDeployment_t>
     > configConstellationsStubDispatcher;
     
+    CommonAPI::SomeIP::MethodWithReplyStubDispatcher<
+        ::v0::com::qualcomm::qti::location::LocIdlAPIStub,
+        std::tuple< LocIdlAPI::MapMatchingFeedbackData>,
+        std::tuple< LocIdlAPI::IDLLocationResponse>,
+        std::tuple< ::v0::com::qualcomm::qti::location::LocIdlAPI_::MapMatchingFeedbackDataDeployment_t>,
+        std::tuple< ::v0::com::qualcomm::qti::location::LocIdlAPI_::IDLLocationResponseDeployment_t>
+    > injectMapMatchedFeedbackDataStubDispatcher;
+    
     LocIdlAPISomeIPStubAdapterInternal(
         const CommonAPI::SomeIP::Address &_address,
         const std::shared_ptr<CommonAPI::SomeIP::ProxyConnection> &_connection,
@@ -188,6 +196,14 @@ public:
             std::make_tuple(static_cast< CommonAPI::SomeIP::ArrayDeployment< ::v0::com::qualcomm::qti::location::LocIdlAPI_::IDLGnssSvIdInfoDeployment_t >* >(nullptr)),
             std::make_tuple(&::v0::com::qualcomm::qti::location::LocIdlAPI_::IDLLocationResponseDeployment))
         
+        ,
+        injectMapMatchedFeedbackDataStubDispatcher(
+            &LocIdlAPIStub::injectMapMatchedFeedbackData,
+            false,
+            _stub->hasElement(13),
+            std::make_tuple(static_cast< ::v0::com::qualcomm::qti::location::LocIdlAPI_::MapMatchingFeedbackDataDeployment_t* >(nullptr)),
+            std::make_tuple(&::v0::com::qualcomm::qti::location::LocIdlAPI_::IDLLocationResponseDeployment))
+        
     {
         LocIdlAPISomeIPStubAdapterHelper::addStubDispatcher( { CommonAPI::SomeIP::method_id_t(0xbb8) }, &getGnssCapabilitiesMaskAttributeStubDispatcher );
         LocIdlAPISomeIPStubAdapterHelper::addStubDispatcher( { CommonAPI::SomeIP::method_id_t(0xbb9) }, &setGnssCapabilitiesMaskAttributeStubDispatcher );
@@ -196,6 +212,7 @@ public:
         LocIdlAPISomeIPStubAdapterHelper::addStubDispatcher( { CommonAPI::SomeIP::method_id_t(0x7d03) }, &stopPositionSessionStubDispatcher );
         LocIdlAPISomeIPStubAdapterHelper::addStubDispatcher( { CommonAPI::SomeIP::method_id_t(0x7d04) }, &deleteAidingDataStubDispatcher );
         LocIdlAPISomeIPStubAdapterHelper::addStubDispatcher( { CommonAPI::SomeIP::method_id_t(0x7d05) }, &configConstellationsStubDispatcher );
+        LocIdlAPISomeIPStubAdapterHelper::addStubDispatcher( { CommonAPI::SomeIP::method_id_t(0x7d06) }, &injectMapMatchedFeedbackDataStubDispatcher );
         std::shared_ptr<CommonAPI::SomeIP::ClientId> itsClient = std::make_shared<CommonAPI::SomeIP::ClientId>(0xFFFF, 0xFFFFFFFF, 0xFFFFFFFF);
 
         // Provided events/fields
