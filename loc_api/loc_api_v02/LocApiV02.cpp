@@ -119,13 +119,16 @@ using namespace loc_core;
 #define WEEK_MSECS              (60*60*24*7*1000LL)
 #define DAY_MSECS               (60*60*24*1000LL)
 #define NSEC_IN_MSEC            (1000000LL)
-
+#define MSEC_IN_ONE_SEC         (1000ULL)
 /* Num days elapsed since GLONASS started from GPS start day 1980->1996 */
 #define GPS_GLONASS_DAYS_DIFF    5838
 /* number of glonass days in a 4-year interval */
 #define GLONASS_DAYS_IN_4YEARS   1461
 /* glonass and UTC offset: 3 hours */
 #define GLONASS_UTC_OFFSET_HOURS 3
+/* Num days elapsed since BDS started from GPS start day 1980->2006 */
+#define GPS_BDS_DAYS_DIFF           9492 // 1356 weeks
+#define GPS_BDS_LEAP_SECONDS_DIFF   14   // 14 leap seconds from 1980 to 2006
 
 /* speed of light */
 #define SPEED_OF_LIGHT          299792458.0
@@ -5378,6 +5381,20 @@ void LocApiV02::setGnssBiasesForB1I() {
     for (uint32_t i = 0; i < mGnssMeasurements->gnssMeasNotification.count; i++) {
         measData = &mGnssMeasurements->gnssMeasNotification.measurements[i];
         switch (measData->gnssSignalType) {
+        case GNSS_SIGNAL_GPS_L1CA:
+            tempFlag = BIAS_GPSL1_VALID | BIAS_BDSB1_VALID;
+            tempFlagUnc = BIAS_GPSL1_UNC_VALID | BIAS_BDSB1_UNC_VALID;
+            if (tempFlag == (mTimeBiases.flags & tempFlag)) {
+                measData->fullInterSignalBiasNs = mTimeBiases.gpsL1 - mTimeBiases.bdsB1;
+                measData->flags |= GNSS_MEASUREMENTS_DATA_FULL_ISB_BIT;
+            }
+            if (tempFlagUnc == (mTimeBiases.flags & tempFlagUnc)) {
+                measData->fullInterSignalBiasUncertaintyNs =
+                        mTimeBiases.gpsL1Unc + mTimeBiases.bdsB1Unc;
+                measData->flags |= GNSS_MEASUREMENTS_DATA_FULL_ISB_UNCERTAINTY_BIT;
+            }
+            break;
+
         case GNSS_SIGNAL_GLONASS_G1:
             tempFlag = BIAS_GLOG1_VALID | BIAS_BDSB1_VALID;
             tempFlagUnc = BIAS_GLOG1_UNC_VALID | BIAS_BDSB1_UNC_VALID;
@@ -5402,6 +5419,22 @@ void LocApiV02::setGnssBiasesForB1I() {
             if (tempFlagUnc == (mTimeBiases.flags & tempFlagUnc)) {
                 measData->fullInterSignalBiasUncertaintyNs =
                         mTimeBiases.galE1Unc + mTimeBiases.bdsB1Unc;
+                measData->flags |= GNSS_MEASUREMENTS_DATA_FULL_ISB_UNCERTAINTY_BIT;
+            }
+            break;
+
+        case GNSS_SIGNAL_GPS_L5:
+            tempFlag = BIAS_BDSB1_VALID | BIAS_GPSL1_VALID | BIAS_GPSL1_GPSL5_VALID;
+            tempFlagUnc =
+                    BIAS_BDSB1_UNC_VALID | BIAS_GPSL1_UNC_VALID | BIAS_GPSL1_GPSL5_UNC_VALID;
+            if (tempFlag == (mTimeBiases.flags & tempFlag)) {
+                measData->fullInterSignalBiasNs =
+                        -mTimeBiases.bdsB1 + mTimeBiases.gpsL1 - mTimeBiases.gpsL1_gpsL5;
+                measData->flags |= GNSS_MEASUREMENTS_DATA_FULL_ISB_BIT;
+            }
+            if (tempFlagUnc == (mTimeBiases.flags & tempFlagUnc)) {
+                measData->fullInterSignalBiasUncertaintyNs =
+                        mTimeBiases.bdsB1Unc + mTimeBiases.gpsL1Unc + mTimeBiases.gpsL1_gpsL5Unc;
                 measData->flags |= GNSS_MEASUREMENTS_DATA_FULL_ISB_UNCERTAINTY_BIT;
             }
             break;
@@ -7053,7 +7086,11 @@ int LocApiV02 :: convertGnssClock (GnssMeasurementsClock& clock,
                   GNSS_MEASUREMENTS_CLOCK_FLAGS_HW_CLOCK_DISCONTINUITY_COUNT_BIT);
 
         msInWeek = (int)gnss_measurement_info.systemTime.systemMsec;
-        if (gnss_measurement_info.systemTime_valid) {
+
+        // we only support GPS preferred or BDS preferred
+        qmiLocSvSystemEnumT_v02 system = gnss_measurement_info.systemTime.system;
+        if (gnss_measurement_info.systemTime_valid &&
+               ((system == eQMI_LOC_SV_SYSTEM_GPS_V02) || (system == eQMI_LOC_SV_SYSTEM_BDS_V02))) {
             uint16_t systemWeek = gnss_measurement_info.systemTime.systemWeek;
             uint32_t systemMsec = gnss_measurement_info.systemTime.systemMsec;
             float sysClkBias = gnss_measurement_info.systemTime.systemClkTimeBias;
@@ -7062,15 +7099,28 @@ int LocApiV02 :: convertGnssClock (GnssMeasurementsClock& clock,
 
             if (systemWeek != C_GPS_WEEK_UNKNOWN && isTimeValid) {
                 // fullBiasNs, biasNs & biasUncertaintyNs
-                int64_t totalMs = ((int64_t)systemWeek) *
-                                  ((int64_t)WEEK_MSECS) + ((int64_t)systemMsec);
-                int64_t gpsTimeNs = totalMs * 1000000 - (int64_t)(sysClkBias * 1e6);
+               int64_t totalMs = (int64_t)systemWeek * WEEK_MSECS + (int64_t)systemMsec;
+               int64_t gpsTimeNs = totalMs * NSEC_IN_MSEC - (int64_t)(sysClkBias * NSEC_IN_MSEC);
+               if (system == eQMI_LOC_SV_SYSTEM_BDS_V02) {
+                  gpsTimeNs += (GPS_BDS_DAYS_DIFF * DAY_MSECS * NSEC_IN_MSEC +
+                              GPS_BDS_LEAP_SECONDS_DIFF * MSEC_IN_ONE_SEC * NSEC_IN_MSEC);
+                  if (gnss_measurement_info.gpsBdsInterSystemBias_valid) {
+                      float timeBias = gnss_measurement_info.gpsBdsInterSystemBias.timeBias;
+                      gpsTimeNs += (int64_t)timeBias * NSEC_IN_MSEC;
+                  }
+               }
                 clock.fullBiasNs = clock.timeNs - gpsTimeNs;
                 clock.biasNs = sysClkBias * 1e6 - (double)((int64_t)(sysClkBias * 1e6));
                 clock.biasUncertaintyNs = (double)sysClkUncMs * 1e6;
                 flags |= (GNSS_MEASUREMENTS_CLOCK_FLAGS_FULL_BIAS_BIT |
                           GNSS_MEASUREMENTS_CLOCK_FLAGS_BIAS_BIT |
                           GNSS_MEASUREMENTS_CLOCK_FLAGS_BIAS_UNCERTAINTY_BIT);
+
+               LOC_LOGv("system %d, week %d, msec %d, sysClkBias %f, gpsbds bias %f, "
+                        "gps time ns%" PRIu64 " ",
+                        system, systemWeek, systemMsec, sysClkBias,
+                        gnss_measurement_info.gpsBdsInterSystemBias.timeBias,
+                        gpsTimeNs);
             }
         }
     }
