@@ -993,8 +993,15 @@ LocIdlAPI::IDLLocationReport LocLcaIdlConverter::parseLocReport(const ::GnssLoca
         gptpGetCurPtpTime(&gptp_time_ns);
         int64_t latency = gptp_time_ns - lcaLoc.elapsedgPTPTime;
     }
-    idlLocReport.setBaseLineLength(0.0);
-    idlLocReport.setAgeMsecOfCorrections(0.0);
+    if (lcaLoc.gnssInfoFlags & LCA_GNSS_LOCATION_INFO_BASE_LINE_LENGTH_BIT) {
+        idlLocReport.setBaseLineLength(lcaLoc.baseLineLength);
+        locFlags |= LocIdlAPI::IDLLCALocationInfoFlagMask::IDL_LOC_INFO_BASE_LINE_LENGTH_BIT;
+    }
+    if (lcaLoc.gnssInfoFlags & LCA_GNSS_LOCATION_INFO_AGE_OF_CORRECTION_BIT) {
+        idlLocReport.setAgeMsecOfCorrections(lcaLoc.ageMsecOfCorrections);
+        locFlags |= LocIdlAPI::IDLLCALocationInfoFlagMask::IDL_LOC_INFO_AGE_OF_CORRECTION_BIT;
+    }
+
     idlLocReport.setCurrReportingRate(0);
 
     if (lcaLoc.gnssInfoFlags & LCA_GNSS_LOCATION_INFO_LEAP_SECONDS_UNC_BIT) {
