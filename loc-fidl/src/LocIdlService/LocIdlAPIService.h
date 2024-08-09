@@ -165,6 +165,7 @@ public:
 #endif
     LocIdlServiceLog* mDiagLogIface;
     LocLcaIdlConverter* mLcaIdlConverter;
+    bool mIsGptpInitialized;
 
 private:
     static LocIdlAPIService *mInstance;
