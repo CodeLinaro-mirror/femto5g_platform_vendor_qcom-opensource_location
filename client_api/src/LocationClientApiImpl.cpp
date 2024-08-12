@@ -895,6 +895,16 @@ GnssLocation LocationClientApiImpl::parseLocationInfo(
         flags |= LCA_GNSS_LOCATION_INFO_DGNSS_STATION_ID_BIT;
     }
 
+    if (LDT_GNSS_LOCATION_INFO_BASE_LINE_LENGTH_BIT & halLocationInfo.flags) {
+        flags |= LCA_GNSS_LOCATION_INFO_BASE_LINE_LENGTH_BIT;
+        locationInfo.baseLineLength = halLocationInfo.baseLineLength;
+    }
+
+    if (LDT_GNSS_LOCATION_INFO_AGE_OF_CORRECTION_BIT & halLocationInfo.flags) {
+        flags |= LCA_GNSS_LOCATION_INFO_AGE_OF_CORRECTION_BIT;
+        locationInfo.ageMsecOfCorrections = halLocationInfo.ageMsecOfCorrections;
+    }
+
     if (LDT_GNSS_LOCATION_INFO_LEAP_SECONDS_UNC_BIT & halLocationInfo.flags) {
         flags |= LCA_GNSS_LOCATION_INFO_LEAP_SECONDS_UNC_BIT;
     }
@@ -974,6 +984,9 @@ GnssLocation LocationClientApiImpl::parseLocationInfo(
     if (::LOCATION_NAV_CORRECTION_ONLY_SBAS_CORRECTED_SV_USED_BIT &
             halLocationInfo.navSolutionMask) {
         flags |= LOCATION_NAV_CORRECTION_ONLY_SBAS_CORRECTED_SV_USED_BIT;
+    }
+    if (::LOCATION_NAV_MMF_AIDED_POSITION & halLocationInfo.navSolutionMask) {
+        flags |= LOCATION_NAV_MMF_AIDED_POSITION;
     }
     locationInfo.navSolutionMask = (GnssLocationNavSolutionMask)flags;
 

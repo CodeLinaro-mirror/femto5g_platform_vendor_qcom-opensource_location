@@ -240,6 +240,10 @@ uint32_t parseIDLNavSolutionMask
         idlNavSolMask |= LocIdlAPI::IDLLocationReportNavSolutionMask::\
                          IDL_NAV_CORR_ONLY_SBAS_CORR_SV_USED;
     }
+    if (LOCATION_NAV_MMF_AIDED_POSITION & navSolMask) {
+        idlNavSolMask |= LocIdlAPI::IDLLocationReportNavSolutionMask::\
+                         LRNSM_NAV_CORR_MMF_AIDED;
+    }
     return idlNavSolMask;
 }
 
@@ -564,8 +568,10 @@ uint32_t parseIDLSignalType (
     if (lcaSignalType & GNSS_SIGNAL_BEIDOU_B2BQ_BIT) {
         gnssSignalTypeMask |= LocIdlAPI::IDLGnssSignalTypeMask::IDL_GNSS_SIGNAL_BEIDOU_B2BQ_BIT;
     }
+    if (lcaSignalType & GNSS_SIGNAL_TYPE_NAVIC_L1) {
+        gnssSignalTypeMask |= LocIdlAPI::IDLGnssSignalTypeMask::GSTM_NAVIC_L1_BIT;
+    }
     return gnssSignalTypeMask;
-
 }
 
 vector< LocIdlAPI::IDLGnssMeasUsageInfo > parseIDLMeasUsageInfo
@@ -743,6 +749,14 @@ uint64_t parseIDLDrSolStatusMask
     if (DR_SOLUTION_STATUS_WARNING_FACTORY_DATA_INCONSISTENT & drSolutionStatusMask) {
         idlDrSolMask |= LocIdlAPI::IDLDrSolutionStatusMask::\
                 IDL_DR_SOLUTION_STATUS_WARNING_FACTORY_DATA_INCONSISTENT;
+    }
+    if (DR_SOLUTION_STATUS_WARNING_MMF_UNAVAILABLE & drSolutionStatusMask) {
+        idlDrSolMask |= LocIdlAPI::IDLDrSolutionStatusMask::\
+                DSSM_WARNING_MMF_UNAVAILABLE;
+    }
+    if (DR_SOLUTION_STATUS_WARNING_MMF_NOT_USABLE  & drSolutionStatusMask) {
+        idlDrSolMask |= LocIdlAPI::IDLDrSolutionStatusMask::\
+                DSSM_WARNING_MMF_NOT_USABLE;
     }
     return idlDrSolMask;
 }
@@ -979,12 +993,23 @@ LocIdlAPI::IDLLocationReport LocLcaIdlConverter::parseLocReport(const ::GnssLoca
         gptpGetCurPtpTime(&gptp_time_ns);
         int64_t latency = gptp_time_ns - lcaLoc.elapsedgPTPTime;
     }
-    idlLocReport.setBaseLineLength(0.0);
-    idlLocReport.setAgeMsecOfCorrections(0.0);
-    idlLocReport.setCurrReportingRate(0);
-    LOC_LOGd("Position report %"PRIu64" ", lcaLoc.timestamp);
+    if (lcaLoc.gnssInfoFlags & LCA_GNSS_LOCATION_INFO_BASE_LINE_LENGTH_BIT) {
+        idlLocReport.setBaseLineLength(lcaLoc.baseLineLength);
+        locFlags |= LocIdlAPI::IDLLCALocationInfoFlagMask::IDL_LOC_INFO_BASE_LINE_LENGTH_BIT;
+    }
+    if (lcaLoc.gnssInfoFlags & LCA_GNSS_LOCATION_INFO_AGE_OF_CORRECTION_BIT) {
+        idlLocReport.setAgeMsecOfCorrections(lcaLoc.ageMsecOfCorrections);
+        locFlags |= LocIdlAPI::IDLLCALocationInfoFlagMask::IDL_LOC_INFO_AGE_OF_CORRECTION_BIT;
+    }
 
+    idlLocReport.setCurrReportingRate(0);
+
+    if (lcaLoc.gnssInfoFlags & LCA_GNSS_LOCATION_INFO_LEAP_SECONDS_UNC_BIT) {
+        idlLocReport.setLeapSecondsUnc(lcaLoc.leapSecondsUnc);
+        locFlags |= LocIdlAPI::IDLLCALocationInfoFlagMask::LREFM_LEAP_SECONDS_UNC_BIT;
+    }
     idlLocReport.setLocationInfoFlags(locFlags);
+    LOC_LOGd("Position report %"PRIu64" ", lcaLoc.timestamp);
 
     return idlLocReport;
 }
@@ -1523,8 +1548,8 @@ LocIdlAPI::IDLGnssData LocLcaIdlConverter::parseGnssData
     vector<uint32_t> dataMaskVal;
     vector<double> jammerIndVal;
     vector<double> agcVal;
-    for (uint8_t idx = 0; idx < LocIdlAPI::IDLGnssSignalTypes::\
-            IDL_GNSS_MAX_NUMBER_OF_SIGNAL_TYPES; idx++) {
+    for (uint8_t idx = 0; idx < (LocIdlAPI::IDLGnssSignalTypes::\
+            IDL_GNSS_MAX_NUMBER_OF_SIGNAL_TYPES - 1); idx++) {
 
          dataMaskVal.push_back(parseIDLDataMask(gnssData.gnssDataMask[idx]));
          jammerIndVal.push_back(gnssData.jammerInd[idx]);
