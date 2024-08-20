@@ -2870,14 +2870,8 @@ void LocApiV02 :: reportPosition (
             locationExtended.numOfMeasReceived = gnssSvUsedList_len;
             memset(locationExtended.measUsageInfo, 0, sizeof(locationExtended.measUsageInfo));
             // Set of used_in_fix SV ID
-            bool reported = LocApiBase::needReport(location,
-                                                   (eQMI_LOC_SESS_STATUS_IN_PROGRESS_V02 ==
-                                                   location_report_ptr->sessionStatus ?
-                                                   LOC_SESS_INTERMEDIATE : LOC_SESS_SUCCESS),
-                                                   locationExtended.tech_mask);
-
-            if (unpropagatedPosition || reported)
-            {
+            if (location_report_ptr->sessionStatus == eQMI_LOC_SESS_STATUS_SUCCESS_V02 ||
+                    unpropagatedPosition) {
                 locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_GNSS_SV_USED_DATA;
                 if (multiBandTypesAvailable) {
                      locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_MULTIBAND;
@@ -2892,7 +2886,8 @@ void LocApiV02 :: reportPosition (
                 GnssSignalTypeMask gnssSignalTypeMask =
                         convertQmiGnssSignalType(qmiGnssSignalType);
 
-                if (unpropagatedPosition || reported)
+                if (unpropagatedPosition || location_report_ptr->sessionStatus ==
+                        eQMI_LOC_SESS_STATUS_SUCCESS_V02)
                 {
                     locationExtended.measUsageInfo[idx].gnssSvId = gnssSvIdUsed;
                     locationExtended.measUsageInfo[idx].carrierPhaseAmbiguityType =
