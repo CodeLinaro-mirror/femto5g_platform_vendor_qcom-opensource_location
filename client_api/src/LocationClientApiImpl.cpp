@@ -1284,6 +1284,9 @@ GnssDcReport LocationClientApiImpl::parseDcReport(const::GnssDcReportInfo &halDc
     }
     dcReport.numValidBits = halDcReport.numValidBits;
     dcReport.dcReportData = std::move(halDcReport.dcReportData);
+    dcReport.prnValid = halDcReport.prnValid;
+    dcReport.prn = halDcReport.prn;
+
     return dcReport;
 }
 
