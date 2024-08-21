@@ -77,57 +77,47 @@ LCAReportLoggerUtil::LCAReportLoggerUtil():
         mLogEph(nullptr),
         mLogGnssData(nullptr){
 
-    int loadDiagIfaceLib = 1;
-    const loc_param_s_type gps_conf_params[] = {
-        {"LOC_DIAGIFACE_ENABLED", &loadDiagIfaceLib, nullptr, 'n'}
-    };
-    UTIL_READ_CONF(LOC_PATH_GPS_CONF, gps_conf_params);
-
-    LOC_LOGi("Loc_DiagIface_enabled: %d", loadDiagIfaceLib);
-
-    if (0 != loadDiagIfaceLib) {
-        const char* libname = "liblocdiagiface.so";
-        void* libHandle = nullptr;
-        mLogLocation = (LogGnssLocation)dlGetSymFromLib(
-                libHandle, libname, "LogGnssLocation");
-        if (nullptr == mLogLocation) {
-            LOC_LOGw("DiagIface mLogLocation is null");
-        }
-        mLogSv = (LogGnssSv)dlGetSymFromLib(
-                libHandle, libname, "LogGnssSv");
-        if (nullptr == mLogSv) {
-            LOC_LOGw("DiagIface mLogSv is null");
-        }
-        mLogNmea = (LogGnssNmea)dlGetSymFromLib(
-                libHandle, libname, "LogGnssNmea");
-        if (nullptr == mLogNmea) {
-            LOC_LOGw("DiagIface mLogNmea is null");
-        }
-        mLogMeas = (LogGnssMeas)dlGetSymFromLib(
-                libHandle, libname, "LogGnssMeas");
-        if (nullptr == mLogMeas) {
-            LOC_LOGw("DiagIface mLogMeas is null");
-        }
-        mLogDcReport = (LogGnssDcReport)dlGetSymFromLib(
-                libHandle, libname, "LogGnssDcReport");
-        if (nullptr == mLogDcReport) {
-            LOC_LOGw("DiagIface mLogDcReport is null");
-        }
-        mLogGeofenceBreach = (LogGeofenceBreach)dlGetSymFromLib(
-                libHandle, libname, "LogGeofenceBreach");
-        if (nullptr == mLogGeofenceBreach) {
-            LOC_LOGw("DiagIface mLogGeofenceBreach is null");
-        }
-        mLogEph = (LogGnssEphemeris)dlGetSymFromLib(
-                libHandle, libname, "LogGnssEphemeris");
-        if (nullptr == mLogEph) {
-            LOC_LOGw("DiagIface mLogEph is null");
-        }
-        mLogGnssData = (LogGnssData)dlGetSymFromLib(
-                libHandle, libname, "LogGnssData");
-        if (nullptr == mLogGnssData) {
-            LOC_LOGw("DiagIface mLogGnssData is null");
-        }
+    const char* libname = "liblocdiagiface.so";
+    void* libHandle = nullptr;
+    mLogLocation = (LogGnssLocation)dlGetSymFromLib(
+            libHandle, libname, "LogGnssLocation");
+    if (nullptr == mLogLocation) {
+        LOC_LOGw("DiagIface mLogLocation is null");
+    }
+    mLogSv = (LogGnssSv)dlGetSymFromLib(
+            libHandle, libname, "LogGnssSv");
+    if (nullptr == mLogSv) {
+        LOC_LOGw("DiagIface mLogSv is null");
+    }
+    mLogNmea = (LogGnssNmea)dlGetSymFromLib(
+            libHandle, libname, "LogGnssNmea");
+    if (nullptr == mLogNmea) {
+        LOC_LOGw("DiagIface mLogNmea is null");
+    }
+    mLogMeas = (LogGnssMeas)dlGetSymFromLib(
+            libHandle, libname, "LogGnssMeas");
+    if (nullptr == mLogMeas) {
+        LOC_LOGw("DiagIface mLogMeas is null");
+    }
+    mLogDcReport = (LogGnssDcReport)dlGetSymFromLib(
+            libHandle, libname, "LogGnssDcReport");
+    if (nullptr == mLogDcReport) {
+        LOC_LOGw("DiagIface mLogDcReport is null");
+    }
+    mLogGeofenceBreach = (LogGeofenceBreach)dlGetSymFromLib(
+            libHandle, libname, "LogGeofenceBreach");
+    if (nullptr == mLogGeofenceBreach) {
+        LOC_LOGw("DiagIface mLogGeofenceBreach is null");
+    }
+    mLogEph = (LogGnssEphemeris)dlGetSymFromLib(
+            libHandle, libname, "LogGnssEphemeris");
+    if (nullptr == mLogEph) {
+        LOC_LOGw("DiagIface mLogEph is null");
+    }
+    mLogGnssData = (LogGnssData)dlGetSymFromLib(
+            libHandle, libname, "LogGnssData");
+    if (nullptr == mLogGnssData) {
+        LOC_LOGw("DiagIface mLogGnssData is null");
     }
 }
 
