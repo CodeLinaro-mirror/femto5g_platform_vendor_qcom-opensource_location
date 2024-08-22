@@ -2132,15 +2132,25 @@ interface LocIdlAPI {
 
     /** Map Matched data validity flags */
     enumeration MapMatchingFeedbackDataValidity {
+        /** MapMatchingFeedbackData is invalid */
         MMF_DATA_INVALID            = 0x00000000
+        /** MapMatchingFeedbackData has valid  utcTimestampMs */
         MMF_DATA_VALID_UTC_TIME     = 0x00000001
+        /** MapMatchingFeedbackData has valid  mapMatchedLatitudeDifference */
         MMF_DATA_VALID_LAT_DIFF     = 0x00000002
+        /** MapMatchingFeedbackData has valid  mapMatchedLongitudeDifference */
         MMF_DATA_VALID_LONG_DIFF    = 0x00000004
+        /** MapMatchingFeedbackData has valid  isTunnel value */
         MMF_DATA_VALID_TUNNEL       = 0x00000008
+        /** MapMatchingFeedbackData has valid  bearing */
         MMF_DATA_VALID_BEARING      = 0x00000010
+        /** MapMatchingFeedbackData has valid  altitude */
         MMF_DATA_VALID_ALTITUDE     = 0x00000020
+        /** MapMatchingFeedbackData has valid  horizontalAccuracy */
         MMF_DATA_VALID_HOR_ACC      = 0x00000040
+        /** MapMatchingFeedbackData has valid  altitudeAccuracy */
         MMF_DATA_VALID_ALT_ACC      = 0x00000080
+        /** MapMatchingFeedbackData has valid  bearingAccuracy */
         MMF_DATA_VALID_BEARING_ACC  = 0x00000100
     }
 
@@ -2155,12 +2165,12 @@ interface LocIdlAPI {
          *  Unit: Milli-seconds */
         UInt64 utcTimestampMs
 
-        /** Latitude difference = reported latitude – map matcher provided latitude
-         * Unit: Degrees
-         * Range: [-90.0, 90.0] */
+        /** Latitude difference = map matched latitude - reported latitude
+         *  Unit: Degrees
+         *  Range: [-90.0, 90.0] */
         Double mapMatchedLatitudeDifference
 
-        /** Longitude difference = reported longitude – map matcher provided longitude
+        /** Longitude difference = map matched longitude - reported longitude
          *  Unit: Degrees
          *  Range: [-180.0, 180.0] */
         Double mapMatchedLongitudeDifference
