@@ -207,7 +207,6 @@ private:
   uint32_t mMinInterval;
   std::vector<adrData>  mADRdata;
   GnssMeasurements*  mGnssMeasurements;
-  bool mPreferredSignalTypeReceived;
   int  mMsInWeek;
   bool mAgcIsPresent;
   timeBiases mTimeBiases;
@@ -225,7 +224,6 @@ private:
   bool mIsFullTracking;
 
   qmiLocGnssSignalTypeMaskT_v02 mPreferredSignalType;
-  referenceSignalTypeForIsb mReferenceSignalTypeForIsb;
 
   // Below two member variables are for elapsedRealTime calculation
   ElapsedRealtimeEstimator mMeasElapsedRealTimeCal;
@@ -370,13 +368,11 @@ private:
       mGnssMeasurements->gnssSvMeasurementSet.svMeasSetHeader.size =
           sizeof(GnssSvMeasurementHeader);
       memset(&mTimeBiases, 0, sizeof(mTimeBiases));
-      mPreferredSignalTypeReceived = false;
       mMsInWeek = -1;
       mAgcIsPresent = false;
   }
 
   void setGnssBiasesForL1CA();
-  void setGnssBiasesForB1I();
 
   /* convert and report ODCPI request */
   void requestOdcpi(
