@@ -170,7 +170,6 @@ private:
   std::vector<Resender> mResenders;
   bool mMasterRegisterNotSupported;
   GnssMeasurements*  mGnssMeasurements;
-  bool mPreferredSignalTypeReceived;
   int  mMsInWeek;
   bool mAgcIsPresent;
   bool mIsFirstFinalFixReported;
@@ -181,7 +180,6 @@ private:
   timeBiases mTimeBiases;
   bool mIsFullTracking;
   qmiLocGnssSignalTypeMaskT_v02 mPreferredSignalType;
-  referenceSignalTypeForIsb mReferenceSignalTypeForIsb;
   GnssMeasurementsNotification m1HzMeasurementsNotify;
   qmiLocPlatformPowerStateEnumT_v02 mPlatformPowerState;
   uint64_t mHlosQtimer1, mHlosQtimer2;
@@ -337,8 +335,6 @@ private:
   }
 
   void setGnssBiasesForL1CA();
-  void setGnssBiasesForB1I();
-  void setGnssBiases();
   /* convert and report ODCPI request */
   void requestOdcpi(
     const qmiLocEventWifiReqIndMsgT_v02& odcpiReq);
