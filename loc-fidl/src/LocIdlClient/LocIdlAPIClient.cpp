@@ -359,6 +359,8 @@ void printPosResport(const LocIdlAPI::IDLLocationReport &_locationReport)
         cout << "ElapsedPTPTimeNs  " << _locationReport.getElapsedgPTPTime() << endl;
         cout << "ReportingLatency  " << _locationReport.getReportingLatency() << endl;
         cout << "LeapSecondsUnc    " << _locationReport.getLeapSecondsUnc() << endl;
+        cout << "BaseLineLength    " << _locationReport.getBaseLineLength() << endl;
+        cout << "AgeMsecOfCorrections " << _locationReport.getAgeMsecOfCorrections() << endl;
         cout << "CurrReportingRate " << _locationReport.getCurrReportingRate() << endl;
         cout << "-------" << endl;
     }

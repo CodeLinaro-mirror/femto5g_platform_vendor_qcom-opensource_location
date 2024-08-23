@@ -176,7 +176,6 @@ set(EXAMPLE_CONFIG_FILES
 
 set(EXAMPLE_CONFIG_FILES
     "vsomeip-client.json"
-    "vsomeip-location.json"
     "commonapi4someip.ini"
     "vsomeip-local.json"
 )
