@@ -3293,13 +3293,6 @@ public:
     */
 
     /* ================================== Other APIs ================================== */
-    /** @brief Inform LocationClientAPI of the device network
-               availability status.
-        @param available
-        True if available. <br/>
-        False otherwise. <br/>  */
-    void updateNetworkAvailability(bool available);
-
     /** @brief Get energy consumed info of modem GNSS engine. <br/>
         If called while the previous call is still being processed,
         then the callback will be updated, and engery consumed info

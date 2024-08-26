@@ -700,12 +700,6 @@ void LocationClientApi::resumeGeofences(std::vector<Geofence>& geofences) {
     }
 }
 
-void LocationClientApi::updateNetworkAvailability(bool available) {
-    if (mApiImpl) {
-        mApiImpl->updateNetworkAvailability(available);
-    }
-}
-
 void LocationClientApi::getGnssEnergyConsumed(
         GnssEnergyConsumedCb gnssEnergyConsumedCb,
         ResponseCb responseCb) {

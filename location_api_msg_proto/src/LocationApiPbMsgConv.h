@@ -156,6 +156,12 @@ public:
     int convertAntennaInfoToPB(const AntennaInformation& antennaInfo,
             PBAntennaInformation* pbAntennaInfo) const;
 
+    NetworkConnectionStatus getConnectionStatusEnum (PBNetworkConnection pbNwConn) const;
+    NetworkTypeInfo getNwTypeEnum(PBNetworkType pbNwType) const;
+
+    int convertNetworkInfoMsgToPB(const NetworkInfo& nwInfo,
+            PBNetworkInfoData* pbNwInfo) const;
+
     // Memory cleanup - Free up memory after PB conversion and serializing data
     inline void freeUpPBLocAPIStartTrackingReqMsg(PBLocAPIStartTrackingReqMsg &pbLocApiStartTrack)
             const {
@@ -488,6 +494,10 @@ public:
         pbLocApiPingTestIndMsg.clear_data();
     }
 
+    inline void freeUpPBNetworkInfoMsg(PBUpdateNetworkInfoReq &pbNetworkInfo) const {
+        pbNetworkInfo.clear_data();
+    }
+
     // **** helper function to convert from protobuf struct to normal struct.
     // PBCollectiveResPayload to CollectiveResPayload
     int pbConvertToCollectiveResPayload(const PBCollectiveResPayload &pbClctResPayload,
@@ -559,6 +569,10 @@ public:
             XtraConfigParams& xtraParams) const;
     int pbConvertToXtraStatus(const PBXtraStatus &pbXtraStatus,
             XtraStatus& xtraStatus) const;
+    PBNetworkConnection getPBConnectionStatusEnum(NetworkConnectionStatus nwConn) const;
+    PBNetworkType getPBNwTypeEnum (NetworkTypeInfo nwType) const;
+    int pbConvertToNetworkDataInfo(const PBNetworkInfoData& pbNwInfo,
+            NetworkInfo& nwInfo) const;
 
     // MASK CONVERSION
     // ***************
