@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -170,6 +170,9 @@ static LocConfigTypeEnum getLocConfigTypeFromMsgId(ELocMsgID  msgId) {
         break;
     case E_INTAPI_CONFIG_XTRA_USER_CONSENT_MSG_ID:
         configType = CONFIG_XTRA_USER_CONSENT;
+        break;
+    case E_INTAPI_NETWORK_UPDATE_INFO_MSG_ID:
+        configType = NETWORK_INFO_UPDATE;
         break;
     default:
         break;
@@ -502,6 +505,7 @@ void IpcListener::onReceive(const char* data, uint32_t length,
             case E_INTAPI_DEREGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID:
             case E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_REQ_MSG_ID:
             case E_INTAPI_CONFIG_MAP_MATCHED_FEEDBACK_MSG_ID:
+            case E_INTAPI_NETWORK_UPDATE_INFO_MSG_ID:
             {
                 PBLocAPIGenericRespMsg pbLocApiGenericRsp;
                 if (0 == pbLocApiGenericRsp.ParseFromString(pbLocApiMsg.payload())) {
@@ -1438,6 +1442,29 @@ uint32_t LocationIntegrationApiImpl::registerGnssSignalTypesUpdate(bool register
     return 0;
 }
 
+uint32_t LocationIntegrationApiImpl::updateNetworkInfo(const NetworkInfo& data) {
+    struct UpdateNetworkInfoReqMsg : public LocMsg {
+        UpdateNetworkInfoReqMsg(LocationIntegrationApiImpl* apiImpl,
+                const NetworkInfo& data) : mApiImpl(apiImpl), mNwData(data) {}
+        virtual ~UpdateNetworkInfoReqMsg() {}
+        void proc() const {
+            string pbStr;
+            UpdateNetworkInfoReq msg(mApiImpl->mSocketName, const_cast<NetworkInfo&>(mNwData),
+                    &mApiImpl->mPbufMsgConv);
+            if (msg.serializeToProtobuf(pbStr)) {
+                mApiImpl->sendConfigMsgToHalDaemon(NETWORK_INFO_UPDATE, pbStr);
+            } else {
+                LOC_LOGe("serializeToProtobuf failed");
+            }
+        }
+
+        LocationIntegrationApiImpl* mApiImpl;
+        const NetworkInfo mNwData;
+    };
+
+    mMsgTask.sendMsg(new (nothrow) UpdateNetworkInfoReqMsg(this, data));
+    return 0;
+}
 
 bool LocationIntegrationApiImpl::sendConfigMsgToHalDaemon(
         LocConfigTypeEnum configType, const string& pbStr, bool invokeResponseCb) {

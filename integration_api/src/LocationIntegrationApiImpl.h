@@ -61,6 +61,11 @@ IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+/*
+Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
+Copyright (c) 2025 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 
 #ifndef LOCATION_INTEGRATION_API_IMPL_H
 #define LOCATION_INTEGRATION_API_IMPL_H
@@ -197,6 +202,7 @@ public:
     uint32_t configMerkleTree(const char * merkleTreeXml, int xmlSize);
     uint32_t configOsnmaEnablement(bool isEnabled);
     uint32_t registerGnssSignalTypesUpdate(bool registerUpdate);
+    uint32_t updateNetworkInfo(const NetworkInfo& data);
 
 private:
     ~LocationIntegrationApiImpl();

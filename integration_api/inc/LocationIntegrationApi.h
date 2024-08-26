@@ -27,7 +27,7 @@
  */
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
-Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -160,7 +160,8 @@ enum LocConfigTypeEnum{
     /** Send out User Consent for XTRA service
      *  status. <br/> */
     CONFIG_XTRA_USER_CONSENT = 107,
-
+    /** Send out Network info */
+    NETWORK_INFO_UPDATE = 108,
 } ;
 
 /**
@@ -992,6 +993,47 @@ struct mapMatchedFeedbackData {
      *  Value: True or False */
     bool isTunnel;
 
+};
+
+/** Specify the network connection status. <br/> */
+enum NetworkConnection {
+    /** The network connection status is unknown. <br/> */
+    NET_CONNECTION_UNKNOWN = 0,
+    /** The network is connected. <br/> */
+    NET_CONNECTED,
+    /** The network is disconnected. <br/> */
+    NET_DISCONNECTED,
+};
+
+/** Specify the type of network. <br/> */
+enum NetworkType {
+    /** The network type is unknown. <br/> */
+    TYPE_UNKNOWN = 0,
+    /** The network type is WWAN (Wireless Wide Area Network). <br/> */
+    TYPE_WWAN,
+    /** The network type is WLAN (Wireless Local Area Network). <br/> */
+    TYPE_WLAN,
+};
+
+/** Network information data structure. <br/> */
+struct NetworkInfoData {
+    /** The network connection status. <br/> */
+    NetworkConnection connection;
+    /** The type of network. <br/> */
+    NetworkType networkType;
+    /** The country code as a 2-byte string, such as "cn", "us", "in".
+     *  An empty string is acceptable. <br/> */
+    std::string country;
+    /** The concatenated MCC and MNC string. <br/>
+     *  When networkType is TYPE_WWAN, set the Mobile Country Code (MCC) and
+     *  the Mobile Network Code (MNC) in the networkInfo. <br/>
+     *  The MCC is a three-digit code representing the country,
+     *  while the MNC is a two or three-digit code representing the specific
+     *  mobile network within that country. <br/>
+     *  For example, if 405 is the MCC and 845 is the MNC,
+     *  use '|' to concatenate the mccmnc string as "405|854". <br/>
+     *  An empty string is acceptable. <br/> */
+    std::string mccmnc;
 };
 
 class LocationIntegrationApiImpl;
@@ -2060,6 +2102,25 @@ public:
                 <br/>
     */
     bool setUserConsentForXtra(bool userConsent);
+
+    /** @brief
+        Use this API to notify the device of the network status
+        when the network is activated by the QC partner.
+
+        @param
+        NetworkInfoData: Stores network related information. This includes
+                         connection status, network type, country, MCC and MNC
+                         of the network used for connectivity.<br/>
+
+        @return true, if the API request has been accepted.
+                LocConfigCb() will be invoked to deliver asynchronous
+                processing status. <br/>
+
+        @return false, if the API request has not been accepted for
+                further processing. When returning false, no further processing
+                will be performed and LocConfigCb() will not be invoked.<br/>
+    */
+    bool updateNetworkInfo(const NetworkInfoData& data);
 
     /** @example example1:testGetConfigApi
     * <pre>

@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -4268,13 +4268,6 @@ public:
     */
 
     /* ================================== Other APIs ================================== */
-    /** @brief Inform LocationClientAPI of the device network
-               availability status.
-        @param available
-        True if available. <br/>
-        False otherwise. <br/>  */
-    void updateNetworkAvailability(bool available);
-
     /** @brief Get energy consumed info of modem GNSS engine. <br/>
         If called while the previous call is still being processed,
         then the callback will be updated, and engery consumed info
