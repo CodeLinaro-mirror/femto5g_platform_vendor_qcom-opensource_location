@@ -36,11 +36,10 @@
 #include <sys/stat.h>
 #include <dlfcn.h>
 #include <dirent.h>
-#include <memory>
+#include <algorithm>
 #include <SystemStatus.h>
 #include <LocationApiMsg.h>
 #include <gps_extended_c.h>
-
 #include <LocHalDaemonClientHandler.h>
 #include <LocationApiService.h>
 #include <location_interface.h>
@@ -454,17 +453,6 @@ void LocationApiService::processClientMsg(const char* data, uint32_t length) {
             resumeGeofences(reinterpret_cast<LocAPIResumeGeofencesReqMsg*>(&msg));
             break;
         }
-        case E_LOCAPI_CONTROL_UPDATE_NETWORK_AVAILABILITY_MSG_ID: {
-            PBLocAPIUpdateNetworkAvailabilityReqMsg pbLocApiUpdateNetwAvail;
-            if (0 == pbLocApiUpdateNetwAvail.ParseFromString(pbLocApiMsg.payload())) {
-                LOC_LOGe("Failed to parse pbLocApiUpdateNetwAvail from payload!!");
-                return;
-            }
-            LocAPIUpdateNetworkAvailabilityReqMsg msg(sockName.c_str(), pbLocApiUpdateNetwAvail,
-                    &mPbufMsgConv);
-            updateNetworkAvailability(msg.mAvailability);
-            break;
-        }
         case E_LOCAPI_GET_GNSS_ENGERY_CONSUMED_MSG_ID: {
             getGnssEnergyConsumed(sockName.c_str());
             break;
@@ -763,6 +751,18 @@ void LocationApiService::processClientMsg(const char* data, uint32_t length) {
             registerGnssSignalTypesUpdate(&msg);
             break;
         }
+        case E_INTAPI_NETWORK_UPDATE_INFO_MSG_ID: {
+            PBUpdateNetworkInfoReq pbNwInfoMsg;
+            if (0 == pbNwInfoMsg.ParseFromString(pbLocApiMsg.payload())) {
+                LOC_LOGe("Failed to parse pbLocXtraUserConsentMsg from payload!!");
+                return;
+            }
+            UpdateNetworkInfoReq msg(sockName.c_str(), pbNwInfoMsg,
+                    &mPbufMsgConv);
+            provideNetworkInfoStatus(reinterpret_cast<UpdateNetworkInfoReq*>(&msg));
+            break;
+        }
+
 
         case E_INTAPI_CONFIG_MAP_MATCHED_FEEDBACK_MSG_ID: {
             PBLocInjectMmfDataReqMsg pbLocMmfDataMsg;
@@ -2151,4 +2151,38 @@ void SingleFixTimer::timeOutCallback() {
 
     mLocationApiService->getMsgTask().sendMsg(new SingleFixTimeoutReq(
                 mLocationApiService, mClientName, mTimerType));
+}
+
+void LocationApiService::provideNetworkInfoStatus(const UpdateNetworkInfoReq* pNwData) {
+    NetworkInfo nwData = pNwData->mData;
+    LOC_LOGd(" Network type %d mccMnc %s connStatus %d country %s",
+        nwData.networkType, nwData.mccmnc.c_str(), nwData.connection, nwData.country.c_str());
+    std::string apn("");
+    std::shared_ptr<LocHalDaemonClientHandler> pClient = getClient(pNwData->mSocketName);
+    if (mGnssInterface) {
+        // MCC MNC format to be sent out mcc|mnc|Country<in UpperCase>
+        string mccmnc = nwData.mccmnc;
+        std::transform(nwData.country.begin(), nwData.country.end(),
+                nwData.country.begin(), ::toupper);
+        mccmnc = mccmnc + "|" + nwData.country;
+        mGnssInterface->updateMccMnc(mccmnc);
+        loc_core::NetworkType  nwType = loc_core::TYPE_UNKNOWN;
+        if (nwData.networkType == TYPE_WWAN) {
+            nwType = loc_core::TYPE_MOBILE;
+        }
+        if (nwData.networkType == TYPE_WLAN) {
+            nwType = loc_core::TYPE_WIFI;
+        }
+        mGnssInterface->updateConnectionStatus((nwData.connection == NET_CONNECTED)? 1:0,
+                nwType,
+                false, NETWORK_HANDLE_UNKNOWN, apn);
+        LOC_LOGv("mccMnc %s networkType %d", mccmnc.c_str(), nwType);
+        if (pClient) {
+            pClient->onControlResponseCb(LOCATION_ERROR_SUCCESS, pNwData->msgId);
+        }
+    } else {
+        if (pClient) {
+            pClient->onControlResponseCb(LOCATION_ERROR_SYSTEM_NOT_READY, pNwData->msgId);
+        }
+    }
 }
