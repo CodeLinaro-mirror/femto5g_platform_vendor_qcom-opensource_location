@@ -132,6 +132,9 @@ using namespace loc_core;
 #define GLONASS_DAYS_IN_4YEARS   1461
 /* glonass and UTC offset: 3 hours */
 #define GLONASS_UTC_OFFSET_HOURS 3
+/* Num days elapsed since BDS started from GPS start day 1980->2006 */
+#define GPS_BDS_DAYS_DIFF           9492 // 1356 weeks
+#define GPS_BDS_LEAP_SECONDS_DIFF   14   // 14 leap seconds from 1980 to 2006
 
 /* speed of light */
 #define SPEED_OF_LIGHT          299792458.0
@@ -1364,7 +1367,7 @@ LocApiV02::deleteAidingData(const GnssAidingData& data, LocApiResponse *adapterR
   }
 
   if (eLOC_CLIENT_FAILURE_UNSUPPORTED == status ||
-      eLOC_CLIENT_FAILURE_INTERNAL == status) {
+      eLOC_CLIENT_FAILURE_INTERNAL == status || eQMI_LOC_SUCCESS_V02 != delete_gnss_resp.status) {
       // If the new API is not supported we fall back on the old one
       // The error could be eLOC_CLIENT_FAILURE_INTERNAL if
       // QMI_LOC_DELETE_GNSS_SERVICE_DATA_REQ_V02 is not in the .idl file
@@ -4783,13 +4786,14 @@ void LocApiV02::reportLocationRequestNotification(
         const char* nfwClient[] = { "NFW_CLIENT_CP", "NFW_CLIENT_SUPL", "NFW_CLIENT_IMS",
                                     "NFW_CLIENT_SIM", "NFW_CLIENT_MDT", "NFW_CLIENT_TLOC",
                                     "NFW_CLIENT_OTHER", "NFW_CLIENT_RLOC", "NFW_CLIENT_V2X",
-                                    "NFW_CLIENT_R1", "NFW_CLIENT_R2", "NFW_CLIENT_R3" };
+                                    "NFW_CLIENT_R1", "NFW_CLIENT_R2", "NFW_CLIENT_R3",
+                                    "NFW_CLIENT_NTN" };
         char packageName[LOC_MAX_PARAM_STRING];
 
         // proxyAppPackageName is "" for emergency
         if (ContextBase::isFeatureSupported(LOC_SUPPORTED_FEATURE_MULTIPLE_ATTRIBUTION_APPS) &&
             loc_req_notif->protocolStack >= eQMI_LOC_CTRL_PLANE_V02 &&
-            loc_req_notif->protocolStack <= eQMI_LOC_R3_V02 &&
+            loc_req_notif->protocolStack <= eQMI_LOC_NTN_V02 &&
             eQMI_LOC_OTHER_V02 != loc_req_notif->protocolStack) {
 
             if (mPackageName[loc_req_notif->protocolStack].empty()) {
@@ -5422,6 +5426,8 @@ void LocApiV02::reportGnssMeasurementData(
         m1HzMeasurementsInfo.clock.flags = measInfo.clock.flags;
         m1HzMeasurementsInfo.clock.timeNs = measInfo.clock.timeNs;
         m1HzMeasurementsInfo.clock.fullBiasNs = measInfo.clock.fullBiasNs;
+        // Clear previous measurement data.
+        m1HzMeasurementsInfo.measurements.clear();
         for (int meas = 0; (meas < measInfo.count) && (meas < GNSS_MEASUREMENTS_MAX); meas++) {
             GnssBasicMeasurementsData measurement = {};
             measurement.svId = measInfo.measurements[meas].svId;
@@ -5706,6 +5712,20 @@ void LocApiV02::setGnssBiasesForB1I() {
     for (uint32_t i = 0; i < mGnssMeasurements->gnssMeasNotification.count; i++) {
         measData = &mGnssMeasurements->gnssMeasNotification.measurements[i];
         switch (measData->gnssSignalType) {
+        case GNSS_SIGNAL_GPS_L1CA:
+            tempFlag = BIAS_GPSL1_VALID | BIAS_BDSB1_VALID;
+            tempFlagUnc = BIAS_GPSL1_UNC_VALID | BIAS_BDSB1_UNC_VALID;
+            if (tempFlag == (mTimeBiases.flags & tempFlag)) {
+                measData->fullInterSignalBiasNs = mTimeBiases.gpsL1 - mTimeBiases.bdsB1;
+                measData->flags |= GNSS_MEASUREMENTS_DATA_FULL_ISB_BIT;
+            }
+            if (tempFlagUnc == (mTimeBiases.flags & tempFlagUnc)) {
+                measData->fullInterSignalBiasUncertaintyNs =
+                        mTimeBiases.gpsL1Unc + mTimeBiases.bdsB1Unc;
+                measData->flags |= GNSS_MEASUREMENTS_DATA_FULL_ISB_UNCERTAINTY_BIT;
+            }
+            break;
+
         case GNSS_SIGNAL_GLONASS_G1:
             tempFlag = BIAS_GLOG1_VALID | BIAS_BDSB1_VALID;
             tempFlagUnc = BIAS_GLOG1_UNC_VALID | BIAS_BDSB1_UNC_VALID;
@@ -5730,6 +5750,22 @@ void LocApiV02::setGnssBiasesForB1I() {
             if (tempFlagUnc == (mTimeBiases.flags & tempFlagUnc)) {
                 measData->fullInterSignalBiasUncertaintyNs =
                         mTimeBiases.galE1Unc + mTimeBiases.bdsB1Unc;
+                measData->flags |= GNSS_MEASUREMENTS_DATA_FULL_ISB_UNCERTAINTY_BIT;
+            }
+            break;
+
+        case GNSS_SIGNAL_GPS_L5:
+            tempFlag = BIAS_BDSB1_VALID | BIAS_GPSL1_VALID | BIAS_GPSL1_GPSL5_VALID;
+            tempFlagUnc =
+                    BIAS_BDSB1_UNC_VALID | BIAS_GPSL1_UNC_VALID | BIAS_GPSL1_GPSL5_UNC_VALID;
+            if (tempFlag == (mTimeBiases.flags & tempFlag)) {
+                measData->fullInterSignalBiasNs =
+                        -mTimeBiases.bdsB1 + mTimeBiases.gpsL1 - mTimeBiases.gpsL1_gpsL5;
+                measData->flags |= GNSS_MEASUREMENTS_DATA_FULL_ISB_BIT;
+            }
+            if (tempFlagUnc == (mTimeBiases.flags & tempFlagUnc)) {
+                measData->fullInterSignalBiasUncertaintyNs =
+                        mTimeBiases.bdsB1Unc + mTimeBiases.gpsL1Unc + mTimeBiases.gpsL1_gpsL5Unc;
                 measData->flags |= GNSS_MEASUREMENTS_DATA_FULL_ISB_UNCERTAINTY_BIT;
             }
             break;
@@ -7047,6 +7083,7 @@ void LocApiV02 :: convertGnssMeasurements(
         }
         measurementData.adrMeters =
             (SPEED_OF_LIGHT / measurementData.carrierFrequencyHz) * measurementData.carrierPhase;
+        measurementData.flags |= GNSS_MEASUREMENTS_DATA_ADR_BIT;
     } else {
         measurementData.adrMeters = 0.0;
     }
@@ -7063,6 +7100,7 @@ void LocApiV02 :: convertGnssMeasurements(
             measurementData.adrUncertaintyMeters =
                 (SPEED_OF_LIGHT / measurementData.carrierFrequencyHz) *
                 gnss_measurement_report_ptr.svCarrierPhaseUncertainty[index];
+            measurementData.flags |= GNSS_MEASUREMENTS_DATA_ADR_UNCERTAINTY_BIT;
         } else {
             measurementData.adrUncertaintyMeters = 0.0;
         }
@@ -7071,6 +7109,7 @@ void LocApiV02 :: convertGnssMeasurements(
             measurementData.adrUncertaintyMeters =
                 (SPEED_OF_LIGHT / measurementData.carrierFrequencyHz) *
                 gnss_measurement_report_ptr.extSvCarrierPhaseUncertainty[index];
+            measurementData.flags |= GNSS_MEASUREMENTS_DATA_ADR_UNCERTAINTY_BIT;
         } else {
             measurementData.adrUncertaintyMeters = 0.0;
         }
@@ -7375,8 +7414,10 @@ void LocApiV02 :: convertGnssClock (GnssMeasurementsClock& clock,
         flags |= (GNSS_MEASUREMENTS_CLOCK_FLAGS_TIME_BIT |
                   GNSS_MEASUREMENTS_CLOCK_FLAGS_TIME_UNCERTAINTY_BIT |
                   GNSS_MEASUREMENTS_CLOCK_FLAGS_HW_CLOCK_DISCONTINUITY_COUNT_BIT);
-
-        if (gnss_measurement_info.systemTime_valid) {
+        // we only support GPS preferred or BDS preferred
+        qmiLocSvSystemEnumT_v02 system = gnss_measurement_info.systemTime.system;
+        if (gnss_measurement_info.systemTime_valid &&
+               ((system == eQMI_LOC_SV_SYSTEM_GPS_V02) || (system == eQMI_LOC_SV_SYSTEM_BDS_V02))) {
             uint16_t systemWeek = gnss_measurement_info.systemTime.systemWeek;
             uint32_t systemMsec = gnss_measurement_info.systemTime.systemMsec;
             float sysClkBias = gnss_measurement_info.systemTime.systemClkTimeBias;
@@ -7385,15 +7426,28 @@ void LocApiV02 :: convertGnssClock (GnssMeasurementsClock& clock,
 
             if (systemWeek != C_GPS_WEEK_UNKNOWN && isTimeValid) {
                 // fullBiasNs, biasNs & biasUncertaintyNs
-                int64_t totalMs = ((int64_t)systemWeek) *
-                                  ((int64_t)WEEK_MSECS) + ((int64_t)systemMsec);
-                int64_t gpsTimeNs = totalMs * 1000000 - (int64_t)(sysClkBias * 1e6);
+               int64_t totalMs = (int64_t)systemWeek * WEEK_MSECS + (int64_t)systemMsec;
+               int64_t gpsTimeNs = totalMs * NSEC_IN_MSEC - (int64_t)(sysClkBias * NSEC_IN_MSEC);
+               if (system == eQMI_LOC_SV_SYSTEM_BDS_V02) {
+                  gpsTimeNs += (GPS_BDS_DAYS_DIFF * DAY_MSECS * NSEC_IN_MSEC +
+                              GPS_BDS_LEAP_SECONDS_DIFF * MSEC_IN_ONE_SEC * NSEC_IN_MSEC);
+                  if (gnss_measurement_info.gpsBdsInterSystemBias_valid) {
+                      float timeBias = gnss_measurement_info.gpsBdsInterSystemBias.timeBias;
+                      gpsTimeNs += (int64_t)timeBias * NSEC_IN_MSEC;
+                  }
+               }
                 clock.fullBiasNs = clock.timeNs - gpsTimeNs;
                 clock.biasNs = sysClkBias * 1e6 - (double)((int64_t)(sysClkBias * 1e6));
                 clock.biasUncertaintyNs = (double)sysClkUncMs * 1e6;
                 flags |= (GNSS_MEASUREMENTS_CLOCK_FLAGS_FULL_BIAS_BIT |
                           GNSS_MEASUREMENTS_CLOCK_FLAGS_BIAS_BIT |
                           GNSS_MEASUREMENTS_CLOCK_FLAGS_BIAS_UNCERTAINTY_BIT);
+
+               LOC_LOGa("system %d, week %d, msec %d, sysClkBias %f, gpsbds bias %f, "
+                        "gps time ns%" PRIu64 " ",
+                        system, systemWeek, systemMsec, sysClkBias,
+                        gnss_measurement_info.gpsBdsInterSystemBias.timeBias,
+                        gpsTimeNs);
 
                 if (mGnssMeasurements->gnssSvMeasurementSet.svMeasSetHeader.flags &
                     GNSS_SV_MEAS_HEADER_HAS_LEAP_SECOND) {
@@ -9629,15 +9683,6 @@ void
 LocApiV02::setConstellationControl(const GnssSvTypeConfig& config,
                                    LocApiResponse *adapterResponse)
 {
-    // QMI will return INVALID parameter if enabledSvTypesMask is 0,
-    // so we just return back to the caller as this is no-op
-    if (0 == config.enabledSvTypesMask) {
-        if (NULL != adapterResponse) {
-            adapterResponse->returnToSender(LOCATION_ERROR_SUCCESS);
-        }
-        return;
-    }
-
     sendMsg(new LocApiMsg([this, config, adapterResponse] () {
 
     locClientStatusEnumType status = eLOC_CLIENT_FAILURE_GENERAL;
@@ -9658,14 +9703,13 @@ LocApiV02::setConstellationControl(const GnssSvTypeConfig& config,
 
     bool disableSupported = ContextBase::isFeatureSupported(
             LOC_SUPPORTED_FEATURE_CONSTELLATION_DISABLEMENT);
+
     if (disableSupported) {
        setConstellationConfigMsg.disableMask_valid = true;
        setConstellationConfigMsg.disableMask = config.blacklistedSvTypesMask;
     }
 
-    // disableMask is not supported in modem
-    // if we set disableMask, QMI call will return error
-    LOC_LOGE("setConstellationControl: disableSupported %d,"
+    LOC_LOGI("setConstellationControl:disableSupported %d,"
              "enable: %d 0x%" PRIx64 ", blacklisted: %d 0x%" PRIx64 "",
              disableSupported,
              setConstellationConfigMsg.enableMask_valid,
