@@ -331,7 +331,7 @@ namespace loc_idl_diag {
                 0x00, sizeof(locIdlClientDiagDelReqLog) - sizeof(log_hdr_type));
         fillGenericHeader(diagDelReqPtr->header,
             LOC_IDL_CLIENT_DIAG_MSG_VERSION,
-            LOC_IDL_CLIENT_DIAG_START_REQ,
+            LOC_IDL_CLIENT_DIAG_DEL_REQ,
             sizeof(locIdlClientDiagDelReq),
             0,  //lat in Tx
             0,
@@ -362,6 +362,9 @@ namespace loc_idl_diag {
         header.t_RxTimePtpNsec = gptp_time_ns;
         header.ptpSyncStatus = ptpSyncStatus;
         header.lattencyInRxEndMsec = latency;
+        header.u_Process_id = (uint32_t)getpid();
+        snprintf(header.processName, sizeof(header.processName),
+            "%s%d", getprogname(), (uint32_t)getpid());
     }
 
     void LocIdlclientDiag::populateDiagGnssSv(locIdlClientDiagGnssSv &dst,

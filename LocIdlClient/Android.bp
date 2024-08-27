@@ -11,14 +11,14 @@ prebuilt_etc {
 }
 
 gen_core_stub_srcs = [
-    "src-gen/core/v0/com/qualcomm/qti/location/*Stub*.cpp"
+    "src-gen/core/v1/com/qualcomm/qti/location/*Stub*.cpp"
 ]
 gen_core_proxy_srcs = [
-    "src-gen/core/v0/com/qualcomm/qti/location/*Proxy.cpp"
+    "src-gen/core/v1/com/qualcomm/qti/location/*Proxy.cpp"
 ]
 
 gen_someip_srcs = [
-    "src-gen/someip/v0/com/qualcomm/qti/location/*.cpp"
+    "src-gen/someip/v1/com/qualcomm/qti/location/*.cpp"
 ]
 
 cc_defaults {
@@ -65,7 +65,7 @@ cc_library_headers {
 }
 
 cc_library_shared {
-    name: "libLocIdlAPI-someip",
+    name: "libLocation-someip",
     vendor: true,
     srcs: gen_someip_srcs,
     defaults: [
@@ -78,7 +78,7 @@ cc_library_shared {
 }
 
 cc_library_shared {
-    name: "libLocIdlAPI-proxy",
+    name: "libLocation-proxy",
     vendor: true,
     srcs: gen_core_proxy_srcs,
     defaults: [
@@ -101,8 +101,8 @@ cc_binary {
        "src",
     ],
     shared_libs: [
-       "libLocIdlAPI-someip",
-       "libLocIdlAPI-proxy",
+       "libLocation-someip",
+       "libLocation-proxy",
     ],
 
     header_libs: [
@@ -132,8 +132,8 @@ cc_binary {
         "liblocdiagiface",
         "liblog",
         "libgps.utils",
-        "libLocIdlAPI-someip",
-        "libLocIdlAPI-proxy",
+        "libLocation-someip",
+        "libLocation-proxy",
     ],
 
     header_libs: [
@@ -189,3 +189,4 @@ cc_library_shared {
     ],
     rtti: true,
 }
+

@@ -128,7 +128,7 @@ void LocIdlClientV02Api::sendPosRptHelper(
 }
 
 void LocIdlClientV02Api::sendPosReport(EventMsgPosPkt *msg) {
-    EventPosRpt *posRpt;
+    EventPosRpt *posRpt = nullptr;
 
     posRpt = new EventPosRpt;
     if (nullptr == posRpt)
@@ -180,7 +180,7 @@ void LocIdlClientV02Api::sendSvRptHelper(
 }
 
 void LocIdlClientV02Api::sendSvReport(EventMsgSvPkt *msg) {
-    EventSvRpt *svRpt;
+    EventSvRpt *svRpt = nullptr;
 
     svRpt = new EventSvRpt;
     if (nullptr == svRpt)
@@ -226,7 +226,7 @@ void LocIdlClientV02Api::sendMeasRptHelper(
 }
 
 void LocIdlClientV02Api::sendMeasReport(EventMsgGnssMeasPkt *msg) {
-    EventGnssMeasRpt *measRpt;
+    EventGnssMeasRpt *measRpt = nullptr;
 
     measRpt = new EventGnssMeasRpt;
     if (nullptr == measRpt)
@@ -273,7 +273,7 @@ void LocIdlClientV02Api::sendNmeaRptHelper(
 }
 
 void LocIdlClientV02Api::sendNmeaReport(EventMsgNmeaPkt *msg) {
-    EventNmeaRpt *nmeaRpt;
+    EventNmeaRpt *nmeaRpt = nullptr;
 
     nmeaRpt = new EventNmeaRpt;
     if (nullptr == nmeaRpt)
@@ -283,6 +283,138 @@ void LocIdlClientV02Api::sendNmeaReport(EventMsgNmeaPkt *msg) {
     sendNmeaRptHelper(nmeaRpt, sizeof(EventNmeaRpt));
 }
 
+void LocIdlClientV02Api::sendEngineUpEventHelper(
+                    EventHwEngStatusConfig *inMsg,
+                    uint32_t msgSize
+)
+{
+    if (nullptr == inMsg || 0 == msgSize)
+        return;
+
+    struct sendEngineUpEvnt: public LocMsg
+    {
+        EventHwEngStatusConfig       *pMsg;
+        LocIdlClientV02Api           *pObj;
+        uint32_t                     size;
+        sendEngineUpEvnt
+        (
+            EventHwEngStatusConfig      *msg,
+            uint32_t                    inSize,
+            LocIdlClientV02Api              *Obj
+        ) :
+            LocMsg(),
+            pMsg(msg),
+            pObj(Obj),
+            size(inSize)
+        {}
+        virtual void proc() const
+        {
+            fidlLocApiV02EventCb->locClientFidlHardWareStatus(FIDL_HARDWARE_UP, fidlLocApiContext);
+            delete pMsg;
+        }
+    };
+    mMsgTask->sendMsg(new sendEngineUpEvnt(inMsg, msgSize, this));
+}
+
+
+void LocIdlClientV02Api::sendEngineUpEvent() {
+   EventHwEngStatusConfig *engineUpMsg = nullptr;
+
+   engineUpMsg = new EventHwEngStatusConfig;
+   if (nullptr == engineUpMsg)
+       return;
+
+   sendEngineUpEventHelper(engineUpMsg, sizeof(EventHwEngStatusConfig));
+}
+
+
+void LocIdlClientV02Api::sendEngineDownEventHelper(
+                    EventHwEngStatusConfig *inMsg,
+                    uint32_t msgSize
+)
+{
+    if (nullptr == inMsg || 0 == msgSize)
+        return;
+
+    struct sendEngineDownEvnt: public LocMsg
+    {
+        EventHwEngStatusConfig       *pMsg;
+        LocIdlClientV02Api           *pObj;
+        uint32_t                     size;
+        sendEngineDownEvnt
+        (
+            EventHwEngStatusConfig      *msg,
+            uint32_t                    inSize,
+            LocIdlClientV02Api              *Obj
+        ) :
+            LocMsg(),
+            pMsg(msg),
+            pObj(Obj),
+            size(inSize)
+        {}
+        virtual void proc() const
+        {
+            fidlLocApiV02EventCb->locClientFidlHardWareStatus(FIDL_HARDWARE_DOWN, fidlLocApiContext);
+            delete pMsg;
+        }
+    };
+    mMsgTask->sendMsg(new sendEngineDownEvnt(inMsg, msgSize, this));
+}
+
+
+void LocIdlClientV02Api::sendEngineDownEvent() {
+   EventHwEngStatusConfig *engineDownMsg = nullptr;
+
+   engineDownMsg = new EventHwEngStatusConfig;
+   if (nullptr == engineDownMsg)
+       return;
+
+   sendEngineDownEventHelper(engineDownMsg, sizeof(EventHwEngStatusConfig));
+}
+
+void LocIdlClientV02Api::sendFidlCapabilitiesEvent(EventMsgCapabilityRptPkt *msg)
+{
+    EventHwCapability *capRpt;
+
+    capRpt = new EventHwCapability;
+    if (nullptr == capRpt)
+        return;
+
+    capRpt->capability = msg->capability;
+    sendEngineCapabilitiesEventHelper(capRpt, sizeof(EventHwCapability));
+}
+
+void LocIdlClientV02Api::sendEngineCapabilitiesEventHelper(EventHwCapability *inMsg, uint32_t msgSize)
+{
+    if (nullptr == inMsg || 0 == msgSize)
+        return;
+
+    struct sendCapabilityEvnt: public LocMsg
+    {
+        EventHwCapability       *pMsg;
+        LocIdlClientV02Api      *pObj;
+        uint32_t                size;
+        sendCapabilityEvnt
+        (
+            EventHwCapability      *msg,
+            uint32_t               inSize,
+            LocIdlClientV02Api     *Obj
+        ) :
+            LocMsg(),
+            pMsg(msg),
+            pObj(Obj),
+            size(inSize)
+        {}
+        virtual void proc() const
+        {
+            fidlLocApiV02EventCb->locClientFidlCapabilities(pMsg->capability, fidlLocApiContext);
+            delete pMsg;
+        }
+    };
+    mMsgTask->sendMsg(new sendCapabilityEvnt(inMsg, msgSize, this));
+}
+
+
 void LocIdlClientIpcListener::onReceive(const char* data, uint32_t length,
                                 const LocIpcRecver* recver)
 {
@@ -290,15 +422,18 @@ void LocIdlClientIpcListener::onReceive(const char* data, uint32_t length,
         return;
 
     EventMsgBase *msg = (EventMsgBase *)data;
-    LOC_LOGD("%s]got ID: %d-->", __func__, (unsigned int)msg->eventID);
     switch (msg->eventID)
     {
         case IdlClientEvents::CLNT_EVT_DEVICE_UP:
         {
+            LOC_LOGD("%s]CLNT_EVT_DEVICE_UP", __func__);
+            mClientInstance.sendEngineUpEvent();
         }
         break;
         case IdlClientEvents::CLNT_EVT_DEVICE_DOWN:
         {
+            LOC_LOGD("%s]CLNT_EVT_DEVICE_DOWN", __func__);
+            mClientInstance.sendEngineDownEvent();
         }
         break;
         case IdlClientEvents::CLNT_EVT_RESPONSE:
@@ -331,6 +466,11 @@ void LocIdlClientIpcListener::onReceive(const char* data, uint32_t length,
         break;
         case IdlClientEvents::CLNT_EVT_CONFIG_RPT:
         {
+        }
+        break;
+        case IdlClientEvents::CLNT_EVT_CAPABILITY_RPT:
+        {
+            mClientInstance.sendFidlCapabilitiesEvent((EventMsgCapabilityRptPkt*)data);
         }
         break;
         default:
@@ -377,15 +517,31 @@ void initFidlCore(void) {
     pInstance->initSocket();
 }
 
+void LocIdlClientV02Api::openRequest() {
+    LOC_LOGD("%s]got CLNT_REQ_OPEN -->", __func__);
+    ReqMsgOpenPkt *openeq = new ReqMsgOpenPkt();
+    if (nullptr == openeq) {
+        return;
+     }
+    openeq->reqOpen.requestedMask = 0x1F;
+    sendReqMsgIpcHandler(openeq, sizeof(ReqMsgOpenPkt));
+}
+
 void LocIdlClientV02Api::startRequest(locClientFidlPosMode& fixCriteria) {
-    ReqMsgStartFix *startfix = new ReqMsgStartFix();
     LOC_LOGD("%s]got CLNT_REQ_START_FIX -->", __func__);
+    ReqMsgStartFix *startfix = new ReqMsgStartFix();
+    if (nullptr == startfix) {
+        return;
+    }
     sendReqMsgIpcHandler(startfix, sizeof(ReqMsgStartFix));
 }
 
 void LocIdlClientV02Api::stopRequest(void) {
-    ReqMsgStopFix *stopfix = new ReqMsgStopFix();
     LOC_LOGD("%s]got CLNT_REQ_STOP_FIX -->", __func__);
+    ReqMsgStopFix *stopfix = new ReqMsgStopFix();
+    if (nullptr == stopfix) {
+        return;
+    }
     sendReqMsgIpcHandler(stopfix, sizeof(ReqMsgStopFix));
 }
 

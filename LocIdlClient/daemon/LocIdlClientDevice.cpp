@@ -50,12 +50,14 @@ void loadGptpLibFile(void)
     }
 }
 
-void LocIdlClientDevice::getClockBootTimeNs(uint64_t &clk_bootTime)
+bool LocIdlClientDevice::getClockBootTimeNs(uint64_t &clk_bootTime)
 {
     LOC_LOGV("%s] --> ", __func__);
     struct timespec ts = {};
-    clock_gettime(CLOCK_BOOTTIME, &ts);
+    int res = -1;
+    res = clock_gettime(CLOCK_BOOTTIME, &ts);
     clk_bootTime = (ts.tv_sec * 1000000000ULL + ts.tv_nsec);
+    return (res == 0);
 }
 
 void LocIdlClientDevice::getGptpTimeNs(uint64_t &gptp_time_ns)
@@ -142,77 +144,143 @@ void LocIdlClientDevice::initGptp()
     }
 }
 
+void LocIdlClientDevice::sendGetCapabilityMsg()
+{
+    LOC_LOGD("%s] --> ", __func__);
+
+    struct sendGetCapability: public LocMsg
+    {
+        LocIdlClientDevice           *pObj;
+        sendGetCapability
+        (
+            LocIdlClientDevice              *Obj
+        ) :
+            LocMsg(),
+            pObj(Obj)
+        {}
+        virtual void proc() const
+        {
+            pObj->getLocationCapabilities();
+        }
+    };
+    mMsgTask->sendMsg(new sendGetCapability(this));
+}
+
 void LocIdlClientDevice::subscribeServiceMsgs()
 {
-    LOC_LOGE("%s] --> ", __func__);
+    LOC_LOGD("%s] --> ", __func__);
     LocIdlClientDevice *pInstance = LocIdlClientDevice::getInstance();
 
-        myProxy->getProxyStatusEvent().subscribe([&, this] (const CommonAPI::AvailabilityStatus status) {
+        myProxy->getProxyStatusEvent().subscribe([&, this]
+                (const CommonAPI::AvailabilityStatus status) {
         switch(status) {
         case CommonAPI::AvailabilityStatus::UNKNOWN:
-            LOC_LOGE("%s] UNKNOWN", __func__);
+            LOC_LOGD("%s] UNKNOWN", __func__);
             break;
         case CommonAPI::AvailabilityStatus::NOT_AVAILABLE:
             if (this->states == ClientDeviceStates::DEVICE_STATE_READY ||
                     this->states == ClientDeviceStates::DEVICE_STATE_IN_SESSION) {
                 this->sendDeviceStateEvent(ClientDeviceStates::DEVICE_STATE_DOWN);
             }
+            if (this->states == ClientDeviceStates::DEVICE_STATE_IN_SESSION)
+                this->UnSubscribeGnssResports();
             this->states = ClientDeviceStates::DEVICE_STATE_DOWN;
-            LOC_LOGE("%s] NOT_AVAILABLE", __func__);
+            LOC_LOGD("%s] NOT_AVAILABLE", __func__);
             break;
         case CommonAPI::AvailabilityStatus::AVAILABLE:
-            LOC_LOGE("%s] AVAILABLE", __func__);
+            LOC_LOGD("%s] AVAILABLE", __func__);
+            if (this->states == ClientDeviceStates::DEVICE_STATE_UNDEFINED)
+                this->sendDeviceStateEvent(ClientDeviceStates::DEVICE_STATE_DOWN);
+            this->sendGetCapabilityMsg();
             break;
         }
     });
 
     // Subscribe for receiving values
-    myProxy->getGnssCapabilitiesMaskAttribute().getChangedEvent().subscribe(
+    capsSubscription = myProxy->getGnssCapabilitiesEvent().subscribe(
     [&, this](const uint32_t &val) {
-        LOC_LOGE("%s] Received caps change event: %d", __func__, val);
-        if (val != 0) {
-            this->states = ClientDeviceStates::DEVICE_STATE_READY;
-            this->sendDeviceStateEvent(ClientDeviceStates::DEVICE_STATE_READY);
+        LOC_LOGD("%s] Received caps change event: %d", __func__, val);
+        this->recvdCapsMask = val;
+        if (0 == val) {
+            if (this->states != ClientDeviceStates::DEVICE_STATE_DOWN) {
+                this->states = ClientDeviceStates::DEVICE_STATE_DOWN;
+                this->sendDeviceStateEvent(ClientDeviceStates::DEVICE_STATE_DOWN);
+            }
+        } else {
+            if (this->states < ClientDeviceStates::DEVICE_STATE_READY) {
+                this->states = ClientDeviceStates::DEVICE_STATE_READY;
+                this->sendDeviceStateEvent(ClientDeviceStates::DEVICE_STATE_READY);
+            }
         }
+        sendDeviceCapabilityEvent();
     });
+}
+
+void LocIdlClientDevice::getLocationCapabilities() {
+    if (myProxy) {
+        CommonAPI::CallStatus callStatus = CommonAPI::CallStatus::UNKNOWN;
+        uint32_t capsMask = 0;
+
+        myProxy->GetLocationCapabilities(callStatus, capsMask, &info);
+        if (callStatus != CommonAPI::CallStatus::SUCCESS) {
+            LOC_LOGE("GetLocationCapabilities() Remote call failed! callStatus : %d",
+                                            (int)callStatus);
+        } else {
+            LOC_LOGD("%s] GetLocationCapabilities caps: %d", __func__, capsMask);
+            this->recvdCapsMask = capsMask;
+            if (capsMask == 0) {
+                if (this->states != ClientDeviceStates::DEVICE_STATE_DOWN) {
+                    this->states = ClientDeviceStates::DEVICE_STATE_DOWN;
+                    this->sendDeviceStateEvent(ClientDeviceStates::DEVICE_STATE_DOWN);
+                }
+            } else {
+                if (this->states < ClientDeviceStates::DEVICE_STATE_READY) {
+                    this->states = ClientDeviceStates::DEVICE_STATE_READY;
+                    this->sendDeviceStateEvent(ClientDeviceStates::DEVICE_STATE_READY);
+                }
+            }
+            sendDeviceCapabilityEvent();
+        }
+    } else {
+        LOC_LOGE("%s] myProxy NULL", __func__);
+    }
 }
 
 void LocIdlClientDevice::subscribeGnssResports()
 {
     LOC_LOGV("%s] --> ", __func__);
-    if (mask & LocIdlAPI::IDLGnssReportCbInfoMask::IDL_LOC_CB_INFO_BIT) {
-        pvtSubscription = myProxy->getLocationReportEvent().subscribe(
-        [&, this](const LocIdlAPI::IDLLocationReport &_locationReport) {
+    if (mask & LocationTypes::GnssReportCbInfoMaskT::GRCIMT_LOCATION_CB_INFO_BIT) {
+        pvtSubscription = myProxy->getGnssLocationReportEvent().subscribe(
+        [&, this](const LocationTypes::LocationReportT &locationReportInfo) {
             LOC_LOGD("%s] --> Posreport ", __func__);
-            this->sendPosRespEvent(_locationReport);
-
+            this->sendPosRespEvent(locationReportInfo);
         });
     }
 
-    if (mask & LocIdlAPI::IDLGnssReportCbInfoMask::IDL_1HZ_MEAS_CB_INFO_BIT) {
-        measSubscription = myProxy->getGnssMeasurementsEvent().subscribe(
-        [&, this](const LocIdlAPI::IDLGnssMeasurements& gnssMeasurements) {
+    if (mask & LocationTypes::GnssReportCbInfoMaskT::GRCIMT_MEAS_CB_INFO_BIT) {
+        measSubscription = myProxy->getGnssMeasurementReportEvent().subscribe(
+        [&, this](const LocationTypes::GnssMeasurementsT& gnssMeasurements) {
             this->sendGnssMeasRespEvent(gnssMeasurements);
         });
     }
 
-    if (mask & LocIdlAPI::IDLGnssReportCbInfoMask::IDL_SV_CB_INFO_BIT) {
-        svSubscription = myProxy->getGnssSvEvent().subscribe(
-        [&, this](const vector<LocIdlAPI::IDLGnssSv> &gnssSv) {
+    if (mask & LocationTypes::GnssReportCbInfoMaskT::GRCIMT_SV_CB_INFO_BIT) {
+        svSubscription = myProxy->getGnssSvReportEvent().subscribe(
+        [&, this](const vector<LocationTypes::GnssSvDataT> &gnssSv) {
             this->sendSvRespEvent(gnssSv);
         });
     }
 
-    if (mask & LocIdlAPI::IDLGnssReportCbInfoMask::IDL_NMEA_CB_INFO_BIT) {
-       nmeaSubscription = myProxy->getGnssNmeaEvent().subscribe(
-        [&, this](const uint64_t timestamp, const string nmea){
+    if (mask & LocationTypes::GnssReportCbInfoMaskT::GRCIMT_NMEA_CB_INFO_BIT) {
+        nmeaSubscription = myProxy->getGnssNmeaEvent().subscribe(
+        [&, this](const uint64_t timestamp, const string nmea) {
             this->sendNmeaRespEvent(timestamp, nmea);
         });
     }
 
-    if (mask & LocIdlAPI::IDLGnssReportCbInfoMask::IDL_DATA_CB_INFO_BIT) {
-        dataSubscription = myProxy->getGnssDataEvent().subscribe(
-        [&, this](const LocIdlAPI::IDLGnssData& gnssData){
+    if (mask & LocationTypes::GnssReportCbInfoMaskT::GRCIMT_DATA_CB_INFO_BIT) {
+        dataSubscription = myProxy->getGnssDataReportEvent().subscribe(
+        [&, this](const LocationTypes::GnssDataT& gnssData) {
            this->sendGnssDataRespEvent(gnssData);
         });
     }
@@ -220,38 +288,38 @@ void LocIdlClientDevice::subscribeGnssResports()
 
 void LocIdlClientDevice::UnSubscribeGnssResports()
 {
-    LOC_LOGV("%s] --> ", __func__);
-    if (mask & LocIdlAPI::IDLGnssReportCbInfoMask::IDL_DATA_CB_INFO_BIT) {
-        myProxy->getGnssDataEvent().unsubscribe(dataSubscription);
+    LOC_LOGD("%s] --> ", __func__);
+    if (mask & LocationTypes::GnssReportCbInfoMaskT::GRCIMT_DATA_CB_INFO_BIT) {
+        myProxy->getGnssDataReportEvent().unsubscribe(dataSubscription);
     }
-    if (mask & LocIdlAPI::IDLGnssReportCbInfoMask::IDL_LOC_CB_INFO_BIT) {
-        myProxy->getLocationReportEvent().unsubscribe(pvtSubscription);
+    if (mask & LocationTypes::GnssReportCbInfoMaskT::GRCIMT_LOCATION_CB_INFO_BIT) {
+        myProxy->getGnssLocationReportEvent().unsubscribe(pvtSubscription);
     }
-    if (mask & LocIdlAPI::IDLGnssReportCbInfoMask::IDL_1HZ_MEAS_CB_INFO_BIT) {
-        myProxy->getGnssMeasurementsEvent().unsubscribe(measSubscription);
+    if (mask & LocationTypes::GnssReportCbInfoMaskT::GRCIMT_MEAS_CB_INFO_BIT) {
+        myProxy->getGnssMeasurementReportEvent().unsubscribe(measSubscription);
     }
-    if (mask & LocIdlAPI::IDLGnssReportCbInfoMask::IDL_SV_CB_INFO_BIT) {
-        myProxy->getGnssSvEvent().unsubscribe(svSubscription);
+    if (mask & LocationTypes::GnssReportCbInfoMaskT::GRCIMT_SV_CB_INFO_BIT) {
+        myProxy->getGnssSvReportEvent().unsubscribe(svSubscription);
     }
-    if (mask & LocIdlAPI::IDLGnssReportCbInfoMask::IDL_NMEA_CB_INFO_BIT) {
+    if (mask & LocationTypes::GnssReportCbInfoMaskT::GRCIMT_NMEA_CB_INFO_BIT) {
         myProxy->getGnssNmeaEvent().unsubscribe(nmeaSubscription);
     }
 }
 
 void LocIdlClientDevice::initSomeIp()
 {
-    LOC_LOGV("%s] --> ", __func__);
-    CommonAPI::Runtime::setProperty("LogContext", "LocIdlAPI");
-    CommonAPI::Runtime::setProperty("LogApplication", "LocIdlAPI");
-    CommonAPI::Runtime::setProperty("LibraryBase", "LocIdlAPI");
+    LOC_LOGD("%s] --> ", __func__);
+    CommonAPI::Runtime::setProperty("LogContext", "Location");
+    CommonAPI::Runtime::setProperty("LogApplication", "Location");
+    CommonAPI::Runtime::setProperty("LibraryBase", "Location");
 
     runtime = CommonAPI::Runtime::get();
 
     string domain = "local";
-    string instance = "com.qualcomm.qti.location.LocIdlAPI";
+    string instance = "com.qualcomm.qti.location.Location";
     string connection = "location-fidl-client";
 
-    myProxy = runtime->buildProxy<LocIdlAPIProxy>(domain,
+    myProxy = runtime->buildProxy<LocationProxy>(domain,
             instance, connection);
 
     LOC_LOGE("%s] Checking Service availability!", __func__);

@@ -215,7 +215,8 @@ enum class IdlClientEvents
     CLNT_EVT_SV_MEAS_RPT,
     CLNT_EVT_NMEA_RPT,
     CLNT_EVT_GNSS_MEAS_RPT,
-    CLNT_EVT_CONFIG_RPT
+    CLNT_EVT_CONFIG_RPT,
+    CLNT_EVT_CAPABILITY_RPT
 };
 
 enum class ResponseStatus
@@ -278,6 +279,18 @@ typedef struct
     char             reserved[32];
 }EventGnssConfig;
 
+typedef struct
+{
+    uint32_t         hwStatus;
+    char             reserved[32];
+}EventHwEngStatusConfig;
+
+typedef struct
+{
+    uint32_t         capability;
+    char             reserved[32];
+}EventHwCapability;
+
 struct EventMsgBase
 {
     IdlClientEvents     eventID;
@@ -310,6 +323,15 @@ struct EventMsgEngineUpPkt : EventMsgBase
 struct EventMsgEngineDownPkt : EventMsgBase
 {
     inline EventMsgEngineDownPkt(): EventMsgBase(IdlClientEvents::CLNT_EVT_DEVICE_DOWN, 0)
+    {
+    }
+};
+
+struct EventMsgCapabilityRptPkt : EventMsgBase
+{
+    uint32_t capability;
+    inline EventMsgCapabilityRptPkt(): EventMsgBase(IdlClientEvents::CLNT_EVT_CAPABILITY_RPT,
+                                                        sizeof(uint32_t))
     {
     }
 };
@@ -348,4 +370,4 @@ struct EventMsgNmeaPkt : EventMsgBase
     }
 };
 
- #endif /* LOC_IDL_CLIENT_IF_V02_H */
+#endif /* LOC_IDL_CLIENT_IF_V02_H */

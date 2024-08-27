@@ -15,8 +15,8 @@
 #define LOC_IDL_CLIENT_DIAG_GNSS_SV_MAX            (176)
 #define LOC_IDL_CLIENT_DIAG_GNSS_MEASUREMENTS_SEQ  (90)
 #define LOC_IDL_CLIENT_DIAG_DGNSS_STATION_ID_MAX    (3)
-#define LOC_IDL_CLIENT_DIAG_MAX_NUMBER_OF_SIGNAL_TYPES (22)
-#define LOC_IDL_CLIENT_DIAG_MSG_VERSION        (0)
+#define LOC_IDL_CLIENT_DIAG_MAX_NUMBER_OF_SIGNAL_TYPES (23)
+#define LOC_IDL_CLIENT_DIAG_MSG_VERSION        (1)
 
 #ifndef LOC_IDL_CLIENT_API_PACKET_C
 #define LOC_IDL_CLIENT_API_PACKET_C (0x1E6B)
@@ -317,7 +317,9 @@ typedef enum {
     /** BEIDOU B2BI RF Band */
     LOC_IDL_CLIENT_DIAG_GNSS_SIGNAL_BEIDOU_B2BI         = (1<<22),
     /** BEIDOU B2BQ RF Band */
-    LOC_IDL_CLIENT_DIAG_GNSS_SIGNAL_BEIDOU_B2BQ         = (1<<23)
+    LOC_IDL_CLIENT_DIAG_GNSS_SIGNAL_BEIDOU_B2BQ         = (1<<23),
+    /** GNSS signal is of NAVIC L1 RF band. <br/>   */
+    LOC_IDL_CLIENT_DIAG_GNSS_GSTM_NAVIC_L1_BIT          = (1<<24)
 } locIdlClientDiagGnssSignalTypeBits;
 
 typedef PACKED struct PACKED_POST {
@@ -544,7 +546,9 @@ typedef enum {
     /** GnssLocation has valid IDLLocationReport::ageMsecOfCorrections. */
     LOC_IDL_CLIENT_DIAG_GNSS_LOCATION_INFO_AGE_OF_CORRECTION_BIT              = (1ULL<<43),
     /** IDLLocationReport has valid IDLLocationReport::currReportingRate. */
-    LOC_IDL_CLIENT_DIAG_GNSS_LOCATION_INFO_CURR_REPORT_RATE_BIT               = (1ULL<<44)
+    LOC_IDL_CLIENT_DIAG_GNSS_LOCATION_INFO_CURR_REPORT_RATE_BIT               = (1ULL<<44),
+    /** IDLLocationReport has valid IDLLocationReport::leapSecondsUnc. */
+    LOC_IDL_CLIENT_DIAG_GNSS_LOCATION_LREFM_LEAP_SECONDS_UNC_BIT             = (1ULL<<45)
 } locIdlClientDiagInfoFlagBits;
 
 typedef enum {
@@ -933,6 +937,9 @@ typedef PACKED struct PACKED_POST {
      *  and sending over SOMEIP
      *  Unit- milli-seconds */
     uint16_t reportingLatency;
+    /** Uncertainty for the GNSS leap second.
+     *  Units -- Seconds */
+    uint8_t  leapSecondsUnc;
 } locIdlClientDiagPosition;
 
 typedef uint32_t locIdlClientDiagGnssMeasurementsDataFlagsMask;
@@ -1162,6 +1169,8 @@ typedef PACKED struct PACKED_POST{
     uint64_t t_TxTimePtpNsec;
     /** PTP time in Receiver End*/
     uint64_t t_RxTimePtpNsec;
+    /** Process Name*/
+    char processName[32];
 } locIdlGenericHeader;
 
 typedef PACKED struct PACKED_POST{

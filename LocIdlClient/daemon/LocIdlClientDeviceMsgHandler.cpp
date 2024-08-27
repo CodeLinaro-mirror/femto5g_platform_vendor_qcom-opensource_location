@@ -12,8 +12,6 @@ void LocIdlClientDevice::sendReqMsgIpcHandler(
     if (nullptr == inMsg || 0 == msgSize)
         return;
 
-    LOC_LOGV("%s] --> ", __func__);
-
     struct sendReqPacket: public LocMsg
     {
         const ReqMsgBase*          pMsg;
@@ -169,7 +167,6 @@ void LocIdlClientDevice::sendEventsIpcHelper(
                     uint32_t         msgSize
                 )
 {
-    LOC_LOGV("%s] --> ", __func__);
     if (nullptr == inMsg || 0 == msgSize)
         return;
 
@@ -200,9 +197,7 @@ void LocIdlClientDevice::sendEventsIpcHelper(
 
 void LocIdlClientDevice::sendRespEvent(IdlClinetRequests reqType, bool status )
 {
-    LOC_LOGV("%s] --> ", __func__);
-
-    EventMsgResponsePkt *msg;
+    EventMsgResponsePkt *msg = nullptr;
     msg = new EventMsgResponsePkt();
     if (nullptr == msg)
         return;
@@ -218,10 +213,10 @@ void LocIdlClientDevice::sendRespEvent(IdlClinetRequests reqType, bool status )
 
 void LocIdlClientDevice::sendDeviceStateEvent(ClientDeviceStates state)
 {
-    LOC_LOGV("%s] --> ", __func__);
+    LOC_LOGD("%s] : state = %d --> ", __func__, state);
     if (ClientDeviceStates::DEVICE_STATE_DOWN == state)
     {
-        EventMsgEngineDownPkt *msg;
+        EventMsgEngineDownPkt *msg = nullptr;
         msg = new EventMsgEngineDownPkt();
         if (nullptr == msg)
             return;
@@ -229,7 +224,7 @@ void LocIdlClientDevice::sendDeviceStateEvent(ClientDeviceStates state)
     }
     else if (ClientDeviceStates::DEVICE_STATE_READY == state)
     {
-        EventMsgEngineUpPkt *msg;
+        EventMsgEngineUpPkt *msg = nullptr;
         msg = new EventMsgEngineUpPkt();
         if (nullptr == msg)
             return;
@@ -237,9 +232,20 @@ void LocIdlClientDevice::sendDeviceStateEvent(ClientDeviceStates state)
     }
 }
 
-void LocIdlClientDevice::sendPosRespEvent(const LocIdlAPI::IDLLocationReport &_locationReport)
+void LocIdlClientDevice::sendDeviceCapabilityEvent()
 {
-    LOC_LOGV("%s] --> ", __func__);
+    LOC_LOGD("%s] : Capability = %d --> ", __func__, this->recvdCapsMask);
+    EventMsgCapabilityRptPkt *msg = nullptr;
+    msg = new EventMsgCapabilityRptPkt();
+    if (nullptr == msg)
+        return;
+    msg->capability = this->recvdCapsMask;
+    sendEventsIpcHelper(msg, sizeof(EventMsgCapabilityRptPkt));
+}
+
+void LocIdlClientDevice::sendPosRespEvent(
+            const LocationTypes::LocationReportT &_locationReport)
+{
     EventMsgPosPkt *msg;
     uint64_t clk_bootTime = 0;
     uint64_t gptp_time_ns = 0;
@@ -248,7 +254,7 @@ void LocIdlClientDevice::sendPosRespEvent(const LocIdlAPI::IDLLocationReport &_l
     if (nullptr == msg)
         return;
 
-    const LocIdlAPI::IDLLocation &location = _locationReport.getLocInfo();
+    const LocationTypes::LocationT &location = _locationReport.getLocInfo();
     UlpLocation &ulpLoc = msg->posRpt.location;
     GpsLocationExtended &gpsLocExt = msg->posRpt.locationExtended;;
     GnssDataNotification &dataNotify = msg->posRpt.dataNotify;
@@ -260,9 +266,9 @@ void LocIdlClientDevice::sendPosRespEvent(const LocIdlAPI::IDLLocationReport &_l
 
     dataNotify = mDataNotify;
 
-    if (st == LocIdlAPI::IDLLocSessionStatus::IDL_LOC_SESS_SUCCESS) {
+    if (st == LocationTypes::LocSessionStatusT::LSS_SUCCESS) {
         status = LOC_SESS_SUCCESS;
-    } else if (st == LocIdlAPI::IDLLocSessionStatus::IDL_LOC_SESS_INTERMEDIATE) {
+    } else if (st == LocationTypes::LocSessionStatusT::LSS_INTERMEDIATE) {
         status = LOC_SESS_INTERMEDIATE;
     } else {
         status = LOC_SESS_FAILURE;
@@ -276,11 +282,13 @@ void LocIdlClientDevice::sendPosRespEvent(const LocIdlAPI::IDLLocationReport &_l
     msg->posRpt.msInWeek = gpsLocExt.gpsTime.gpsWeek;
     msg->posRpt.status = status;
 
-    getClockBootTimeNs(clk_bootTime);
     getGptpTimeNs(gptp_time_ns);
 
+    msg->posRpt.location.isTimeAtPVTRxFromHWVaild = getClockBootTimeNs(clk_bootTime);
+    msg->posRpt.location.timeAtPVTRxFromHW = clk_bootTime;
+
     msg->posRpt.gptp_time_ns = gptp_time_ns;
-    msg->posRpt.elapsedgPTPTime = _locationReport.getElapsedgPTPTime();
+    msg->posRpt.elapsedgPTPTime = _locationReport.getElapsedgPtpTime();
 
     if ((msg->posRpt.gptp_time_ns == 0) || (msg->posRpt.elapsedgPTPTime == 0)) {
         latency = 0;
@@ -297,9 +305,9 @@ void LocIdlClientDevice::sendPosRespEvent(const LocIdlAPI::IDLLocationReport &_l
     sendEventsIpcHelper(msg, sizeof(EventMsgPosPkt));
 }
 
-void LocIdlClientDevice::sendGnssMeasRespEvent(const LocIdlAPI::IDLGnssMeasurements& gnssMeasurements)
+void LocIdlClientDevice::sendGnssMeasRespEvent(
+            const LocationTypes::GnssMeasurementsT& gnssMeasurements)
 {
-    LOC_LOGV("%s] --> ", __func__);
     EventMsgGnssMeasPkt *msg;
     locIdlClientDiagGnssMeasPacket gnssMeasDiag;
     uint64_t clk_bootTime = 0;
@@ -320,9 +328,8 @@ void LocIdlClientDevice::sendGnssMeasRespEvent(const LocIdlAPI::IDLGnssMeasureme
     sendEventsIpcHelper(msg, sizeof(EventMsgGnssMeasPkt));
 }
 
-void LocIdlClientDevice::sendSvRespEvent(const vector<LocIdlAPI::IDLGnssSv> &gnssSv)
+void LocIdlClientDevice::sendSvRespEvent(const vector<LocationTypes::GnssSvDataT> &gnssSv)
 {
-    LOC_LOGV("%s] --> ", __func__);
     EventMsgSvPkt *msg;
     uint64_t clk_bootTime = 0;
     uint64_t gptp_time_ns = 0;
@@ -344,7 +351,6 @@ void LocIdlClientDevice::sendSvRespEvent(const vector<LocIdlAPI::IDLGnssSv> &gns
 
 void LocIdlClientDevice::sendNmeaRespEvent(const uint64_t timestamp, const string nmea)
 {
-    LOC_LOGV("%s] --> ", __func__);
     EventMsgNmeaPkt *msg;
     uint64_t clk_bootTime = 0;
     uint64_t gptp_time_ns = 0;
@@ -367,9 +373,8 @@ void LocIdlClientDevice::sendNmeaRespEvent(const uint64_t timestamp, const strin
     mDiagObj.diagLogNmeaInfo(timestamp, nmea, clk_bootTime, gptp_time_ns, false);
 }
 
-void LocIdlClientDevice::sendGnssDataRespEvent(const LocIdlAPI::IDLGnssData& gnssData)
+void LocIdlClientDevice::sendGnssDataRespEvent(const LocationTypes::GnssDataT& gnssData)
 {
-    LOC_LOGV("%s] --> ", __func__);
     vector<uint32_t> dataMask = gnssData.getGnssDataMask();
     vector<double> jammerInd = gnssData.getJammerInd();
     vector<double> agc = gnssData.getAgc();
@@ -377,17 +382,28 @@ void LocIdlClientDevice::sendGnssDataRespEvent(const LocIdlAPI::IDLGnssData& gns
     locIdlClientDiagGnssData gnssDataDiag;
     uint64_t clk_bootTime = 0;
     uint64_t gptp_time_ns = 0;
+    uint32_t rSize = dataMask.size() - 1;
 
-    dataNotify.size = dataMask.size() - 1;
-    gnssDataDiag.size = dataNotify.size;
+    for  (int i = 0; i < rSize; i++) {
+        if (i < GNSS_LOC_MAX_NUMBER_OF_SIGNAL_TYPES) {
+            dataNotify.gnssDataMask[i] = (uint32_t)dataMask[i];
+            dataNotify.jammerInd[i] = (double)jammerInd[i];
+            dataNotify.agc[i] = (double)agc[i];
+        }
+        if (i < LOC_IDL_CLIENT_DIAG_MAX_NUMBER_OF_SIGNAL_TYPES) {
+            gnssDataDiag.gnssDiagDataMask[i] = (uint32_t)dataMask[i];
+            gnssDataDiag.jammerInd[i] = (double)jammerInd[i];
+            gnssDataDiag.agc[i] = (double)agc[i];
+        }
+    }
 
-    for  (int i = 0; i < (dataMask.size() - 1) && i < GNSS_LOC_MAX_NUMBER_OF_SIGNAL_TYPES; i++) {
-        dataNotify.gnssDataMask[i] = (uint32_t)dataMask[i];
-        gnssDataDiag.gnssDiagDataMask[i] = (uint32_t)dataMask[i];
-        dataNotify.jammerInd[i] = (double)jammerInd[i];
-        gnssDataDiag.jammerInd[i] = (double)jammerInd[i];
-        dataNotify.agc[i] = (double)agc[i];
-        gnssDataDiag.agc[i] = (double)agc[i];
+    dataNotify.size = rSize;
+    gnssDataDiag.size = rSize;
+    if (rSize > GNSS_LOC_MAX_NUMBER_OF_SIGNAL_TYPES) {
+        dataNotify.size = GNSS_LOC_MAX_NUMBER_OF_SIGNAL_TYPES;
+    }
+    if (rSize > LOC_IDL_CLIENT_DIAG_MAX_NUMBER_OF_SIGNAL_TYPES) {
+        gnssDataDiag.size = LOC_IDL_CLIENT_DIAG_MAX_NUMBER_OF_SIGNAL_TYPES;
     }
 
     getClockBootTimeNs(clk_bootTime);
@@ -421,10 +437,11 @@ void LocIdlClientDevice::handleOpen(ReqOpen &open)
 
 void LocIdlClientDevice::sessionStart()
 {
-    LOC_LOGV("%s] --> ", __func__);
+    LOC_LOGI("%s] --> ", __func__);
     uint32_t _intervalInMs = 100;
-    LocIdlAPI::IDLLocationResponse resp;
-    CommonAPI::CallStatus callStatus;
+    LocationTypes::LocationStatusT resp =
+            LocationTypes::LocationStatusT::LOCATION_STATUS_T_UNKNOWN;
+    CommonAPI::CallStatus callStatus = CommonAPI::CallStatus::UNKNOWN;
     uint64_t clk_bootTime = 0;
     uint64_t gptp_time_ns = 0;
     locIdlClientDiagStartReq startReq;
@@ -433,36 +450,37 @@ void LocIdlClientDevice::sessionStart()
     bool sessionStartstat = false;
 
     subscribeGnssResports();
-
-    myProxy->startPositionSession(_intervalInMs, mask, callStatus, resp, &info);
+    getClockBootTimeNs(clk_bootTime);
+    getGptpTimeNs(gptp_time_ns);
+    startReq.interval = _intervalInMs;
+    startReq.mask = mask;
+    mDiagObj.diagLogGnssStartReq(startReq, clk_bootTime, gptp_time_ns, false);
+    mSessionStartBootTimestampNs = clk_bootTime;
+    myProxy->StartPositionSessionLocationReport(_intervalInMs, mask, callStatus, resp, &info);
     if (callStatus != CommonAPI::CallStatus::SUCCESS) {
-        LOC_LOGE("startPositionSession() Remote call failed! callStatus : %d", (int)callStatus);
+        LOC_LOGE("StartPositionSessionLocationReport() Remote call failed! callStatus : %d",
+                                            (int)callStatus);
         sessionStartstat = false;
     } else {
         sessionStartstat = true;
         states = ClientDeviceStates::DEVICE_STATE_IN_SESSION;
     }
-
-    getClockBootTimeNs(clk_bootTime);
-    getGptpTimeNs(gptp_time_ns);
-
-    startReq.interval = _intervalInMs;
-    startReq.mask = mask;
-    mDiagObj.diagLogGnssStartReq(startReq, clk_bootTime, gptp_time_ns, false);
     sendRespEvent(IdlClinetRequests::CLNT_REQ_START_FIX, sessionStartstat);
 }
 
 void LocIdlClientDevice::sessionStop()
 {
-    LOC_LOGV("%s] --> ", __func__);
-    CommonAPI::CallStatus callStatus;
+    LOC_LOGI("%s] --> ", __func__);
+    LocationTypes::LocationStatusT status =
+            LocationTypes::LocationStatusT::LOCATION_STATUS_T_UNKNOWN;
+    CommonAPI::CallStatus callStatus = CommonAPI::CallStatus::UNKNOWN;
     bool sessionStopstat = false;
     uint64_t clk_bootTime = 0;
     uint64_t gptp_time_ns = 0;
 
     UnSubscribeGnssResports();
 
-    myProxy->stopPositionSession(callStatus, &info);
+    myProxy->StopPositionSession(callStatus, status, &info);
     if (callStatus != CommonAPI::CallStatus::SUCCESS) {
         LOC_LOGE("stopPositionSession() Remote call failed! callStatus : %d", (int)callStatus);
         sessionStopstat = false;
@@ -481,27 +499,29 @@ void LocIdlClientDevice::sessionStop()
 }
 
 void LocIdlClientDevice::deleteRequest(GnssAidingData &data) {
-    LOC_LOGV("%s] --> ", __func__);
-    CommonAPI::CallStatus callStatus;
+    LOC_LOGI("%s] --> ", __func__);
+    CommonAPI::CallStatus callStatus = CommonAPI::CallStatus::UNKNOWN;
     uint32_t aidingDataMask = 0;
-    LocIdlAPI::IDLLocationResponse resp;
+    LocationTypes::LocationStatusT resp =
+            LocationTypes::LocationStatusT::LOCATION_STATUS_T_UNKNOWN;
     bool delStat = false;
     uint64_t clk_bootTime = 0;
     uint64_t gptp_time_ns = 0;
     locIdlClientDiagDelReq delReq;
 
     if (data.deleteAll) {
-        aidingDataMask |= LocIdlAPI::IDLAidingDataDeletionMask::IDL_AIDING_DATA_DELETION_ALL;
+        aidingDataMask |= LocationTypes::AidingDataDeletionMaskT::ADDMT_ALL;
     }
     if (data.sv.svMask) {
-        aidingDataMask |= LocIdlAPI::IDLAidingDataDeletionMask::IDL_AIDING_DATA_DELETION_EPHEMERIS;
+        aidingDataMask |= LocationTypes::AidingDataDeletionMaskT::ADDMT_EPHEMERIS;
     }
     if(data.dreAidingDataMask) {
-        aidingDataMask |= LocIdlAPI::IDLAidingDataDeletionMask::IDL_AIDING_DATA_DELETION_DR_SENSOR_CALIBRATION;
+        aidingDataMask |=
+            LocationTypes::AidingDataDeletionMaskT::ADDMT_DR_SENSOR_CALIBRATION;
     }
 
     if (myProxy) {
-        myProxy->deleteAidingData(aidingDataMask, callStatus, resp, &info);
+        myProxy->DeleteAidingData(aidingDataMask, callStatus, resp, &info);
         if (callStatus != CommonAPI::CallStatus::SUCCESS) {
             LOC_LOGE("deleteAidingData() Remote call failed! callStatus : %d", (int)callStatus);
             delStat = false;

@@ -48,10 +48,10 @@ private:
 
 public:
     void initSocket();
-    //void initGptp();
     void waitForSocketDir(const char *dirPath);
     void sendReqMsgIpcHandler(ReqMsgBase *inMsg, uint32_t msgSize);
     void sendReqMsg(IdlClinetRequests req);
+    void openRequest();
     void startRequest(locClientFidlPosMode& fixCriteria);
     void stopRequest(void);
     void delRequest(const GnssAidingData& data) ;
@@ -63,6 +63,12 @@ public:
     void sendMeasRptHelper(EventGnssMeasRpt *inMsg, uint32_t msgSize);
     void sendSvReport(EventMsgSvPkt *msg);
     void sendSvRptHelper(EventSvRpt *inMsg, uint32_t msgSize);
+    void sendEngineUpEvent();
+    void sendEngineUpEventHelper(EventHwEngStatusConfig *inMsg, uint32_t msgSize);
+    void sendEngineDownEvent();
+    void sendEngineDownEventHelper(EventHwEngStatusConfig *inMsg, uint32_t msgSize);
+    void sendFidlCapabilitiesEvent(EventMsgCapabilityRptPkt *msg);
+    void sendEngineCapabilitiesEventHelper(EventHwCapability *inMsg, uint32_t msgSize);
 };
 
 #endif /* LOC_CLIENT_FIDL_V02API_H  */
