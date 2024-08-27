@@ -10917,12 +10917,6 @@ LocApiV02::startTimeBasedTracking(const TrackingOptions& options, LocApiResponse
     start_msg.configAltitudeAssumed =
         eQMI_LOC_ALTITUDE_ASSUMED_IN_GNSS_SV_INFO_DISABLED_V02;
 
-    //Enable intermediate report only when client shows interest, i.e. HW FLP or automotive client
-    if (QUALITY_HIGH_ACCU_FIX_ONLY == options.qualityLevelAccepted) {
-        start_msg.intermediateReportState_valid = 1;
-        start_msg.intermediateReportState = eQMI_LOC_INTERMEDIATE_REPORTS_OFF_V02;
-    }
-
     // power mode
     mPowerMode = options.powerMode;
 
