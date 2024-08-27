@@ -5460,7 +5460,8 @@ void LocApiV02 :: reportNiRequest(
 
     LocInEmergency emergencyState = ni_req_ptr->isInEmergencySession_valid ?
             (ni_req_ptr->isInEmergencySession ? LOC_IN_EMERGENCY_SET : LOC_IN_EMERGENCY_NOT_SET) :
-            LOC_IN_EMERGENCY_UNKNOWN;
+            (ni_req_ptr->suplEmergencyNotification_valid ? LOC_IN_EMERGENCY_SET :
+                LOC_IN_EMERGENCY_UNKNOWN);
     if (NULL != ni_req_copy_ptr) {
         memcpy(ni_req_copy_ptr, ni_req_ptr, sizeof(*ni_req_copy_ptr));
         requestNiNotify(notif, (const void*)ni_req_copy_ptr, emergencyState);
