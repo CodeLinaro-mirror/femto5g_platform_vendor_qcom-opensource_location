@@ -21,6 +21,10 @@
 
 #define FIDL_LOC_SUPPORTED_FEATURE_LENGTH_V02 (100)
 
+#define FIDL_HARDWARE_KNOW (0)
+#define FIDL_HARDWARE_UP   (1)
+#define FIDL_HARDWARE_DOWN (2)
+
 typedef struct {
     LocPositionMode mode;
     LocGpsPositionRecurrence recurrence;
@@ -179,8 +183,12 @@ typedef struct {
     */
     void (*locClientFidlReportGnssMeasurementData)(GnssMeasurements& measurements,
             int msInWeek, void *context);
-
+    /* */
     void (*locClientFidlReportGnssConfig)(uint32_t sessionId, const GnssConfig& gnssConfig, void *context);
+    /* */
+    void (*locClientFidlHardWareStatus)(uint32_t hardwareStatus, void *context);
+    /* */
+    void (*locClientFidlCapabilities)(uint32_t hwCapabilities, void *context);
 
 } locClientFidlInterfaceEvent;
 

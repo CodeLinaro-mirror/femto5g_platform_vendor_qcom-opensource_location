@@ -12,10 +12,15 @@
 #define LOC_FIDL_MAIN_H
 
 typedef uint32_t fidlEngineState_t;
-#define FIDL_ENGINE_STATE_NONE       (0)
-#define FIDL_ENGINE_STATE_INIT       (1)
-#define FIDL_ENGINE_STATE_IN_SESSION (2)
-#define FIDL_ENGINE_STATE_RESET      (3)
+#define FIDL_ENGINE_STATE_NONE                  (0)
+#define FIDL_ENGINE_STATE_INIT                  (1)
+#define FIDL_ENGINE_STATE_HW_OPEN_REQ           (3)
+#define FIDL_ENGINE_STATE_HW_UP                 (4)
+#define FIDL_ENGINE_STATE_IN_SESSION            (5)
+#define FIDL_ENGINE_STATE_IN_SESSION_HW_DOWN    (6)
+#define FIDL_ENGINE_STATE_HW_CLOSE_REQ          (7)
+#define FIDL_ENGINE_STATE_HW_DOWN               (8)
+#define FIDL_ENGINE_STATE_RESET                 (9)
 
 typedef uint32_t fidlEngineMessage;
 
@@ -47,17 +52,13 @@ typedef uint32_t fidlEngineMessage;
 #define FIDL_ENGINE_EVENT_SET_TIME         (59)
 #define FIDL_ENGINE_EVENT_MAX              (60)
 
+#define LCMT_HW_CAPABILITY_UNKNOWN         (0x0)
+#define LCMT_HW_CAPABILITY_TIME_BASED_TRACKING_BIT (0x1)
+#define LCMT_HW_CAPABILITY_GNSS_MEAS_BIT   (0x2)
+
 #define LOG_TAG "Fidl-If-Lib "
 
-typedef struct {
-    void *fidlLocApiContext;
-    fidlEngineState_t fidlEngineState;
-    const FidlInterfaceEvent* eventCallback;
-    const locClientFidlInterfaceReq* locClientFildReq;
-    locClientFidlInterfaceEvent locClientFildEvent;
-    void *fidlIfLibFileHandle;
-} fidlThreadContext;
-
+#define LOC_FIDL_CAPABILITIES_FILE "/data/vendor/location/fidlCapabilities.txt"
 
 typedef struct {
     LOC_API_ADAPTER_EVENT_MASK_T mask;
@@ -112,6 +113,17 @@ typedef struct {
         fidlSetTimeMsg  msgSetTime;
     } u;
 } fidlEngineMsg;
+
+typedef struct {
+    void *fidlLocApiContext;
+    fidlEngineState_t fidlEngineState;
+    const FidlInterfaceEvent* eventCallback;
+    const locClientFidlInterfaceReq* locClientFildReq;
+    locClientFidlInterfaceEvent locClientFildEvent;
+    void *fidlIfLibFileHandle;
+    bool isStartCommandInQ;
+    fidlSetPosModeMsg startCommandInQ;
+} fidlThreadContext;
 
 
 enum loc_api_adapter_err handleLocApiOpen(uint64_t requestedMask, bool isMaster,

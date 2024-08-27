@@ -153,12 +153,13 @@ const FidlInterfaceReq* get_fidl_if_api(const FidlInterfaceEvent* eventCallback,
 
     LOC_LOGD("%s] --> context:%p State:%d ", __func__, context, mFidlContextThrd.fidlEngineState);
     if (FIDL_ENGINE_STATE_NONE == mFidlContextThrd.fidlEngineState) {
+        mFidlContextThrd.isStartCommandInQ = false;
         mFidlContextThrd.fidlLocApiContext = context;
+        mFidlContextThrd.fidlEngineState = FIDL_ENGINE_STATE_INIT;
         setInterfaceEvent(eventCallback);
         initFidlInterface(&mFidlContextThrd);
         usleep(100);
         fidlInit(context);
-        mFidlContextThrd.fidlEngineState = FIDL_ENGINE_STATE_INIT;
     }
     return fidlRqIf;
 }

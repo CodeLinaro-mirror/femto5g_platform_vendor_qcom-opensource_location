@@ -16,6 +16,8 @@
 
 
 #define LOC_CLIENT_INVALID_HANDLE_VALUE (NULL)
+#define FIDL_HW_ENGINE_ON  (true)
+#define FIDL_HW_ENGINE_OFF (false)
 
 using Resender = std::function<void()>;
 
@@ -163,6 +165,7 @@ public:
                                          LocApiResponse *adapterResponse=nullptr);
     virtual void getConstellationControl();
     virtual void resetConstellationControl(LocApiResponse *adapterResponse=nullptr);
+    virtual void updateEngineState(bool currentEngineState);
 };
 
 extern "C" LocApiBase* getLocApi(LOC_API_ADAPTER_EVENT_MASK_T exMask,

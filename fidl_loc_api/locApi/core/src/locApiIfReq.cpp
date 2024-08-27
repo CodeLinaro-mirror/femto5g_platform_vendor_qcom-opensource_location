@@ -5,6 +5,7 @@
 #define LOG_NDEBUG 0
 #define LOG_TAG "FidlLocApi_Core"
 
+#include <stdio.h>
 #include <stdint.h>
 #include <errno.h>
 #include "msg_q.h"
@@ -21,6 +22,8 @@ enum loc_api_adapter_err handleLocApiOpen(uint64_t requestedMask, bool isMaster,
              uint64_t *supportedMask, fidlFeatureList * fidlFeatures,
              void *context) {
     static fidlEngineMsg sndMsg;
+    size_t retRead = 0;
+    uint32_t hwCapabilities = LCMT_HW_CAPABILITY_UNKNOWN;
 
     LOC_LOGD("%s] ", __func__);
 
@@ -31,19 +34,48 @@ enum loc_api_adapter_err handleLocApiOpen(uint64_t requestedMask, bool isMaster,
 
     sendMsg2FidlEngine(&sndMsg);
 
+    /* Read Capabilities from file */
+
+    FILE *fp = NULL;
+    fp = fopen(LOC_FIDL_CAPABILITIES_FILE, "r" );
+    if (NULL != fp) {
+        retRead = fread(&hwCapabilities, 1, sizeof(uint32_t), fp);
+        fclose(fp);
+    }
+
     //Set Engine Capabilities
     if (NULL != supportedMask) {
-        *supportedMask = LOC_API_ADAPTER_BIT_PARSED_POSITION_REPORT |
-                           LOC_API_ADAPTER_BIT_SATELLITE_REPORT |
-                           LOC_API_ADAPTER_BIT_EVENT_REPORT_INFO;
+        LOC_LOGD("%s:%d:Set Engine Capabilities",__func__,__LINE__);
+        *supportedMask |= LOC_API_ADAPTER_BIT_SATELLITE_REPORT |
+                          LOC_API_ADAPTER_BIT_EVENT_REPORT_INFO;
+
+        if (LCMT_HW_CAPABILITY_UNKNOWN != hwCapabilities) {
+           if (LCMT_HW_CAPABILITY_TIME_BASED_TRACKING_BIT ==
+               (hwCapabilities & LCMT_HW_CAPABILITY_TIME_BASED_TRACKING_BIT)) {
+               *supportedMask |= LOC_API_ADAPTER_BIT_PARSED_POSITION_REPORT;
+           }
+
+           if (LCMT_HW_CAPABILITY_GNSS_MEAS_BIT ==
+               (hwCapabilities & LCMT_HW_CAPABILITY_GNSS_MEAS_BIT)) {
+               *supportedMask |= LOC_API_ADAPTER_BIT_GNSS_MEASUREMENT;
+           }
+
+        } else {
+            /* Enable Position and Measurement reprot */
+            /* if Hardware capability is not present */
+            *supportedMask |= LOC_API_ADAPTER_BIT_PARSED_POSITION_REPORT;
+            *supportedMask |= LOC_API_ADAPTER_BIT_GNSS_MEASUREMENT;
+       }
+    } else {
+        LOC_LOGE("%s:%d:Engine Capabilities is NULL",__func__,__LINE__);
     }
 
     //Set Engine Features for HW year as 2015
     if (NULL != fidlFeatures) {
+        LOC_LOGD("%s:%d set Engine Features for HW year",__func__,__LINE__);
         fidlFeatures->feature[0] = 0;
         fidlFeatures->feature_len = 0;
     }
-
 
     return LOC_API_ADAPTER_ERR_SUCCESS;
 }

@@ -60,8 +60,9 @@ typedef const FidlInterfaceReq* (*get_fidl_if_api_t)
 void handleLocApiFidlEngineUp(void *context) {
 
     if (nullptr != context) {
+        LOC_LOGD("%s:%d",__func__,__LINE__);
         FidlLocApi *fidlLocApiInstance = (FidlLocApi*)context;
-        fidlLocApiInstance->reportStatus(LOC_GPS_STATUS_ENGINE_ON);
+        fidlLocApiInstance->updateEngineState(FIDL_HW_ENGINE_ON);
     } else {
         LOC_LOGw ("Context is NULL");
     }
@@ -83,8 +84,9 @@ void handleLocApiFidlEngineUp(void *context) {
 void handleLocApiFidlEngineDown(void *context) {
 
     if (nullptr != context) {
+        LOC_LOGD("%s:%d",__func__,__LINE__);
         FidlLocApi *fidlLocApiInstance = (FidlLocApi*)context;
-        fidlLocApiInstance->reportStatus(LOC_GPS_STATUS_ENGINE_OFF);
+        fidlLocApiInstance->updateEngineState(FIDL_HW_ENGINE_OFF);
     } else {
         LOC_LOGw ("Context is NULL");
     }
@@ -115,7 +117,7 @@ void handleLocApiFidlReportPosition(UlpLocation& location,
                     LocPosTechMask loc_technology_mask,
                     GnssDataNotification* pDataNotify,
                     int msInWeek, void *context) {
-
+    LOC_LOGD("%s:%d",__func__,__LINE__);
     if (nullptr != context) {
         FidlLocApi *fidlLocApiInstance = (FidlLocApi*)context;
 
@@ -131,6 +133,7 @@ void handleLocApiFidlReportPosition(UlpLocation& location,
             location.gpsLocation.flags |= LOCATION_HAS_ELAPSED_REAL_TIME_BIT;
             location.gpsLocation.elapsedRealTime = elapsedRealTime;
             location.gpsLocation.elapsedRealTimeUnc = unc;
+            LOC_LOGD("%s:%d elapsedRealTime %" PRIu64 "",__func__,__LINE__, elapsedRealTime);
         }
 
         fidlLocApiInstance->reportPosition(location, locationExtended,
@@ -156,6 +159,7 @@ void handleLocApiFidlReportPosition(UlpLocation& location,
 void handleLocApiFidlReportSv(GnssSvNotification& svNotify, void *context) {
 
     if (nullptr != context) {
+        LOC_LOGD("%s:%d",__func__,__LINE__);
         FidlLocApi *fidlLocApiInstance = (FidlLocApi*)context;
         fidlLocApiInstance->reportSv(svNotify);
     } else {
@@ -1455,6 +1459,7 @@ FidlLocApi::open(LOC_API_ADAPTER_EVENT_MASK_T mask) {
                 getFidlFeatures.feature : NULL), gnssMeasurementSupported);
         }
     }
+    LOC_LOGd("%s:%d rtv = %" PRIx64 "",__func__,__LINE__,rtv);
     return rtv;
 }
 
@@ -1539,6 +1544,11 @@ void FidlLocApi::startFix(const LocPosMode& fixCriteria, LocApiResponse *adapter
             if (LOC_API_ADAPTER_ERR_SUCCESS == rtv) {
                 err = LOCATION_ERROR_SUCCESS;
             }
+            /* Return the State based on Engine */
+            if (false == mEngineOn) {
+                err = LOCATION_ERROR_SYSTEM_NOT_READY;
+            }
+
         } else {
             err = LOCATION_ERROR_NOT_SUPPORTED;
         }
@@ -2853,3 +2863,9 @@ FidlLocApi::stopDistanceBasedTracking(uint32_t sessionId,
         }
     }));
 }
+
+void
+FidlLocApi::updateEngineState(bool currentEngineState) {
+    mEngineOn = currentEngineState;
+}
+
