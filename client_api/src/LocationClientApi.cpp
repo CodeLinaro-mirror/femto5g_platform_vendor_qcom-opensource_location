@@ -271,6 +271,7 @@ void TrackingSessCbHandler::initializeCommonCbs(LocationClientApiImpl *pClientAp
                 [pClientApiImpl, gnssDataCallback] (const ::GnssDataNotification& n) {
             GnssData gnssData = LocationClientApiImpl::parseGnssData(n);
             gnssDataCallback(gnssData);
+            pClientApiImpl->getLogger().log(gnssData);
        };
     }
     if (gnssMeasurementsCallback) {
@@ -1320,7 +1321,9 @@ DECLARE_TBL(DrSolutionStatusMask) = {
     {DR_SOLUTION_STATUS_ERROR_GENERIC, "ERROR_GENERIC"},
     {DR_SOLUTION_STATUS_WARNING_SENSOR_TEMP_OUT_OF_RANGE, "WARNING_SENSOR_TEMP_OUT_OF_RANGE"},
     {DR_SOLUTION_STATUS_WARNING_USER_DYNAMICS_INSUFFICIENT, "WARNING_USER_DYNAMICS_INSUFFICIENT"},
-    {DR_SOLUTION_STATUS_WARNING_FACTORY_DATA_INCONSISTENT, "WARNING_FACTORY_DATA_INCONSISTENT"}
+    {DR_SOLUTION_STATUS_WARNING_FACTORY_DATA_INCONSISTENT, "WARNING_FACTORY_DATA_INCONSISTENT"},
+    {DR_SOLUTION_STATUS_WARNING_MMF_UNAVAILABLE, "WARNING_MMF_UNAVAILABLE"},
+    {DR_SOLUTION_STATUS_WARNING_MMF_NOT_USABLE, "MMF_NOT_USABLE"},
 };
 
 DECLARE_TBL(GnssDcReportType) = {
@@ -1559,6 +1562,8 @@ string GnssLocation::toString() const {
         out += to_string(dgnssId);
         count++;
     }
+    out += FIELDVAL_DEC(baseLineLength);
+    out += FIELDVAL_DEC(ageMsecOfCorrections);
     out += FIELDVAL_DEC(leapSecondsUnc);
     return out;
 }

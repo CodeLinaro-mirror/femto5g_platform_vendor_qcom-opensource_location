@@ -357,6 +357,11 @@ void printPosResport(const LocIdlAPI::IDLLocationReport &_locationReport)
                cout << "DgnssStationId        " << dgnss[idx] << endl;
         }
         cout << "ElapsedPTPTimeNs  " << _locationReport.getElapsedgPTPTime() << endl;
+        cout << "ReportingLatency  " << _locationReport.getReportingLatency() << endl;
+        cout << "LeapSecondsUnc    " << _locationReport.getLeapSecondsUnc() << endl;
+        cout << "BaseLineLength    " << _locationReport.getBaseLineLength() << endl;
+        cout << "AgeMsecOfCorrections " << _locationReport.getAgeMsecOfCorrections() << endl;
+        cout << "CurrReportingRate " << _locationReport.getCurrReportingRate() << endl;
         cout << "-------" << endl;
     }
 }
@@ -619,13 +624,33 @@ void sessionStart()
 int main(int argc, char* argv[])
 {
     int delay;
+    string clientName;
+    std::cout << "Enter client-name: ";
+    std::cin >> clientName;
 
-    /* Command Line parsing*/
-    if (!parseCommandLine(argc, argv, delay))
-        return -1;
-    /* signal Handler */
-    regSigHandler();
+    CommonAPI::Runtime::setProperty("LogContext", "LocIdlAPI");
+    CommonAPI::Runtime::setProperty("LogApplication", "LocIdlAPI");
+    CommonAPI::Runtime::setProperty("LibraryBase", "LocIdlAPI");
 
+    shared_ptr < CommonAPI::Runtime > runtime = CommonAPI::Runtime::get();
+    string domain = "local";
+    string instance = "com.qualcomm.qti.location.LocIdlAPI";
+    if (runtime) {
+        myProxy = runtime->buildProxy<LocIdlAPIProxy>(domain, instance, clientName);
+    } else {
+        LOC_LOGe("CAPI error runtime is NULL !!");
+        return 0;
+    }
+
+    if (myProxy) {
+        cout << "Checking availability!" << endl;
+        while (!myProxy->isAvailable())
+            usleep(10);
+        cout << "Available..." << endl;
+    } else {
+        cout << "myProxy is null !!" << endl;
+        return 0;
+    }
     /* GPTP */
     if (false == mIsGptpInitialized) {
         if (gptpInit()) {
@@ -636,23 +661,11 @@ int main(int argc, char* argv[])
         }
     }
 
-    CommonAPI::Runtime::setProperty("LogContext", "LocIdlAPI");
-    CommonAPI::Runtime::setProperty("LogApplication", "LocIdlAPI");
-    CommonAPI::Runtime::setProperty("LibraryBase", "LocIdlAPI");
-
-    shared_ptr < CommonAPI::Runtime > runtime = CommonAPI::Runtime::get();
-
-    string domain = "local";
-    string instance = "com.qualcomm.qti.location.LocIdlAPI";
-    string connection = "client-sample";
-
-    myProxy = runtime->buildProxy<LocIdlAPIProxy>(domain,
-            instance, connection);
-
-    cout << "Checking availability!" << endl;
-    while (!myProxy->isAvailable())
-        usleep(10);
-    cout << "Available..." << endl;
+    /* Command Line parsing*/
+    if (!parseCommandLine(argc, argv, delay))
+        return -1;
+    /* signal Handler */
+    regSigHandler();
 
     subscribeGnssResports();
     sessionStart();
