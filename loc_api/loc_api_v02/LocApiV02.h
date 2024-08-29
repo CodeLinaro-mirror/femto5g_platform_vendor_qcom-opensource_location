@@ -300,11 +300,6 @@ private:
   static qmiLocApnTypeMaskT_v02 convertLocApnTypeMask(LocApnTypeMask mask);
   static LocApnTypeMask convertQmiLocApnTypeMask(qmiLocApnTypeMaskT_v02 mask);
 
-  /* Convert Get Constellation QMI Ind info to GnssSvTypeConfig */
-  static void convertToGnssSvTypeConfig(
-          const qmiLocGetConstellationConfigIndMsgT_v02& ind,
-          GnssSvTypeConfig& config);
-
   /* Convert GnssPowerMode to QMI Loc Power Mode Enum */
   static qmiLocPowerModeEnumT_v02 convertPowerMode(GnssPowerMode powerMode);
 
@@ -440,10 +435,6 @@ private:
   /* Convert get blacklist sv info to GnssSvIdConfig */
   void reportGnssSvIdConfig
     (const qmiLocGetBlacklistSvIndMsgT_v02& getBlacklistSvIndMsg);
-
-  /* Convert get constellation info to GnssSvTypeConfig */
-  void reportGnssSvTypeConfig
-    (const qmiLocGetConstellationConfigIndMsgT_v02& getConstellationConfigIndMsg);
 
   /* Inform ODCPI availability to Modem */
   void wifiStatusInformSync();
@@ -665,7 +656,6 @@ public:
   virtual void getBlacklistSv();
   virtual void setConstellationControl(const GnssSvTypeConfig& config,
                                        LocApiResponse *adapterResponse=nullptr);
-  virtual void getConstellationControl();
   virtual void resetConstellationControl(LocApiResponse *adapterResponse=nullptr);
 
   virtual void configConstellationMultiBand(const GnssSvTypeConfig& secondaryBandConfig,
