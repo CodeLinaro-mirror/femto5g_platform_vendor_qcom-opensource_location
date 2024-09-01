@@ -1553,7 +1553,9 @@ struct GnssLocation : public Location {
             drSolutionStatusMask((DrSolutionStatusMask)0),
             altitudeAssumed(false),
             integrityRiskUsed(0), protectAlongTrack(0.0f),
-            protectCrossTrack(0.0f), protectVertical(0.0f) {
+            protectCrossTrack(0.0f), protectVertical(0.0f),
+            baseLineLength(0), ageMsecOfCorrections(0),
+            leapSecondsUnc(0), posReportingInterval(0) {
     }
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
