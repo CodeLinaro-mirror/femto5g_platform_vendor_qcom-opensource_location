@@ -95,9 +95,9 @@ static pthread_t threadId;
 static pps_handle handle;
 
 static pthread_mutex_t ts_lock;
-static int skipPPSPulseCnt = 0;
-static int gnssOutageInSec = 1;
-static loc_param_s_type gps_conf_param_table[] =
+static int skipPPSPulseCnt = 1;
+static int gnssOutageInSec = 10;
+static loc_param_s_type izat_conf_param_table[] =
 {
     {"IGNORE_PPS_PULSE_COUNT", &skipPPSPulseCnt, NULL, 'n'},
     {"GNSS_OUTAGE_DURATION", &gnssOutageInSec, NULL, 'n'}
@@ -370,7 +370,7 @@ int initPPS(char *devname)
         LOC_LOGV("%s:%d Could not find PPS source", __func__, __LINE__);
         return 0;
     }
-    UTIL_READ_CONF(LOC_PATH_GPS_CONF, gps_conf_param_table);
+    UTIL_READ_CONF(LOC_PATH_IZAT_CONF, izat_conf_param_table);
     pthread_mutex_init(&ts_lock, NULL);
 
     pid = pthread_create(&threadId, NULL, &thread_handle, NULL);
