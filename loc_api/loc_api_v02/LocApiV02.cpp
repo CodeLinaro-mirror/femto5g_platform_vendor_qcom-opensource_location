@@ -2249,9 +2249,6 @@ locClientEventMaskType LocApiV02 :: convertLocClientEventMask(
     eventMask |= QMI_LOC_EVENT_MASK_QUERY_XTRA_INFO_V02;
   }
 
-  if (mask & LOC_API_ADAPTER_BIT_POSITION_INJECTION_REQUEST)
-      eventMask |= QMI_LOC_EVENT_MASK_INJECT_POSITION_REQ_V02;
-
   if (mask & LOC_API_ADAPTER_BIT_STATUS_REPORT)
   {
       eventMask |= (QMI_LOC_EVENT_MASK_ENGINE_STATE_V02);
@@ -2331,9 +2328,6 @@ locClientEventMaskType LocApiV02 :: convertLocClientEventMask(
 
   if(mask & LOC_API_ADAPTER_BIT_REQUEST_TIMEZONE)
       eventMask |= QMI_LOC_EVENT_MASK_GET_TIME_ZONE_REQ_V02;
-
-  if (mask & LOC_API_ADAPTER_BIT_FDCL_SERVICE_REQ)
-      eventMask |= QMI_LOC_EVENT_MASK_FDCL_SERVICE_REQ_V02;
 
   if (mask & LOC_API_ADAPTER_BIT_BS_OBS_DATA_SERVICE_REQ)
       eventMask |= QMI_LOC_EVENT_MASK_BS_OBS_DATA_SERVICE_REQ_V02;
@@ -4899,27 +4893,6 @@ void LocApiV02 :: reportEngineState (
       sendMsg(new MsgUpdateEngineState(this, false));
   }
 
-}
-
-/* convert fix session state report to loc eng format and send the converted
-   report to loc eng */
-void LocApiV02 :: reportFixSessionState (
-    const qmiLocEventFixSessionStateIndMsgT_v02 *fix_session_state_ptr)
-{
-  LocGpsStatusValue status;
-  LOC_LOGd("state = %d", fix_session_state_ptr->sessionState);
-
-  status = LOC_GPS_STATUS_NONE;
-  if (fix_session_state_ptr->sessionState == eQMI_LOC_FIX_SESSION_STARTED_V02)
-  {
-    status = LOC_GPS_STATUS_SESSION_BEGIN;
-  }
-  else if (fix_session_state_ptr->sessionState
-           == eQMI_LOC_FIX_SESSION_FINISHED_V02)
-  {
-    status = LOC_GPS_STATUS_SESSION_END;
-  }
-  reportStatus(status);
 }
 
 /* convert and report an ATL request to loc engine */
@@ -7560,10 +7533,6 @@ void LocApiV02 :: eventCb(locClientHandleType /*clientHandle*/,
       reportEngineState(eventPayload.pEngineState);
       break;
 
-    case QMI_LOC_EVENT_FIX_SESSION_STATE_IND_V02:
-      reportFixSessionState(eventPayload.pFixSessionState);
-      break;
-
     // XTRA request
     case QMI_LOC_EVENT_INJECT_PREDICTED_ORBITS_REQ_IND_V02:
       reportXtraServerUrl(eventPayload.pInjectPredictedOrbitsReqEvent);
@@ -7573,11 +7542,6 @@ void LocApiV02 :: eventCb(locClientHandleType /*clientHandle*/,
     // time request
     case QMI_LOC_EVENT_INJECT_TIME_REQ_IND_V02:
       requestTime();
-      break;
-
-    //position request
-    case QMI_LOC_EVENT_INJECT_POSITION_REQ_IND_V02:
-      requestLocation();
       break;
 
     // NI request

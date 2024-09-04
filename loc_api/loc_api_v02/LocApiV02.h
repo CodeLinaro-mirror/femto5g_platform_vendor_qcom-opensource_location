@@ -378,11 +378,6 @@ private:
   void reportEngineState (
     const qmiLocEventEngineStateIndMsgT_v02 *engine_state_ptr);
 
-  /* convert fix session report to loc eng format and send the converted
-     report to loc eng */
-  void reportFixSessionState (
-    const qmiLocEventFixSessionStateIndMsgT_v02 *fix_session_state_ptr);
-
   /* convert and report an ATL request to loc engine */
   void reportAtlRequest(
     const qmiLocEventLocationServerConnectionReqIndMsgT_v02

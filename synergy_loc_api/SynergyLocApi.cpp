@@ -114,13 +114,7 @@ typedef const SllInterfaceReq* (*get_sll_if_api_t)
        None.
 */
 void handleSllEngineUp(void *context) {
-
-    if (nullptr != context) {
-        SynergyLocApi *synergyLocApiInstance = (SynergyLocApi*)context;
-        synergyLocApiInstance->reportStatus(LOC_GPS_STATUS_ENGINE_ON);
-    } else {
-        LOC_LOGw ("Context is NULL");
-    }
+   // no impl is needed, as GNSS HAL does not proces the gps status
 }
 
 
@@ -138,12 +132,7 @@ void handleSllEngineUp(void *context) {
 */
 void handleSllEngineDown(void *context) {
 
-    if (nullptr != context) {
-        SynergyLocApi *synergyLocApiInstance = (SynergyLocApi*)context;
-        synergyLocApiInstance->reportStatus(LOC_GPS_STATUS_ENGINE_OFF);
-    } else {
-        LOC_LOGw ("Context is NULL");
-    }
+   // no impl is needed, as GNSS HAL does not proces the gps status
 }
 
 /**
@@ -289,12 +278,7 @@ void handleSllReportSvEphemeris(GnssSvEphemerisReport &svEphemeris, void *contex
 */
 void hanldeSllReportStatus(LocGpsStatusValue status, void *context) {
 
-    if (nullptr != context) {
-        SynergyLocApi *synergyLocApiInstance = (SynergyLocApi*)context;
-        synergyLocApiInstance->reportStatus(status);
-    } else {
-        LOC_LOGw ("Context is NULL");
-    }
+   // no impl is needed, as GNSS HAL does not proces the gps status
 }
 
 /**
@@ -459,13 +443,7 @@ void handleSllRequestTime(void *context) {
        None.
 */
 void handleSllRequestLocation(void *context) {
-
-    if (nullptr != context) {
-        SynergyLocApi *synergyLocApiInstance = (SynergyLocApi*)context;
-        synergyLocApiInstance->requestLocation();
-    } else {
-        LOC_LOGw ("Context is NULL");
-    }
+   // no impl is needed, as GNSS HAL does not proces the gps status
 }
 
 /**
