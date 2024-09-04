@@ -1762,6 +1762,10 @@ struct GnssDcReport {
     uint32_t             numValidBits;
     /** dc report data, packed into uint8_t. <br/>  */
     std::vector<uint8_t> dcReportData;
+    /** SV's Pseudo-Random Number validity */
+    bool                 prnValid;
+    /** SV's Pseudo-Random Number. */
+    uint8_t              prn;
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
     string toString() const;

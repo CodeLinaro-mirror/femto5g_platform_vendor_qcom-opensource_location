@@ -6478,6 +6478,10 @@ void LocApiV02 :: reportDcMessage(const qmiLocEventDcReportIndMsgT_v02* pDcRepor
         for (uint32_t i = 0; i < pDcReportIndMsg->dcReportData_len; i++) {
             dcReportInfo.dcReportData[i] = pDcReportIndMsg->dcReportData[i];
         }
+        if (pDcReportIndMsg->prn_valid) {
+            dcReportInfo.prnValid = 1;
+            dcReportInfo.prn = pDcReportIndMsg->prn;
+        }
         LocApiBase::reportDcMessage(dcReportInfo);
     }
 }

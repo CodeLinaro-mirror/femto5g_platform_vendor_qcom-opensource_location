@@ -1732,7 +1732,8 @@ string GnssDcReport::toString() const {
 
         free(ptr);
     }
-
+    out += FIELDVAL_DEC(prnValid);
+    out += FIELDVAL_DEC(prn);
     return out;
 }
 

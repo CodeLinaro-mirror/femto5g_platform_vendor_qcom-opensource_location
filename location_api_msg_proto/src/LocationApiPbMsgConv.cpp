@@ -4594,6 +4594,8 @@ int LocationApiPbMsgConv::convertGnssDcReportToPB(
     for (uint32_t i = 0; i < dcReportInfo.dcReportData.size(); i++) {
         pbDcReportInfo->add_dcreportdata((uint32_t)dcReportInfo.dcReportData[i]);
     }
+    pbDcReportInfo->set_prnvalid(dcReportInfo.prnValid);
+    pbDcReportInfo->set_prn(dcReportInfo.prn);
     return 0;
 }
 
@@ -4606,6 +4608,8 @@ int LocationApiPbMsgConv::pbConvertToDcReport(
     for (uint32_t i = 0; i < pbDcReportInfo.dcreportdata_size(); i++) {
         dcReportInfo.dcReportData.push_back((uint8_t) (pbDcReportInfo.dcreportdata(i)));
     }
+    dcReportInfo.prnValid = pbDcReportInfo.prnvalid();
+    dcReportInfo.prn = static_cast<uint8_t>(pbDcReportInfo.prn());
     return 0;
 }
 
