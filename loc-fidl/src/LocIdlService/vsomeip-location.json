@@ -12,7 +12,7 @@
     [
         {
             "name" : "location-fidl-service",
-            "id" : "0x1"
+            "id" : "0x3"
         }
     ],
     "services" :
@@ -28,7 +28,7 @@
         }
     ],
     "max-payload-size-unreliable" : "15000",
-    "routing" : "location-fidl-service",
+    "routing" : "sensor-fidl-service",
     "network" : "vlan_ivss",
     "service-discovery" :
     {
