@@ -194,7 +194,7 @@ const struct conf_scaler_to_68_pair confScalers[CONF_SCALER_ARRAY_MAX] = {
 };
 
 /*fixed timestamp uncertainty 10 milli second */
-static int ap_timestamp_uncertainty = 0;
+static int ap_timestamp_uncertainty = 10;
 
 typedef enum {
     RF_LOSS_GPS_CONF        = 0,
@@ -215,7 +215,6 @@ static uint32_t rfLossNV[RF_LOSS_MAX_CONF] = { 0 };
 
 static loc_param_s_type gps_conf_param_table[] =
 {
-    { "AP_TIMESTAMP_UNCERTAINTY",   &ap_timestamp_uncertainty,          NULL, 'n' },
     { "RF_LOSS_GPS",                &rfLossNV[RF_LOSS_GPS_CONF],        NULL, 'n' },
     { "RF_LOSS_GPS_L5",             &rfLossNV[RF_LOSS_GPS_L5_CONF],     NULL, 'n' },
     { "RF_LOSS_GLO_LEFT",           &rfLossNV[RF_LOSS_GLO_LEFT_CONF],   NULL, 'n' },
@@ -227,6 +226,11 @@ static loc_param_s_type gps_conf_param_table[] =
     { "RF_LOSS_GAL_E5",             &rfLossNV[RF_LOSS_GAL_E5_CONF],     NULL, 'n' },
     { "RF_LOSS_NAVIC",              &rfLossNV[RF_LOSS_NAVIC_CONF],      NULL, 'n' },
     { "RF_LOSS_BDS_B2B",            &rfLossNV[RF_LOSS_BDS_B2B_CONF],    NULL, 'n' },
+};
+
+static loc_param_s_type izat_conf_param_table[] =
+{
+    { "AP_TIMESTAMP_UNCERTAINTY",   &ap_timestamp_uncertainty,          NULL, 'n' },
 };
 
 /* static event callbacks that call the LocApiV02 callbacks*/
@@ -392,7 +396,7 @@ LocApiV02 :: LocApiV02(LOC_API_ADAPTER_EVENT_MASK_T exMask,
   mReferenceSignalTypeForIsb.svType = GNSS_SV_TYPE_GPS;
   mReferenceSignalTypeForIsb.carrierFrequencyHz = GPS_L1CA_CARRIER_FREQUENCY;
   mReferenceSignalTypeForIsb.codeType = GNSS_MEASUREMENTS_CODE_TYPE_C;
-
+  UTIL_READ_CONF(LOC_PATH_IZAT_CONF, izat_conf_param_table);
   UTIL_READ_CONF(LOC_PATH_GPS_CONF, gps_conf_param_table);
 
   loc_param_s_type flp_conf_param_table[] =
