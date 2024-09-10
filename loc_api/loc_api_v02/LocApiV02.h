@@ -624,6 +624,8 @@ public:
   virtual void
       handleZppBestAvailableFixIndication(const qmiLocGetBestAvailablePositionIndMsgT_v02 &zpp_ind);
   virtual void getBestAvailableZppFix();
+  virtual bool getBestAvailableZppFixSync(LocGpsLocation &zppLoc,
+          LocPosTechMask &tech_mask);
   virtual LocationError setGpsLockSync(GnssConfigGpsLock lock);
   virtual void setConstrainedTuncMode(bool enabled, float tuncConstraint, uint32_t powerBudget,
                                       LocApiResponse *adapterResponse=nullptr);

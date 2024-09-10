@@ -717,6 +717,9 @@ locClientEventMaskType LocApiV02 :: adjustLocClientEventMask(locClientEventMaskT
                                            QMI_LOC_EVENT_MASK_GNSS_NHZ_MEASUREMENT_REPORT_V02 |
                                            QMI_LOC_EVENT_MASK_GNSS_SV_POLYNOMIAL_REPORT_V02 |
                                            QMI_LOC_EVENT_MASK_EPHEMERIS_REPORT_V02 |
+#ifdef __ANDROID__
+                                           QMI_LOC_EVENT_MASK_NEXT_LS_INFO_REPORT_V02 |
+#endif
                                            QMI_LOC_EVENT_MASK_LATENCY_INFORMATION_REPORT_V02 |
                                            QMI_LOC_EVENT_MASK_ENGINE_DEBUG_DATA_REPORT_V02;
         // clear GNSS_EVENT_REPORT mask because QMI_LOC_EVENT_MASK_FEATURE_STATUS_V02 is set
@@ -5514,6 +5517,8 @@ void LocApiV02::reportGnssMeasurementData(
         m1HzMeasurementsInfo.clock.flags = measInfo.clock.flags;
         m1HzMeasurementsInfo.clock.timeNs = measInfo.clock.timeNs;
         m1HzMeasurementsInfo.clock.fullBiasNs = measInfo.clock.fullBiasNs;
+        // Clear previous measurement data.
+        m1HzMeasurementsInfo.measurements.clear();
         for (int meas = 0; (meas < measInfo.count) && (meas < GNSS_MEASUREMENTS_MAX); meas++) {
             GnssBasicMeasurementsData measurement = {};
             measurement.svId = measInfo.measurements[meas].svId;
@@ -7804,6 +7809,78 @@ void LocApiV02 ::getBestAvailableZppFix()
     }));
 }
 
+bool LocApiV02::getBestAvailableZppFixSync(LocGpsLocation &zppLoc,
+        LocPosTechMask &tech_mask) {
+
+    qmiLocGetBestAvailablePositionReqMsgT_v02 zpp_req;
+    qmiLocGetBestAvailablePositionIndMsgT_v02 zpp_ind;
+    locClientReqUnionType req_union;
+    locClientStatusEnumType status;
+
+    LOC_LOGd("Get ZPP Fix from best available source\n");
+    memset(&zpp_req, 0, sizeof(zpp_req));
+    memset(&zpp_ind, 0, sizeof(zpp_ind));
+    memset(&zppLoc, 0, sizeof(zppLoc));
+    zppLoc.size = sizeof(zppLoc);
+    tech_mask = 0;
+
+    req_union.pGetBestAvailablePositionReq = &zpp_req;
+    zpp_req.transactionId = 1;
+    status = locSyncSendReq(QMI_LOC_GET_BEST_AVAILABLE_POSITION_REQ_V02,
+                            req_union,
+                            LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
+                            QMI_LOC_GET_BEST_AVAILABLE_POSITION_IND_V02,
+                            &zpp_ind);
+
+    if ((eLOC_CLIENT_SUCCESS != status) ||
+        (eQMI_LOC_SUCCESS_V02 != zpp_ind.status))
+    {
+        LOC_LOGe("error! status = %d, zpp_ind.status = %d\n",
+                  (status),
+                  (zpp_ind.status));
+        return false;
+    } else {
+        if (zpp_ind.timestampUtc_valid) {
+            zppLoc.timestamp = zpp_ind.timestampUtc;
+        } else {
+            /* The UTC time from modem is not valid.
+                    In this case, we use current system time instead.*/
+
+          struct timespec time_info_current = {};
+          clock_gettime(CLOCK_REALTIME, &time_info_current);
+          zppLoc.timestamp = (time_info_current.tv_sec)*1e3 +
+                  (time_info_current.tv_nsec)/1e6;
+          LOC_LOGd("zpp timestamp got from system: %" PRIu64, zppLoc.timestamp);
+        }
+
+        if (zpp_ind.latitude_valid && zpp_ind.longitude_valid &&
+                zpp_ind.horUncCircular_valid ) {
+            zppLoc.flags = LOC_GPS_LOCATION_HAS_LAT_LONG | LOC_GPS_LOCATION_HAS_ACCURACY;
+            zppLoc.latitude = zpp_ind.latitude;
+            zppLoc.longitude = zpp_ind.longitude;
+            zppLoc.accuracy = zpp_ind.horUncCircular;
+
+            // If horCircularConfidence_valid is true, and horCircularConfidence value
+            // is less than 68%, then scale the accuracy value to 68% confidence.
+            if (zpp_ind.horCircularConfidence_valid)
+            {
+                scaleAccuracyTo68PercentConfidence(zpp_ind.horCircularConfidence,
+                                                   zppLoc, true);
+            }
+
+            if (zpp_ind.altitudeWrtEllipsoid_valid) {
+                zppLoc.flags |= LOC_GPS_LOCATION_HAS_ALTITUDE;
+                zppLoc.altitude = zpp_ind.altitudeWrtEllipsoid;
+            }
+
+            if (zpp_ind.technologyMask_valid) {
+                tech_mask = zpp_ind.technologyMask;
+            }
+        }
+        return true;
+    }
+}
+
 LocationError LocApiV02 :: setGpsLockSync(GnssConfigGpsLock lock)
 {
     LocationError err = LOCATION_ERROR_SUCCESS;
@@ -9582,6 +9659,11 @@ LocApiV02::setBlacklistSvSync(const GnssSvIdConfig& config)
     memset(&genReqStatusIndMsg, 0, sizeof(genReqStatusIndMsg));
 
     // Fill in the request details
+    setBlacklistSvMsg.gps_persist_blacklist_sv_valid = true;
+    setBlacklistSvMsg.gps_persist_blacklist_sv = config.gpsBlacklistSvMask,
+    setBlacklistSvMsg.gps_clear_persist_blacklist_sv_valid = true;
+    setBlacklistSvMsg.gps_clear_persist_blacklist_sv = ~config.gpsBlacklistSvMask;
+
     setBlacklistSvMsg.glo_persist_blacklist_sv_valid = true;
     setBlacklistSvMsg.glo_persist_blacklist_sv = config.gloBlacklistSvMask;
     setBlacklistSvMsg.glo_clear_persist_blacklist_sv_valid = true;
@@ -9613,12 +9695,14 @@ LocApiV02::setBlacklistSvSync(const GnssSvIdConfig& config)
     setBlacklistSvMsg.navic_clear_persist_blacklist_sv = ~config.navicBlacklistSvMask;
 
     LOC_LOGd(">>> configConstellations, "
+             "gps blacklist mask =0x%" PRIx64 ", "
              "glo blacklist mask =0x%" PRIx64 ", "
              "qzss blacklist mask =0x%" PRIx64 ",\n"
              "bds blacklist mask =0x%" PRIx64 ", "
              "gal blacklist mask =0x%" PRIx64 ",\n"
              "sbas blacklist mask =0x%" PRIx64 ", "
-             "navic blacklist mask =0x%" PRIx64 ", ",
+             "navic blacklist mask =0x%" PRIx64 ",\n",
+             setBlacklistSvMsg.gps_persist_blacklist_sv,
              setBlacklistSvMsg.glo_persist_blacklist_sv,
              setBlacklistSvMsg.qzss_persist_blacklist_sv,
              setBlacklistSvMsg.bds_persist_blacklist_sv,
@@ -9674,15 +9758,6 @@ void
 LocApiV02::setConstellationControl(const GnssSvTypeConfig& config,
                                    LocApiResponse *adapterResponse)
 {
-    // QMI will return INVALID parameter if enabledSvTypesMask is 0,
-    // so we just return back to the caller as this is no-op
-    if (0 == config.enabledSvTypesMask) {
-        if (NULL != adapterResponse) {
-            adapterResponse->returnToSender(LOCATION_ERROR_SUCCESS);
-        }
-        return;
-    }
-
     sendMsg(new LocApiMsg([this, config, adapterResponse] () {
 
     locClientStatusEnumType status = eLOC_CLIENT_FAILURE_GENERAL;
@@ -9701,10 +9776,17 @@ LocApiV02::setConstellationControl(const GnssSvTypeConfig& config,
     setConstellationConfigMsg.enableMask_valid = true;
     setConstellationConfigMsg.enableMask = config.enabledSvTypesMask;
 
-    // disableMask is not supported in modem
-    // if we set disableMask, QMI call will return error
-    LOC_LOGE("setConstellationControl: "
+    bool disableSupported = ContextBase::isFeatureSupported(
+            LOC_SUPPORTED_FEATURE_CONSTELLATION_DISABLEMENT);
+
+    if (disableSupported) {
+       setConstellationConfigMsg.disableMask_valid = true;
+       setConstellationConfigMsg.disableMask = config.blacklistedSvTypesMask;
+    }
+
+    LOC_LOGI("setConstellationControl:disableSupported %d,"
              "enable: %d 0x%" PRIx64 ", blacklisted: %d 0x%" PRIx64 "",
+             disableSupported,
              setConstellationConfigMsg.enableMask_valid,
              setConstellationConfigMsg.enableMask,
              setConstellationConfigMsg.disableMask_valid,
@@ -9848,6 +9930,12 @@ LocApiV02::convertToGnssSvTypeConfig(
         GnssSvTypeConfig& config)
 {
     // Enabled Mask
+    if (ind.gps_status_valid &&
+            (ind.gps_status == eQMI_LOC_CONSTELLATION_ENABLED_MANDATORY_V02 ||
+                    ind.gps_status == eQMI_LOC_CONSTELLATION_ENABLED_INTERNALLY_V02 ||
+                    ind.gps_status == eQMI_LOC_CONSTELLATION_ENABLED_BY_CLIENT_V02)) {
+        config.enabledSvTypesMask |= GNSS_SV_TYPES_MASK_GPS_BIT;
+    }
     if (ind.bds_status_valid &&
             (ind.bds_status == eQMI_LOC_CONSTELLATION_ENABLED_MANDATORY_V02 ||
                     ind.bds_status == eQMI_LOC_CONSTELLATION_ENABLED_INTERNALLY_V02 ||
@@ -9880,6 +9968,13 @@ LocApiV02::convertToGnssSvTypeConfig(
     }
 
     // Disabled Mask
+    if (ind.gps_status_valid &&
+            (ind.gps_status == eQMI_LOC_CONSTELLATION_DISABLED_NOT_SUPPORTED_V02 ||
+                    ind.gps_status == eQMI_LOC_CONSTELLATION_DISABLED_INTERNALLY_V02 ||
+                    ind.gps_status == eQMI_LOC_CONSTELLATION_DISABLED_BY_CLIENT_V02 ||
+                    ind.gps_status == eQMI_LOC_CONSTELLATION_DISABLED_NO_MEMORY_V02)) {
+        config.blacklistedSvTypesMask |= GNSS_SV_TYPES_MASK_GPS_BIT;
+    }
     if (ind.bds_status_valid &&
             (ind.bds_status == eQMI_LOC_CONSTELLATION_DISABLED_NOT_SUPPORTED_V02 ||
                     ind.bds_status == eQMI_LOC_CONSTELLATION_DISABLED_INTERNALLY_V02 ||
@@ -11188,16 +11283,22 @@ void LocApiV02::convertQmiBlacklistedSvConfigToGnssConfig(
         gnssBlacklistConfig.navicBlacklistSvMask = qmiBlacklistConfig.navic_persist_blacklist_sv;
     }
 
-    LOC_LOGd("%d %d %d %d %d %d , blacklist bds 0x%" PRIx64 ", "
-             "glo 0x%" PRIx64", qzss 0x%" PRIx64 ", "
-             "gal 0x%" PRIx64 ", sbas 0x%" PRIx64 ", "
-             "navic 0x%" PRIx64 "",
+    if (qmiBlacklistConfig.gps_persist_blacklist_sv_valid) {
+        gnssBlacklistConfig.gpsBlacklistSvMask = qmiBlacklistConfig.gps_persist_blacklist_sv;
+    }
+
+    LOC_LOGd("%d %d %d %d %d %d %d, blacklist gps 0x%" PRIx64 ", "
+             "bds 0x%" PRIx64", glo 0x%" PRIx64 ", "
+             "qzss 0x%" PRIx64", gal 0x%" PRIx64 ", "
+             "sbas 0x%" PRIx64 ", navic 0x%" PRIx64 "",
+             qmiBlacklistConfig.gps_persist_blacklist_sv_valid,
              qmiBlacklistConfig.glo_persist_blacklist_sv_valid,
              qmiBlacklistConfig.bds_persist_blacklist_sv_valid,
              qmiBlacklistConfig.qzss_persist_blacklist_sv_valid,
              qmiBlacklistConfig.gal_persist_blacklist_sv_valid,
              qmiBlacklistConfig.sbas_persist_blacklist_sv_valid,
              qmiBlacklistConfig.navic_persist_blacklist_sv_valid,
+             gnssBlacklistConfig.gpsBlacklistSvMask,
              gnssBlacklistConfig.bdsBlacklistSvMask, gnssBlacklistConfig.gloBlacklistSvMask,
              gnssBlacklistConfig.qzssBlacklistSvMask, gnssBlacklistConfig.galBlacklistSvMask,
              gnssBlacklistConfig.sbasBlacklistSvMask, gnssBlacklistConfig.navicBlacklistSvMask);
