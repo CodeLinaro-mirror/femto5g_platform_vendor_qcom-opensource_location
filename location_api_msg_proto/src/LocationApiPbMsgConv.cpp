@@ -7119,7 +7119,7 @@ int LocationApiPbMsgConv::pbConvertToAntennaInfo(
     //repeated PBGnssAntennaInformation antennaInfos = 1;
     int count = pbAntennaInfo.antennainfos_size();
     for (int i = 0; i < count; i++) {
-        GnssAntennaInformation gnssAntennaInfo;
+        GnssAntennaInformation gnssAntennaInfo = {0};
         pbConvertToGnssAntennaInformaiton(pbAntennaInfo.antennainfos(i), gnssAntennaInfo);
         antennaInfo.antennaInfos.push_back(std::move(gnssAntennaInfo));
     }
