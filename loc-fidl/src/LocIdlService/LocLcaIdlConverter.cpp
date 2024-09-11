@@ -568,7 +568,7 @@ uint32_t parseIDLSignalType (
     if (lcaSignalType & GNSS_SIGNAL_BEIDOU_B2BQ_BIT) {
         gnssSignalTypeMask |= LocIdlAPI::IDLGnssSignalTypeMask::IDL_GNSS_SIGNAL_BEIDOU_B2BQ_BIT;
     }
-    if (lcaSignalType & GNSS_SIGNAL_TYPE_NAVIC_L1) {
+    if (lcaSignalType & GNSS_SIGNAL_NAVIC_L1_BIT) {
         gnssSignalTypeMask |= LocIdlAPI::IDLGnssSignalTypeMask::GSTM_NAVIC_L1_BIT;
     }
     return gnssSignalTypeMask;
