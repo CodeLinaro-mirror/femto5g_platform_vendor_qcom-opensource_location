@@ -44,7 +44,7 @@ define org.genivi.commonapi.someip.deployment for interface com.qualcomm.qti.loc
 
     broadcast GnssCapabilities {
         SomeIpEventID = 32769  /** 0x8001 */
-        SomeIpEventGroups = { 8193 }
+        SomeIpEventGroups = { 8194 }
 
         out {
         }
