@@ -50,7 +50,7 @@ LocationSomeIPProxy::LocationSomeIPProxy(
     const CommonAPI::SomeIP::Address &_address,
     const std::shared_ptr<CommonAPI::SomeIP::ProxyConnection> &_connection)
         : CommonAPI::SomeIP::Proxy(_address, _connection),
-          gnssCapabilities_(*this, 0x2001, CommonAPI::SomeIP::event_id_t(0x8001), CommonAPI::SomeIP::event_type_e::ET_EVENT , CommonAPI::SomeIP::reliability_type_e::RT_UNRELIABLE, false, std::make_tuple(static_cast< CommonAPI::SomeIP::IntegerDeployment<uint32_t>* >(nullptr))),
+          gnssCapabilities_(*this, 0x2002, CommonAPI::SomeIP::event_id_t(0x8001), CommonAPI::SomeIP::event_type_e::ET_EVENT , CommonAPI::SomeIP::reliability_type_e::RT_UNRELIABLE, false, std::make_tuple(static_cast< CommonAPI::SomeIP::IntegerDeployment<uint32_t>* >(nullptr))),
           gnssMeasurementReport_(*this, 0x2001, CommonAPI::SomeIP::event_id_t(0x8002), CommonAPI::SomeIP::event_type_e::ET_EVENT , CommonAPI::SomeIP::reliability_type_e::RT_UNRELIABLE, false, std::make_tuple(&::v1::com::qualcomm::qti::location::LocationTypes_::GnssMeasurementsTDeployment)),
           gnssLocationReport_(*this, 0x2001, CommonAPI::SomeIP::event_id_t(0x8003), CommonAPI::SomeIP::event_type_e::ET_EVENT , CommonAPI::SomeIP::reliability_type_e::RT_UNRELIABLE, false, std::make_tuple(&::v1::com::qualcomm::qti::location::LocationTypes_::LocationReportTDeployment)),
           gnssEngineLocationsReport_(*this, 0x2001, CommonAPI::SomeIP::event_id_t(0x8004), CommonAPI::SomeIP::event_type_e::ET_EVENT , CommonAPI::SomeIP::reliability_type_e::RT_UNRELIABLE, false, std::make_tuple(&::v1::com::qualcomm::qti::location::Location_::GnssEngineLocationsReport_locationReportDeployment)),
