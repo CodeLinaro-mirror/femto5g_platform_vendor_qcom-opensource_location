@@ -3767,6 +3767,7 @@ void  LocApiV02 :: reportSv (
                         }
                     }
                     if (gnssSv_ref.cN0Dbhz > rfLoss) {
+                        mask |= GNSS_SV_OPTIONS_HAS_BASEBAND_CARRIER_TO_NOISE_BIT;
                         gnssSv_ref.basebandCarrierToNoiseDbHz = gnssSv_ref.cN0Dbhz - rfLoss;
                     }
                 }
