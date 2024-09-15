@@ -1359,7 +1359,7 @@ LocApiV02::deleteAidingData(const GnssAidingData& data, LocApiResponse *adapterR
   }
 
   if (eLOC_CLIENT_FAILURE_UNSUPPORTED == status ||
-      eLOC_CLIENT_FAILURE_INTERNAL == status) {
+      eLOC_CLIENT_FAILURE_INTERNAL == status || eQMI_LOC_SUCCESS_V02 != delete_gnss_resp.status) {
       // If the new API is not supported we fall back on the old one
       // The error could be eLOC_CLIENT_FAILURE_INTERNAL if
       // QMI_LOC_DELETE_GNSS_SERVICE_DATA_REQ_V02 is not in the .idl file
@@ -7034,6 +7034,7 @@ bool LocApiV02 :: convertGnssMeasurements(
         }
         measurementData.adrMeters =
             (SPEED_OF_LIGHT / measurementData.carrierFrequencyHz) * measurementData.carrierPhase;
+        measurementData.flags |= GNSS_MEASUREMENTS_DATA_ADR_BIT;
     } else {
         measurementData.adrMeters = 0.0;
     }
@@ -7050,6 +7051,7 @@ bool LocApiV02 :: convertGnssMeasurements(
             measurementData.adrUncertaintyMeters =
                 (SPEED_OF_LIGHT / measurementData.carrierFrequencyHz) *
                 gnss_measurement_report_ptr.svCarrierPhaseUncertainty[index];
+            measurementData.flags |= GNSS_MEASUREMENTS_DATA_ADR_UNCERTAINTY_BIT;
         } else {
             measurementData.adrUncertaintyMeters = 0.0;
         }
@@ -7058,6 +7060,7 @@ bool LocApiV02 :: convertGnssMeasurements(
             measurementData.adrUncertaintyMeters =
                 (SPEED_OF_LIGHT / measurementData.carrierFrequencyHz) *
                 gnss_measurement_report_ptr.extSvCarrierPhaseUncertainty[index];
+            measurementData.flags |= GNSS_MEASUREMENTS_DATA_ADR_UNCERTAINTY_BIT;
         } else {
             measurementData.adrUncertaintyMeters = 0.0;
         }
