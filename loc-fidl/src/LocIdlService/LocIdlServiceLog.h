@@ -42,9 +42,11 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "LocDiagIfaceApi.h"
 #include "LocIdlAPIStubImpl.hpp"
-#include <v0/com/qualcomm/qti/location/LocIdlAPIStub.hpp>
+#include <v1/com/qualcomm/qti/location/LocationTypes.hpp>
+#include <v1/com/qualcomm/qti/location/LocationStub.hpp>
 
 using namespace std;
+using namespace v1::com::qualcomm::qti::location;
 
 #ifndef LOG_1X_BASE_C
 #define LOG_1X_BASE_C        ((uint16_t) 0x1000)
@@ -269,7 +271,7 @@ public:
     void diagLogPowerEventInfo(uint8_t powerEvent, uint8_t serviceStatus);
     void diagLogDeleteAidingRequest (uint64_t clientIdentifier, uint32_t aidingMask);
     void diagLogConfigConstellationRequest(uint64_t clientIdentifier,
-            vector< LocIdlAPI::IDLGnssSvIdInfo > svListSrc);
+            vector<LocationTypes::GnssSvIdInfoT > svListSrc);
     void updateSystemHealth(uint32_t totalRss, bool gptpSyncStatus);
 private:
     uint32_t mTotalRss;

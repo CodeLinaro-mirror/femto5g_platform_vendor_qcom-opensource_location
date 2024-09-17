@@ -43,22 +43,42 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <iomanip>
 #include <sstream>
 #include <string>
+#include <queue>
+#include <thread>
+#include <chrono>
+#include <fstream>
 #include <CommonAPI/CommonAPI.hpp>
-#include <v0/com/qualcomm/qti/location/LocIdlAPIProxy.hpp>
+#include <v1/com/qualcomm/qti/location/LocationProxy.hpp>
 #include <time.h>
 #include <cstdlib>
 #include <cstring>
+#include <cmath>
 #include <dlfcn.h>
 #include <signal.h>
+#include <sys/types.h>
+#include <sys/prctl.h>
+#include <sys/capability.h>
 #include <gptp_helper.h>
+#include "loc_cfg.h"
+#include "loc_pla.h"
 #include "log_util.h"
+#include "loc_misc_utils.h"
 
-using namespace v0::com::qualcomm::qti::location;
+#define GID_GPS (1021)
+
+using namespace v1::com::qualcomm::qti::location;
 using namespace std;
 #define NSEC_IN_ONE_SEC       (1000000000ULL)   /* nanosec in a sec */
 
-std::shared_ptr<LocIdlAPIProxy<>> myProxy;
+std::shared_ptr<LocationProxy<>> myProxy;
 bool verbose = false;
+bool fileReadDone = false;
+
+static const char MMF_TRUTH_FILE[] = "/data/vendor/location/";
+#define MAX_LINE_TO_READ 100
+#define NUM_SEC_IN_WEEK       604800
+
+uint32_t readThreadSleep = 25;
 
 CommonAPI::CallInfo info(1000);
 bool     sessionStarted;
@@ -69,14 +89,89 @@ uint32_t nmeaSubscription;
 uint32_t measSubscription;
 uint32_t nHzmeasSubscription;
 uint32_t dataSubscription;
+uint32_t capsSubscription;
+
+enum BdsFields {
+    BDS_INSTEST_GPS_WEEK = 1,
+    BDS_INSTEST_GPS_TOW_MS = 2,
+    BDS_INSTEST_LAT = 4,
+    BDS_INSTEST_LONG = 5,
+    BDS_INSTEST_ALTITUDE = 6,
+    BDS_INSTEST_NORTH_ACC = 7,
+    BDS_INSTEST_EAST_ACC = 8,
+    BDS_INSTEST_ALTITUDE_ACC = 9,
+    BDS_INSTEST_BEARING = 21,
+    BDS_INSTEST_BEARING_ACC = 24
+};
+
+enum MmfPosInfoValidityMAsk {
+    DATA_INVALID            = 0x00000000,
+    DATA_VALID_UTC_TIME     = 0x00000001,
+    DATA_VALID_GPS_WEEK     = 0x00000002,
+    DATA_VALID_GPS_MSEC     = 0x00000004,
+    DATA_VALID_LAT          = 0x00000008,
+    DATA_VALID_LONG         = 0x00000010,
+    DATA_VALID_TUNNEL       = 0x00000020,
+    DATA_VALID_BEARING      = 0x00000040,
+    DATA_VALID_ALTITUDE     = 0x00000080,
+    DATA_VALID_HOR_ACC      = 0x00000100,
+    DATA_VALID_ALT_ACC      = 0x00000200,
+    DATA_VALID_BEARING_ACC  = 0x00000400
+};
+
+typedef struct __MMF_POSITION_INFO_ {
+    uint64_t validityMask;
+    uint64_t utcTimestampMs;
+    uint32_t gpsWeek;
+    uint32_t gpsWeekMsec;
+    uint64_t gpsTimeMsec;
+    double lat;
+    double lon;
+    double alt;
+    float horizontalAccuracy;
+    float altitudeAccuracy;
+    float bearing;
+    float bearingAccuracy;
+    bool isTunnel;
+}MMF_POSITION_INFO;
+
+
+std::queue<MMF_POSITION_INFO> posInfoQueue;
+std::queue<std::vector<MMF_POSITION_INFO>> truthInfoQueue;
+
+MMF_POSITION_INFO liveTruthInfo;
+bool liveSignal = false;
+
+string truthFile;
+string serverIp;
+uint32_t serverPort;
+
+std::condition_variable cv_posCb;
+std::mutex cv_m_posCb;
+unsigned int gotPosCb = 0;
+
+std::condition_variable cv_mmfTerminate;
+std::mutex cv_m_mmfTerminate;
+unsigned int mmfTerminate = 0;
+
+std::thread t[2];
+
+bool mmfON = false;
+
+void mmfDataInjection(LocationTypes::MapMatchingFeedbackDataT  &mapData);
+
 static bool mIsGptpInitialized = false;
 
 void ToolUsage()
 {
     cout << " Usage : " << endl;
     cout << " LocIdlAPIClient -m <interested reports in decimal> -d "
-                                            "<test duration in seconds> -v" << endl;
+                              "-f <mmf options> <test duration in seconds> -v" << endl;
     cout << " -v represents verbose output " << endl;
+    cout << " -f represents Map Matching feedback " << endl;
+    cout << " mmf options:" << endl;
+    cout << " -f 1,lat,long,alt (For live location)" << endl;
+    cout << " -f 2,Truth_file_name (file should be present in /data/vendor/location/)" << endl;
     cout << " ===========================================" << endl<<endl;
     cout << " Example 1: No argument - deafult values will be used(-m 1 -d 60)" << endl;
     cout << " LocIdlAPIClient" <<endl;
@@ -92,14 +187,20 @@ void ToolUsage()
     cout << " REPORT_GNSSDATA   0x08   8" <<endl;
     cout << " REPORT_1HZ_MEAS   0x10   16" <<endl;
     cout << " ===========================================" << endl<<endl;
+    cout << " Example 4: Map Matching feedback with live location" << endl;
+    cout << " LocIdlAPIClient -f 1,12.98226941,77.6985102,866.776" <<endl;
+    cout << " ===========================================" << endl<<endl;
+    cout << " Example 5: Map Matching feedback based on truth file" << endl;
+    cout << " LocIdlAPIClient -f 2,Truth_10Hz.txt" <<endl;
+    cout << " ===========================================" << endl<<endl;
     return;
 }
 
-void printMeasurement(const LocIdlAPI::IDLGnssMeasurements& gnssMeasurements)
+void printMeasurement(const LocationTypes::GnssMeasurementsT& gnssMeasurements)
 {
     static unsigned int measCount;
     uint64_t gptp_time_ns = 0;
-    const LocIdlAPI::IDLGnssMeasurementsClock &clk = gnssMeasurements.getClock();
+    const LocationTypes::GnssMeasurementsClockT &clk = gnssMeasurements.getClock();
     static bool printMeasHeader = true;
 
     if (printMeasHeader) {
@@ -126,15 +227,15 @@ void printMeasurement(const LocIdlAPI::IDLGnssMeasurements& gnssMeasurements)
         cout << "DriftUncNsps  " << clk.getDriftUncertaintyNsps() << endl;
         cout << "HwClockCount  " << clk.getHwClockDiscontinuityCount() << endl;
 
-        const vector<LocIdlAPI::IDLGnssMeasurementsData > &measData =
+        const vector<LocationTypes::GnssMeasurementsDataT > &measData =
                                         gnssMeasurements.getMeasurements();
         for (uint16_t idx = 0; idx < measData.size(); idx++) {
             cout <<"Idx  "<< idx << endl;
 
             cout <<"MeasFlags "<< measData[idx].getFlags() << endl;
-            cout <<"svId "<< measData[idx].getSvType() << endl;
+            cout <<"svId "<< measData[idx].getSvId() << endl;
 
-            cout <<"svType "<< measData[idx].getSvType() << endl;
+            cout <<"svType "<< static_cast<int>(measData[idx].getSvType()) << endl;
             cout <<"timeOffsetNs"<< measData[idx].getTimeOffsetNs() << endl;
             cout <<"stateMask "<< measData[idx].getStateMask() << endl;
             cout <<"receivedSvTimeNs "<< measData[idx].getReceivedSvTimeNs() << endl;
@@ -166,13 +267,317 @@ void printMeasurement(const LocIdlAPI::IDLGnssMeasurements& gnssMeasurements)
                     ""<< measData[idx].getFullInterSignalBiasUncertaintyNs() << endl;
             cout <<"cycleSlipCount "<< static_cast<int>(measData[idx].getCycleSlipCount()) << endl;
         }
+        cout <<"ReportingLatency "<< gnssMeasurements.getReportingLatency() << endl;
         cout << "-------" << endl;
     }
 }
 
-void printPosResport(const LocIdlAPI::IDLLocationReport &_locationReport)
+void TerminateApp()
 {
-    const LocIdlAPI::IDLLocation &location = _locationReport.getLocInfo();
+    std::unique_lock<std::mutex> lk(cv_m_mmfTerminate);
+    mmfTerminate = 1;
+    cv_mmfTerminate.notify_all();
+    lk.unlock();
+    cout<<"TerminateApp!"<<endl;
+}
+
+void readThread()
+{
+    if (!liveSignal) {
+        std::string filepath(MMF_TRUTH_FILE);
+        std::ifstream file((filepath+truthFile));
+        uint32_t nLines = 0;
+        uint32_t nBlob = 0;
+        if (!file.is_open()) {
+            std::cout << "Could not open file" << std::endl;
+            TerminateApp();
+            fileReadDone = true;
+            return;
+        }
+
+        std::string line;
+        vector<MMF_POSITION_INFO> truthInfoVec;
+        while (std::getline(file, line) && mmfON) {
+            MMF_POSITION_INFO truthInfo;
+            std::istringstream lineStream(line);
+            std::string token;
+
+            // Extract the first token delimited by a comma
+            if (std::getline(lineStream, token, ',')) {
+                if (token == string("#INSTEST")) {
+                    // Extract remaining tokens
+                    std::vector<std::string> remainingTokens;
+                    while (std::getline(lineStream, token, ',')) {
+                            remainingTokens.push_back(token);
+                    }
+                    truthInfo.validityMask = 0;
+                    truthInfo.gpsWeek =
+                        static_cast<uint32_t>(std::stoul(remainingTokens[BDS_INSTEST_GPS_WEEK]));
+                    truthInfo.validityMask |= DATA_VALID_GPS_WEEK;
+                    truthInfo.gpsWeekMsec =
+                    static_cast<uint32_t>((std::stod(
+                            remainingTokens[BDS_INSTEST_GPS_TOW_MS])) * 1000);
+                    truthInfo.gpsTimeMsec =
+                        (truthInfo.gpsWeek * NUM_SEC_IN_WEEK * 1000) + truthInfo.gpsWeekMsec;
+                    truthInfo.validityMask |= DATA_VALID_GPS_MSEC;
+                    truthInfo.lat = (std::stod(remainingTokens[BDS_INSTEST_LAT]));
+                    truthInfo.validityMask |= DATA_VALID_LAT;
+                    truthInfo.lon = (std::stod(remainingTokens[BDS_INSTEST_LONG]));
+                    truthInfo.validityMask |= DATA_VALID_LONG;
+                    truthInfo.alt = (std::stod(remainingTokens[BDS_INSTEST_ALTITUDE])); //H-Ell
+                    truthInfo.validityMask |= DATA_VALID_ALTITUDE;
+                    float northAcc = std::stof(remainingTokens[BDS_INSTEST_NORTH_ACC]); //SDNorth
+                    float eastAcc = std::stof(remainingTokens[BDS_INSTEST_EAST_ACC]); //SDEast
+                    truthInfo.horizontalAccuracy =
+                        static_cast<float>( sqrt((northAcc * northAcc) + (eastAcc * eastAcc)) );
+                    truthInfo.validityMask |= DATA_VALID_HOR_ACC;
+                    truthInfo.altitudeAccuracy =
+                        std::stof(remainingTokens[BDS_INSTEST_ALTITUDE_ACC]); //SDHeight
+                    truthInfo.validityMask |= DATA_VALID_ALT_ACC;
+                    truthInfo.bearing = std::stof(remainingTokens[BDS_INSTEST_BEARING]);
+                    truthInfo.validityMask |= DATA_VALID_BEARING;
+                    truthInfo.bearingAccuracy =
+                        std::stof(remainingTokens[BDS_INSTEST_BEARING_ACC]);
+                    truthInfo.validityMask |= DATA_VALID_BEARING_ACC;
+                    truthInfoVec.push_back(truthInfo);
+                    nLines++;
+                } else {
+                    continue;
+                }
+                /*when 100 records reached we will push the vector into queue */
+                if (nLines == MAX_LINE_TO_READ) {
+                    truthInfoQueue.push(truthInfoVec);
+                    truthInfoVec.clear();
+                    nLines = 0;
+                    truthInfoVec.push_back(truthInfo);
+                    nLines++;
+                    nBlob++;
+                    std::this_thread::sleep_for(std::chrono::milliseconds(readThreadSleep));
+                }
+            }
+        }
+        if (file.eof() && nLines > 1) {
+            nBlob++;
+            truthInfoQueue.push(truthInfoVec);
+            truthInfoVec.clear();
+        }
+        fileReadDone = true;
+        file.close();
+    }
+    cout<<" readThread terminate " <<endl;
+    return;
+}
+
+void sendMmfInfo(MMF_POSITION_INFO &truth, MMF_POSITION_INFO &pos)
+{
+    uint32_t mask = 0;
+    LocationTypes::MapMatchingFeedbackDataT  mapData = {};
+
+    mask |= LocationTypes::MapMatchingFeedbackDataValidityT::MMFDVT_UTC_TIME;
+    mapData.setUtcTimestampMs(pos.utcTimestampMs);
+    mask |= LocationTypes::MapMatchingFeedbackDataValidityT::MMFDVT_TUNNEL;
+    mapData.setIsTunnel(pos.isTunnel);
+    if (((truth.validityMask & DATA_VALID_LAT) == DATA_VALID_LAT)) {
+        mask |= LocationTypes::MapMatchingFeedbackDataValidityT::MMFDVT_LAT_DIFF;
+        mapData.setMapMatchedLatitudeDifference(truth.lat - pos.lat);
+    }
+    if (((truth.validityMask & DATA_VALID_LONG) == DATA_VALID_LONG)) {
+        mask |= LocationTypes::MapMatchingFeedbackDataValidityT::MMFDVT_LONG_DIFF;
+        mapData.setMapMatchedLongitudeDifference(truth.lon - pos.lon);
+    }
+    if (((truth.validityMask & DATA_VALID_ALTITUDE) == DATA_VALID_ALTITUDE)) {
+        mask |= LocationTypes::MapMatchingFeedbackDataValidityT::MMFDVT_ALTITUDE;
+        mapData.setAltitude(truth.alt);
+    }
+    if (((truth.validityMask & DATA_VALID_BEARING) == DATA_VALID_BEARING)) {
+        mask |= LocationTypes::MapMatchingFeedbackDataValidityT::MMFDVT_BEARING;
+        mapData.setBearing(truth.bearing);
+    }
+    if (((truth.validityMask & DATA_VALID_HOR_ACC) == DATA_VALID_HOR_ACC)) {
+        mask |= LocationTypes::MapMatchingFeedbackDataValidityT::MMFDVT_HOR_ACC;
+        mapData.setHorizontalAccuracy(truth.horizontalAccuracy);
+    }
+    if (((truth.validityMask & DATA_VALID_ALT_ACC) == DATA_VALID_ALT_ACC)) {
+        mask |= LocationTypes::MapMatchingFeedbackDataValidityT::MMFDVT_ALT_ACC;
+        mapData.setAltitudeAccuracy(truth.altitudeAccuracy);
+    }
+    if (((truth.validityMask & DATA_VALID_BEARING_ACC) == DATA_VALID_BEARING_ACC)) {
+        mask |= LocationTypes::MapMatchingFeedbackDataValidityT::MMFDVT_BEARING_ACC;
+        mapData.setBearingAccuracy(truth.bearingAccuracy);
+    }
+    mapData.setValidityMask(mask);
+    mmfDataInjection(mapData);
+}
+
+void mmfComputation()
+{
+    std::string filepath(MMF_TRUTH_FILE);
+
+    uint32_t truthPos = 0;
+    MMF_POSITION_INFO prevTruth;
+    bool runThread = true;
+    while (runThread) {
+        MMF_POSITION_INFO pos;
+        MMF_POSITION_INFO matchingTruth;
+
+        if (!posInfoQueue.size() && mmfON) {
+            std::unique_lock<std::mutex> lock(cv_m_posCb);
+            cv_posCb.wait(lock, [] { return gotPosCb; });
+            gotPosCb = 0;
+            lock.unlock();
+        }
+        if (!mmfON)
+            break;
+        /* To handle the case where more than one position report reached before finding the truth
+        entry from truth file. This will happen only for first report. */
+        if (posInfoQueue.size()) {
+            pos = posInfoQueue.front();
+            posInfoQueue.pop();
+        } else {
+            continue;
+        }
+
+        if (liveSignal) {
+            matchingTruth = liveTruthInfo;
+            sendMmfInfo(matchingTruth, pos);
+        } else if (truthInfoQueue.size()){
+            std::vector<MMF_POSITION_INFO> truth = truthInfoQueue.front();
+            uint32_t tSize = truth.size();
+            if ((truth[0].gpsWeek + 1) < pos.gpsWeek) {
+                cout << " TRUTH FILE is TOO OLD!!!!"<<endl;
+                runThread = false;
+                break;
+            }
+            for (int i = truthPos; i < tSize; i++) {
+                /*Find the right vector from the queue which has the matching timestamp*/
+                if ((truth[tSize - 1].gpsTimeMsec <= pos.gpsTimeMsec && tSize == MAX_LINE_TO_READ)
+                                                    || (pos.gpsTimeMsec < truth[0].gpsTimeMsec)) {
+                    truthInfoQueue.pop();
+                    while (!truthInfoQueue.size() && !fileReadDone && mmfON ) {
+                        readThreadSleep = 5; /*aggressive read */
+                        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+                    }
+                    if (truthInfoQueue.size()) {
+                        truth = truthInfoQueue.front();
+                        tSize = truth.size();
+                        i = -1;
+                        continue;
+                    } else {
+                        cout<< "truth[tSize - 1].gpsWeekMsec: "<< truth[tSize - 1].gpsWeekMsec <<""
+                                  ""<< " pos.gpsWeekMsec: " << pos.gpsWeekMsec <<endl;
+                        cout << " No More entry in Truth file!!!!"<<endl;
+                        runThread = false;
+                        break;
+                    }
+                }
+                else if (tSize < MAX_LINE_TO_READ &&
+                        truth[tSize - 1].gpsTimeMsec < pos.gpsTimeMsec) {
+                    cout << " Last vector batch, No matching timestamp going to terminate!!"<<endl;
+                    cout<< "truth[tSize - 1].gpsWeekMsec: "<< truth[tSize - 1].gpsWeekMsec <<""
+                        ""<< " pos.gpsWeekMsec: " << pos.gpsWeekMsec <<endl;
+                    truthInfoQueue.pop();
+                    runThread = false;
+                    break;
+                }
+                else if (truth[i].gpsTimeMsec == pos.gpsTimeMsec) {
+                    matchingTruth = truth[i];
+                    truthPos = i;
+                    sendMmfInfo(matchingTruth, pos);
+                    break;
+                }
+                else  if (i < (tSize -1) && truth[i+1].gpsTimeMsec == pos.gpsTimeMsec) {
+                    matchingTruth = truth[i+1];
+                    truthPos = i+1;
+                    sendMmfInfo(matchingTruth, pos);
+                    break;
+                }
+                else if (i < (tSize -1) && truth[i].gpsTimeMsec < pos.gpsTimeMsec &&
+                                            truth[i+1].gpsTimeMsec > pos.gpsTimeMsec){
+                    MMF_POSITION_INFO intPolTruth;
+                    intPolTruth.validityMask = truth[i].validityMask;
+                    intPolTruth.gpsWeek = pos.gpsWeek;
+                    intPolTruth.gpsWeekMsec = pos.gpsWeekMsec;
+                    intPolTruth.gpsTimeMsec = pos.gpsTimeMsec;
+                    intPolTruth.utcTimestampMs = pos.utcTimestampMs;
+                    float factor = static_cast<float>((float)(pos.gpsTimeMsec -
+                        truth[i].gpsTimeMsec) / (float)(truth[i+1].gpsTimeMsec -
+                                                        truth[i].gpsTimeMsec));
+                    intPolTruth.lat = truth[i].lat + ( factor * (truth[i+1].lat - truth[i].lat));
+                    intPolTruth.lon = truth[i].lon + ( factor * (truth[i+1].lon - truth[i].lon));
+                    intPolTruth.alt = truth[i].alt + ( factor * (truth[i+1].alt - truth[i].alt));
+                    intPolTruth.horizontalAccuracy = truth[i].horizontalAccuracy +
+                      (factor * (truth[i + 1].horizontalAccuracy - truth[i].horizontalAccuracy));
+                    intPolTruth.altitudeAccuracy = truth[i].altitudeAccuracy +
+                          (factor * (truth[i + 1].altitudeAccuracy - truth[i].altitudeAccuracy));
+                    {
+                        double delta2Use;
+                        double adj1 = (truth[i+1].bearing > truth[i].bearing) ? -360.0 : 0;
+                        double adj2 = (truth[i+1].bearing > truth[i].bearing) ? 0 : -360.0;
+
+                        // the straight forward slice: Sample N+1 - Sample N
+                        double deltaA = truth[i+1].bearing - truth[i].bearing;
+
+                        // the other slice, where it be within 360 degrees,
+                        // thus the adjustment factors
+                        double deltaB = (truth[i+1].bearing + adj1) - (truth[i].bearing + adj2);
+
+                        // use the small slice as delta for interpolation
+                        delta2Use = ( std::abs(deltaA) < std::abs(deltaB) ) ? deltaA : deltaB;
+                        double interpbearing = truth[i].bearing + ( factor * delta2Use );
+
+                        if (interpbearing < 0)
+                           interpbearing += 360;
+                        if (interpbearing >= 360)
+                           interpbearing -= 360;
+                        intPolTruth.bearing = static_cast<float>( interpbearing );
+                    }
+                    intPolTruth.bearingAccuracy = truth[i].bearingAccuracy +
+                        (factor * (truth[i + 1].bearingAccuracy - truth[i].bearingAccuracy));
+                    matchingTruth = intPolTruth;
+                    truthPos = i;
+                    sendMmfInfo(matchingTruth, pos);
+                    break;
+                } else if (i == (tSize -1)) {
+                    cout<< "Invalid TS in PVT, pos.gpsWeek:: " << pos.gpsWeek <<""
+                        ""<< " pos.gpsWeekMsec: " << pos.gpsWeekMsec<<endl;
+                    cout<< "truthInfoQueue.size(): " << truthInfoQueue.size()<<endl;
+                    truthPos = i;
+                }else {
+                    ;
+                }
+                if (truthInfoQueue.size() > 5)
+                    readThreadSleep = 1000; /*Reduce read frequency*/
+                else
+                    readThreadSleep = 500;
+            }
+            if (truthPos == (tSize - 1)) {
+                truthPos = 0;
+                truthInfoQueue.pop();
+            }
+        } else {
+            cout<<" TRUTH QUEUE EMPTY: fileReadDone status: " << fileReadDone<<endl;
+            while (!truthInfoQueue.size() && !fileReadDone && mmfON) {
+                readThreadSleep = 5; /*aggressive read */
+                std::this_thread::sleep_for(std::chrono::milliseconds(5));
+            }
+            if (!truthInfoQueue.size() && fileReadDone) {
+                cout << " No More entry in Truth file!!!!"<<endl;
+                runThread = false;
+            }
+        }
+    }
+    cout<<" mmfComputation terminate " <<endl;
+    TerminateApp();
+    return;
+}
+
+void printPosResport(const LocationTypes::LocationReportT &_locationReport)
+{
+    const LocationTypes::LocationT &location = _locationReport.getLocInfo();
+
+    if (!mIsGptpInitialized && gptpInit()) {
+        mIsGptpInitialized = true;
+    }
 
     static unsigned int posCount;
     uint64_t gptp_time_ns = 0;
@@ -187,25 +592,63 @@ void printPosResport(const LocIdlAPI::IDLLocationReport &_locationReport)
 
     posCount += 1;
 
+    if (mmfON) {
+        MMF_POSITION_INFO posInfo;
+        static uint32_t tunnelTracker;
+        uint32_t posMask =  _locationReport.getPosTechMask();
+        if (posMask & LocationTypes::LocationTechnologyMaskT::LTMT_GNSS_BIT) {
+            tunnelTracker = 0;
+        } else if ((posMask & LocationTypes::LocationTechnologyMaskT::LTMT_SENSORS_BIT) &&
+            !(posMask & LocationTypes::LocationTechnologyMaskT::LTMT_GNSS_BIT)) {
+            tunnelTracker++;
+        }
+        posInfo.utcTimestampMs = location.getTimestamp();
+        posInfo.lat = location.getLatitude();
+        posInfo.lon = location.getLongitude();
+        posInfo.alt = location.getAltitude();
+        if (tunnelTracker > 30) { /*3s = 30 reports in 10Hz case */
+            posInfo.isTunnel = true;
+        } else {
+            posInfo.isTunnel = false;
+        }
+        const LocationTypes::GnssSystemTimeT &gnssTime = _locationReport.getGnssSystemTime();
+        const LocationTypes::SystemTimeStructT &time = gnssTime.getSystemTime();
+
+         if (gnssTime.getGnssSystemTimeSrc() != LocationTypes::GnssLocSvSystemTypeT::GLSSTT_GLO) {
+            const LocationTypes::GnssSystemTimeStructTypeT &systemTime =
+                                time.getGnssSystemTime();
+            posInfo.gpsWeek = systemTime.getSystemWeek();
+            posInfo.gpsWeekMsec = systemTime.getSystemMsec();
+            posInfo.gpsTimeMsec = (posInfo.gpsWeek * NUM_SEC_IN_WEEK * 1000) + posInfo.gpsWeekMsec;
+        }
+        if (posInfo.gpsWeek > 0) {
+            std::unique_lock<std::mutex> lock(cv_m_posCb);
+            posInfoQueue.push(posInfo);
+            gotPosCb = 1;
+            cv_posCb.notify_all();
+            lock.unlock();
+        }
+    }
+
     uint64_t lFlags = _locationReport.getLocationInfoFlags();
-    if (lFlags &  LocIdlAPI::IDLLCALocationInfoFlagMask::IDL_LOC_INFO_GPTP_TIME_BIT) {
+    if (lFlags &  LocationTypes::LocationReportExtendedFlagMaskT::LREFMT_GPTP_TIME_BIT){
         retPtp = gptpGetCurPtpTime(&gptp_time_ns);
         if (retPtp) {
             cout <<"PVT, "
                 "" << location.getTimestamp()<< ", "
                 "" <<location.getLatitude() << ", " << location.getLongitude() << ", "
                 "" << gptp_time_ns << ", "
-                "" << _locationReport.getElapsedgPTPTime() <<", "
+                "" << _locationReport.getElapsedgPtpTime()<<", "
                 "" << fixed << setprecision(3) << ""
                 "" <<(float)(gptp_time_ns -
-                            _locationReport.getElapsedgPTPTime()) / (float)1000000 <<""
+                            _locationReport.getElapsedgPtpTime()) / (float)1000000 <<""
                 ""  << endl;
         } else {
             cout <<"PVT, "
                 "" << location.getTimestamp()<< ", "
                 "" <<location.getLatitude() << ", " << location.getLongitude() << ", "
                 "" << "NA" << ", "
-                "" << _locationReport.getElapsedgPTPTime() <<", "
+                "" << _locationReport.getElapsedgPtpTime() <<", "
                 "" << fixed << setprecision(3) << ""
                 "" <<"NA" <<""
                 ""  << endl;
@@ -269,7 +712,7 @@ void printPosResport(const LocIdlAPI::IDLLocationReport &_locationReport)
         cout << "UpVelocityStdDeviatio    "<< _locationReport.getUpVelocityStdDeviation() << endl;
         cout << "NumSvUsedInPosition      " << _locationReport.getNumSvUsedInPosition() << endl;
 
-        const LocIdlAPI::IDLLocationReportSvUsedInPosition &svUsed =
+        const LocationTypes::LocationReportSvUsedInPositionT &svUsed =
                                 _locationReport.getSvUsedInPosition();
         cout << "GpsSvUsedIdsMask     "<< svUsed.getGpsSvUsedIdsMask() << endl;
         cout << "GalSvUsedIdsMask     "<< svUsed.getGalSvUsedIdsMask() << endl;
@@ -282,7 +725,7 @@ void printPosResport(const LocIdlAPI::IDLLocationReport &_locationReport)
         cout << "NavSolutionMask      "<< _locationReport.getNavSolutionMask() << endl;
         cout << "PosTechMask          "<< _locationReport.getPosTechMask() << endl;
 
-        const LocIdlAPI::IDLLocationReportPositionDynamics &posDynamics =
+        const LocationTypes::LocationReportPositionDynamicsT &posDynamics =
                                     _locationReport.getBodyFrameData();
         cout << "BodyFrameDataMask    "<< posDynamics.getBodyFrameDataMask() << endl;
         cout << "LongAccel            "<< posDynamics.getLongAccel() << endl;
@@ -304,23 +747,37 @@ void printPosResport(const LocIdlAPI::IDLLocationReport &_locationReport)
         cout << "YawRate              "<< posDynamics.getYawRate() << endl;
         cout << "YawRateUnc           "<< posDynamics.getYawRateUnc() << endl;
 
-        const LocIdlAPI::IDLGnssSystemTime &gnssTime = _locationReport.getGnssSystemTime();
-        cout << "getLocationCbEvent GnssSystemTimeSrc " << gnssTime.getGnssSystemTimeSrc() << endl;
-        const LocIdlAPI::IDLSystemTimeStructUnion &time = gnssTime.getTimeUnion();
-        if (time.isType<LocIdlAPI::IDLGnssSystemTimeStructType>()) {
-              const LocIdlAPI::IDLGnssSystemTimeStructType &systemTime =
-                                time.get<LocIdlAPI::IDLGnssSystemTimeStructType>();
+        const LocationTypes::GnssSystemTimeT &gnssTime = _locationReport.getGnssSystemTime();
+        cout << "GnssSystemTimeSrc " << static_cast<int>(gnssTime.getGnssSystemTimeSrc()) << endl;
+        const LocationTypes::SystemTimeStructT &time = gnssTime.getSystemTime();
+        if (gnssTime.getGnssSystemTimeSrc() ==
+                LocationTypes::GnssLocSvSystemTypeT::GLSSTT_GLO) {
+              const LocationTypes::GnssGloTimeStructTypeT &systemTime =
+                                time.getGloSystemTime();
+              cout <<"ValidityMask    " <<systemTime.getValidityMask() <<endl ;
+              cout <<"GloDays         " <<systemTime.getGloDays() <<endl ;
+              cout <<"GloFourYear     " <<systemTime.getGloFourYear() <<endl ;
+              cout <<"ClkTimeBias     " <<systemTime.getGloClkTimeBias() <<endl ;
+              cout <<"ClkTimeUncMs    " <<systemTime.getGloClkTimeUncMs() <<endl ;
+              cout <<"GloMsec         " <<systemTime.getGloMsec() <<endl ;
+              cout <<"NumClockResets  " <<systemTime.getNumClockResets() <<endl ;
+              cout <<"RefCount        " <<systemTime.getRefFCount() <<endl ;
+        } else {
+              const LocationTypes::GnssSystemTimeStructTypeT &systemTime =
+                                time.getGnssSystemTime();
+              cout <<"ValidityMask    " <<systemTime.getValidityMask() <<endl ;
               cout <<"SystemWeek      " <<systemTime.getSystemWeek() <<endl ;
-              cout <<"SystemWeekMs    " <<systemTime.getSystemMsec() <<endl ;
-              cout <<"SysClkTimeBias  " <<systemTime.getSystemClkTimeBias() <<endl ;
-              cout <<"SysClkTimeUncMs " <<systemTime.getSystemClkTimeUncMs() <<endl ;
-              cout <<"RefFCount       " <<systemTime.getRefFCount() <<endl ;
+              cout <<"SystemMsec      " <<systemTime.getSystemMsec() <<endl ;
+              cout <<"ClkTimeBias     " <<systemTime.getSystemClkTimeBias() <<endl ;
+              cout <<"ClkTimeUncMs    " <<systemTime.getSystemClkTimeUncMs() <<endl ;
+              cout <<"RefFcount       " <<systemTime.getRefFcount() <<endl ;
               cout <<"NumClockResets  " <<systemTime.getNumClockResets() <<endl ;
         }
 
-        const vector<LocIdlAPI::IDLGnssMeasUsageInfo> &meas = _locationReport.getMeasUsageInfo();
+        const vector<LocationTypes::GnssMeasUsageInfoT> &meas =
+                _locationReport.getMeasUsageInfo();
         for (uint8_t idx = 0; idx < meas.size() && idx < 176; idx++) {
-            cout << "GnssConstellation    "<< meas[idx].getGnssConstellation()<<endl ;
+            cout << "GnssConstellation    "<< static_cast<int>(meas[idx].getGnssConstellation())<<endl ;
             cout << "GnssSignalType       "<< meas[idx].getGnssSignalType()<<endl ;
             cout << "GnssSvId             "<< meas[idx].getGnssSvId()<<endl ;
         }
@@ -328,45 +785,48 @@ void printPosResport(const LocIdlAPI::IDLLocationReport &_locationReport)
         cout << "LeapSeconds      " << static_cast<int>(_locationReport.getLeapSeconds()) << endl;
         cout << "CalibrationConfidence "
             "" << static_cast<int>(_locationReport.getCalibrationConfidencePercent()) << endl;
-        cout << "CalibrationStatus    " << _locationReport.getCalibrationStatus() << endl;
-        cout << "LocOutputEngType     " << _locationReport.getLocOutputEngType() << endl;
+        cout << "CalibrationStatus    "
+            "" << _locationReport.getCalibrationStatus() << endl;
+        cout << "LocOutputEngType     "
+            "" << static_cast<int>(_locationReport.getLocOutputEngType()) << endl;
         cout << "LocOutputEngMask     " << _locationReport.getLocOutputEngMask() << endl;
         cout << "ConformityIndex      " << _locationReport.getConformityIndex() << endl;
 
-        const LocIdlAPI::IDLLLAInfo &lla = _locationReport.getLlaVRPBased();
+        const LocationTypes::LlaInfoT &lla = _locationReport.getLlaVrpBased();
         cout << "Latitude             " << lla.getLatitude() << endl;
         cout << "Longitude            " << lla.getLongitude() << endl;
         cout << "Altitude             " << lla.getAltitude() << endl;
 
-        const vector<float> &emu = _locationReport.getEnuVelocityVRPBased();
+        const vector<float> &emu = _locationReport.getEnuVelocityVrpBased();
         for (int k = 0; k < emu.size(); k++) {
             cout << "Emu                  " << emu[k] << endl;
         }
 
         cout << "DrSolutionStatusMask " << _locationReport.getDrSolutionStatusMask() << endl;
         cout << "AltitudeAssumed      " << _locationReport.getAltitudeAssumed() << endl;
-        cout << "SessionStatus        " << _locationReport.getSessionStatus() << endl;
+        cout << "SessionStatus        "
+            "" << static_cast<int>(_locationReport.getSessionStatus()) << endl;
         cout << "IntegrityRiskUsed    " << _locationReport.getIntegrityRiskUsed() << endl;
         cout << "ProtectAlongTrack    " << _locationReport.getProtectAlongTrack() << endl;
         cout << "ProtectCrossTrack    " << _locationReport.getProtectCrossTrack() << endl;
         cout << "ProtectVertical      " << _locationReport.getProtectVertical() << endl;
         cout << "LocationInfoFlags    " << _locationReport.getLocationInfoFlags() << endl;
 
-        const vector<uint16_t> &dgnss = _locationReport.getDgnssStationId();
+        const vector<uint32_t> &dgnss = _locationReport.getDgnssStationId();
         for (int idx = 0; idx < dgnss.size(); idx++) {
                cout << "DgnssStationId        " << dgnss[idx] << endl;
         }
-        cout << "ElapsedPTPTimeNs  " << _locationReport.getElapsedgPTPTime() << endl;
+        cout << "ElapsedPTPTimeNs  " << _locationReport.getElapsedgPtpTime() << endl;
         cout << "ReportingLatency  " << _locationReport.getReportingLatency() << endl;
         cout << "LeapSecondsUnc    " << _locationReport.getLeapSecondsUnc() << endl;
         cout << "BaseLineLength    " << _locationReport.getBaseLineLength() << endl;
         cout << "AgeMsecOfCorrections " << _locationReport.getAgeMsecOfCorrections() << endl;
-        cout << "CurrReportingRate " << _locationReport.getCurrReportingRate() << endl;
+        cout << "CurrReportingRate " << _locationReport.getPosReportingInterval() << endl;
         cout << "-------" << endl;
     }
 }
 
-void printGnssData(const LocIdlAPI::IDLGnssData& gnssData)
+void printGnssData(const LocationTypes::GnssDataT& gnssData)
 {
    vector<uint32_t> dataMask = gnssData.getGnssDataMask();
    vector<double> jammerInd = gnssData.getJammerInd();
@@ -383,7 +843,7 @@ void printGnssData(const LocIdlAPI::IDLGnssData& gnssData)
    }
 }
 
-void printSVInfo(const vector<LocIdlAPI::IDLGnssSv> &gnssSv)
+void printSVInfo(const vector<LocationTypes::GnssSvDataT > &gnssSv)
 {
     static unsigned int svCount;
     static bool printSVHeader = true;
@@ -400,12 +860,12 @@ void printSVInfo(const vector<LocIdlAPI::IDLGnssSv> &gnssSv)
         cout << "-------" << endl;
         for (uint16_t idx = 0; idx < gnssSv.size(); idx++) {
             cout << "svId  " << gnssSv[idx].getSvId() << endl;
-            cout << "Type    " << gnssSv[idx].getType() << endl;
-            cout << "CN0Dbhz  " << gnssSv[idx].getCN0Dbhz() << endl;
+            cout << "Type    " << static_cast<int>(gnssSv[idx].getType()) << endl;
+            cout << "CN0Dbhz  " << gnssSv[idx].getCN0DbHz() << endl;
             cout << "setElevation    " << gnssSv[idx].getElevation() << endl;
             cout << "Azimuth  " << gnssSv[idx].getAzimuth() << endl;
             cout << "CarrierFrequencyHz    " << gnssSv[idx].getCarrierFrequencyHz() << endl;
-            cout << "GnssSignalTypeMask" << gnssSv[idx].getGnssSignalTypeMask() << endl;
+            cout << "GnssSignalTypeMask" << gnssSv[idx].getGnssSignalType() << endl;
             cout << "BasebandCarrierToNoiseDbHz    "
                     "" << gnssSv[idx].getBasebandCarrierToNoiseDbHz() << endl;
             cout << "GloFrequency" << gnssSv[idx].getGloFrequency() << endl;
@@ -437,25 +897,26 @@ void printNmea(const uint64_t timestamp, const string &nmea)
 void DeInitHandles()
 {
     CommonAPI::CallStatus callStatus;
-
+    LocationTypes::LocationStatusT sessStatus =
+            LocationTypes::LocationStatusT::LOCATION_STATUS_T_SUCCESS;
     if (sessionStarted && myProxy) {
-        if (mask & LocIdlAPI::IDLGnssReportCbInfoMask::IDL_DATA_CB_INFO_BIT) {
-            myProxy->getGnssDataEvent().unsubscribe(dataSubscription);
+        if (mask & LocationTypes::GnssReportCbInfoMaskT::GRCIMT_DATA_CB_INFO_BIT) {
+            myProxy->getGnssDataReportEvent().unsubscribe(dataSubscription);
         }
-        if (mask & LocIdlAPI::IDLGnssReportCbInfoMask::IDL_LOC_CB_INFO_BIT) {
-            myProxy->getLocationReportEvent().unsubscribe(pvtSubscription);
+        if (mask & LocationTypes::GnssReportCbInfoMaskT::GRCIMT_LOCATION_CB_INFO_BIT) {
+            myProxy->getGnssLocationReportEvent().unsubscribe(pvtSubscription);
         }
-        if (mask & LocIdlAPI::IDLGnssReportCbInfoMask::IDL_1HZ_MEAS_CB_INFO_BIT) {
-            myProxy->getGnssMeasurementsEvent().unsubscribe(measSubscription);
+        if (mask & LocationTypes::GnssReportCbInfoMaskT::GRCIMT_MEAS_CB_INFO_BIT) {
+            myProxy->getGnssMeasurementReportEvent().unsubscribe(measSubscription);
         }
-        if (mask & LocIdlAPI::IDLGnssReportCbInfoMask::IDL_SV_CB_INFO_BIT) {
-            myProxy->getGnssSvEvent().unsubscribe(svSubscription);
+        if (mask & LocationTypes::GnssReportCbInfoMaskT::GRCIMT_SV_CB_INFO_BIT) {
+            myProxy->getGnssSvReportEvent().unsubscribe(svSubscription);
         }
-        if (mask & LocIdlAPI::IDLGnssReportCbInfoMask::IDL_NMEA_CB_INFO_BIT) {
+        if (mask & LocationTypes::GnssReportCbInfoMaskT::GRCIMT_NMEA_CB_INFO_BIT) {
             myProxy->getGnssNmeaEvent().unsubscribe(nmeaSubscription);
         }
-
-        myProxy->stopPositionSession(callStatus, &info);
+        myProxy->getGnssCapabilitiesEvent().unsubscribe(capsSubscription);
+        myProxy->StopPositionSession(callStatus, sessStatus, &info);
     } else {
         cout << "Either session not started or mProxy is NULL !! "<< endl;
     }
@@ -464,17 +925,45 @@ void DeInitHandles()
         gptpDeinit();
     }
     usleep(5000);
+}
+
+void terminateThreads()
+{
+    mmfON = false;
+    std::unique_lock<std::mutex> lock(cv_m_posCb);
+    gotPosCb = 1;
+    cv_posCb.notify_all();
+    lock.unlock();
+
+    t[0].join();
+    t[1].join();
+    cout << "terminateThreads" <<endl;
 
 }
 
 void signalHandler(int signal) {
     cout << "signalHandler " <<endl;
+    if (mmfON) {
+        terminateThreads();
+        return;
+    }
     DeInitHandles();
     if (myProxy) {
         myProxy.reset();
     }
     exit(0);
     return;
+}
+
+void getLocationCapabilities() {
+    if (myProxy) {
+        CommonAPI::CallStatus callStatus;
+        uint32_t capsMask = 0;
+        myProxy->GetLocationCapabilities(callStatus, capsMask, &info);
+        if (callStatus == CommonAPI::CallStatus::SUCCESS)
+            cout << "caps received " << capsMask << endl;
+    }
+
 }
 
 bool parseCommandLine(int argc, char* argv[], int &delay)
@@ -499,7 +988,7 @@ bool parseCommandLine(int argc, char* argv[], int &delay)
 
     if (argc > 1) {
         while ((opt = getopt(argc, argv,
-                  "m:d:hv")) != -1) {
+                  "m:d:f:hvg")) != -1) {
              switch (opt) {
                  case 'm':
                     mask = atoi(optarg);
@@ -511,6 +1000,68 @@ bool parseCommandLine(int argc, char* argv[], int &delay)
                     break;
                  case 'v':
                     verbose = true;
+                    break;
+                 case 'f':
+                     {
+                        string inp(optarg);
+                        stringstream stream(inp);
+                        string token;
+                        getline(stream, token, ',');
+
+                        if (token == string("1")) {
+                            liveSignal = true;
+                            liveTruthInfo.validityMask = 0;
+                            if (getline(stream, token, ',')) {
+                                liveTruthInfo.validityMask |= DATA_VALID_LAT;
+                                liveTruthInfo.lat = (stod(token));
+                            } else {
+                                cout << "Truth LATITUDE MISSING!!"<<endl;
+                                ToolUsage();
+                                return false;
+                            }
+                            if (getline(stream, token, ',')) {
+                                liveTruthInfo.validityMask |= DATA_VALID_LONG;
+                                liveTruthInfo.lon = (stod(token));
+                            } else {
+                                cout << "Truth LONGTITUDE MISSING!!"<<endl;
+                                ToolUsage();
+                                return false;
+                            }
+                            if (getline(stream, token, ',')) {
+                                liveTruthInfo.validityMask |= DATA_VALID_ALTITUDE;
+                                liveTruthInfo.alt = (stod(token));
+                            } else {
+                                cout << "Truth ALTITUDE MISSING!!"<<endl;
+                                ToolUsage();
+                                return false;
+                            }
+                            cout << "LAT: " << liveTruthInfo.lat << endl;
+                            cout << "LON: " << liveTruthInfo.lon << endl;
+                            cout << "ALT: " << liveTruthInfo.alt << endl;
+                        } else if (token == string("2")) {
+                            if (getline(stream, token, ',')) {
+                                truthFile = token;
+                                cout << "Truth File: " << truthFile << endl;
+                            } else {
+                                cout << "Truth File MISSING!!"<<endl;
+                                ToolUsage();
+                                return false;
+                            }
+                        } else {
+                                cout << "Invalid Argument!!"<<endl;
+                                ToolUsage();
+                                return false;
+                            /*getline(stream, token, ',');
+                            serverIp = token;
+                            getline(stream, token, ',');
+                            serverPort = static_cast<uint32_t>(std::stoul(token));*/
+                        }
+                        mmfON = true;
+                        flag = true;
+                    }
+                    break;
+                 case 'g':
+                    getLocationCapabilities();
                     break;
                  case 'h':
                  default:
@@ -555,40 +1106,40 @@ void subscribeGnssResports()
             }
         });
         // Subscribe for receiving values
-        myProxy->getGnssCapabilitiesMaskAttribute().getChangedEvent().subscribe(
-            [&](const uint32_t &val) {
-                    cout << "Received caps change event: " << val << endl;
-                });
+        capsSubscription = myProxy->getGnssCapabilitiesEvent().subscribe(
+             [&](const uint32_t &val) {
+             cout << "Received caps change event: " << val << endl;
+        });
 
-        if (mask & LocIdlAPI::IDLGnssReportCbInfoMask::IDL_DATA_CB_INFO_BIT) {
-            dataSubscription = myProxy->getGnssDataEvent().subscribe(
-            [&](const LocIdlAPI::IDLGnssData& gnssData){
+        if (mask & LocationTypes::GnssReportCbInfoMaskT::GRCIMT_DATA_CB_INFO_BIT) {
+            dataSubscription = myProxy->getGnssDataReportEvent().subscribe(
+            [&](const LocationTypes::GnssDataT& gnssData){
                 printGnssData(gnssData);
             });
         }
 
-        if (mask & LocIdlAPI::IDLGnssReportCbInfoMask::IDL_LOC_CB_INFO_BIT) {
-            pvtSubscription = myProxy->getLocationReportEvent().subscribe(
-            [&](const LocIdlAPI::IDLLocationReport &_locationReport) {
-                printPosResport(_locationReport);
+        if (mask & LocationTypes::GnssReportCbInfoMaskT::GRCIMT_LOCATION_CB_INFO_BIT) {
+            pvtSubscription = myProxy->getGnssLocationReportEvent().subscribe(
+            [&](const LocationTypes::LocationReportT &locationReportInfo) {
+                printPosResport(locationReportInfo);
             });
         }
 
-        if (mask & LocIdlAPI::IDLGnssReportCbInfoMask::IDL_1HZ_MEAS_CB_INFO_BIT) {
-            measSubscription = myProxy->getGnssMeasurementsEvent().subscribe(
-            [&](const LocIdlAPI::IDLGnssMeasurements& gnssMeasurements) {
+        if (mask & LocationTypes::GnssReportCbInfoMaskT::GRCIMT_MEAS_CB_INFO_BIT) {
+            measSubscription = myProxy->getGnssMeasurementReportEvent().subscribe(
+            [&](const LocationTypes::GnssMeasurementsT& gnssMeasurements) {
                 printMeasurement(gnssMeasurements);
             });
         }
 
-        if (mask & LocIdlAPI::IDLGnssReportCbInfoMask::IDL_SV_CB_INFO_BIT) {
-            svSubscription = myProxy->getGnssSvEvent().subscribe(
-            [&](const vector<LocIdlAPI::IDLGnssSv> &gnssSv) {
+        if (mask & LocationTypes::GnssReportCbInfoMaskT::GRCIMT_SV_CB_INFO_BIT) {
+            svSubscription = myProxy->getGnssSvReportEvent().subscribe(
+            [&](const vector<LocationTypes::GnssSvDataT> &gnssSv) {
                 printSVInfo(gnssSv);
             });
         }
 
-        if (mask & LocIdlAPI::IDLGnssReportCbInfoMask::IDL_NMEA_CB_INFO_BIT) {
+        if (mask & LocationTypes::GnssReportCbInfoMaskT::GRCIMT_NMEA_CB_INFO_BIT) {
             nmeaSubscription = myProxy->getGnssNmeaEvent().subscribe(
             [&](const uint64_t timestamp, const string nmea){
                 printNmea(timestamp, nmea);
@@ -602,15 +1153,15 @@ void subscribeGnssResports()
 void sessionStart()
 {
     uint32_t _intervalInMs = 100;
-    LocIdlAPI::IDLLocationResponse resp;
+    LocationTypes::LocationStatusT resp;
     CommonAPI::CallStatus callStatus;
     info.sender_ = 1234;
 
     sleep(1);
     if (myProxy) {
-        myProxy->startPositionSession(_intervalInMs, mask, callStatus, resp, &info);
+        myProxy->StartPositionSessionLocationReport(_intervalInMs, mask, callStatus, resp, &info);
         if (callStatus != CommonAPI::CallStatus::SUCCESS) {
-            cout << "startPositionSession() Remote call failed! callStatus "
+            cout << "StartPositionSessionLocationReport() Remote call failed! callStatus "
             "" << (int)callStatus << endl;
             sessionStarted = false;
         } else {
@@ -620,23 +1171,88 @@ void sessionStart()
         cout << " mProxy is NULL !! "<< endl;
     }
 }
+void setRequiredPermToRunAsIdlClient() {
+    if (0 == getuid()) {
+        char groupNames[LOC_MAX_PARAM_NAME] = "gps sensors vnw telaf ";
+        gid_t groupIds[LOC_PROCESS_MAX_NUM_GROUPS] = {};
+        char *splitGrpString[LOC_PROCESS_MAX_NUM_GROUPS];
+        int numGrps = loc_util_split_string(groupNames, splitGrpString,
+                LOC_PROCESS_MAX_NUM_GROUPS, ' ');
+
+        int numGrpIds=0;
+        for (int i = 0; i < numGrps; i++) {
+            struct group* grp = getgrnam(splitGrpString[i]);
+            if (grp) {
+                groupIds[numGrpIds] = grp->gr_gid;
+                printf("Group %s = %d\n", splitGrpString[i], groupIds[numGrpIds]);
+                numGrpIds++;
+            }
+        }
+        if (0 != numGrpIds) {
+            if (-1 == setgroups(numGrpIds, groupIds)) {
+                printf("Error: setgroups failed %s", strerror(errno));
+            }
+        }
+        // Set the group id first and then set the effective userid, to gps.
+        if (-1 == setgid(GID_GPS)) {
+            printf("Error: setgid failed. %s", strerror(errno));
+        }
+        // Set user id to gps
+        if (-1 == setuid(GID_GPS)) {
+            printf("Error: setuid failed. %s", strerror(errno));
+        }
+
+        // Set capabilities
+        struct __user_cap_header_struct cap_hdr = {};
+        cap_hdr.version = _LINUX_CAPABILITY_VERSION;
+        cap_hdr.pid = getpid();
+        if (prctl(PR_SET_KEEPCAPS, 1) < 0) {
+            printf("Error: prctl failed. %s", strerror(errno));
+        }
+
+        // Set access to CAP_NET_BIND_SERVICE
+        struct __user_cap_data_struct cap_data = {};
+        cap_data.permitted = (1 << CAP_NET_BIND_SERVICE);
+        cap_data.effective = cap_data.permitted;
+        printf("cap_data.permitted: %d", (int)cap_data.permitted);
+        if (capset(&cap_hdr, &cap_data)) {
+            printf("Error: capset failed. %s", strerror(errno));
+        }
+    } else {
+        int userId = getuid();
+        if (GID_GPS  == userId) {
+            printf("Test app started as gps user: %d\n", userId);
+        } else {
+            printf("ERROR! Test app started as user: %d\n", userId);
+            printf("Start the test app from shell running as root OR\n");
+            printf("Start the test app as gps user from shell\n");
+            exit(0);
+        }
+    }
+}
+
+void mmfDataInjection(LocationTypes::MapMatchingFeedbackDataT   &mapData)
+{
+    CommonAPI::CallStatus callStatus;
+    myProxy->InjectMapMatchedFeedbackData(mapData, callStatus);
+}
 
 int main(int argc, char* argv[])
 {
-    int delay;
-    string clientName;
-    std::cout << "Enter client-name: ";
-    std::cin >> clientName;
+    setRequiredPermToRunAsIdlClient();
 
+    int delay;
+    string clientName = "location-fidl-test-client";
     CommonAPI::Runtime::setProperty("LogContext", "LocIdlAPI");
     CommonAPI::Runtime::setProperty("LogApplication", "LocIdlAPI");
     CommonAPI::Runtime::setProperty("LibraryBase", "LocIdlAPI");
-
+    CommonAPI::Version version = Location::getInterfaceVersion();
+    std::cout << "Version: " << version.Major << "." << version.Minor << endl;
     shared_ptr < CommonAPI::Runtime > runtime = CommonAPI::Runtime::get();
     string domain = "local";
-    string instance = "com.qualcomm.qti.location.LocIdlAPI";
+    string instance = "com.qualcomm.qti.location.Location";
     if (runtime) {
-        myProxy = runtime->buildProxy<LocIdlAPIProxy>(domain, instance, clientName);
+        myProxy = runtime->buildProxy<LocationProxy>(domain, instance, clientName);
     } else {
         LOC_LOGe("CAPI error runtime is NULL !!");
         return 0;
@@ -665,15 +1281,32 @@ int main(int argc, char* argv[])
     if (!parseCommandLine(argc, argv, delay))
         return -1;
     /* signal Handler */
+    if (mmfON) {
+        t[0] = std::thread(readThread);
+        t[1] = std::thread(mmfComputation);
+    }
+
     regSigHandler();
 
     subscribeGnssResports();
     sessionStart();
+
+    if (mmfON) {
+        std::unique_lock<std::mutex> lock(cv_m_mmfTerminate);
+        cv_mmfTerminate.wait(lock, [] { return mmfTerminate; });
+        mmfTerminate = 0;
+        delay = 0;
+        cout<<"MMF Computation Terminated!!!!"<<endl;
+        lock.unlock();
+    }
     if (sessionStarted)
         sleep(delay);
     DeInitHandles();
     if (myProxy) {
         myProxy.reset();
     }
+    if (mmfON)
+        terminateThreads();
+
     return 0;
 }

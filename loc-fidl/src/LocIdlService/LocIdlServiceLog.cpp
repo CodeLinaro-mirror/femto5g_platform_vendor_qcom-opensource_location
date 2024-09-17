@@ -34,12 +34,13 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "LocIdlServiceLog.h"
 
+using namespace v1::com::qualcomm::qti::location;
 
 static LocDiagInterface *locDiagIfaceHandle = nullptr;
 
 bool LocIdlServiceLog::initializeDiagIface()
 {
-    LOC_LOGd("");
+    LOC_LOGv("");
     bool retVal = true;
     if (nullptr == locDiagIfaceHandle) {
         locDiagIfaceHandle = loadLocDiagIfaceInterface();
@@ -83,15 +84,15 @@ void LocIdlServiceLog::diagLogGnssReportInfo(uint8_t reportType, int16_t latency
             locDiagIfaceHandle->logCommit(gnssReportInfo, bufferSrc,
                     LOG_LOCATION_IDL_SERVICE_REPORT_VERSION, size);
         } else {
-            LOC_LOGe(" logAlloc failed for Delete Aiding Request !! ");
+            LOC_LOGv(" logAlloc failed for diagLogGnssReportInfo !! ");
         }
     } else {
-        LOC_LOGe(" locDiagIfaceHandle is NULL ");
+        LOC_LOGd(" locDiagIfaceHandle is NULL ");
     }
 }
 
 void LocIdlServiceLog::diagLogConfigConstellationRequest(uint64_t clientIdentifier,
-        vector< LocIdlAPI::IDLGnssSvIdInfo > svListSrc) {
+        vector< LocationTypes::GnssSvIdInfoT > svListSrc) {
 
     size_t size = 0;
     diagServiceInfoStruct*  svListInfo = NULL;
@@ -119,10 +120,10 @@ void LocIdlServiceLog::diagLogConfigConstellationRequest(uint64_t clientIdentifi
             locDiagIfaceHandle->logCommit(svListInfo, bufferSrc,
                     LOG_LOCATION_IDL_SERVICE_REPORT_VERSION, size);
         } else {
-            LOC_LOGe(" logAlloc failed for Delete Aiding Request !! ");
+            LOC_LOGv(" logAlloc failed for Config Constellation Request !! ");
         }
     } else {
-        LOC_LOGe(" locDiagIfaceHandle is NULL ");
+        LOC_LOGd(" locDiagIfaceHandle is NULL ");
     }
 }
 
@@ -147,10 +148,10 @@ void LocIdlServiceLog::diagLogDeleteAidingRequest (uint64_t clientIdentifier,
             locDiagIfaceHandle->logCommit(aidingInfo, bufferSrc,
                     LOG_LOCATION_IDL_SERVICE_REPORT_VERSION, size);
         } else {
-            LOC_LOGe(" logAlloc failed for Delete Aiding Request !! ");
+            LOC_LOGv(" logAlloc failed for Delete Aiding Request !! ");
         }
     } else {
-        LOC_LOGe(" locDiagIfaceHandle is NULL ");
+        LOC_LOGd(" locDiagIfaceHandle is NULL ");
     }
 }
 
@@ -183,10 +184,10 @@ void LocIdlServiceLog::diagLogSessionInfo (diagControlCommandInfo idlSessionInfo
             locDiagIfaceHandle->logCommit(sessionInfo, bufferSrc,
                     LOG_LOCATION_IDL_SERVICE_REPORT_VERSION, size);
         } else {
-            LOC_LOGe(" logAlloc failed for session event Info !! ");
+            LOC_LOGv(" logAlloc failed for session event Info !! ");
         }
     } else {
-        LOC_LOGe(" locDiagIfaceHandle is NULL ");
+        LOC_LOGd(" locDiagIfaceHandle is NULL ");
     }
 }
 
@@ -209,10 +210,10 @@ void LocIdlServiceLog::diagLogPowerEventInfo(uint8_t powerEvent, uint8_t service
             locDiagIfaceHandle->logCommit(powerEventInfo, bufferSrc,
                    LOG_LOCATION_IDL_SERVICE_REPORT_VERSION, size);
         } else {
-            LOC_LOGe(" logAlloc failed for Power Event Info !! ");
+            LOC_LOGv(" logAlloc failed for Power Event Info !! ");
         }
     } else {
-        LOC_LOGe(" locDiagIfaceHandle is NULL ");
+        LOC_LOGv(" locDiagIfaceHandle is NULL ");
     }
 }
 void LocIdlServiceLog::diagLogCapabilityInfo(string capabilityMask) {
@@ -236,10 +237,10 @@ void LocIdlServiceLog::diagLogCapabilityInfo(string capabilityMask) {
             locDiagIfaceHandle->logCommit(capsInfo, bufferSrc,
                    LOG_LOCATION_IDL_SERVICE_REPORT_VERSION, size);
         } else {
-            LOC_LOGe(" logAlloc failed for Capability Info !! ");
+            LOC_LOGd(" logAlloc failed for Capability Info !! ");
         }
     } else {
-        LOC_LOGe(" locDiagIfaceHandle is NULL ");
+        LOC_LOGv(" locDiagIfaceHandle is NULL ");
     }
 }
 
