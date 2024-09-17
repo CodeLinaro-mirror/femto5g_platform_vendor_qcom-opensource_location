@@ -172,6 +172,7 @@ public:
     virtual uint32_t configMinGpsWeek(uint16_t minGpsWeek) override;
     virtual void odcpiInject(const ::Location& location) override;
     virtual uint32_t gnssInjectMmfData(const GnssMapMatchedData& mmfData) override;
+    virtual uint32_t configureUserConsentForXtra(const bool userConsent) override;
 
     uint32_t getRobustLocationConfig();
     uint32_t getMinGpsWeek();
