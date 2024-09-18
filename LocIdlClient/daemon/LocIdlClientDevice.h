@@ -123,6 +123,7 @@ public:
     void getGptpTimeNs(uint64_t &gptp_time_ns);
     void sendGetCapabilityMsg();
     void sendDeviceCapabilityEvent();
+    bool getGptpSyncStatus();
 private:
    static LocIdlClientDevice* mInstance;
 };

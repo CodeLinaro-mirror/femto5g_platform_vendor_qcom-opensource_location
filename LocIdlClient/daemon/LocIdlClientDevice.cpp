@@ -71,6 +71,15 @@ void LocIdlClientDevice::getGptpTimeNs(uint64_t &gptp_time_ns)
     gptp_time_ns = ptpTime;
 }
 
+bool LocIdlClientDevice::getGptpSyncStatus()
+{
+    bool ret = false;
+    if ((nullptr != gPTPReqIf) && (nullptr != gPTPReqIf->gptpGetSyncStatusIf)) {
+       ret = gPTPReqIf->gptpGetSyncStatusIf();
+    }
+    return ret;
+}
+
 class IpcListener : public ILocIpcListener {
     LocIdlClientDevice& mClientInstance;
 public:

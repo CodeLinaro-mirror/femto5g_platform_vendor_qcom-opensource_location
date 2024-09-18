@@ -301,7 +301,7 @@ void LocIdlClientDevice::sendPosRespEvent(
     LOC_LOGD("%s] Rx= %llu Tx= %llu Latency= %0.4f--> ", __func__,
                         msg->posRpt.gptp_time_ns, msg->posRpt.elapsedgPTPTime, latency);
 
-    mDiagObj.diagLogPosInfo(gnssPosDiag, clk_bootTime, gptp_time_ns, false, latency);
+    mDiagObj.diagLogPosInfo(gnssPosDiag, clk_bootTime, gptp_time_ns, getGptpSyncStatus(), latency);
     sendEventsIpcHelper(msg, sizeof(EventMsgPosPkt));
 }
 
@@ -324,7 +324,7 @@ void LocIdlClientDevice::sendGnssMeasRespEvent(
     getClockBootTimeNs(clk_bootTime);
     getGptpTimeNs(gptp_time_ns);
 
-    mDiagObj.diagLogMeasInfo(gnssMeasDiag, clk_bootTime, gptp_time_ns, false);
+    mDiagObj.diagLogMeasInfo(gnssMeasDiag, clk_bootTime, gptp_time_ns, getGptpSyncStatus());
     sendEventsIpcHelper(msg, sizeof(EventMsgGnssMeasPkt));
 }
 

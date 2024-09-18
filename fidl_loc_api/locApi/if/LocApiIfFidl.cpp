@@ -120,22 +120,6 @@ void handleLocApiFidlReportPosition(UlpLocation& location,
     LOC_LOGD("%s:%d",__func__,__LINE__);
     if (nullptr != context) {
         FidlLocApi *fidlLocApiInstance = (FidlLocApi*)context;
-
-        int64_t locationTimeMs = ((int64_t)(location.gpsLocation.timestamp) * 1000000);
-        bool isCurDataTimeTrustable =
-          ((locationTimeMs % ((int64_t) (fidlLocApiInstance->mMinInterval ) * 1000000)) == 0);
-        int64_t elapsedRealTime =
-            fidlLocApiInstance->mPositionElapsedRealTimeCal.getElapsedRealtimeEstimateNanos
-                                     (locationTimeMs, isCurDataTimeTrustable,
-                                     ((int64_t)fidlLocApiInstance->mMinInterval * 1000000));
-        int unc = fidlLocApiInstance->mPositionElapsedRealTimeCal.getElapsedRealtimeUncNanos();
-        if (elapsedRealTime != -1) {
-            location.gpsLocation.flags |= LOCATION_HAS_ELAPSED_REAL_TIME_BIT;
-            location.gpsLocation.elapsedRealTime = elapsedRealTime;
-            location.gpsLocation.elapsedRealTimeUnc = unc;
-            LOC_LOGD("%s:%d elapsedRealTime %" PRIu64 "",__func__,__LINE__, elapsedRealTime);
-        }
-
         fidlLocApiInstance->reportPosition(location, locationExtended,
                             status, loc_technology_mask, pDataNotify, msInWeek);
     } else {
