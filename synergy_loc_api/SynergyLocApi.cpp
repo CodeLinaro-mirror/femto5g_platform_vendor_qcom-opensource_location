@@ -632,14 +632,6 @@ void handleSllReportGnssSvIdConfig(const GnssSvIdConfig& config, void *context) 
        None.
 */
 void handleSllReportGnssSvTypeConfig(const GnssSvTypeConfig& config, void *context) {
-
-    if (nullptr != context) {
-        SynergyLocApi *synergyLocApiInstance = (SynergyLocApi*)context;
-        synergyLocApiInstance->reportGnssSvTypeConfig(config);
-    } else {
-        LOC_LOGw ("Context is NULL");
-    }
-
 }
 
 /**
@@ -2520,33 +2512,6 @@ SynergyLocApi::setConstellationControl(const GnssSvTypeConfig& config,
         }
         if (adapterResponse != NULL) {
             adapterResponse->returnToSender(err);
-        }
-    }));
-}
-
-/**
-   Request get configured Constellation from Hardware.
-
-   @param
-        None.
-
-   @return
-        None.
-
-   @dependencies
-        None.
-*/
-void
-SynergyLocApi::getConstellationControl() {
-
-    sendMsg(new LocApiMsg([this] () {
-        enum loc_api_adapter_err rtv = LOC_API_ADAPTER_ERR_SUCCESS;
-
-        if ((nullptr != sllReqIf) && (nullptr != sllReqIf->sllGetConstellationControl)) {
-            rtv = sllReqIf->sllGetConstellationControl((void *)this);
-            if (LOC_API_ADAPTER_ERR_SUCCESS != rtv) {
-               LOC_LOGe ("Error: %d", rtv);
-            }
         }
     }));
 }
