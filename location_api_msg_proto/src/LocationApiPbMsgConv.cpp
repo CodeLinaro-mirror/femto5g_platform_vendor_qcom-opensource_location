@@ -7350,6 +7350,49 @@ int LocationApiPbMsgConv::convertCommanEphToPB (
     }
 }
 
+int LocationApiPbMsgConv::convertGpsExtendedEphToPB (
+    const GpsExtendedEphemeris &extEph,
+    PBGpsExtendedEphemeris* pbExtEph) const {
+
+    if (pbExtEph) {
+        // uint32 gnssSvId = 1;
+        pbExtEph->set_gnsssvid(extEph.gnssSvId);
+        // uint32 validityMask = 2;
+        pbExtEph->set_validitymask(extEph.validityMask);
+        // float iscL1ca = 3;
+        pbExtEph->set_iscl1ca(extEph.iscL1ca);
+        // float iscL2c = 4;
+        pbExtEph->set_iscl2c(extEph.iscL2c);
+        // float iscL5I5 = 5;
+        pbExtEph->set_iscl5i5(extEph.iscL5I5);
+        //  float iscL5Q5 = 6;
+        pbExtEph->set_iscl5q5(extEph.iscL5Q5);
+        //  uint32 alert = 7;
+        pbExtEph->set_alert(extEph.alert);
+        // uint32 uraNed0 = 8;
+        pbExtEph->set_uraned0(extEph.uraNed0);
+        // uint32 uraNed1 = 9;
+        pbExtEph->set_uraned1(extEph.uraNed1);
+        // uint32 uraNed2 = 10;
+        pbExtEph->set_uraned2(extEph.uraNed2);
+        // double top = 11;
+        pbExtEph->set_top(extEph.top);
+        // uint32 topClock = 12;
+        pbExtEph->set_topclock(extEph.topClock);
+        // uint32 validityPeriod = 13;
+        pbExtEph->set_validityperiod(extEph.validityPeriod);
+        // double deltaNdot = 14;
+        pbExtEph->set_deltandot(extEph.deltaNdot);
+        // double deltaA = 15;
+        pbExtEph->set_deltaa(extEph.deltaA);
+        // double adot = 16;
+        pbExtEph->set_adot(extEph.adot);
+        return 0;
+    } else {
+        return 1;
+    }
+}
+
 int LocationApiPbMsgConv::convertGpsEphDataToPB(
     const GpsEphemeris &halEphInfo,
     PBGpsEphemeris *pbEphInfo) const {
@@ -7396,11 +7439,65 @@ int LocationApiPbMsgConv::convertGpsEphResponseToPB(
                 return 1;
             }
         }
+        pbEphResp->set_validdatasourcesignal(halResp.validDataSourceSignal);
+        pbEphResp->set_datasourcesignal(halResp.dataSourceSignal);
+        pbEphResp->set_validextendedephdata(halResp.validExtendedEphData);
+        pbEphResp->set_numofextendedephemeris(halResp.numOfExtendedEphemeris);
+
+        for (uint32_t idx = 0; idx < halResp.numOfExtendedEphemeris; idx++) {
+            PBGpsExtendedEphemeris *pbEph = pbEphResp->add_gpsextephemerisdata();
+            if (nullptr != pbEph) {
+                if (convertGpsExtendedEphToPB(halResp.gpsExtEphemerisData[idx], pbEph)) {
+                    LOC_LOGe(" Failed convertGpsExtendedEphToPB");
+                    free(pbEph);
+                    return 1;
+                }
+            } else {
+                LOC_LOGe(" add_gpsextephemerisdata is NULL ");
+                return 1;
+            }
+        }
         return 0;
     } else {
         return 1;
     }
 }
+
+int LocationApiPbMsgConv::convertBdsExtendedEphToPB (
+    const BdsExtendedEphemeris &extEph,
+    PBBdsExtendedEphemeris* pbExtEph) const {
+
+    if (pbExtEph) {
+        // uint32 gnssSvId = 1;
+        pbExtEph->set_gnsssvid(extEph.gnssSvId);
+        // uint32 validityMask = 2;
+        pbExtEph->set_validitymask(extEph.validityMask);
+        // float tgdB2a = 3;
+        pbExtEph->set_tgdb2a(extEph.tgdB2a);
+        // float iscB2a = 4;
+        pbExtEph->set_iscb2a(extEph.iscB2a);
+        // float tgdB1c = 5;
+        pbExtEph->set_tgdb1c(extEph.tgdB1c);
+        // float iscB1c = 6;
+        pbExtEph->set_iscb1c(extEph.iscB1c);
+        // uint32 svType = 7;
+        pbExtEph->set_svtype(extEph.svType);
+        // uint32 validityPeriod = 8;
+        pbExtEph->set_validityperiod(extEph.validityPeriod);
+        // uint32 integrityFlags = 9;
+        pbExtEph->set_integrityflags(extEph.integrityFlags);
+        // double deltaNdot = 10;
+        pbExtEph->set_deltandot(extEph.deltaNdot);
+        // double deltaA = 11;
+        pbExtEph->set_deltaa(extEph.deltaA);
+        // double adot = 12;
+        pbExtEph->set_adot(extEph.adot);
+        return 0;
+    } else {
+        return 1;
+    }
+}
+
 
 int LocationApiPbMsgConv::convertBdsEphDataToPB(
     const BdsEphemeris &halEphInfo,
@@ -7447,6 +7544,24 @@ int LocationApiPbMsgConv::convertBdsEphResponseToPB(
                 }
             } else {
                 LOC_LOGe(" add_bdsephemerisdata is NULL ");
+                return 1;
+            }
+        }
+        pbEphResp->set_validdatasourcesignal(halResp.validDataSourceSignal);
+        pbEphResp->set_datasourcesignal(halResp.dataSourceSignal);
+        pbEphResp->set_validextendedephdata(halResp.validExtendedEphData);
+        pbEphResp->set_numofextendedephemeris(halResp.numOfExtendedEphemeris);
+
+        for (uint32_t idx = 0; idx < halResp.numOfExtendedEphemeris; idx++) {
+            PBBdsExtendedEphemeris *pbEph = pbEphResp->add_bdsextephemerisdata();
+            if (nullptr != pbEph) {
+                if (convertBdsExtendedEphToPB(halResp.bdsExtEphemerisData[idx], pbEph)) {
+                    LOC_LOGe(" Failed convertBdsExtendedEphToPB");
+                    free(pbEph);
+                    return 1;
+                }
+            } else {
+                LOC_LOGe(" add_bdsextephemerisdata is NULL ");
                 return 1;
             }
         }
@@ -7623,6 +7738,24 @@ int LocationApiPbMsgConv::convertQzssEphResponseToPB(
                 }
             } else {
                 LOC_LOGe(" add_qzssephemerisdata is NULL ");
+                return 1;
+            }
+        }
+        pbEphResp->set_validdatasourcesignal(halResp.validDataSourceSignal);
+        pbEphResp->set_datasourcesignal(halResp.dataSourceSignal);
+        pbEphResp->set_validextendedephdata(halResp.validExtendedEphData);
+        pbEphResp->set_numofextendedephemeris(halResp.numOfExtendedEphemeris);
+
+        for (uint32_t idx = 0; idx < halResp.numOfExtendedEphemeris; idx++) {
+            PBGpsExtendedEphemeris *pbEph = pbEphResp->add_qzssextephemerisdata();
+            if (nullptr != pbEph) {
+                if (convertGpsExtendedEphToPB(halResp.qzssExtEphemerisData[idx], pbEph)) {
+                    LOC_LOGe(" Failed convertGpsExtendedEphToPB");
+                    free(pbEph);
+                    return 1;
+                }
+            } else {
+                LOC_LOGe(" add_qzssextephemerisdata is NULL ");
                 return 1;
             }
         }
@@ -7932,6 +8065,44 @@ int LocationApiPbMsgConv::pbConvertToGpsEphData(
     halEphInfo.tgd          = pbEphInfo.tgd();
     halEphInfo.fitInterval  = pbEphInfo.fitinterval();
     halEphInfo.IODC         = pbEphInfo.iodc();
+    return 0;
+}
+
+int LocationApiPbMsgConv::pbConvertToGpsExtendedEph(
+    const PBGpsExtendedEphemeris &pbEphInfo,
+    GpsExtendedEphemeris &halEphInfo) const {
+    // uint32 gnssSvId = 1;
+    halEphInfo.gnssSvId = pbEphInfo.gnsssvid();
+    // uint32 validityMask = 2;
+    halEphInfo.validityMask = pbEphInfo.validitymask();
+    // float iscL1ca = 3;
+    halEphInfo.iscL1ca = pbEphInfo.iscl1ca();
+    // float iscL2c = 4;
+    halEphInfo.iscL2c = pbEphInfo.iscl2c();
+    // float iscL5I5 = 5;
+    halEphInfo.iscL5I5 = pbEphInfo.iscl5i5();
+    // float iscL5Q5 = 6;
+    halEphInfo.iscL5Q5 = pbEphInfo.iscl5q5();
+    // uint32 alert = 7;
+    halEphInfo.alert = pbEphInfo.alert();
+    // uint32 uraNed0 = 8;
+    halEphInfo.uraNed0  = pbEphInfo.uraned0();
+    // uint32 uraNed1 = 9;
+    halEphInfo.uraNed1  = pbEphInfo.uraned1();
+    // uint32 uraNed2 = 10;
+    halEphInfo.uraNed2  = pbEphInfo.uraned2();
+    // double top = 11;
+    halEphInfo.top      = pbEphInfo.top();
+    // uint32 topClock = 12;
+    halEphInfo.topClock  = pbEphInfo.topclock();
+    // uint32 validityPeriod = 13;
+    halEphInfo.validityPeriod  = pbEphInfo.validityperiod();
+    // double deltaNdot = 14;
+    halEphInfo.deltaNdot = pbEphInfo.deltandot();
+    // double deltaA = 15;
+    halEphInfo.deltaA = pbEphInfo.deltaa();
+    // double adot = 16;
+    halEphInfo.adot = pbEphInfo.adot();
 
     return 0;
 }
@@ -7946,6 +8117,44 @@ int LocationApiPbMsgConv::pbConvertToGpsEphResponse(
         pbConvertToGpsEphData(pbEphResp.gpsephemerisdata(idx),
                 halResp.gpsEphemerisData[idx]);
     }
+    halResp.dataSourceSignal = (Gnss_LocSignalEnumType)pbEphResp.datasourcesignal();
+    halResp.validDataSourceSignal = pbEphResp.validdatasourcesignal();
+    halResp.validExtendedEphData = pbEphResp.validextendedephdata();
+    halResp.numOfExtendedEphemeris = pbEphResp.numofextendedephemeris();
+    for (uint32_t idx = 0; idx < halResp.numOfExtendedEphemeris; idx++) {
+        pbConvertToGpsExtendedEph(pbEphResp.gpsextephemerisdata(idx),
+                halResp.gpsExtEphemerisData[idx]);
+    }
+    return 0;
+}
+
+int LocationApiPbMsgConv::pbConvertToBdsExtendedEph(
+    const PBBdsExtendedEphemeris &pbEphInfo,
+    BdsExtendedEphemeris &halEphInfo) const {
+    // uint32 gnssSvId = 1;
+    halEphInfo.gnssSvId = pbEphInfo.gnsssvid();
+    // uint32 validityMask = 2;
+    halEphInfo.validityMask = pbEphInfo.validitymask();
+    // float tgdB2a = 3;
+    halEphInfo.tgdB2a  = pbEphInfo.tgdb2a();
+    // float iscB2a = 4;
+    halEphInfo.iscB2a         = pbEphInfo.iscb2a();
+    // float tgdB1c = 5;
+    halEphInfo.tgdB1c  = pbEphInfo.tgdb1c();
+    // float iscB1c = 6;
+    halEphInfo.iscB1c         = pbEphInfo.iscb1c();
+    // uint32 svType = 7;
+    halEphInfo.svType          = pbEphInfo.svtype();
+    // uint32 validityPeriod = 8;
+    halEphInfo.validityPeriod  = pbEphInfo.validityperiod();
+    //  uint32 integrityFlags = 9;
+    halEphInfo.integrityFlags         = pbEphInfo.integrityflags();
+    // double deltaNdot = 10;
+    halEphInfo.deltaNdot = pbEphInfo.deltandot();
+    // double deltaA = 11;
+    halEphInfo.deltaA = pbEphInfo.deltaa();
+    // double adot = 12;
+    halEphInfo.adot = pbEphInfo.adot();
     return 0;
 }
 
@@ -7976,6 +8185,14 @@ int LocationApiPbMsgConv::pbConvertToBdsEphResponse(
     for (uint32_t idx = 0; idx < halResp.numOfEphemeris; idx++) {
         pbConvertToBdsEphData(pbEphResp.bdsephemerisdata(idx),
                 halResp.bdsEphemerisData[idx]);
+    }
+    halResp.dataSourceSignal = (Gnss_LocSignalEnumType)pbEphResp.datasourcesignal();
+    halResp.validDataSourceSignal = pbEphResp.validdatasourcesignal();
+    halResp.validExtendedEphData = pbEphResp.validextendedephdata();
+    halResp.numOfExtendedEphemeris = pbEphResp.numofextendedephemeris();
+    for (uint32_t idx = 0; idx < halResp.numOfExtendedEphemeris; idx++) {
+        pbConvertToBdsExtendedEph(pbEphResp.bdsextephemerisdata(idx),
+                halResp.bdsExtEphemerisData[idx]);
     }
     return 0;
 }
@@ -8099,6 +8316,14 @@ int LocationApiPbMsgConv::pbConvertToQzssEphResponse(
     for (uint32_t idx = 0; idx < halResp.numOfEphemeris; idx++) {
         pbConvertToGpsEphData(pbEphResp.qzssephemerisdata(idx),
                 halResp.qzssEphemerisData[idx]);
+    }
+    halResp.dataSourceSignal = (Gnss_LocSignalEnumType)pbEphResp.datasourcesignal();
+    halResp.validDataSourceSignal = pbEphResp.validdatasourcesignal();
+    halResp.validExtendedEphData = pbEphResp.validextendedephdata();
+    halResp.numOfExtendedEphemeris = pbEphResp.numofextendedephemeris();
+    for (uint32_t idx = 0; idx < halResp.numOfExtendedEphemeris; idx++) {
+        pbConvertToGpsExtendedEph(pbEphResp.qzssextephemerisdata(idx),
+                halResp.qzssExtEphemerisData[idx]);
     }
     return 0;
 }
