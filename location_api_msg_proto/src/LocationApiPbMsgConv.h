@@ -794,6 +794,13 @@ private:
             const GalEphSignalSource &ephSignal) const;
     int convertCommanEphToPB (const GnssEphCommon &commanEph,
             PBGnssEphCommon *pbCommanEph) const ;
+    int convertGpsExtendedEphToPB (
+            const GpsExtendedEphemeris &extEph,
+            PBGpsExtendedEphemeris* pbExtEph) const;
+    int convertBdsExtendedEphToPB (
+        const BdsExtendedEphemeris &extEph,
+        PBBdsExtendedEphemeris* pbExtEph) const;
+
     int convertGpsEphDataToPB(const GpsEphemeris &halEphInfo,
             PBGpsEphemeris *pbEphInfo) const;
     int convertGpsEphResponseToPB(const GpsEphemerisResponse  &halResp,
@@ -1063,10 +1070,17 @@ private:
     GnssEphAction pbConvertToEphAction (const PBGnssEphAction& pbEphAction) const;
     int pbConvertToCommanEph(const PBGnssEphCommon &pbCommanEph,
         GnssEphCommon &commanEph) const;
+
     int pbConvertToGpsEphResponse(const PBGpsEphemerisResponse  &pbEphResp,
         GpsEphemerisResponse  &halResp) const;
+
+    int pbConvertToGpsExtendedEph(   const PBGpsExtendedEphemeris &pbEphInfo,
+            GpsExtendedEphemeris &halEphInfo) const;
+
     int pbConvertToGpsEphData(const PBGpsEphemeris &pbEphInfo,
         GpsEphemeris &halEphInfo) const;
+    int pbConvertToBdsExtendedEph(const PBBdsExtendedEphemeris &pbEphInfo,
+            BdsExtendedEphemeris &halEphInfo) const;
     int pbConvertToBdsEphData(const PBBdsEphemeris &pbEphInfo,
         BdsEphemeris &halEphInfo) const;
     int pbConvertToBdsEphResponse(const PBBdsEphemerisResponse &pbEphResp,

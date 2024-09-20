@@ -4464,14 +4464,16 @@ void LocApiV02::populateCommonEphemeris(const qmiLocEphGnssDataStructT_v02 &rece
     ephToFill.af2 = receivedEph.af2;
 }
 
-
 void LocApiV02::populateGpsEphemeris(
         const qmiLocGpsEphemerisReportIndMsgT_v02 *gpsEphemeris,
         GnssSvEphemerisReport &svEphemeris)
 {
-    LOC_LOGv("GPS Ephemeris Received: Len= %d: systemTime_valid%d",
-            gpsEphemeris->gpsEphemerisList_len, gpsEphemeris->gpsSystemTime_valid);
+    LOC_LOGv("GPS Ephemeris Received: Len= %d: systemTime_valid%d Ext eph Len %d",
+            gpsEphemeris->gpsEphemerisList_len, gpsEphemeris->gpsSystemTime_valid,
+            gpsEphemeris->gpsEphemerisListExt_len);
     svEphemeris.ephInfo.gpsEphemeris.numOfEphemeris = gpsEphemeris->gpsEphemerisList_len;
+    svEphemeris.ephInfo.gpsEphemeris.numOfExtendedEphemeris =
+            gpsEphemeris->gpsEphemerisListExt_len;
 
     if (gpsEphemeris->gpsSystemTime_valid) {
         svEphemeris.isSystemTimeValid = true;
@@ -4493,6 +4495,79 @@ void LocApiV02::populateGpsEphemeris(
         gpsEphemerisToFill.fitInterval = receivedGpsEphemeris.fitInterval;
         gpsEphemerisToFill.IODC = receivedGpsEphemeris.IODC;
     }
+    if (gpsEphemeris->dataSourceSignal_valid) {
+        svEphemeris.ephInfo.gpsEphemeris.dataSourceSignal =
+                convertQmiGnssSignalEnumType(gpsEphemeris->dataSourceSignal);
+        svEphemeris.ephInfo.gpsEphemeris.validDataSourceSignal = true;
+    }
+    if (gpsEphemeris->gpsEphemerisListExt_valid) {
+        svEphemeris.ephInfo.gpsEphemeris.validExtendedEphData = true;
+        for (uint32_t i =0; i < gpsEphemeris->gpsEphemerisListExt_len; i++) {
+            const qmiLocGpsExtEphemerisT_v02 &receivedExtGpsEphemeris =
+                    gpsEphemeris->gpsEphemerisListExt[i];
+            GpsExtendedEphemeris &gpsExtEphemerisToFill =
+                    svEphemeris.ephInfo.gpsEphemeris.gpsExtEphemerisData[i];
+            gpsExtEphemerisToFill.gnssSvId = receivedExtGpsEphemeris.gnssSvId;
+            if (QMI_LOC_EPH_ISC_L1CA_VALID_MASK_V02 & receivedExtGpsEphemeris.validityMask) {
+                gpsExtEphemerisToFill.validityMask |= GNSS_EXT_EPH_ISC_L1CA_VALID;
+                gpsExtEphemerisToFill.iscL1ca = receivedExtGpsEphemeris.iscL1ca;
+            }
+            if (QMI_LOC_EPH_ISC_L2C_VALID_MASK_V02 & receivedExtGpsEphemeris.validityMask) {
+                gpsExtEphemerisToFill.validityMask |= GNSS_EXT_EPH_ISC_L2C_VALID;
+                gpsExtEphemerisToFill.iscL2c = receivedExtGpsEphemeris.iscL2c;
+            }
+            if (QMI_LOC_EPH_ISC_L5I5_VALID_MASK_V02 & receivedExtGpsEphemeris.validityMask) {
+                gpsExtEphemerisToFill.validityMask |= GNSS_EXT_EPH_ISC_L5I5_VALID;
+                gpsExtEphemerisToFill.iscL5I5 = receivedExtGpsEphemeris.iscL5I5;
+            }
+            if (QMI_LOC_EPH_ISC_L5Q5_VALID_MASK_V02 & receivedExtGpsEphemeris.validityMask) {
+                gpsExtEphemerisToFill.validityMask |= GNSS_EXT_EPH_ISC_L5Q5_VALID;
+                gpsExtEphemerisToFill.iscL5Q5 = receivedExtGpsEphemeris.iscL5Q5;
+            }
+            if (QMI_LOC_EPH_ALERT_VALID_MASK_V02 & receivedExtGpsEphemeris.validityMask) {
+                gpsExtEphemerisToFill.validityMask |= GNSS_EXT_EPH_ALERT_VALID;
+                gpsExtEphemerisToFill.alert = receivedExtGpsEphemeris.alert;
+            }
+            if (QMI_LOC_EPH_URANED0_VALID_MASK_V02 & receivedExtGpsEphemeris.validityMask) {
+                gpsExtEphemerisToFill.validityMask |= GNSS_EXT_EPH_URANED0_VALID;
+                gpsExtEphemerisToFill.uraNed0 = receivedExtGpsEphemeris.uraNed0;
+            }
+            if (QMI_LOC_EPH_URANED1_VALID_MASK_V02 & receivedExtGpsEphemeris.validityMask) {
+                gpsExtEphemerisToFill.validityMask |= GNSS_EXT_EPH_URANED1_VALID;
+                gpsExtEphemerisToFill.uraNed1 = receivedExtGpsEphemeris.uraNed1;
+            }
+            if (QMI_LOC_EPH_URANED2_VALID_MASK_V02 & receivedExtGpsEphemeris.validityMask) {
+                gpsExtEphemerisToFill.validityMask |= GNSS_EXT_EPH_URANED2_VALID;
+                gpsExtEphemerisToFill.uraNed2 = receivedExtGpsEphemeris.uraNed2;
+            }
+            if (QMI_LOC_EPH_TOP_VALID_MASK_V02 & receivedExtGpsEphemeris.validityMask) {
+                gpsExtEphemerisToFill.validityMask |= GNSS_EXT_EPH_TOP_VALID;
+                gpsExtEphemerisToFill.top = receivedExtGpsEphemeris.top;
+            }
+            if (QMI_LOC_EPH_TOP_CLOCK_VALID_MASK_V02 & receivedExtGpsEphemeris.validityMask) {
+                gpsExtEphemerisToFill.validityMask |= GNSS_EXT_EPH_TOP_CLOCK_VALID;
+                gpsExtEphemerisToFill.topClock = receivedExtGpsEphemeris.topClock;
+            }
+            if (QMI_LOC_EPH_VALIDITY_PERIOD_VALID_MASK_V02 &
+                     receivedExtGpsEphemeris.validityMask) {
+                gpsExtEphemerisToFill.validityMask |= GNSS_EXT_EPH_VALIDITY_PERIOD_VALID;
+                gpsExtEphemerisToFill.validityPeriod =
+                    receivedExtGpsEphemeris.validityPeriod;
+            }
+            if (QMI_LOC_EPH_DELTA_NDOT_VALID_MASK_V02 & receivedExtGpsEphemeris.validityMask) {
+                gpsExtEphemerisToFill.validityMask |= GNSS_EXT_EPH_DELTA_NDOT_VALID;
+                gpsExtEphemerisToFill.deltaNdot = receivedExtGpsEphemeris.deltaNdot;
+            }
+            if (QMI_LOC_EPH_DELTAA_VALID_MASK_V02 & receivedExtGpsEphemeris.validityMask) {
+                gpsExtEphemerisToFill.validityMask |= GNSS_EXT_EPH_DELTAA_VALID;
+                gpsExtEphemerisToFill.deltaA = receivedExtGpsEphemeris.deltaA;
+            }
+            if (QMI_LOC_EPH_ADOT_VALID_MASK_V02 & receivedExtGpsEphemeris.validityMask) {
+                gpsExtEphemerisToFill.validityMask |= GNSS_EXT_EPH_ADOT_VALID;
+                gpsExtEphemerisToFill.adot = receivedExtGpsEphemeris.adot;
+            }
+        }
+    }
 }
 
 void LocApiV02::populateGlonassEphemeris(const qmiLocGloEphemerisReportIndMsgT_v02 *gloEphemeris,
@@ -4509,7 +4584,8 @@ void LocApiV02::populateGlonassEphemeris(const qmiLocGloEphemerisReportIndMsgT_v
 
     for (uint32_t i =0; i < gloEphemeris->gloEphemerisList_len; i++) {
         const qmiLocGloEphemerisT_v02 &receivedGloEphemeris = gloEphemeris->gloEphemerisList[i];
-        GlonassEphemeris &gloEphemerisToFill = svEphemeris.ephInfo.glonassEphemeris.gloEphemerisData[i];
+        GlonassEphemeris &gloEphemerisToFill =
+                 svEphemeris.ephInfo.glonassEphemeris.gloEphemerisData[i];
 
         LOC_LOGv("Eph received for sv-id: %d action:%d", receivedGloEphemeris.gnssSvId,
                  receivedGloEphemeris.updateAction);
@@ -4567,6 +4643,8 @@ void LocApiV02::populateBdsEphemeris(const qmiLocBdsEphemerisReportIndMsgT_v02 *
     LOC_LOGv("BDS Ephemeris Received: Len= %d: systemTime_valid%d",
             bdsEphemeris->bdsEphemerisList_len, bdsEphemeris->gpsSystemTime_valid);
     svEphemeris.ephInfo.bdsEphemeris.numOfEphemeris = bdsEphemeris->bdsEphemerisList_len;
+    svEphemeris.ephInfo.bdsEphemeris.numOfExtendedEphemeris =
+            bdsEphemeris->bdsEphemerisListExt_len;
 
     if (bdsEphemeris->gpsSystemTime_valid) {
         svEphemeris.isSystemTimeValid = true;
@@ -4587,6 +4665,65 @@ void LocApiV02::populateBdsEphemeris(const qmiLocBdsEphemerisReportIndMsgT_v02 *
         bdsEphemerisToFill.tgd2 = receivedBdsEphemeris.tgd2;
         bdsEphemerisToFill.URAI = receivedBdsEphemeris.URAI;
     }
+    if (bdsEphemeris->dataSourceSignal_valid) {
+        svEphemeris.ephInfo.bdsEphemeris.dataSourceSignal =
+                convertQmiGnssSignalEnumType(bdsEphemeris->dataSourceSignal);
+        svEphemeris.ephInfo.bdsEphemeris.validDataSourceSignal = true;
+    }
+
+    if (bdsEphemeris->bdsEphemerisListExt_valid) {
+        svEphemeris.ephInfo.bdsEphemeris.validExtendedEphData = true;
+        for (uint32_t i =0; i < bdsEphemeris->bdsEphemerisListExt_len; i++) {
+            const qmiLocBdsExtEphemerisT_v02 &receivedExtBdsEphemeris =
+                    bdsEphemeris->bdsEphemerisListExt[i];
+            BdsExtendedEphemeris &bdsExtEphemerisToFill =
+                    svEphemeris.ephInfo.bdsEphemeris.bdsExtEphemerisData[i];
+            bdsExtEphemerisToFill.gnssSvId = receivedExtBdsEphemeris.gnssSvId;
+            if (QMI_LOC_BDS_EPH_TGD_B2A_VALID_MASK_V02 & receivedExtBdsEphemeris.validityMask) {
+                bdsExtEphemerisToFill.validityMask |= GNSS_BDS_EXT_EPH_TGD_B2A_VALID;
+                bdsExtEphemerisToFill.tgdB2a = receivedExtBdsEphemeris.tgdB2a;
+            }
+            if (QMI_LOC_BDS_EPH_ISC_B2A_VALID_MASK_V02 & receivedExtBdsEphemeris.validityMask) {
+                bdsExtEphemerisToFill.validityMask |= GNSS_BDS_EXT_EPH_ISC_B2A_VALID;
+                bdsExtEphemerisToFill.iscB2a = receivedExtBdsEphemeris.iscB2a;
+            }
+            if (QMI_LOC_BDS_EPH_TGD_B1C_VALID_MASK_V02 & receivedExtBdsEphemeris.validityMask) {
+                bdsExtEphemerisToFill.validityMask |= GNSS_BDS_EXT_EPH_TGD_B1C_VALID;
+                bdsExtEphemerisToFill.tgdB1c = receivedExtBdsEphemeris.tgdB1c;
+            }
+            if (QMI_LOC_BDS_EPH_ISC_B1C_VALID_MASK_V02 & receivedExtBdsEphemeris.validityMask) {
+                bdsExtEphemerisToFill.validityMask |= GNSS_BDS_EXT_EPH_ISC_B1C_VALID;
+                bdsExtEphemerisToFill.iscB1c = receivedExtBdsEphemeris.iscB1c;
+            }
+            if (QMI_LOC_BDS_EPH_SV_TYPE_VALID_MASK_V02 & receivedExtBdsEphemeris.validityMask) {
+                bdsExtEphemerisToFill.validityMask |= GNSS_BDS_EXT_EPH_SV_TYPE_VALID;
+                bdsExtEphemerisToFill.svType = receivedExtBdsEphemeris.svType;
+            }
+            if (QMI_LOC_BDS_EPH_VALIDITY_PERIOD_VALID_MASK_V02 &
+                     receivedExtBdsEphemeris.validityMask) {
+                bdsExtEphemerisToFill.validityMask |= GNSS_BDS_EXT_EPH_VALIDITY_PERIOD;
+                bdsExtEphemerisToFill.validityPeriod =
+                    receivedExtBdsEphemeris.validityPeriod;
+            }
+            if (QMI_LOC_BDS_EPH_INTEGRITY_FLAGS_VALID_MASK_V02 &
+                    receivedExtBdsEphemeris.validityMask) {
+                bdsExtEphemerisToFill.validityMask |= GNSS_BDS_EXT_EPH_INTEGRITY_FLAGS;
+                bdsExtEphemerisToFill.integrityFlags = receivedExtBdsEphemeris.integrityFlags;
+            }
+            if (QMI_LOC_BDS_EPH_DELTA_NDOT_VALID_MASK_V02 & receivedExtBdsEphemeris.validityMask) {
+                bdsExtEphemerisToFill.validityMask |= GNSS_BDS_EXT_EPH_DELTA_NDOT_VALID;
+                bdsExtEphemerisToFill.deltaNdot = receivedExtBdsEphemeris.deltaNdot;
+            }
+            if (QMI_LOC_BDS_EPH_DELTAA_VALID_MASK_V02 & receivedExtBdsEphemeris.validityMask) {
+                bdsExtEphemerisToFill.validityMask |= GNSS_BDS_EXT_EPH_DELTAA_VALID;
+                bdsExtEphemerisToFill.deltaA = receivedExtBdsEphemeris.deltaA;
+            }
+            if (QMI_LOC_BDS_EPH_ADOT_VALID_MASK_V02 & receivedExtBdsEphemeris.validityMask) {
+                bdsExtEphemerisToFill.validityMask |= GNSS_BDS_EXT_EPH_ADOT_VALID;
+                bdsExtEphemerisToFill.adot = receivedExtBdsEphemeris.adot;
+            }
+        }
+    }
 }
 
 void LocApiV02::populateGalEphemeris(const qmiLocGalEphemerisReportIndMsgT_v02 *galEphemeris,
@@ -4604,7 +4741,8 @@ void LocApiV02::populateGalEphemeris(const qmiLocGalEphemerisReportIndMsgT_v02 *
 
     for (uint32_t i =0; i < galEphemeris->galEphemerisList_len; i++) {
         const qmiLocGalEphemerisT_v02 &receivedGalEphemeris = galEphemeris->galEphemerisList[i];
-        GalileoEphemeris &galEphemerisToFill = svEphemeris.ephInfo.galileoEphemeris.galEphemerisData[i];
+        GalileoEphemeris &galEphemerisToFill =
+                svEphemeris.ephInfo.galileoEphemeris.galEphemerisData[i];
 
         populateCommonEphemeris(receivedGalEphemeris.commonEphemerisData,
                 galEphemerisToFill.commonEphemerisData);
@@ -4639,6 +4777,8 @@ void LocApiV02::populateQzssEphemeris(const qmiLocQzssEphemerisReportIndMsgT_v02
     LOC_LOGv("QZSS Ephemeris Received: Len= %d: systemTime_valid%d",
             qzssEphemeris->qzssEphemerisList_len, qzssEphemeris->gpsSystemTime_valid);
     svEphemeris.ephInfo.qzssEphemeris.numOfEphemeris = qzssEphemeris->qzssEphemerisList_len;
+    svEphemeris.ephInfo.qzssEphemeris.numOfExtendedEphemeris =
+            qzssEphemeris->qzssEphemerisListExt_len;
 
     if (qzssEphemeris->gpsSystemTime_valid) {
         svEphemeris.isSystemTimeValid = true;
@@ -4660,6 +4800,79 @@ void LocApiV02::populateQzssEphemeris(const qmiLocQzssEphemerisReportIndMsgT_v02
         qzssEphemerisToFill.tgd = receivedQzssEphemeris.tgd;
         qzssEphemerisToFill.fitInterval = receivedQzssEphemeris.fitInterval;
         qzssEphemerisToFill.IODC = receivedQzssEphemeris.IODC;
+    }
+    if (qzssEphemeris->dataSourceSignal_valid) {
+        svEphemeris.ephInfo.qzssEphemeris.dataSourceSignal =
+                convertQmiGnssSignalEnumType(qzssEphemeris->dataSourceSignal);
+        svEphemeris.ephInfo.qzssEphemeris.validDataSourceSignal = true;
+    }
+    if (qzssEphemeris->qzssEphemerisListExt_valid) {
+        svEphemeris.ephInfo.qzssEphemeris.validExtendedEphData = true;
+        for (uint32_t i =0; i < qzssEphemeris->qzssEphemerisListExt_len; i++) {
+            const qmiLocGpsExtEphemerisT_v02 &receivedExtGpsEphemeris =
+                    qzssEphemeris->qzssEphemerisListExt[i];
+            GpsExtendedEphemeris &qzssExtEphemerisToFill =
+                    svEphemeris.ephInfo.qzssEphemeris.qzssExtEphemerisData[i];
+            qzssExtEphemerisToFill.gnssSvId = receivedExtGpsEphemeris.gnssSvId;
+            if (QMI_LOC_EPH_ISC_L1CA_VALID_MASK_V02 & receivedExtGpsEphemeris.validityMask) {
+                qzssExtEphemerisToFill.validityMask |= GNSS_EXT_EPH_ISC_L1CA_VALID;
+                qzssExtEphemerisToFill.iscL1ca = receivedExtGpsEphemeris.iscL1ca;
+            }
+            if (QMI_LOC_EPH_ISC_L2C_VALID_MASK_V02 & receivedExtGpsEphemeris.validityMask) {
+                qzssExtEphemerisToFill.validityMask |= GNSS_EXT_EPH_ISC_L2C_VALID;
+                qzssExtEphemerisToFill.iscL2c = receivedExtGpsEphemeris.iscL2c;
+            }
+            if (QMI_LOC_EPH_ISC_L5I5_VALID_MASK_V02 & receivedExtGpsEphemeris.validityMask) {
+                qzssExtEphemerisToFill.validityMask |= GNSS_EXT_EPH_ISC_L5I5_VALID;
+                qzssExtEphemerisToFill.iscL5I5 = receivedExtGpsEphemeris.iscL5I5;
+            }
+            if (QMI_LOC_EPH_ISC_L5Q5_VALID_MASK_V02 & receivedExtGpsEphemeris.validityMask) {
+                qzssExtEphemerisToFill.validityMask |= GNSS_EXT_EPH_ISC_L5Q5_VALID;
+                qzssExtEphemerisToFill.iscL5Q5 = receivedExtGpsEphemeris.iscL5Q5;
+            }
+            if (QMI_LOC_EPH_ALERT_VALID_MASK_V02 & receivedExtGpsEphemeris.validityMask) {
+                qzssExtEphemerisToFill.validityMask |= GNSS_EXT_EPH_ALERT_VALID;
+                qzssExtEphemerisToFill.alert = receivedExtGpsEphemeris.alert;
+            }
+            if (QMI_LOC_EPH_URANED0_VALID_MASK_V02 & receivedExtGpsEphemeris.validityMask) {
+                qzssExtEphemerisToFill.validityMask |= GNSS_EXT_EPH_URANED0_VALID;
+                qzssExtEphemerisToFill.uraNed0 = receivedExtGpsEphemeris.uraNed0;
+            }
+            if (QMI_LOC_EPH_URANED1_VALID_MASK_V02 & receivedExtGpsEphemeris.validityMask) {
+                qzssExtEphemerisToFill.validityMask |= GNSS_EXT_EPH_URANED1_VALID;
+                qzssExtEphemerisToFill.uraNed1 = receivedExtGpsEphemeris.uraNed1;
+            }
+            if (QMI_LOC_EPH_URANED2_VALID_MASK_V02 & receivedExtGpsEphemeris.validityMask) {
+                qzssExtEphemerisToFill.validityMask |= GNSS_EXT_EPH_URANED2_VALID;
+                qzssExtEphemerisToFill.uraNed2 = receivedExtGpsEphemeris.uraNed2;
+            }
+            if (QMI_LOC_EPH_TOP_VALID_MASK_V02 & receivedExtGpsEphemeris.validityMask) {
+                qzssExtEphemerisToFill.validityMask |= GNSS_EXT_EPH_TOP_VALID;
+                qzssExtEphemerisToFill.top = receivedExtGpsEphemeris.top;
+            }
+            if (QMI_LOC_EPH_TOP_CLOCK_VALID_MASK_V02 & receivedExtGpsEphemeris.validityMask) {
+                qzssExtEphemerisToFill.validityMask |= GNSS_EXT_EPH_TOP_CLOCK_VALID;
+                qzssExtEphemerisToFill.topClock = receivedExtGpsEphemeris.topClock;
+            }
+            if (QMI_LOC_EPH_VALIDITY_PERIOD_VALID_MASK_V02 &
+                     receivedExtGpsEphemeris.validityMask) {
+                qzssExtEphemerisToFill.validityMask |= GNSS_EXT_EPH_VALIDITY_PERIOD_VALID;
+                qzssExtEphemerisToFill.validityPeriod =
+                    receivedExtGpsEphemeris.validityPeriod;
+            }
+            if (QMI_LOC_EPH_DELTA_NDOT_VALID_MASK_V02 & receivedExtGpsEphemeris.validityMask) {
+                qzssExtEphemerisToFill.validityMask |= GNSS_EXT_EPH_DELTA_NDOT_VALID;
+                qzssExtEphemerisToFill.deltaNdot = receivedExtGpsEphemeris.deltaNdot;
+            }
+            if (QMI_LOC_EPH_DELTAA_VALID_MASK_V02 & receivedExtGpsEphemeris.validityMask) {
+                qzssExtEphemerisToFill.validityMask |= GNSS_EXT_EPH_DELTAA_VALID;
+                qzssExtEphemerisToFill.deltaA = receivedExtGpsEphemeris.deltaA;
+            }
+            if (QMI_LOC_EPH_ADOT_VALID_MASK_V02 & receivedExtGpsEphemeris.validityMask) {
+                qzssExtEphemerisToFill.validityMask |= GNSS_EXT_EPH_ADOT_VALID;
+                qzssExtEphemerisToFill.adot = receivedExtGpsEphemeris.adot;
+            }
+        }
     }
 }
 
@@ -12194,6 +12407,84 @@ GnssSignalTypeMask LocApiV02::convertQmiGnssSignalType(
         gnssSignalType |= GNSS_SIGNAL_BEIDOU_B2AQ;
     }
 
+    return gnssSignalType;
+}
+
+Gnss_LocSignalEnumType LocApiV02::convertQmiGnssSignalEnumType(
+        qmiLocGnssSignalTypeEnumT_v02 qmiGnssSignalType) {
+    Gnss_LocSignalEnumType gnssSignalType = GNSS_LOC_MAX_NUMBER_OF_SIGNAL_TYPES;
+
+    switch (qmiGnssSignalType) {
+        case eQMI_LOC_GNSS_SIGNAL_TYPE_GPS_L1CA_V02:
+            gnssSignalType = GNSS_LOC_SIGNAL_TYPE_GPS_L1CA;
+            break;
+        case eQMI_LOC_GNSS_SIGNAL_TYPE_GPS_L1C_V02:
+            gnssSignalType = GNSS_LOC_SIGNAL_TYPE_GPS_L1C;
+            break;
+        case eQMI_LOC_GNSS_SIGNAL_TYPE_GPS_L2C_L_V02:
+            gnssSignalType = GNSS_LOC_SIGNAL_TYPE_GPS_L2C_L;
+            break;
+        case eQMI_LOC_GNSS_SIGNAL_TYPE_GPS_L5_Q_V02:
+            gnssSignalType = GNSS_LOC_SIGNAL_TYPE_GPS_L5_Q;
+            break;
+        case eQMI_LOC_GNSS_SIGNAL_TYPE_GLONASS_G1_V02:
+            gnssSignalType = GNSS_LOC_SIGNAL_TYPE_GLONASS_G1;
+            break;
+        case eQMI_LOC_GNSS_SIGNAL_TYPE_GLONASS_G2_V02:
+            gnssSignalType = GNSS_LOC_SIGNAL_TYPE_GLONASS_G2;
+            break;
+        case eQMI_LOC_GNSS_SIGNAL_TYPE_GALILEO_E1_C_V02:
+            gnssSignalType = GNSS_LOC_SIGNAL_TYPE_GALILEO_E1_C;
+            break;
+        case eQMI_LOC_GNSS_SIGNAL_TYPE_GALILEO_E5A_Q_V02:
+            gnssSignalType = GNSS_LOC_SIGNAL_TYPE_GALILEO_E5A_Q;
+            break;
+        case eQMI_LOC_GNSS_SIGNAL_TYPE_GALILEO_E5B_Q_V02:
+            gnssSignalType = GNSS_LOC_SIGNAL_TYPE_GALILEO_E5B_Q;
+            break;
+        case eQMI_LOC_GNSS_SIGNAL_TYPE_BEIDOU_B1_I_V02:
+            gnssSignalType = GNSS_LOC_SIGNAL_TYPE_BEIDOU_B1_I;
+            break;
+        case eQMI_LOC_GNSS_SIGNAL_TYPE_BEIDOU_B1C_V02:
+            gnssSignalType = GNSS_LOC_SIGNAL_TYPE_BEIDOU_B1C;
+            break;
+        case eQMI_LOC_GNSS_SIGNAL_TYPE_BEIDOU_B2_I_V02:
+            gnssSignalType = GNSS_LOC_SIGNAL_TYPE_BEIDOU_B2_I;
+            break;
+        case eQMI_LOC_GNSS_SIGNAL_TYPE_BEIDOU_B2A_I_V02:
+            gnssSignalType = GNSS_LOC_SIGNAL_TYPE_BEIDOU_B2A_I;
+            break;
+        case eQMI_LOC_GNSS_SIGNAL_TYPE_QZSS_L1CA_V02:
+            gnssSignalType = GNSS_LOC_SIGNAL_TYPE_QZSS_L1CA;
+            break;
+        case eQMI_LOC_GNSS_SIGNAL_TYPE_QZSS_L1S_V02:
+            gnssSignalType = GNSS_LOC_SIGNAL_TYPE_QZSS_L1S;
+            break;
+        case eQMI_LOC_GNSS_SIGNAL_TYPE_QZSS_L2C_L_V02:
+            gnssSignalType = GNSS_LOC_SIGNAL_TYPE_QZSS_L2C_L;
+            break;
+        case eQMI_LOC_GNSS_SIGNAL_TYPE_QZSS_L5_Q_V02:
+            gnssSignalType = GNSS_LOC_SIGNAL_TYPE_QZSS_L5_Q;
+            break;
+        case eQMI_LOC_GNSS_SIGNAL_TYPE_SBAS_L1_CA_V02:
+            gnssSignalType = GNSS_LOC_SIGNAL_TYPE_SBAS_L1_CA;
+            break;
+        case eQMI_LOC_GNSS_SIGNAL_TYPE_NAVIC_L5_V02:
+            gnssSignalType = GNSS_LOC_SIGNAL_TYPE_NAVIC_L5;
+            break;
+        case eQMI_LOC_GNSS_SIGNAL_TYPE_BEIDOU_B2A_Q_V02:
+            gnssSignalType = GNSS_LOC_SIGNAL_TYPE_BEIDOU_B2A_Q;
+            break;
+        case eQMI_LOC_GNSS_SIGNAL_TYPE_BEIDOU_B2B_I_V02:
+            gnssSignalType = GNSS_LOC_SIGNAL_TYPE_BEIDOU_B2B_I;
+            break;
+        case eQMI_LOC_GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q_V02:
+            gnssSignalType = GNSS_LOC_SIGNAL_TYPE_BEIDOU_B2B_Q;
+            break;
+        case eQMI_LOC_GNSS_SIGNAL_TYPE_NAVIC_L1_V02:
+            gnssSignalType = GNSS_LOC_SIGNAL_TYPE_NAVIC_L1;
+            break;
+    }
     return gnssSignalType;
 }
 
