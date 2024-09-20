@@ -79,8 +79,8 @@ enum LocationApiDataTypesVersion {
     LOCAPI_DATA_TYPES_VER_MAJOR = 1;
     // Minor - New features / API addition, new message/elemtent addition.
     // Bump the last byte of version i.e. x.2 to x.3
-    // Minor version 48: Support GPS SV blacklisting- BDS pref mode
-    LOCAPI_DATA_TYPES_VER_MINOR = 48;
+    // Minor version 49: Support Additional EPH data
+    LOCAPI_DATA_TYPES_VER_MINOR = 49;
 }
 
 // ============================================================================
@@ -1946,6 +1946,73 @@ message PBGnssEphCommon {
 
 }
 
+/** Extended Ephemeris structure */
+message PBGnssExtendedEphCommon {
+
+    double deltaNdot = 1;
+    /** Rate of Mean motion difference from computed value [semi-circle/sec^2] (unitless).
+     */
+
+    double deltaA = 2;
+    /** Semi-Major Axis Difference At Reference Time [m].
+        - Units -- Meters */
+
+    double adot = 3;
+    /** Change Rate In Semi-Major Axis [m/sec].
+        - Units -- Meters/seconds */
+}
+
+/* GPS Extended Ephemeris struct */
+message PBGpsExtendedEphemeris {
+    PBGnssExtendedEphCommon commonEphemerisDataExt = 1;
+    /** GPS Common Ephemeris Data. */
+
+    uint32 dataSourceSignal = 2;
+    /**  Ephemeris Signal Source Type (unitless). */
+
+    uint32 alert = 3;
+    /** Alert Bit Info (unitless). */
+
+    uint32 uraNed0 = 4;
+    /** NED accuracy index (5 bits, unitless). */
+
+    uint32 uraNed1 = 5;
+    /**NED accuracy change index (3 bits), UraNed1 = 1/2^N (m/s), N=14 + UraNed1 index(unitless).*/
+
+    uint32 uraNed2 = 6;
+    /** NED accuracy change rate index (3 bits),
+     *  UraNed2 = 1/2^N (m/s^2), N=28 + UraNed2 index (unitless). */
+
+    double top = 7;
+    /** Data predict time of week, 0-604500 sec.
+         - Units -- Seconds */
+
+    uint32 topClock = 8;
+    /** Data predict time of week (clock) , scale 300 seconds.
+         - Units -- Seconds */
+
+    uint32 validityPeriod = 9;
+    /** Validity Period in seconds.
+         - Units -- Seconds */
+
+    float iscL1ca = 10;
+    /** InterSignal Correction between L1ca Data and Pilot channels in milliseconds
+     *  always zero for QZSS.
+        - Units -- milliseconds */
+
+    float iscL2c = 11;
+    /** InterSignal Correction between L2c Data and Pilot channels in milliseconds.
+        - Units -- milliseconds */
+
+    float iscL5I5 = 12;
+    /**  InterSignal Correction between L5I5 Data and Pilot channels in milliseconds.
+         - Units -- milliseconds */
+
+    float iscL5Q5 = 13;
+    /**<   InterSignal Correction between L5Q5 Data and Pilot channels in milliseconds.
+         - Units -- milliseconds    */
+}
+
 /* GPS Navigation Model Info */
 message PBGpsEphemeris {
     PBGnssEphCommon commonEphemerisData = 1;
@@ -1993,6 +2060,12 @@ message PBGpsEphemeris {
     /**<   Issue of Data, Clock. \n
          - Type: uint16
          - Units: Unit-less */
+
+    /** Validity field for PBGpsExtendedEphemeris */
+    bool extendedEphDataValidity = 9;
+
+    /** Extended Ephemeris data for GPS/QZSS */
+    PBGpsExtendedEphemeris gpsExtEphData = 10;
 }
 
 /* GLONASS Navigation Model Info */
@@ -2105,26 +2178,70 @@ message PBGlonassEphemeris {
        - Units: Days */
 }
 
+/** Extended Ephemeris report for BDS */
+message PBBdsExtendedEphemeris {
+
+    PBGnssExtendedEphCommon commonEphemerisDataExt = 1;
+    /**  BDS Common Ephemeris Data.  */
+
+    uint32 dataSourceSignal = 2;
+    /** Ephemeris Signal Source Type (Unitless). */
+
+    uint32 svType = 3;
+    /**  Sv Type  GEO / MEO / IGSO (Unitless). */
+
+    float tgdB2a = 4;
+    /**  Time of Group Delay For B2a in milliseconds.
+         - Units -- milliseconds */
+
+    float iscB2a = 5;
+    /**  InterSignal Correction between B2a Data and Pilot channels in milliseconds.
+         - Units -- milliseconds */
+
+    float tgdB1c = 6;
+    /**  Time of Group Delay For B1C in milliseconds.
+         - Units -- milliseconds */
+
+    float iscB1c = 7;
+    /**  InterSignal Correction between B1c Data and Pilot channels in milliseconds.
+         - Units -- milliseconds */
+
+    uint32 validityPeriod = 8;
+    /**   Validity Period in seconds.
+       - Units -- Seconds */
+
+    uint32 integrityFlags = 9;
+    /** Satellite Integrity Flags consists data integrity Flag(DIF),
+     *  Signal Integrity Flag(SIF), Accuracy Integrity Flag (AIF).
+     *  Values:
+     *  - b0 - AIF, The signal is Valid(0) or Invalid (1).
+     *  - b1 - SIF, The signal is Normal(0) or Abnormal (1).
+     *  - b2 - DIF, The error of message parameters in this signal does not
+     *  exceeds the prediction accuracy (0)/ Exceeds the prediction accuracy (1).
+     *  - b3 - B1I, ephemeris health (unitless).
+     */
+}
+
 /* BDS Navigation Model Info */
 message PBBdsEphemeris {
 
     PBGnssEphCommon commonEphemerisData = 1;
-    /**<   Common ephemeris data.   */
+    /** Common ephemeris data.   */
 
     uint32 svHealth = 2;
-    /**<   Satellite health information applied to both B1 and B2 (SatH1). \n
+    /** Satellite health information applied to both B1 and B2 (SatH1). \n
        - Type: uint8
        Valid Values: \n
        - 0 : Healthy
        - 1 : Unhealthy */
 
     uint32 AODC = 3;
-    /**<   Age of data clock. \n
+    /** Age of data clock. \n
        - Type: uint8
        - Units: Hours */
 
     double tgd1 = 4;
-    /**<   Equipment group delay differential on B1 signal. \n
+    /** Equipment group delay differential on B1 signal. \n
        - Type: double
        - Units: Nano-Seconds */
 
@@ -2134,9 +2251,15 @@ message PBBdsEphemeris {
        - Units: Nano-Seconds */
 
     uint32 URAI = 6;
-    /**<   User range accuracy index (4-bits). \n
+    /**  User range accuracy index (4-bits). \n
        - Type: uint8
        - Units: Unit-less */
+
+    /** Validity field for PBBdsExtendedEphemeris */
+    bool extendedEphDataValidity = 7;
+
+    /** Extended Ephemeris data for BDS */
+    PBBdsExtendedEphemeris bdsExtEphData = 8;
 }
 
 /* GALIELO Navigation Model Info */
