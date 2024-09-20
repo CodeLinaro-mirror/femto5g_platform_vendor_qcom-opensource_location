@@ -332,34 +332,6 @@ void handleSllReportData(GnssDataNotification& dataNotify, int msInWeek,
 }
 
 /**
-   Report XTRA Server Info, this is received from SLL Hardware.
-   This event indicates XTRA Server URL info.
-
-   @param url1[Input]    XTRA Server URL.
-   @param url2[Input]    XTRA Server URL.
-   @param url3[Input]    XTRA Server URL.
-   @param maxlength[Input]    Max length of URL.
-   @param context[Input]    Context Pointer of Synergy Location API.
-
-   @return
-       None.
-
-   @dependencies
-       None.
-*/
-void hanldeSllReportXtraServer(const char* url1, const char* url2,
-    const char* url3, const int maxlength, void *context) {
-
-    if (nullptr != context) {
-        SynergyLocApi *synergyLocApiInstance = (SynergyLocApi*)context;
-        synergyLocApiInstance->reportXtraServer(url1, url2, url3, maxlength);
-    } else {
-        LOC_LOGw ("Context is NULL");
-    }
-
-}
-
-/**
    Report Location System Info, this is received from SLL Hardware.
    This event indicates LEAP second related Info.
 
@@ -378,29 +350,6 @@ void handleSllReportLocationSystemInfo(const LocationSystemInfo& locationSystemI
     if (nullptr != context) {
         SynergyLocApi *synergyLocApiInstance = (SynergyLocApi*)context;
         synergyLocApiInstance->reportLocationSystemInfo(locationSystemInfo);
-    } else {
-        LOC_LOGw ("Context is NULL");
-    }
-
-}
-
-/**
-   Request for XTRA Server Info, this is received from SLL Hardware.
-   This event is to request to provide XTRA Server URL info.
-
-   @param context[Input]    Context Pointer of Synergy Location API.
-
-   @return
-       None.
-
-   @dependencies
-       None.
-*/
-void handleSllRequestXtraData(void *context) {
-
-    if (nullptr != context) {
-        SynergyLocApi *synergyLocApiInstance = (SynergyLocApi*)context;
-        synergyLocApiInstance->requestXtraData();
     } else {
         LOC_LOGw ("Context is NULL");
     }
@@ -778,9 +727,7 @@ const SllInterfaceEvent sllEventCb = {
     hanldeSllReportStatus,
     hanldeSllReportNmea,
     handleSllReportData,
-    hanldeSllReportXtraServer,
     handleSllReportLocationSystemInfo,
-    handleSllRequestXtraData,
     handleSllRequestTime,
     handleSllRequestLocation,
     handleSllRequestATL,
@@ -868,14 +815,6 @@ enum loc_api_adapter_err defaultSllSetTime(LocGpsUtcTime time, int64_t timeRefer
     to indicate the command is not supported.
 */
 enum loc_api_adapter_err defaultSllSetXtraData(char* data, int length, void *context) {
-    SLL_DEFAULT_IMPL();
-}
-
-/**
-    Default Implantation of Request XTRA Server Command;
-    to indicate the command is not supported.
-*/
-enum loc_api_adapter_err defaultSllRequestXtraServer(void *context) {
     SLL_DEFAULT_IMPL();
 }
 
@@ -1193,7 +1132,6 @@ const SllInterfaceReq sllDefultReq = {
     defaultSllInjectPosition,
     defaultSllSetTime,
     defaultSllSetXtraData,
-    defaultSllRequestXtraServer,
     defaultSllAtlOpenStatus,
     defaultSllAtlCloseStatus,
     defaultSllSetPositionMode,

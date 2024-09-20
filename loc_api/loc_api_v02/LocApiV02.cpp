@@ -5100,36 +5100,6 @@ void LocApiV02 :: scaleAccuracyTo68PercentConfidence(
   }
 }
 
-/* Report the Xtra Server Url from the modem to HAL*/
-void LocApiV02 :: reportXtraServerUrl(
-                const qmiLocEventInjectPredictedOrbitsReqIndMsgT_v02*
-                server_request_ptr)
-{
-
-  if (server_request_ptr->serverList.serverList_len == 1)
-  {
-    reportXtraServer(server_request_ptr->serverList.serverList[0].serverUrl,
-                     "",
-                     "",
-                     QMI_LOC_MAX_SERVER_ADDR_LENGTH_V02);
-  }
-  else if (server_request_ptr->serverList.serverList_len == 2)
-  {
-    reportXtraServer(server_request_ptr->serverList.serverList[0].serverUrl,
-                     server_request_ptr->serverList.serverList[1].serverUrl,
-                     "",
-                     QMI_LOC_MAX_SERVER_ADDR_LENGTH_V02);
-  }
-  else
-  {
-    reportXtraServer(server_request_ptr->serverList.serverList[0].serverUrl,
-                     server_request_ptr->serverList.serverList[1].serverUrl,
-                     server_request_ptr->serverList.serverList[2].serverUrl,
-                     QMI_LOC_MAX_SERVER_ADDR_LENGTH_V02);
-  }
-
-}
-
 /* convert Ni Encoding type from QMI_LOC to loc eng format */
 GnssNiEncodingType LocApiV02 ::convertNiEncoding(
   qmiLocNiDataCodingSchemeEnumT_v02 loc_encoding)
@@ -7528,12 +7498,6 @@ void LocApiV02 :: eventCb(locClientHandleType /*clientHandle*/,
       reportEngineState(eventPayload.pEngineState);
       break;
 
-    // XTRA request
-    case QMI_LOC_EVENT_INJECT_PREDICTED_ORBITS_REQ_IND_V02:
-      reportXtraServerUrl(eventPayload.pInjectPredictedOrbitsReqEvent);
-      requestXtraData();
-      break;
-
     // time request
     case QMI_LOC_EVENT_INJECT_TIME_REQ_IND_V02:
       requestTime();
@@ -7850,48 +7814,6 @@ void LocApiV02 :: getEngineLockStateSync() {
     EngineLockState lockState = convertEngineLockState(ret);
     setEngineLockState(lockState);
     LocApiBase::reportEngineLockStatus(lockState);
-}
-
-LocationError
-LocApiV02:: setXtraVersionCheckSync(uint32_t check)
-{
-    LocationError err = LOCATION_ERROR_SUCCESS;
-    qmiLocSetXtraVersionCheckReqMsgT_v02 req;
-    qmiLocSetXtraVersionCheckIndMsgT_v02 ind;
-    locClientStatusEnumType status;
-    locClientReqUnionType req_union;
-
-    LOC_LOGd("check: %u", check);
-    memset(&req, 0, sizeof(req));
-    memset(&ind, 0, sizeof(ind));
-    switch (check) {
-    case 0:
-        req.xtraVersionCheckMode = eQMI_LOC_XTRA_VERSION_CHECK_DISABLE_V02;
-        break;
-    case 1:
-        req.xtraVersionCheckMode = eQMI_LOC_XTRA_VERSION_CHECK_AUTO_V02;
-        break;
-    case 2:
-        req.xtraVersionCheckMode = eQMI_LOC_XTRA_VERSION_CHECK_XTRA2_V02;
-        break;
-    case 3:
-        req.xtraVersionCheckMode = eQMI_LOC_XTRA_VERSION_CHECK_XTRA3_V02;
-        break;
-    default:
-        req.xtraVersionCheckMode = eQMI_LOC_XTRA_VERSION_CHECK_DISABLE_V02;
-        break;
-    }
-
-    req_union.pSetXtraVersionCheckReq = &req;
-    status = locSyncSendReq(QMI_LOC_SET_XTRA_VERSION_CHECK_REQ_V02,
-                            req_union, LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
-                            QMI_LOC_SET_XTRA_VERSION_CHECK_IND_V02,
-                            &ind);
-    if(status != eLOC_CLIENT_SUCCESS || ind.status != eQMI_LOC_SUCCESS_V02) {
-        err = LOCATION_ERROR_GENERAL_FAILURE;
-    }
-
-    return err;
 }
 
 int LocApiV02::setSvMeasurementConstellation(const locClientEventMaskType mask)
