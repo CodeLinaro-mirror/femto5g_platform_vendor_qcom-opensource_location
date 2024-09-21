@@ -74,7 +74,8 @@ LCAReportLoggerUtil::LCAReportLoggerUtil():
         mLogNmea(nullptr),
         mLogMeas(nullptr),
         mLogDcReport(nullptr),
-        mLogEph(nullptr) {
+        mLogEph(nullptr),
+        mLogGnssData(nullptr){
 
     int loadDiagIfaceLib = 1;
     const loc_param_s_type gps_conf_params[] = {
@@ -122,6 +123,11 @@ LCAReportLoggerUtil::LCAReportLoggerUtil():
         if (nullptr == mLogEph) {
             LOC_LOGw("DiagIface mLogEph is null");
         }
+        mLogGnssData = (LogGnssData)dlGetSymFromLib(
+                libHandle, libname, "LogGnssData");
+        if (nullptr == mLogGnssData) {
+            LOC_LOGw("DiagIface mLogGnssData is null");
+        }
     }
 }
 
@@ -166,6 +172,12 @@ void LCAReportLoggerUtil::log(const GeofenceBreachNotification& breachNotif,
 void LCAReportLoggerUtil::log(const GnssEphemeris& ephInfo) {
     if (mLogEph != nullptr) {
         mLogEph(ephInfo);
+    }
+}
+
+void LCAReportLoggerUtil::log(const GnssData& gnssData) {
+    if (mLogGnssData != nullptr) {
+        mLogGnssData(gnssData);
     }
 }
 } // namespace loc_client

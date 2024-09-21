@@ -79,8 +79,8 @@ enum LocationApiDataTypesVersion {
     LOCAPI_DATA_TYPES_VER_MAJOR = 1;
     // Minor - New features / API addition, new message/elemtent addition.
     // Bump the last byte of version i.e. x.2 to x.3
-    // Minor version 47: Support OEM DRE data blob reporting
-    LOCAPI_DATA_TYPES_VER_MINOR = 47;
+    // Minor version 48: Support GPS SV blacklisting- BDS pref mode
+    LOCAPI_DATA_TYPES_VER_MINOR = 48;
 }
 
 // ============================================================================
@@ -1464,6 +1464,9 @@ message PBGnssSvIdConfig {
 
     //Navic - SV 401 maps to bit 0
     uint64 navicBlacklistSvMask = 6;
+
+    // GPS - SV 1 maps to bit 0
+    uint64 gpsBlacklistSvMask = 7;
 }
 
 message PBLIALeverArmParams {
