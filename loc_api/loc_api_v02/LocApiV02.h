@@ -221,6 +221,7 @@ private:
   uint64_t mHlosQtimer1, mHlosQtimer2;
   uint32_t mRefFCount;
   std::string mPackageName[eQMI_LOC_R3_V02+1];
+  GnssSvType mPreferredSvSystemType;
   bool mIsFullTracking;
 
   qmiLocGnssSignalTypeMaskT_v02 mPreferredSignalType;
@@ -431,6 +432,7 @@ private:
             const qmiLocGnssBandsSupportedIndMsgT_v02* pGnssBandsSupportedIndMsg);
 
   GnssMeasurementsCodeType getCodeType(qmiLocGnssSignalTypeMaskT_v02 gnssSignalType);
+  GnssSvType getSvTypeFromSignalType(qmiLocGnssSignalTypeMaskT_v02 gnssSignalType);
   void updateGnssCapabNotification(GnssCapabNotification& gnssCapabNotification,
                                    qmiLocGnssSignalTypeMaskT_v02 gnssSignalType);
 
