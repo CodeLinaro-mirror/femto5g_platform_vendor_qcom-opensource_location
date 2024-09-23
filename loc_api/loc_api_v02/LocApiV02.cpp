@@ -367,7 +367,6 @@ LocApiV02 :: LocApiV02(LOC_API_ADAPTER_EVENT_MASK_T exMask,
     mGnssMeasurements(nullptr),
     mBatchSize(0), mDesiredBatchSize(0),
     mTripBatchSize(0), mDesiredTripBatchSize(0),
-    mUseBatching1_0(1),
     mIsFirstFinalFixReported(false),
     mIsFirstStartFixReq(false),
     mHlosQtimer1(0),
@@ -394,12 +393,6 @@ LocApiV02 :: LocApiV02(LOC_API_ADAPTER_EVENT_MASK_T exMask,
   mReferenceSignalTypeForIsb.codeType = GNSS_MEASUREMENTS_CODE_TYPE_C;
 
   UTIL_READ_CONF(LOC_PATH_GPS_CONF, gps_conf_param_table);
-
-  loc_param_s_type flp_conf_param_table[] =
-  {
-      {"USE_LB_1_0", &mUseBatching1_0, NULL, 'n'}
-  };
-  UTIL_READ_CONF(LOC_PATH_BATCHING_CONF, flp_conf_param_table);
 }
 
 /* Destructor for LocApiV02 */
@@ -10885,12 +10878,6 @@ LocApiV02::startTimeBasedTracking(const TrackingOptions& options, LocApiResponse
     start_msg.configAltitudeAssumed =
         eQMI_LOC_ALTITUDE_ASSUMED_IN_GNSS_SV_INFO_DISABLED_V02;
 
-    //Enable intermediate report only when client shows interest, i.e. HW FLP or automotive client
-    if (QUALITY_HIGH_ACCU_FIX_ONLY == options.qualityLevelAccepted) {
-        start_msg.intermediateReportState_valid = 1;
-        start_msg.intermediateReportState = eQMI_LOC_INTERMEDIATE_REPORTS_OFF_V02;
-    }
-
     // power mode
     mPowerMode = options.powerMode;
 
@@ -11575,10 +11562,6 @@ LocApiV02::startBatching(uint32_t sessionId,
     } else {
         startBatchReq.minInterval = FLP_BATCHING_MINIMUN_INTERVAL; // 1 second
     }
-
-    // distance
-    startBatchReq.minDistance_valid = mUseBatching1_0 ? 0 : 1;
-    startBatchReq.minDistance = options.minDistance;
 
     // accuracy
     startBatchReq.horizontalAccuracyLevel_valid = 1;
