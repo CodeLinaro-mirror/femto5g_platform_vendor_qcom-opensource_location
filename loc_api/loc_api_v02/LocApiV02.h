@@ -219,6 +219,7 @@ private:
   std::vector<adrData>  mADRdata;
   timeBiases mTimeBiases;
   qmiLocPlatformPowerStateEnumT_v02 mPlatformPowerState;
+  GnssSvType mPreferredSvSystemType;
   bool mIsFullTracking;
   qmiLocGnssSignalTypeMaskT_v02 mPreferredSignalType;
   GnssMeasurementsNotification m1HzMeasurementsNotify;
@@ -412,6 +413,7 @@ private:
             const qmiLocGnssBandsSupportedIndMsgT_v02* pGnssBandsSupportedIndMsg);
 
   GnssMeasurementsCodeType getCodeType(qmiLocGnssSignalTypeMaskT_v02 gnssSignalType);
+  GnssSvType getSvTypeFromSignalType(qmiLocGnssSignalTypeMaskT_v02 gnssSignalType);
   void updateGnssCapabNotification(GnssCapabNotification& gnssCapabNotification,
                                    qmiLocGnssSignalTypeMaskT_v02 gnssSignalType);
 
