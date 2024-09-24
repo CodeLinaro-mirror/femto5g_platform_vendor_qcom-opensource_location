@@ -1359,7 +1359,7 @@ LocApiV02::deleteAidingData(const GnssAidingData& data, LocApiResponse *adapterR
   }
 
   if (eLOC_CLIENT_FAILURE_UNSUPPORTED == status ||
-      eLOC_CLIENT_FAILURE_INTERNAL == status) {
+      eLOC_CLIENT_FAILURE_INTERNAL == status || eQMI_LOC_SUCCESS_V02 != delete_gnss_resp.status) {
       // If the new API is not supported we fall back on the old one
       // The error could be eLOC_CLIENT_FAILURE_INTERNAL if
       // QMI_LOC_DELETE_GNSS_SERVICE_DATA_REQ_V02 is not in the .idl file
@@ -3372,6 +3372,11 @@ void LocApiV02 :: reportPosition (
                      sessStatus, location.gpsLocation.flags, location.gpsLocation.latitude,
                      location.gpsLocation.longitude, location.gpsLocation.accuracy);
             sessStatus = LOC_SESS_FAILURE;
+        }
+        // Filling report rate for SPE reports
+        if (mMinInterval) {
+            locationExtended.posReportingInterval = mMinInterval;
+            locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_REPORT_INTERVAL;
         }
 
         LocApiBase::reportPosition(location,
@@ -7034,6 +7039,7 @@ bool LocApiV02 :: convertGnssMeasurements(
         }
         measurementData.adrMeters =
             (SPEED_OF_LIGHT / measurementData.carrierFrequencyHz) * measurementData.carrierPhase;
+        measurementData.flags |= GNSS_MEASUREMENTS_DATA_ADR_BIT;
     } else {
         measurementData.adrMeters = 0.0;
     }
@@ -7050,6 +7056,7 @@ bool LocApiV02 :: convertGnssMeasurements(
             measurementData.adrUncertaintyMeters =
                 (SPEED_OF_LIGHT / measurementData.carrierFrequencyHz) *
                 gnss_measurement_report_ptr.svCarrierPhaseUncertainty[index];
+            measurementData.flags |= GNSS_MEASUREMENTS_DATA_ADR_UNCERTAINTY_BIT;
         } else {
             measurementData.adrUncertaintyMeters = 0.0;
         }
@@ -7058,6 +7065,7 @@ bool LocApiV02 :: convertGnssMeasurements(
             measurementData.adrUncertaintyMeters =
                 (SPEED_OF_LIGHT / measurementData.carrierFrequencyHz) *
                 gnss_measurement_report_ptr.extSvCarrierPhaseUncertainty[index];
+            measurementData.flags |= GNSS_MEASUREMENTS_DATA_ADR_UNCERTAINTY_BIT;
         } else {
             measurementData.adrUncertaintyMeters = 0.0;
         }
@@ -9562,10 +9570,18 @@ LocApiV02::setConstellationControl(const GnssSvTypeConfig& config,
     setConstellationConfigMsg.enableMask_valid = true;
     setConstellationConfigMsg.enableMask = config.enabledSvTypesMask;
 
+    bool disableSupported = ContextBase::isFeatureSupported(
+            LOC_SUPPORTED_FEATURE_CONSTELLATION_DISABLEMENT);
+    if (disableSupported) {
+       setConstellationConfigMsg.disableMask_valid = true;
+       setConstellationConfigMsg.disableMask = config.blacklistedSvTypesMask;
+    }
+
     // disableMask is not supported in modem
     // if we set disableMask, QMI call will return error
-    LOC_LOGE("setConstellationControl: "
+    LOC_LOGE("setConstellationControl: disableSupported %d,"
              "enable: %d 0x%" PRIx64 ", blacklisted: %d 0x%" PRIx64 "",
+             disableSupported,
              setConstellationConfigMsg.enableMask_valid,
              setConstellationConfigMsg.enableMask,
              setConstellationConfigMsg.disableMask_valid,
