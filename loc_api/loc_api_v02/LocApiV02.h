@@ -269,6 +269,9 @@ private:
   /* Convert GPS LOCK from LocationAPI format to QMI format */
   static qmiLocLockEnumT_v02 convertGpsLockFromAPItoQMI(GnssConfigGpsLock lock);
 
+  /* Convert GPS LOCK to QMI Client Config Mask */
+  static qmiLocClientsMaskT_v02 convertGpsLock(GnssConfigGpsLock lock);
+
   /* Convert Engine Lock State from QMI format to LocationAPI format */
   static EngineLockState convertEngineLockState(qmiLocEngineLockStateEnumT_v02 LockState);
 
