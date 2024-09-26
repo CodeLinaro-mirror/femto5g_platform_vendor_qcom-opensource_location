@@ -1433,7 +1433,7 @@ void menuRemoveGeofence() {
     pLcaClient->removeGeofences(removeGfVec);
 }
 void geofenceTestMenu() {
-    char buf[16], *p;
+    char buf[16], *p = NULL;
     bool exit_loop = false;
 
     while (!exit_loop)
@@ -1451,6 +1451,8 @@ void geofenceTestMenu() {
         p = fgets (buf, 16, stdin);
         if (p == nullptr) {
             printf("Error: fgets returned nullptr !!");
+            exit_loop = true;
+            continue;
         }
 
         switch (p[0]) {
