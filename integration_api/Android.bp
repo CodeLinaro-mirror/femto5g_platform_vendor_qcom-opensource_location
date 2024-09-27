@@ -14,7 +14,7 @@ cc_library_shared {
 
     srcs: [
         "src/LocationIntegrationApi.cpp",
-        "src/LocationIntegrationApiImpl.cpp"
+        "src/LocationIntegrationApiImpl.cpp",
     ],
 
     cflags: [

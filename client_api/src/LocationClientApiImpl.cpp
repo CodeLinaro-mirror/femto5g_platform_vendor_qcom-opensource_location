@@ -273,6 +273,7 @@ uint16_t LocationClientApiImpl::parseYearOfHw(::LocationCapabilitiesMask mask) {
 void LocationClientApiImpl::parseLocation(const ::Location &halLocation, Location& location) {
     uint32_t flags = 0;
 
+    location.sessionStatus = (LocSessionStatus)halLocation.sessionStatus;
     location.timestamp = halLocation.timestamp;
     location.timeUncMs = halLocation.timeUncMs;
     location.latitude = halLocation.latitude;
@@ -337,6 +338,10 @@ void LocationClientApiImpl::parseLocation(const ::Location &halLocation, Locatio
     if (::LOCATION_HAS_GPTP_TIME_UNC_BIT & halLocation.flags) {
         flags |= LOCATION_HAS_GPTP_TIME_UNC_BIT;
         location.elapsedgPTPTimeUnc =  halLocation.elapsedgPTPTimeUnc;
+    }
+
+    if (::LOCATION_HAS_SESSION_STATUS_BIT & halLocation.flags) {
+        flags |= LOCATION_HAS_SESSION_STATUS_BIT;
     }
     location.flags = (LocationFlagsMask)flags;
 
@@ -476,6 +481,9 @@ GnssSignalTypeMask LocationClientApiImpl::parseGnssSignalType(
     if (halGnssSignalTypeMask & ::GNSS_SIGNAL_BEIDOU_B2BQ) {
         gnssSignalTypeMask |= GNSS_SIGNAL_BEIDOU_B2BQ_BIT;
     }
+    if (halGnssSignalTypeMask & ::GNSS_SIGNAL_NAVIC_L1) {
+        gnssSignalTypeMask |= GNSS_SIGNAL_NAVIC_L1_BIT;
+    }
     return (GnssSignalTypeMask)gnssSignalTypeMask;
 }
 
@@ -612,6 +620,24 @@ LocationReliability LocationClientApiImpl::parseLocationReliability(
     return reliability;
 }
 
+static AgcStatus parseAgcStatus(const ::AgcStatus &halAgcStatus) {
+    AgcStatus agcStatus = AGC_STATUS_UNKNOWN;
+    switch (halAgcStatus) {
+        case ::AGC_STATUS_NO_SATURATION:
+            agcStatus = AGC_STATUS_NO_SATURATION;
+            break;
+        case ::AGC_STATUS_FRONT_END_GAIN_MAXIMUM_SATURATION:
+            agcStatus = AGC_STATUS_FRONT_END_GAIN_MAXIMUM_SATURATION;
+            break;
+        case ::AGC_STATUS_FRONT_END_GAIN_MINIMUM_SATURATION:
+            agcStatus = AGC_STATUS_FRONT_END_GAIN_MINIMUM_SATURATION;
+            break;
+        default:
+            break;
+    }
+    return agcStatus;
+}
+
 GnssSystemTimeStructType LocationClientApiImpl::parseGnssTime(
         const ::GnssSystemTimeStructType &halGnssTime) {
 
@@ -733,7 +759,7 @@ GnssLocation LocationClientApiImpl::parseLocationInfo(
 
     GnssLocation locationInfo = {};
     parseLocation(halLocationInfo.location, locationInfo);
-    uint64_t flags = 0;
+    LCAGnssLocationInfoFlagMask flags = 0;
 
     if (LDT_GNSS_LOCATION_INFO_ALTITUDE_MEAN_SEA_LEVEL_BIT & halLocationInfo.flags) {
         flags |= LCA_GNSS_LOCATION_INFO_ALTITUDE_MEAN_SEA_LEVEL_BIT;
@@ -844,7 +870,8 @@ GnssLocation LocationClientApiImpl::parseLocationInfo(
         flags |= LCA_GNSS_LOCATION_INFO_ALTITUDE_ASSUMED_BIT;
     }
 
-    if (LDT_GNSS_LOCATION_INFO_SESSION_STATUS_BIT & halLocationInfo.flags) {
+    //sessionStatus is set in parseLocation
+    if (::LOCATION_HAS_SESSION_STATUS_BIT & halLocationInfo.location.flags) {
         flags |= LCA_GNSS_LOCATION_INFO_SESSION_STATUS_BIT;
     }
 
@@ -868,7 +895,21 @@ GnssLocation LocationClientApiImpl::parseLocationInfo(
         flags |= LCA_GNSS_LOCATION_INFO_DGNSS_STATION_ID_BIT;
     }
 
-    locationInfo.gnssInfoFlags = (GnssLocationInfoFlagMask)flags;
+    if (LDT_GNSS_LOCATION_INFO_BASE_LINE_LENGTH_BIT & halLocationInfo.flags) {
+        flags |= LCA_GNSS_LOCATION_INFO_BASE_LINE_LENGTH_BIT;
+        locationInfo.baseLineLength = halLocationInfo.baseLineLength;
+    }
+
+    if (LDT_GNSS_LOCATION_INFO_AGE_OF_CORRECTION_BIT & halLocationInfo.flags) {
+        flags |= LCA_GNSS_LOCATION_INFO_AGE_OF_CORRECTION_BIT;
+        locationInfo.ageMsecOfCorrections = halLocationInfo.ageMsecOfCorrections;
+    }
+
+    if (LDT_GNSS_LOCATION_INFO_LEAP_SECONDS_UNC_BIT & halLocationInfo.flags) {
+        flags |= LCA_GNSS_LOCATION_INFO_LEAP_SECONDS_UNC_BIT;
+    }
+
+    locationInfo.gnssInfoFlags = flags;
     locationInfo.altitudeMeanSeaLevel = halLocationInfo.altitudeMeanSeaLevel;
     locationInfo.pdop = halLocationInfo.pdop;
     locationInfo.hdop = halLocationInfo.hdop;
@@ -907,7 +948,6 @@ GnssLocation LocationClientApiImpl::parseLocationInfo(
     parseGnssMeasUsageInfo(halLocationInfo, locationInfo.measUsageInfo);
     locationInfo.drSolutionStatusMask = (DrSolutionStatusMask) halLocationInfo.drSolutionStatusMask;
     locationInfo.altitudeAssumed = halLocationInfo.altitudeAssumed;
-    locationInfo.sessionStatus = (LocSessionStatus) halLocationInfo.sessionStatus;
     locationInfo.integrityRiskUsed =  halLocationInfo.integrityRiskUsed;
     locationInfo.protectAlongTrack =  halLocationInfo.protectAlongTrack;
     locationInfo.protectCrossTrack =  halLocationInfo.protectCrossTrack;
@@ -945,6 +985,9 @@ GnssLocation LocationClientApiImpl::parseLocationInfo(
             halLocationInfo.navSolutionMask) {
         flags |= LOCATION_NAV_CORRECTION_ONLY_SBAS_CORRECTED_SV_USED_BIT;
     }
+    if (::LOCATION_NAV_MMF_AIDED_POSITION & halLocationInfo.navSolutionMask) {
+        flags |= LOCATION_NAV_MMF_AIDED_POSITION;
+    }
     locationInfo.navSolutionMask = (GnssLocationNavSolutionMask)flags;
 
     locationInfo.posTechMask = locationInfo.techMask;
@@ -952,6 +995,7 @@ GnssLocation LocationClientApiImpl::parseLocationInfo(
             halLocationInfo.bodyFrameData, halLocationInfo.bodyFrameDataExt);
     locationInfo.gnssSystemTime = parseSystemTime(halLocationInfo.gnssSystemTime);
     locationInfo.leapSeconds = halLocationInfo.leapSeconds;
+    locationInfo.leapSecondsUnc = halLocationInfo.leapSecondsUnc;
 
     return locationInfo;
 }
@@ -1052,6 +1096,9 @@ GnssData LocationClientApiImpl::parseGnssData(const ::GnssDataNotification &halG
             LOC_LOGv("agc[%d]=%f", sig, gnssData.agc[sig]);
         }
     }
+    gnssData.agcStatusL1 = parseAgcStatus(halGnssData.agcStatusL1);
+    gnssData.agcStatusL2 = parseAgcStatus(halGnssData.agcStatusL2);
+    gnssData.agcStatusL5 = parseAgcStatus(halGnssData.agcStatusL5);
     return gnssData;
 }
 
@@ -1137,6 +1184,9 @@ GnssMeasurements LocationClientApiImpl::parseGnssMeasurements(
     gnssMeasurements.clock.elapsedgPTPTime = halGnssMeasurements.clock.elapsedgPTPTime;
     gnssMeasurements.clock.elapsedgPTPTimeUnc = halGnssMeasurements.clock.elapsedgPTPTimeUnc;
     gnssMeasurements.isNhz = halGnssMeasurements.isNhz;
+    gnssMeasurements.agcStatusL1 = parseAgcStatus(halGnssMeasurements.agcStatusL1);
+    gnssMeasurements.agcStatusL2 = parseAgcStatus(halGnssMeasurements.agcStatusL2);
+    gnssMeasurements.agcStatusL5 = parseAgcStatus(halGnssMeasurements.agcStatusL5);
 
     return gnssMeasurements;
 }
@@ -2060,11 +2110,6 @@ void LocationClientApiImpl::startPositionSession(
             if (mApiImpl->isInBatching()) {
                 mApiImpl->mLocationCbs.responseCb(
                         ::LOCATION_ERROR_EXCLUSIVE_SESSION_IN_PROGRESS, 0);
-                return;
-            }
-            //only one nmea callback should be registered
-            if (mCallbacksOption.gnssNmeaCb && mCallbacksOption.engineNmeaCb) {
-                mCallbacksOption.responseCb(::LOCATION_ERROR_INVALID_PARAMETER, 0);
                 return;
             }
             // set up the flag to indicate that responseCb is pending

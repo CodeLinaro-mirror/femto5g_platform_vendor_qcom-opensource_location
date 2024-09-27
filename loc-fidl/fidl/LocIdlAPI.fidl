@@ -4,7 +4,7 @@
 package com.qualcomm.qti.location
 
 interface LocIdlAPI {
-    version { major 0 minor 1 }
+    version { major 0 minor 2 }
 
     /** @brief Provides the capabilities of the system. <br/>
         @param gnssCapabilitiesMask: Bitwise OR of IDLLocationCapabilitiesMask
@@ -456,6 +456,9 @@ interface LocIdlAPI {
         /** Only SBAS corrected SVs was used to calculate
             IDLLocationReport.  */
         IDL_NAV_CORR_ONLY_SBAS_CORR_SV_USED = 0x0100
+        /** MMF data aiding was used to to calculate
+            IDLLocationReport.  */
+        LRNSM_NAV_CORR_MMF_AIDED  = 0x0200
     }
 
     /** Specify the valid fields in
@@ -573,6 +576,8 @@ interface LocIdlAPI {
         IDL_GNSS_SIGNAL_BEIDOU_B2BI_BIT         = 0x00400000
         /** GNSS signal is of BEIDOU B2B_Q RF band.    */
         IDL_GNSS_SIGNAL_BEIDOU_B2BQ_BIT         = 0x00800000
+        /** GNSS signal is of NAVIC L1 RF band. <br/>   */
+        GSTM_NAVIC_L1_BIT            = 0x01000000
     }
 
     /** Specify LocationClientApi function call processing status.
@@ -750,6 +755,14 @@ interface LocIdlAPI {
         IDL_LOC_INFO_GPTP_TIME_BIT                      = 0x0000010000000000
         /** IDLLocationReport has valid IDLLocationReport::elapsedgPTPTimeUnc. */
         IDL_LOC_INFO_GPTP_TIME_UNC_BIT                  = 0x0000020000000000
+        /** GnssLocation has valid IDLLocationReport::baseLineLength. */
+        IDL_LOC_INFO_BASE_LINE_LENGTH_BIT               = 0x0000040000000000
+        /** GnssLocation has valid IDLLocationReport::ageMsecOfCorrections. */
+        IDL_LOC_INFO_AGE_OF_CORRECTION_BIT              = 0x0000080000000000
+        /** IDLLocationReport has valid IDLLocationReport::currReportingRate. */
+        IDL_LOC_INFO_CURR_REPORT_RATE_BIT               = 0x0000100000000000
+        /** IDLLocationReport has valid IDLLocationReport::leapSecondsUnc. */
+        LREFM_LEAP_SECONDS_UNC_BIT                      = 0x0000200000000000
     }
 
     /** Specify the reliability level of
@@ -929,7 +942,7 @@ interface LocIdlAPI {
      *  IDLLocationReport.  */
     struct IDLGnssMeasUsageInfo {
         /** Specify GNSS Constellation Type for the SV. */
-        UInt32 gnssConstellation
+        UInt16 gnssConstellation
         /** Specify satellite vehicle ID number.
          *  For SV id range of each supported constellations, refer to
          *  documentation section in IDLGnssSv::svId.
@@ -1313,6 +1326,10 @@ interface LocIdlAPI {
         /** DRE solution disengaged due to inconsistent
           *  factory data */
         IDL_DR_SOLUTION_STATUS_WARNING_FACTORY_DATA_INCONSISTENT   = 0x0000000000008000
+        /** DRE did not recieve any recent map matching feedback data */
+        DSSM_WARNING_MMF_UNAVAILABLE                               = 0x0000000000010000
+        /** Map matching feedback is available for DRE but is not usable */
+        DSSM_WARNING_MMF_NOT_USABLE                               = 0x0000000000020000
     }
 
     /** Specify the session status. */
@@ -1509,6 +1526,23 @@ interface LocIdlAPI {
         UInt64 elapsedgPTPTime
         /** GPTP time Unc */
         UInt64 elapsedgPTPTimeUnc
+        /** Distance between the base station and the receiver
+         *  Unit- meters */
+        Double baseLineLength
+        /** Difference in time between the fix timestamp using the
+         *  correction and the time of the correction
+         *  Unit - milli-seconds */
+        UInt64 ageMsecOfCorrections
+        /** Current Reporting Rate of GNSS engine
+         *  Unit - milli-seconds */
+        UInt32 currReportingRate
+        /** Time difference between packet generation time
+         *  and sending over SOMEIP
+         *  Unit- milli-seconds */
+        Int16 reportingLatency
+        /** Uncertainty for the GNSS leap second.
+         *  Units -- Seconds */
+        UInt8 leapSecondsUnc
     }
 
     /** GNSS SV report that comes when clients registers for
@@ -1528,6 +1562,11 @@ interface LocIdlAPI {
          *    - For GAL:     301 to 336
          *    - For NAVIC:   401 to 414    */
         UInt16 svId
+        /** GLONASS frequency channel number, range is [1, 14].
+         *
+         * This field is always valid if and only if sv is of GLONASS.
+         *  */
+        UInt16 gloFrequency
         /** Constellation type of the SV (GPS, SBAS, GLONASS, QZSS,
          *  BEIDOU, GALILEO).
          *  This field is always valid.   */
@@ -1560,12 +1599,6 @@ interface LocIdlAPI {
          *  This field is valid if gnssSvOptionsMask has
          *  GNSS_SV_OPTIONS_HAS_BASEBAND_CARRIER_TO_NOISE_BIT set.  */
         Double basebandCarrierToNoiseDbHz
-        /** GLONASS frequency channel number, range is [1, 14].
-         *
-         * This field is always valid if and only if sv is of GLONASS.
-         *  */
-        UInt16 gloFrequency
-
     }
 
     /** Specify the GNSS signal type and RF band for jammer info and
@@ -1621,8 +1654,10 @@ interface LocIdlAPI {
         IDL_GNSS_SIGNAL_TYPE_BEIDOU_B2B_I = 21
         /**  GNSS signal is of BEIDOU B2B_Q RF band.     */
         IDL_GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q = 22
+        /**  GNSS signal is of NAVIC L1 RF band.  <br/>   */
+        GST_NAVIC_L1 = 23
         /** Maximum number of signal types.    */
-        IDL_GNSS_MAX_NUMBER_OF_SIGNAL_TYPES = 23
+        IDL_GNSS_MAX_NUMBER_OF_SIGNAL_TYPES = 24
     }
 
     /** Specify valid mask of data fields in
@@ -1864,6 +1899,8 @@ interface LocIdlAPI {
          *  documentation in IDLGnssSv::svId.
          */
         UInt16 svId
+        /** Increments when a cycle slip is detected.  */
+        UInt8 cycleSlipCount
         /** SV constellation type.    */
         IDLGnssSvType svType
         /** Time offset when the measurement was taken,
@@ -1944,8 +1981,6 @@ interface LocIdlAPI {
         /** 1-sigma uncertainty associated with the full inter-signal
          *  bias in nanoseconds.    */
         Double fullInterSignalBiasUncertaintyNs
-        /** Increments when a cycle slip is detected.  */
-        UInt8 cycleSlipCount
     }
 
     /** Specify GNSS measurements clock.
@@ -1997,6 +2032,10 @@ interface LocIdlAPI {
         IDLGnssMeasurementsData [] measurements
         /** NHz measurements indicator */
         Boolean isNHz
+        /** Time difference between packet generation time
+         *  and sending over SOMEIP
+         *  Unit- milli-seconds */
+        Int16 reportingLatency
     }
 
     /*********** LIA API's ******************/
@@ -2086,6 +2125,93 @@ interface LocIdlAPI {
         in {
            IDLGnssSvIdInfo [] svList
         }
+        out {
+            IDLLocationResponse resp
+        }
+    }
+
+    /** Map Matched data validity flags */
+    enumeration MapMatchingFeedbackDataValidity {
+        /** MapMatchingFeedbackData is invalid */
+        MMF_DATA_INVALID            = 0x00000000
+        /** MapMatchingFeedbackData has valid  utcTimestampMs */
+        MMF_DATA_VALID_UTC_TIME     = 0x00000001
+        /** MapMatchingFeedbackData has valid  mapMatchedLatitudeDifference */
+        MMF_DATA_VALID_LAT_DIFF     = 0x00000002
+        /** MapMatchingFeedbackData has valid  mapMatchedLongitudeDifference */
+        MMF_DATA_VALID_LONG_DIFF    = 0x00000004
+        /** MapMatchingFeedbackData has valid  isTunnel value */
+        MMF_DATA_VALID_TUNNEL       = 0x00000008
+        /** MapMatchingFeedbackData has valid  bearing */
+        MMF_DATA_VALID_BEARING      = 0x00000010
+        /** MapMatchingFeedbackData has valid  altitude */
+        MMF_DATA_VALID_ALTITUDE     = 0x00000020
+        /** MapMatchingFeedbackData has valid  horizontalAccuracy */
+        MMF_DATA_VALID_HOR_ACC      = 0x00000040
+        /** MapMatchingFeedbackData has valid  altitudeAccuracy */
+        MMF_DATA_VALID_ALT_ACC      = 0x00000080
+        /** MapMatchingFeedbackData has valid  bearingAccuracy */
+        MMF_DATA_VALID_BEARING_ACC  = 0x00000100
+    }
+
+    struct MapMatchingFeedbackData {
+        /** Validity fields for MMF data fields to follow
+         *  Flags defined uisng enum MapMatchingFeedbackDataValidity */
+        UInt64 validityMask
+
+        /** Unix epoch time of the location fix for which map-match
+         *  feedback is being sent, since the start of the Unix epoch
+         *  (00:00:00 January 1, 1970 UTC).
+         *  Unit: Milli-seconds */
+        UInt64 utcTimestampMs
+
+        /** Latitude difference = map matched latitude - reported latitude
+         *  Unit: Degrees
+         *  Range: [-90.0, 90.0] */
+        Double mapMatchedLatitudeDifference
+
+        /** Longitude difference = map matched longitude - reported longitude
+         *  Unit: Degrees
+         *  Range: [-180.0, 180.0] */
+        Double mapMatchedLongitudeDifference
+
+        /** Bearing: The horizontal direction of travel of the device with
+         *  respect to north and is unrelated to the device orientation.
+         *  Unit: Degrees
+         *  range: [0, 360) */
+        Float bearing
+
+        /** Absolute Altitude above the WGS 84 reference ellipsoid
+            Unit: meters */
+        Double altitude
+
+        /** Horizontal accuracy radius defined with the
+         *  68th percentile confidence level.
+         *  Unit: meter
+         *  Range: 0 or greater */
+        Float horizontalAccuracy
+
+        /** Altitude accuracy. Defined with 68% confidence level.
+         *  Unit:meter
+         *  Range: 0 or greater */
+        Float altitudeAccuracy
+
+        /** Estimated bearing accuracy defined with
+         *  68 percentile confidence level (1 sigma).
+         *  Unit: Degrees
+         *  Range [0, 360) */
+        Float bearingAccuracy
+
+        /** Road Type. Decision to use the MMF data depends on isTunnel
+         *  Value: True or False */
+        Boolean isTunnel
+    }
+
+    method injectMapMatchedFeedbackData {
+        in {
+            MapMatchingFeedbackData mmfData
+        }
+
         out {
             IDLLocationResponse resp
         }

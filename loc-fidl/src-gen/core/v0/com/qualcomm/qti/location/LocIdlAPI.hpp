@@ -452,7 +452,8 @@ public:
             IDL_NAV_CORR_RTK = 32,
             IDL_NAV_CORR_PPP = 64,
             IDL_NAV_CORR_RTK_FIX = 128,
-            IDL_NAV_CORR_ONLY_SBAS_CORR_SV_USED = 256
+            IDL_NAV_CORR_ONLY_SBAS_CORR_SV_USED = 256,
+            LRNSM_NAV_CORR_MMF_AIDED = 512
         };
     
         IDLLocationReportNavSolutionMask()
@@ -472,6 +473,7 @@ public:
                 case static_cast< uint32_t>(Literal::IDL_NAV_CORR_PPP):
                 case static_cast< uint32_t>(Literal::IDL_NAV_CORR_RTK_FIX):
                 case static_cast< uint32_t>(Literal::IDL_NAV_CORR_ONLY_SBAS_CORR_SV_USED):
+                case static_cast< uint32_t>(Literal::LRNSM_NAV_CORR_MMF_AIDED):
                 return true;
             default:
                 return false;
@@ -506,6 +508,7 @@ public:
             case static_cast< uint32_t>(Literal::IDL_NAV_CORR_PPP): return "IDL_NAV_CORR_PPP";
             case static_cast< uint32_t>(Literal::IDL_NAV_CORR_RTK_FIX): return "IDL_NAV_CORR_RTK_FIX";
             case static_cast< uint32_t>(Literal::IDL_NAV_CORR_ONLY_SBAS_CORR_SV_USED): return "IDL_NAV_CORR_ONLY_SBAS_CORR_SV_USED";
+            case static_cast< uint32_t>(Literal::LRNSM_NAV_CORR_MMF_AIDED): return "LRNSM_NAV_CORR_MMF_AIDED";
             default: return "UNDEFINED";
             }
         }
@@ -634,7 +637,8 @@ public:
             IDL_GNSS_SIGNAL_NAVIC_L5_BIT = 1048576,
             IDL_GNSS_SIGNAL_BEIDOU_B2AQ_BIT = 2097152,
             IDL_GNSS_SIGNAL_BEIDOU_B2BI_BIT = 4194304,
-            IDL_GNSS_SIGNAL_BEIDOU_B2BQ_BIT = 8388608
+            IDL_GNSS_SIGNAL_BEIDOU_B2BQ_BIT = 8388608,
+            GSTM_NAVIC_L1_BIT = 16777216
         };
     
         IDLGnssSignalTypeMask()
@@ -669,6 +673,7 @@ public:
                 case static_cast< uint64_t>(Literal::IDL_GNSS_SIGNAL_BEIDOU_B2AQ_BIT):
                 case static_cast< uint64_t>(Literal::IDL_GNSS_SIGNAL_BEIDOU_B2BI_BIT):
                 case static_cast< uint64_t>(Literal::IDL_GNSS_SIGNAL_BEIDOU_B2BQ_BIT):
+                case static_cast< uint64_t>(Literal::GSTM_NAVIC_L1_BIT):
                 return true;
             default:
                 return false;
@@ -718,6 +723,7 @@ public:
             case static_cast< uint64_t>(Literal::IDL_GNSS_SIGNAL_BEIDOU_B2AQ_BIT): return "IDL_GNSS_SIGNAL_BEIDOU_B2AQ_BIT";
             case static_cast< uint64_t>(Literal::IDL_GNSS_SIGNAL_BEIDOU_B2BI_BIT): return "IDL_GNSS_SIGNAL_BEIDOU_B2BI_BIT";
             case static_cast< uint64_t>(Literal::IDL_GNSS_SIGNAL_BEIDOU_B2BQ_BIT): return "IDL_GNSS_SIGNAL_BEIDOU_B2BQ_BIT";
+            case static_cast< uint64_t>(Literal::GSTM_NAVIC_L1_BIT): return "GSTM_NAVIC_L1_BIT";
             default: return "UNDEFINED";
             }
         }
@@ -898,7 +904,11 @@ public:
             IDL_LOC_INFO_PROTECT_VERTICAL = 274877906944,
             IDL_LOC_INFO_DGNSS_STATION_ID = 549755813888,
             IDL_LOC_INFO_GPTP_TIME_BIT = 1099511627776,
-            IDL_LOC_INFO_GPTP_TIME_UNC_BIT = 2199023255552
+            IDL_LOC_INFO_GPTP_TIME_UNC_BIT = 2199023255552,
+            IDL_LOC_INFO_BASE_LINE_LENGTH_BIT = 4398046511104,
+            IDL_LOC_INFO_AGE_OF_CORRECTION_BIT = 8796093022208,
+            IDL_LOC_INFO_CURR_REPORT_RATE_BIT = 17592186044416,
+            LREFM_LEAP_SECONDS_UNC_BIT = 35184372088832
         };
     
         IDLLCALocationInfoFlagMask()
@@ -951,6 +961,10 @@ public:
                 case static_cast< uint64_t>(Literal::IDL_LOC_INFO_DGNSS_STATION_ID):
                 case static_cast< uint64_t>(Literal::IDL_LOC_INFO_GPTP_TIME_BIT):
                 case static_cast< uint64_t>(Literal::IDL_LOC_INFO_GPTP_TIME_UNC_BIT):
+                case static_cast< uint64_t>(Literal::IDL_LOC_INFO_BASE_LINE_LENGTH_BIT):
+                case static_cast< uint64_t>(Literal::IDL_LOC_INFO_AGE_OF_CORRECTION_BIT):
+                case static_cast< uint64_t>(Literal::IDL_LOC_INFO_CURR_REPORT_RATE_BIT):
+                case static_cast< uint64_t>(Literal::LREFM_LEAP_SECONDS_UNC_BIT):
                 return true;
             default:
                 return false;
@@ -1018,6 +1032,10 @@ public:
             case static_cast< uint64_t>(Literal::IDL_LOC_INFO_DGNSS_STATION_ID): return "IDL_LOC_INFO_DGNSS_STATION_ID";
             case static_cast< uint64_t>(Literal::IDL_LOC_INFO_GPTP_TIME_BIT): return "IDL_LOC_INFO_GPTP_TIME_BIT";
             case static_cast< uint64_t>(Literal::IDL_LOC_INFO_GPTP_TIME_UNC_BIT): return "IDL_LOC_INFO_GPTP_TIME_UNC_BIT";
+            case static_cast< uint64_t>(Literal::IDL_LOC_INFO_BASE_LINE_LENGTH_BIT): return "IDL_LOC_INFO_BASE_LINE_LENGTH_BIT";
+            case static_cast< uint64_t>(Literal::IDL_LOC_INFO_AGE_OF_CORRECTION_BIT): return "IDL_LOC_INFO_AGE_OF_CORRECTION_BIT";
+            case static_cast< uint64_t>(Literal::IDL_LOC_INFO_CURR_REPORT_RATE_BIT): return "IDL_LOC_INFO_CURR_REPORT_RATE_BIT";
+            case static_cast< uint64_t>(Literal::LREFM_LEAP_SECONDS_UNC_BIT): return "LREFM_LEAP_SECONDS_UNC_BIT";
             default: return "UNDEFINED";
             }
         }
@@ -1394,22 +1412,22 @@ public:
         }
     
     };
-    struct IDLGnssMeasUsageInfo : CommonAPI::Struct< uint32_t, uint16_t, uint32_t> {
+    struct IDLGnssMeasUsageInfo : CommonAPI::Struct< uint16_t, uint16_t, uint32_t> {
     
         IDLGnssMeasUsageInfo()
         {
-            std::get< 0>(values_) = 0ul;
+            std::get< 0>(values_) = 0u;
             std::get< 1>(values_) = 0u;
             std::get< 2>(values_) = 0ul;
         }
-        IDLGnssMeasUsageInfo(const uint32_t &_gnssConstellation, const uint16_t &_gnssSvId, const uint32_t &_gnssSignalType)
+        IDLGnssMeasUsageInfo(const uint16_t &_gnssConstellation, const uint16_t &_gnssSvId, const uint32_t &_gnssSignalType)
         {
             std::get< 0>(values_) = _gnssConstellation;
             std::get< 1>(values_) = _gnssSvId;
             std::get< 2>(values_) = _gnssSignalType;
         }
-        inline const uint32_t &getGnssConstellation() const { return std::get< 0>(values_); }
-        inline void setGnssConstellation(const uint32_t &_value) { std::get< 0>(values_) = _value; }
+        inline const uint16_t &getGnssConstellation() const { return std::get< 0>(values_); }
+        inline void setGnssConstellation(const uint16_t &_value) { std::get< 0>(values_) = _value; }
         inline const uint16_t &getGnssSvId() const { return std::get< 1>(values_); }
         inline void setGnssSvId(const uint16_t &_value) { std::get< 1>(values_) = _value; }
         inline const uint32_t &getGnssSignalType() const { return std::get< 2>(values_); }
@@ -1922,7 +1940,9 @@ public:
             IDL_DR_SOLUTION_STATUS_ERROR_GENERIC = 4096,
             IDL_DR_SOLUTION_STATUS_WARNING_SENSOR_TEMP_OUT_OF_RANGE = 8192,
             IDL_DR_SOLUTION_STATUS_WARNING_USER_DYNAMICS_INSUFFICIENT = 16384,
-            IDL_DR_SOLUTION_STATUS_WARNING_FACTORY_DATA_INCONSISTENT = 32768
+            IDL_DR_SOLUTION_STATUS_WARNING_FACTORY_DATA_INCONSISTENT = 32768,
+            DSSM_WARNING_MMF_UNAVAILABLE = 65536,
+            DSSM_WARNING_MMF_NOT_USABLE = 131072
         };
     
         IDLDrSolutionStatusMask()
@@ -1949,6 +1969,8 @@ public:
                 case static_cast< uint64_t>(Literal::IDL_DR_SOLUTION_STATUS_WARNING_SENSOR_TEMP_OUT_OF_RANGE):
                 case static_cast< uint64_t>(Literal::IDL_DR_SOLUTION_STATUS_WARNING_USER_DYNAMICS_INSUFFICIENT):
                 case static_cast< uint64_t>(Literal::IDL_DR_SOLUTION_STATUS_WARNING_FACTORY_DATA_INCONSISTENT):
+                case static_cast< uint64_t>(Literal::DSSM_WARNING_MMF_UNAVAILABLE):
+                case static_cast< uint64_t>(Literal::DSSM_WARNING_MMF_NOT_USABLE):
                 return true;
             default:
                 return false;
@@ -1990,6 +2012,8 @@ public:
             case static_cast< uint64_t>(Literal::IDL_DR_SOLUTION_STATUS_WARNING_SENSOR_TEMP_OUT_OF_RANGE): return "IDL_DR_SOLUTION_STATUS_WARNING_SENSOR_TEMP_OUT_OF_RANGE";
             case static_cast< uint64_t>(Literal::IDL_DR_SOLUTION_STATUS_WARNING_USER_DYNAMICS_INSUFFICIENT): return "IDL_DR_SOLUTION_STATUS_WARNING_USER_DYNAMICS_INSUFFICIENT";
             case static_cast< uint64_t>(Literal::IDL_DR_SOLUTION_STATUS_WARNING_FACTORY_DATA_INCONSISTENT): return "IDL_DR_SOLUTION_STATUS_WARNING_FACTORY_DATA_INCONSISTENT";
+            case static_cast< uint64_t>(Literal::DSSM_WARNING_MMF_UNAVAILABLE): return "DSSM_WARNING_MMF_UNAVAILABLE";
+            case static_cast< uint64_t>(Literal::DSSM_WARNING_MMF_NOT_USABLE): return "DSSM_WARNING_MMF_NOT_USABLE";
             default: return "UNDEFINED";
             }
         }
@@ -2046,7 +2070,7 @@ public:
             }
         }
     };
-    struct IDLLocationReport : CommonAPI::Struct< IDLLocation, uint64_t, float, float, float, float, float, float, float, uint32_t, uint32_t, float, float, float, float, float, float, float, float, float, float, float, uint16_t, IDLLocationReportSvUsedInPosition, uint32_t, uint32_t, IDLLocationReportPositionDynamics, IDLGnssSystemTime, std::vector< IDLGnssMeasUsageInfo >, uint8_t, uint8_t, uint64_t, IDLLocOutputEngineType, uint32_t, float, IDLLLAInfo, std::vector< float >, uint64_t, bool, uint32_t, uint32_t, float, float, float, std::vector< uint16_t >, uint64_t, uint64_t> {
+    struct IDLLocationReport : CommonAPI::Struct< IDLLocation, uint64_t, float, float, float, float, float, float, float, uint32_t, uint32_t, float, float, float, float, float, float, float, float, float, float, float, uint16_t, IDLLocationReportSvUsedInPosition, uint32_t, uint32_t, IDLLocationReportPositionDynamics, IDLGnssSystemTime, std::vector< IDLGnssMeasUsageInfo >, uint8_t, uint8_t, uint64_t, IDLLocOutputEngineType, uint32_t, float, IDLLLAInfo, std::vector< float >, uint64_t, bool, uint32_t, uint32_t, float, float, float, std::vector< uint16_t >, uint64_t, uint64_t, double, uint64_t, uint32_t, int16_t, uint8_t> {
     
         IDLLocationReport()
         {
@@ -2097,8 +2121,13 @@ public:
             std::get< 44>(values_) = std::vector< uint16_t >();
             std::get< 45>(values_) = 0ull;
             std::get< 46>(values_) = 0ull;
+            std::get< 47>(values_) = 0.0;
+            std::get< 48>(values_) = 0ull;
+            std::get< 49>(values_) = 0ul;
+            std::get< 50>(values_) = 0;
+            std::get< 51>(values_) = 0u;
         }
-        IDLLocationReport(const IDLLocation &_locInfo, const uint64_t &_locationInfoFlags, const float &_altitudeMeanSeaLevel, const float &_pdop, const float &_hdop, const float &_vdop, const float &_gdop, const float &_tdop, const float &_magneticDeviation, const uint32_t &_horReliability, const uint32_t &_verReliability, const float &_horUncEllipseSemiMajor, const float &_horUncEllipseSemiMinor, const float &_horUncEllipseOrientAzimuth, const float &_northStdDeviation, const float &_eastStdDeviation, const float &_northVelocity, const float &_eastVelocity, const float &_upVelocity, const float &_northVelocityStdDeviation, const float &_eastVelocityStdDeviation, const float &_upVelocityStdDeviation, const uint16_t &_numSvUsedInPosition, const IDLLocationReportSvUsedInPosition &_svUsedInPosition, const uint32_t &_navSolutionMask, const uint32_t &_posTechMask, const IDLLocationReportPositionDynamics &_bodyFrameData, const IDLGnssSystemTime &_gnssSystemTime, const std::vector< IDLGnssMeasUsageInfo > &_measUsageInfo, const uint8_t &_leapSeconds, const uint8_t &_calibrationConfidencePercent, const uint64_t &_calibrationStatus, const IDLLocOutputEngineType &_locOutputEngType, const uint32_t &_locOutputEngMask, const float &_conformityIndex, const IDLLLAInfo &_llaVRPBased, const std::vector< float > &_enuVelocityVRPBased, const uint64_t &_drSolutionStatusMask, const bool &_altitudeAssumed, const uint32_t &_sessionStatus, const uint32_t &_integrityRiskUsed, const float &_protectAlongTrack, const float &_protectCrossTrack, const float &_protectVertical, const std::vector< uint16_t > &_dgnssStationId, const uint64_t &_elapsedgPTPTime, const uint64_t &_elapsedgPTPTimeUnc)
+        IDLLocationReport(const IDLLocation &_locInfo, const uint64_t &_locationInfoFlags, const float &_altitudeMeanSeaLevel, const float &_pdop, const float &_hdop, const float &_vdop, const float &_gdop, const float &_tdop, const float &_magneticDeviation, const uint32_t &_horReliability, const uint32_t &_verReliability, const float &_horUncEllipseSemiMajor, const float &_horUncEllipseSemiMinor, const float &_horUncEllipseOrientAzimuth, const float &_northStdDeviation, const float &_eastStdDeviation, const float &_northVelocity, const float &_eastVelocity, const float &_upVelocity, const float &_northVelocityStdDeviation, const float &_eastVelocityStdDeviation, const float &_upVelocityStdDeviation, const uint16_t &_numSvUsedInPosition, const IDLLocationReportSvUsedInPosition &_svUsedInPosition, const uint32_t &_navSolutionMask, const uint32_t &_posTechMask, const IDLLocationReportPositionDynamics &_bodyFrameData, const IDLGnssSystemTime &_gnssSystemTime, const std::vector< IDLGnssMeasUsageInfo > &_measUsageInfo, const uint8_t &_leapSeconds, const uint8_t &_calibrationConfidencePercent, const uint64_t &_calibrationStatus, const IDLLocOutputEngineType &_locOutputEngType, const uint32_t &_locOutputEngMask, const float &_conformityIndex, const IDLLLAInfo &_llaVRPBased, const std::vector< float > &_enuVelocityVRPBased, const uint64_t &_drSolutionStatusMask, const bool &_altitudeAssumed, const uint32_t &_sessionStatus, const uint32_t &_integrityRiskUsed, const float &_protectAlongTrack, const float &_protectCrossTrack, const float &_protectVertical, const std::vector< uint16_t > &_dgnssStationId, const uint64_t &_elapsedgPTPTime, const uint64_t &_elapsedgPTPTimeUnc, const double &_baseLineLength, const uint64_t &_ageMsecOfCorrections, const uint32_t &_currReportingRate, const int16_t &_reportingLatency, const uint8_t &_leapSecondsUnc)
         {
             std::get< 0>(values_) = _locInfo;
             std::get< 1>(values_) = _locationInfoFlags;
@@ -2147,6 +2176,11 @@ public:
             std::get< 44>(values_) = _dgnssStationId;
             std::get< 45>(values_) = _elapsedgPTPTime;
             std::get< 46>(values_) = _elapsedgPTPTimeUnc;
+            std::get< 47>(values_) = _baseLineLength;
+            std::get< 48>(values_) = _ageMsecOfCorrections;
+            std::get< 49>(values_) = _currReportingRate;
+            std::get< 50>(values_) = _reportingLatency;
+            std::get< 51>(values_) = _leapSecondsUnc;
         }
         inline const IDLLocation &getLocInfo() const { return std::get< 0>(values_); }
         inline void setLocInfo(const IDLLocation &_value) { std::get< 0>(values_) = _value; }
@@ -2242,64 +2276,74 @@ public:
         inline void setElapsedgPTPTime(const uint64_t &_value) { std::get< 45>(values_) = _value; }
         inline const uint64_t &getElapsedgPTPTimeUnc() const { return std::get< 46>(values_); }
         inline void setElapsedgPTPTimeUnc(const uint64_t &_value) { std::get< 46>(values_) = _value; }
+        inline const double &getBaseLineLength() const { return std::get< 47>(values_); }
+        inline void setBaseLineLength(const double &_value) { std::get< 47>(values_) = _value; }
+        inline const uint64_t &getAgeMsecOfCorrections() const { return std::get< 48>(values_); }
+        inline void setAgeMsecOfCorrections(const uint64_t &_value) { std::get< 48>(values_) = _value; }
+        inline const uint32_t &getCurrReportingRate() const { return std::get< 49>(values_); }
+        inline void setCurrReportingRate(const uint32_t &_value) { std::get< 49>(values_) = _value; }
+        inline const int16_t &getReportingLatency() const { return std::get< 50>(values_); }
+        inline void setReportingLatency(const int16_t &_value) { std::get< 50>(values_) = _value; }
+        inline const uint8_t &getLeapSecondsUnc() const { return std::get< 51>(values_); }
+        inline void setLeapSecondsUnc(const uint8_t &_value) { std::get< 51>(values_) = _value; }
         inline bool operator==(const IDLLocationReport& _other) const {
-        return (getLocInfo() == _other.getLocInfo() && getLocationInfoFlags() == _other.getLocationInfoFlags() && getAltitudeMeanSeaLevel() == _other.getAltitudeMeanSeaLevel() && getPdop() == _other.getPdop() && getHdop() == _other.getHdop() && getVdop() == _other.getVdop() && getGdop() == _other.getGdop() && getTdop() == _other.getTdop() && getMagneticDeviation() == _other.getMagneticDeviation() && getHorReliability() == _other.getHorReliability() && getVerReliability() == _other.getVerReliability() && getHorUncEllipseSemiMajor() == _other.getHorUncEllipseSemiMajor() && getHorUncEllipseSemiMinor() == _other.getHorUncEllipseSemiMinor() && getHorUncEllipseOrientAzimuth() == _other.getHorUncEllipseOrientAzimuth() && getNorthStdDeviation() == _other.getNorthStdDeviation() && getEastStdDeviation() == _other.getEastStdDeviation() && getNorthVelocity() == _other.getNorthVelocity() && getEastVelocity() == _other.getEastVelocity() && getUpVelocity() == _other.getUpVelocity() && getNorthVelocityStdDeviation() == _other.getNorthVelocityStdDeviation() && getEastVelocityStdDeviation() == _other.getEastVelocityStdDeviation() && getUpVelocityStdDeviation() == _other.getUpVelocityStdDeviation() && getNumSvUsedInPosition() == _other.getNumSvUsedInPosition() && getSvUsedInPosition() == _other.getSvUsedInPosition() && getNavSolutionMask() == _other.getNavSolutionMask() && getPosTechMask() == _other.getPosTechMask() && getBodyFrameData() == _other.getBodyFrameData() && getGnssSystemTime() == _other.getGnssSystemTime() && getMeasUsageInfo() == _other.getMeasUsageInfo() && getLeapSeconds() == _other.getLeapSeconds() && getCalibrationConfidencePercent() == _other.getCalibrationConfidencePercent() && getCalibrationStatus() == _other.getCalibrationStatus() && getLocOutputEngType() == _other.getLocOutputEngType() && getLocOutputEngMask() == _other.getLocOutputEngMask() && getConformityIndex() == _other.getConformityIndex() && getLlaVRPBased() == _other.getLlaVRPBased() && getEnuVelocityVRPBased() == _other.getEnuVelocityVRPBased() && getDrSolutionStatusMask() == _other.getDrSolutionStatusMask() && getAltitudeAssumed() == _other.getAltitudeAssumed() && getSessionStatus() == _other.getSessionStatus() && getIntegrityRiskUsed() == _other.getIntegrityRiskUsed() && getProtectAlongTrack() == _other.getProtectAlongTrack() && getProtectCrossTrack() == _other.getProtectCrossTrack() && getProtectVertical() == _other.getProtectVertical() && getDgnssStationId() == _other.getDgnssStationId() && getElapsedgPTPTime() == _other.getElapsedgPTPTime() && getElapsedgPTPTimeUnc() == _other.getElapsedgPTPTimeUnc());
+        return (getLocInfo() == _other.getLocInfo() && getLocationInfoFlags() == _other.getLocationInfoFlags() && getAltitudeMeanSeaLevel() == _other.getAltitudeMeanSeaLevel() && getPdop() == _other.getPdop() && getHdop() == _other.getHdop() && getVdop() == _other.getVdop() && getGdop() == _other.getGdop() && getTdop() == _other.getTdop() && getMagneticDeviation() == _other.getMagneticDeviation() && getHorReliability() == _other.getHorReliability() && getVerReliability() == _other.getVerReliability() && getHorUncEllipseSemiMajor() == _other.getHorUncEllipseSemiMajor() && getHorUncEllipseSemiMinor() == _other.getHorUncEllipseSemiMinor() && getHorUncEllipseOrientAzimuth() == _other.getHorUncEllipseOrientAzimuth() && getNorthStdDeviation() == _other.getNorthStdDeviation() && getEastStdDeviation() == _other.getEastStdDeviation() && getNorthVelocity() == _other.getNorthVelocity() && getEastVelocity() == _other.getEastVelocity() && getUpVelocity() == _other.getUpVelocity() && getNorthVelocityStdDeviation() == _other.getNorthVelocityStdDeviation() && getEastVelocityStdDeviation() == _other.getEastVelocityStdDeviation() && getUpVelocityStdDeviation() == _other.getUpVelocityStdDeviation() && getNumSvUsedInPosition() == _other.getNumSvUsedInPosition() && getSvUsedInPosition() == _other.getSvUsedInPosition() && getNavSolutionMask() == _other.getNavSolutionMask() && getPosTechMask() == _other.getPosTechMask() && getBodyFrameData() == _other.getBodyFrameData() && getGnssSystemTime() == _other.getGnssSystemTime() && getMeasUsageInfo() == _other.getMeasUsageInfo() && getLeapSeconds() == _other.getLeapSeconds() && getCalibrationConfidencePercent() == _other.getCalibrationConfidencePercent() && getCalibrationStatus() == _other.getCalibrationStatus() && getLocOutputEngType() == _other.getLocOutputEngType() && getLocOutputEngMask() == _other.getLocOutputEngMask() && getConformityIndex() == _other.getConformityIndex() && getLlaVRPBased() == _other.getLlaVRPBased() && getEnuVelocityVRPBased() == _other.getEnuVelocityVRPBased() && getDrSolutionStatusMask() == _other.getDrSolutionStatusMask() && getAltitudeAssumed() == _other.getAltitudeAssumed() && getSessionStatus() == _other.getSessionStatus() && getIntegrityRiskUsed() == _other.getIntegrityRiskUsed() && getProtectAlongTrack() == _other.getProtectAlongTrack() && getProtectCrossTrack() == _other.getProtectCrossTrack() && getProtectVertical() == _other.getProtectVertical() && getDgnssStationId() == _other.getDgnssStationId() && getElapsedgPTPTime() == _other.getElapsedgPTPTime() && getElapsedgPTPTimeUnc() == _other.getElapsedgPTPTimeUnc() && getBaseLineLength() == _other.getBaseLineLength() && getAgeMsecOfCorrections() == _other.getAgeMsecOfCorrections() && getCurrReportingRate() == _other.getCurrReportingRate() && getReportingLatency() == _other.getReportingLatency() && getLeapSecondsUnc() == _other.getLeapSecondsUnc());
         }
         inline bool operator!=(const IDLLocationReport &_other) const {
             return !((*this) == _other);
         }
     
     };
-    struct IDLGnssSv : CommonAPI::Struct< uint16_t, IDLGnssSvType, float, float, float, uint32_t, float, uint32_t, double, uint16_t> {
+    struct IDLGnssSv : CommonAPI::Struct< uint16_t, uint16_t, IDLGnssSvType, float, float, float, uint32_t, float, uint32_t, double> {
     
         IDLGnssSv()
         {
             std::get< 0>(values_) = 0u;
-            std::get< 1>(values_) = IDLGnssSvType();
-            std::get< 2>(values_) = 0.0f;
+            std::get< 1>(values_) = 0u;
+            std::get< 2>(values_) = IDLGnssSvType();
             std::get< 3>(values_) = 0.0f;
             std::get< 4>(values_) = 0.0f;
-            std::get< 5>(values_) = 0ul;
-            std::get< 6>(values_) = 0.0f;
-            std::get< 7>(values_) = 0ul;
-            std::get< 8>(values_) = 0.0;
-            std::get< 9>(values_) = 0u;
+            std::get< 5>(values_) = 0.0f;
+            std::get< 6>(values_) = 0ul;
+            std::get< 7>(values_) = 0.0f;
+            std::get< 8>(values_) = 0ul;
+            std::get< 9>(values_) = 0.0;
         }
-        IDLGnssSv(const uint16_t &_svId, const IDLGnssSvType &_type, const float &_cN0Dbhz, const float &_elevation, const float &_azimuth, const uint32_t &_gnssSvOptionsMask, const float &_carrierFrequencyHz, const uint32_t &_gnssSignalTypeMask, const double &_basebandCarrierToNoiseDbHz, const uint16_t &_gloFrequency)
+        IDLGnssSv(const uint16_t &_svId, const uint16_t &_gloFrequency, const IDLGnssSvType &_type, const float &_cN0Dbhz, const float &_elevation, const float &_azimuth, const uint32_t &_gnssSvOptionsMask, const float &_carrierFrequencyHz, const uint32_t &_gnssSignalTypeMask, const double &_basebandCarrierToNoiseDbHz)
         {
             std::get< 0>(values_) = _svId;
-            std::get< 1>(values_) = _type;
-            std::get< 2>(values_) = _cN0Dbhz;
-            std::get< 3>(values_) = _elevation;
-            std::get< 4>(values_) = _azimuth;
-            std::get< 5>(values_) = _gnssSvOptionsMask;
-            std::get< 6>(values_) = _carrierFrequencyHz;
-            std::get< 7>(values_) = _gnssSignalTypeMask;
-            std::get< 8>(values_) = _basebandCarrierToNoiseDbHz;
-            std::get< 9>(values_) = _gloFrequency;
+            std::get< 1>(values_) = _gloFrequency;
+            std::get< 2>(values_) = _type;
+            std::get< 3>(values_) = _cN0Dbhz;
+            std::get< 4>(values_) = _elevation;
+            std::get< 5>(values_) = _azimuth;
+            std::get< 6>(values_) = _gnssSvOptionsMask;
+            std::get< 7>(values_) = _carrierFrequencyHz;
+            std::get< 8>(values_) = _gnssSignalTypeMask;
+            std::get< 9>(values_) = _basebandCarrierToNoiseDbHz;
         }
         inline const uint16_t &getSvId() const { return std::get< 0>(values_); }
         inline void setSvId(const uint16_t &_value) { std::get< 0>(values_) = _value; }
-        inline const IDLGnssSvType &getType() const { return std::get< 1>(values_); }
-        inline void setType(const IDLGnssSvType &_value) { std::get< 1>(values_) = _value; }
-        inline const float &getCN0Dbhz() const { return std::get< 2>(values_); }
-        inline void setCN0Dbhz(const float &_value) { std::get< 2>(values_) = _value; }
-        inline const float &getElevation() const { return std::get< 3>(values_); }
-        inline void setElevation(const float &_value) { std::get< 3>(values_) = _value; }
-        inline const float &getAzimuth() const { return std::get< 4>(values_); }
-        inline void setAzimuth(const float &_value) { std::get< 4>(values_) = _value; }
-        inline const uint32_t &getGnssSvOptionsMask() const { return std::get< 5>(values_); }
-        inline void setGnssSvOptionsMask(const uint32_t &_value) { std::get< 5>(values_) = _value; }
-        inline const float &getCarrierFrequencyHz() const { return std::get< 6>(values_); }
-        inline void setCarrierFrequencyHz(const float &_value) { std::get< 6>(values_) = _value; }
-        inline const uint32_t &getGnssSignalTypeMask() const { return std::get< 7>(values_); }
-        inline void setGnssSignalTypeMask(const uint32_t &_value) { std::get< 7>(values_) = _value; }
-        inline const double &getBasebandCarrierToNoiseDbHz() const { return std::get< 8>(values_); }
-        inline void setBasebandCarrierToNoiseDbHz(const double &_value) { std::get< 8>(values_) = _value; }
-        inline const uint16_t &getGloFrequency() const { return std::get< 9>(values_); }
-        inline void setGloFrequency(const uint16_t &_value) { std::get< 9>(values_) = _value; }
+        inline const uint16_t &getGloFrequency() const { return std::get< 1>(values_); }
+        inline void setGloFrequency(const uint16_t &_value) { std::get< 1>(values_) = _value; }
+        inline const IDLGnssSvType &getType() const { return std::get< 2>(values_); }
+        inline void setType(const IDLGnssSvType &_value) { std::get< 2>(values_) = _value; }
+        inline const float &getCN0Dbhz() const { return std::get< 3>(values_); }
+        inline void setCN0Dbhz(const float &_value) { std::get< 3>(values_) = _value; }
+        inline const float &getElevation() const { return std::get< 4>(values_); }
+        inline void setElevation(const float &_value) { std::get< 4>(values_) = _value; }
+        inline const float &getAzimuth() const { return std::get< 5>(values_); }
+        inline void setAzimuth(const float &_value) { std::get< 5>(values_) = _value; }
+        inline const uint32_t &getGnssSvOptionsMask() const { return std::get< 6>(values_); }
+        inline void setGnssSvOptionsMask(const uint32_t &_value) { std::get< 6>(values_) = _value; }
+        inline const float &getCarrierFrequencyHz() const { return std::get< 7>(values_); }
+        inline void setCarrierFrequencyHz(const float &_value) { std::get< 7>(values_) = _value; }
+        inline const uint32_t &getGnssSignalTypeMask() const { return std::get< 8>(values_); }
+        inline void setGnssSignalTypeMask(const uint32_t &_value) { std::get< 8>(values_) = _value; }
+        inline const double &getBasebandCarrierToNoiseDbHz() const { return std::get< 9>(values_); }
+        inline void setBasebandCarrierToNoiseDbHz(const double &_value) { std::get< 9>(values_) = _value; }
         inline bool operator==(const IDLGnssSv& _other) const {
-        return (getSvId() == _other.getSvId() && getType() == _other.getType() && getCN0Dbhz() == _other.getCN0Dbhz() && getElevation() == _other.getElevation() && getAzimuth() == _other.getAzimuth() && getGnssSvOptionsMask() == _other.getGnssSvOptionsMask() && getCarrierFrequencyHz() == _other.getCarrierFrequencyHz() && getGnssSignalTypeMask() == _other.getGnssSignalTypeMask() && getBasebandCarrierToNoiseDbHz() == _other.getBasebandCarrierToNoiseDbHz() && getGloFrequency() == _other.getGloFrequency());
+        return (getSvId() == _other.getSvId() && getGloFrequency() == _other.getGloFrequency() && getType() == _other.getType() && getCN0Dbhz() == _other.getCN0Dbhz() && getElevation() == _other.getElevation() && getAzimuth() == _other.getAzimuth() && getGnssSvOptionsMask() == _other.getGnssSvOptionsMask() && getCarrierFrequencyHz() == _other.getCarrierFrequencyHz() && getGnssSignalTypeMask() == _other.getGnssSignalTypeMask() && getBasebandCarrierToNoiseDbHz() == _other.getBasebandCarrierToNoiseDbHz());
         }
         inline bool operator!=(const IDLGnssSv &_other) const {
             return !((*this) == _other);
@@ -2332,7 +2376,8 @@ public:
             IDL_GNSS_SIGNAL_TYPE_BEIDOU_B2A_Q = 20,
             IDL_GNSS_SIGNAL_TYPE_BEIDOU_B2B_I = 21,
             IDL_GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q = 22,
-            IDL_GNSS_MAX_NUMBER_OF_SIGNAL_TYPES = 23
+            GST_NAVIC_L1 = 23,
+            IDL_GNSS_MAX_NUMBER_OF_SIGNAL_TYPES = 24
         };
     
         IDLGnssSignalTypes()
@@ -2365,6 +2410,7 @@ public:
                 case static_cast< uint8_t>(Literal::IDL_GNSS_SIGNAL_TYPE_BEIDOU_B2A_Q):
                 case static_cast< uint8_t>(Literal::IDL_GNSS_SIGNAL_TYPE_BEIDOU_B2B_I):
                 case static_cast< uint8_t>(Literal::IDL_GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q):
+                case static_cast< uint8_t>(Literal::GST_NAVIC_L1):
                 case static_cast< uint8_t>(Literal::IDL_GNSS_MAX_NUMBER_OF_SIGNAL_TYPES):
                 return true;
             default:
@@ -2413,6 +2459,7 @@ public:
             case static_cast< uint8_t>(Literal::IDL_GNSS_SIGNAL_TYPE_BEIDOU_B2A_Q): return "IDL_GNSS_SIGNAL_TYPE_BEIDOU_B2A_Q";
             case static_cast< uint8_t>(Literal::IDL_GNSS_SIGNAL_TYPE_BEIDOU_B2B_I): return "IDL_GNSS_SIGNAL_TYPE_BEIDOU_B2B_I";
             case static_cast< uint8_t>(Literal::IDL_GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q): return "IDL_GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q";
+            case static_cast< uint8_t>(Literal::GST_NAVIC_L1): return "GST_NAVIC_L1";
             case static_cast< uint8_t>(Literal::IDL_GNSS_MAX_NUMBER_OF_SIGNAL_TYPES): return "IDL_GNSS_MAX_NUMBER_OF_SIGNAL_TYPES";
             default: return "UNDEFINED";
             }
@@ -2878,120 +2925,120 @@ public:
             }
         }
     };
-    struct IDLGnssMeasurementsData : CommonAPI::Struct< uint32_t, uint16_t, IDLGnssSvType, double, uint32_t, int64_t, float, int64_t, double, double, double, uint32_t, double, double, float, int64_t, double, double, uint32_t, double, double, double, uint32_t, double, double, uint8_t> {
+    struct IDLGnssMeasurementsData : CommonAPI::Struct< uint32_t, uint16_t, uint8_t, IDLGnssSvType, double, uint32_t, int64_t, float, int64_t, double, double, double, uint32_t, double, double, float, int64_t, double, double, uint32_t, double, double, double, uint32_t, double, double> {
     
         IDLGnssMeasurementsData()
         {
             std::get< 0>(values_) = 0ul;
             std::get< 1>(values_) = 0u;
-            std::get< 2>(values_) = IDLGnssSvType();
-            std::get< 3>(values_) = 0.0;
-            std::get< 4>(values_) = 0ul;
-            std::get< 5>(values_) = 0;
-            std::get< 6>(values_) = 0.0f;
-            std::get< 7>(values_) = 0;
-            std::get< 8>(values_) = 0.0;
+            std::get< 2>(values_) = 0u;
+            std::get< 3>(values_) = IDLGnssSvType();
+            std::get< 4>(values_) = 0.0;
+            std::get< 5>(values_) = 0ul;
+            std::get< 6>(values_) = 0;
+            std::get< 7>(values_) = 0.0f;
+            std::get< 8>(values_) = 0;
             std::get< 9>(values_) = 0.0;
             std::get< 10>(values_) = 0.0;
-            std::get< 11>(values_) = 0ul;
-            std::get< 12>(values_) = 0.0;
+            std::get< 11>(values_) = 0.0;
+            std::get< 12>(values_) = 0ul;
             std::get< 13>(values_) = 0.0;
-            std::get< 14>(values_) = 0.0f;
-            std::get< 15>(values_) = 0;
-            std::get< 16>(values_) = 0.0;
+            std::get< 14>(values_) = 0.0;
+            std::get< 15>(values_) = 0.0f;
+            std::get< 16>(values_) = 0;
             std::get< 17>(values_) = 0.0;
-            std::get< 18>(values_) = 0ul;
-            std::get< 19>(values_) = 0.0;
+            std::get< 18>(values_) = 0.0;
+            std::get< 19>(values_) = 0ul;
             std::get< 20>(values_) = 0.0;
             std::get< 21>(values_) = 0.0;
-            std::get< 22>(values_) = 0ul;
-            std::get< 23>(values_) = 0.0;
+            std::get< 22>(values_) = 0.0;
+            std::get< 23>(values_) = 0ul;
             std::get< 24>(values_) = 0.0;
-            std::get< 25>(values_) = 0u;
+            std::get< 25>(values_) = 0.0;
         }
-        IDLGnssMeasurementsData(const uint32_t &_flags, const uint16_t &_svId, const IDLGnssSvType &_svType, const double &_timeOffsetNs, const uint32_t &_stateMask, const int64_t &_receivedSvTimeNs, const float &_receivedSvTimeSubNs, const int64_t &_receivedSvTimeUncertaintyNs, const double &_carrierToNoiseDbHz, const double &_pseudorangeRateMps, const double &_pseudorangeRateUncertaintyMps, const uint32_t &_adrStateMask, const double &_adrMeters, const double &_adrUncertaintyMeters, const float &_carrierFrequencyHz, const int64_t &_carrierCycles, const double &_carrierPhase, const double &_carrierPhaseUncertainty, const uint32_t &_multipathIndicator, const double &_signalToNoiseRatioDb, const double &_agcLevelDb, const double &_basebandCarrierToNoiseDbHz, const uint32_t &_gnssSignalType, const double &_fullInterSignalBiasNs, const double &_fullInterSignalBiasUncertaintyNs, const uint8_t &_cycleSlipCount)
+        IDLGnssMeasurementsData(const uint32_t &_flags, const uint16_t &_svId, const uint8_t &_cycleSlipCount, const IDLGnssSvType &_svType, const double &_timeOffsetNs, const uint32_t &_stateMask, const int64_t &_receivedSvTimeNs, const float &_receivedSvTimeSubNs, const int64_t &_receivedSvTimeUncertaintyNs, const double &_carrierToNoiseDbHz, const double &_pseudorangeRateMps, const double &_pseudorangeRateUncertaintyMps, const uint32_t &_adrStateMask, const double &_adrMeters, const double &_adrUncertaintyMeters, const float &_carrierFrequencyHz, const int64_t &_carrierCycles, const double &_carrierPhase, const double &_carrierPhaseUncertainty, const uint32_t &_multipathIndicator, const double &_signalToNoiseRatioDb, const double &_agcLevelDb, const double &_basebandCarrierToNoiseDbHz, const uint32_t &_gnssSignalType, const double &_fullInterSignalBiasNs, const double &_fullInterSignalBiasUncertaintyNs)
         {
             std::get< 0>(values_) = _flags;
             std::get< 1>(values_) = _svId;
-            std::get< 2>(values_) = _svType;
-            std::get< 3>(values_) = _timeOffsetNs;
-            std::get< 4>(values_) = _stateMask;
-            std::get< 5>(values_) = _receivedSvTimeNs;
-            std::get< 6>(values_) = _receivedSvTimeSubNs;
-            std::get< 7>(values_) = _receivedSvTimeUncertaintyNs;
-            std::get< 8>(values_) = _carrierToNoiseDbHz;
-            std::get< 9>(values_) = _pseudorangeRateMps;
-            std::get< 10>(values_) = _pseudorangeRateUncertaintyMps;
-            std::get< 11>(values_) = _adrStateMask;
-            std::get< 12>(values_) = _adrMeters;
-            std::get< 13>(values_) = _adrUncertaintyMeters;
-            std::get< 14>(values_) = _carrierFrequencyHz;
-            std::get< 15>(values_) = _carrierCycles;
-            std::get< 16>(values_) = _carrierPhase;
-            std::get< 17>(values_) = _carrierPhaseUncertainty;
-            std::get< 18>(values_) = _multipathIndicator;
-            std::get< 19>(values_) = _signalToNoiseRatioDb;
-            std::get< 20>(values_) = _agcLevelDb;
-            std::get< 21>(values_) = _basebandCarrierToNoiseDbHz;
-            std::get< 22>(values_) = _gnssSignalType;
-            std::get< 23>(values_) = _fullInterSignalBiasNs;
-            std::get< 24>(values_) = _fullInterSignalBiasUncertaintyNs;
-            std::get< 25>(values_) = _cycleSlipCount;
+            std::get< 2>(values_) = _cycleSlipCount;
+            std::get< 3>(values_) = _svType;
+            std::get< 4>(values_) = _timeOffsetNs;
+            std::get< 5>(values_) = _stateMask;
+            std::get< 6>(values_) = _receivedSvTimeNs;
+            std::get< 7>(values_) = _receivedSvTimeSubNs;
+            std::get< 8>(values_) = _receivedSvTimeUncertaintyNs;
+            std::get< 9>(values_) = _carrierToNoiseDbHz;
+            std::get< 10>(values_) = _pseudorangeRateMps;
+            std::get< 11>(values_) = _pseudorangeRateUncertaintyMps;
+            std::get< 12>(values_) = _adrStateMask;
+            std::get< 13>(values_) = _adrMeters;
+            std::get< 14>(values_) = _adrUncertaintyMeters;
+            std::get< 15>(values_) = _carrierFrequencyHz;
+            std::get< 16>(values_) = _carrierCycles;
+            std::get< 17>(values_) = _carrierPhase;
+            std::get< 18>(values_) = _carrierPhaseUncertainty;
+            std::get< 19>(values_) = _multipathIndicator;
+            std::get< 20>(values_) = _signalToNoiseRatioDb;
+            std::get< 21>(values_) = _agcLevelDb;
+            std::get< 22>(values_) = _basebandCarrierToNoiseDbHz;
+            std::get< 23>(values_) = _gnssSignalType;
+            std::get< 24>(values_) = _fullInterSignalBiasNs;
+            std::get< 25>(values_) = _fullInterSignalBiasUncertaintyNs;
         }
         inline const uint32_t &getFlags() const { return std::get< 0>(values_); }
         inline void setFlags(const uint32_t &_value) { std::get< 0>(values_) = _value; }
         inline const uint16_t &getSvId() const { return std::get< 1>(values_); }
         inline void setSvId(const uint16_t &_value) { std::get< 1>(values_) = _value; }
-        inline const IDLGnssSvType &getSvType() const { return std::get< 2>(values_); }
-        inline void setSvType(const IDLGnssSvType &_value) { std::get< 2>(values_) = _value; }
-        inline const double &getTimeOffsetNs() const { return std::get< 3>(values_); }
-        inline void setTimeOffsetNs(const double &_value) { std::get< 3>(values_) = _value; }
-        inline const uint32_t &getStateMask() const { return std::get< 4>(values_); }
-        inline void setStateMask(const uint32_t &_value) { std::get< 4>(values_) = _value; }
-        inline const int64_t &getReceivedSvTimeNs() const { return std::get< 5>(values_); }
-        inline void setReceivedSvTimeNs(const int64_t &_value) { std::get< 5>(values_) = _value; }
-        inline const float &getReceivedSvTimeSubNs() const { return std::get< 6>(values_); }
-        inline void setReceivedSvTimeSubNs(const float &_value) { std::get< 6>(values_) = _value; }
-        inline const int64_t &getReceivedSvTimeUncertaintyNs() const { return std::get< 7>(values_); }
-        inline void setReceivedSvTimeUncertaintyNs(const int64_t &_value) { std::get< 7>(values_) = _value; }
-        inline const double &getCarrierToNoiseDbHz() const { return std::get< 8>(values_); }
-        inline void setCarrierToNoiseDbHz(const double &_value) { std::get< 8>(values_) = _value; }
-        inline const double &getPseudorangeRateMps() const { return std::get< 9>(values_); }
-        inline void setPseudorangeRateMps(const double &_value) { std::get< 9>(values_) = _value; }
-        inline const double &getPseudorangeRateUncertaintyMps() const { return std::get< 10>(values_); }
-        inline void setPseudorangeRateUncertaintyMps(const double &_value) { std::get< 10>(values_) = _value; }
-        inline const uint32_t &getAdrStateMask() const { return std::get< 11>(values_); }
-        inline void setAdrStateMask(const uint32_t &_value) { std::get< 11>(values_) = _value; }
-        inline const double &getAdrMeters() const { return std::get< 12>(values_); }
-        inline void setAdrMeters(const double &_value) { std::get< 12>(values_) = _value; }
-        inline const double &getAdrUncertaintyMeters() const { return std::get< 13>(values_); }
-        inline void setAdrUncertaintyMeters(const double &_value) { std::get< 13>(values_) = _value; }
-        inline const float &getCarrierFrequencyHz() const { return std::get< 14>(values_); }
-        inline void setCarrierFrequencyHz(const float &_value) { std::get< 14>(values_) = _value; }
-        inline const int64_t &getCarrierCycles() const { return std::get< 15>(values_); }
-        inline void setCarrierCycles(const int64_t &_value) { std::get< 15>(values_) = _value; }
-        inline const double &getCarrierPhase() const { return std::get< 16>(values_); }
-        inline void setCarrierPhase(const double &_value) { std::get< 16>(values_) = _value; }
-        inline const double &getCarrierPhaseUncertainty() const { return std::get< 17>(values_); }
-        inline void setCarrierPhaseUncertainty(const double &_value) { std::get< 17>(values_) = _value; }
-        inline const uint32_t &getMultipathIndicator() const { return std::get< 18>(values_); }
-        inline void setMultipathIndicator(const uint32_t &_value) { std::get< 18>(values_) = _value; }
-        inline const double &getSignalToNoiseRatioDb() const { return std::get< 19>(values_); }
-        inline void setSignalToNoiseRatioDb(const double &_value) { std::get< 19>(values_) = _value; }
-        inline const double &getAgcLevelDb() const { return std::get< 20>(values_); }
-        inline void setAgcLevelDb(const double &_value) { std::get< 20>(values_) = _value; }
-        inline const double &getBasebandCarrierToNoiseDbHz() const { return std::get< 21>(values_); }
-        inline void setBasebandCarrierToNoiseDbHz(const double &_value) { std::get< 21>(values_) = _value; }
-        inline const uint32_t &getGnssSignalType() const { return std::get< 22>(values_); }
-        inline void setGnssSignalType(const uint32_t &_value) { std::get< 22>(values_) = _value; }
-        inline const double &getFullInterSignalBiasNs() const { return std::get< 23>(values_); }
-        inline void setFullInterSignalBiasNs(const double &_value) { std::get< 23>(values_) = _value; }
-        inline const double &getFullInterSignalBiasUncertaintyNs() const { return std::get< 24>(values_); }
-        inline void setFullInterSignalBiasUncertaintyNs(const double &_value) { std::get< 24>(values_) = _value; }
-        inline const uint8_t &getCycleSlipCount() const { return std::get< 25>(values_); }
-        inline void setCycleSlipCount(const uint8_t &_value) { std::get< 25>(values_) = _value; }
+        inline const uint8_t &getCycleSlipCount() const { return std::get< 2>(values_); }
+        inline void setCycleSlipCount(const uint8_t &_value) { std::get< 2>(values_) = _value; }
+        inline const IDLGnssSvType &getSvType() const { return std::get< 3>(values_); }
+        inline void setSvType(const IDLGnssSvType &_value) { std::get< 3>(values_) = _value; }
+        inline const double &getTimeOffsetNs() const { return std::get< 4>(values_); }
+        inline void setTimeOffsetNs(const double &_value) { std::get< 4>(values_) = _value; }
+        inline const uint32_t &getStateMask() const { return std::get< 5>(values_); }
+        inline void setStateMask(const uint32_t &_value) { std::get< 5>(values_) = _value; }
+        inline const int64_t &getReceivedSvTimeNs() const { return std::get< 6>(values_); }
+        inline void setReceivedSvTimeNs(const int64_t &_value) { std::get< 6>(values_) = _value; }
+        inline const float &getReceivedSvTimeSubNs() const { return std::get< 7>(values_); }
+        inline void setReceivedSvTimeSubNs(const float &_value) { std::get< 7>(values_) = _value; }
+        inline const int64_t &getReceivedSvTimeUncertaintyNs() const { return std::get< 8>(values_); }
+        inline void setReceivedSvTimeUncertaintyNs(const int64_t &_value) { std::get< 8>(values_) = _value; }
+        inline const double &getCarrierToNoiseDbHz() const { return std::get< 9>(values_); }
+        inline void setCarrierToNoiseDbHz(const double &_value) { std::get< 9>(values_) = _value; }
+        inline const double &getPseudorangeRateMps() const { return std::get< 10>(values_); }
+        inline void setPseudorangeRateMps(const double &_value) { std::get< 10>(values_) = _value; }
+        inline const double &getPseudorangeRateUncertaintyMps() const { return std::get< 11>(values_); }
+        inline void setPseudorangeRateUncertaintyMps(const double &_value) { std::get< 11>(values_) = _value; }
+        inline const uint32_t &getAdrStateMask() const { return std::get< 12>(values_); }
+        inline void setAdrStateMask(const uint32_t &_value) { std::get< 12>(values_) = _value; }
+        inline const double &getAdrMeters() const { return std::get< 13>(values_); }
+        inline void setAdrMeters(const double &_value) { std::get< 13>(values_) = _value; }
+        inline const double &getAdrUncertaintyMeters() const { return std::get< 14>(values_); }
+        inline void setAdrUncertaintyMeters(const double &_value) { std::get< 14>(values_) = _value; }
+        inline const float &getCarrierFrequencyHz() const { return std::get< 15>(values_); }
+        inline void setCarrierFrequencyHz(const float &_value) { std::get< 15>(values_) = _value; }
+        inline const int64_t &getCarrierCycles() const { return std::get< 16>(values_); }
+        inline void setCarrierCycles(const int64_t &_value) { std::get< 16>(values_) = _value; }
+        inline const double &getCarrierPhase() const { return std::get< 17>(values_); }
+        inline void setCarrierPhase(const double &_value) { std::get< 17>(values_) = _value; }
+        inline const double &getCarrierPhaseUncertainty() const { return std::get< 18>(values_); }
+        inline void setCarrierPhaseUncertainty(const double &_value) { std::get< 18>(values_) = _value; }
+        inline const uint32_t &getMultipathIndicator() const { return std::get< 19>(values_); }
+        inline void setMultipathIndicator(const uint32_t &_value) { std::get< 19>(values_) = _value; }
+        inline const double &getSignalToNoiseRatioDb() const { return std::get< 20>(values_); }
+        inline void setSignalToNoiseRatioDb(const double &_value) { std::get< 20>(values_) = _value; }
+        inline const double &getAgcLevelDb() const { return std::get< 21>(values_); }
+        inline void setAgcLevelDb(const double &_value) { std::get< 21>(values_) = _value; }
+        inline const double &getBasebandCarrierToNoiseDbHz() const { return std::get< 22>(values_); }
+        inline void setBasebandCarrierToNoiseDbHz(const double &_value) { std::get< 22>(values_) = _value; }
+        inline const uint32_t &getGnssSignalType() const { return std::get< 23>(values_); }
+        inline void setGnssSignalType(const uint32_t &_value) { std::get< 23>(values_) = _value; }
+        inline const double &getFullInterSignalBiasNs() const { return std::get< 24>(values_); }
+        inline void setFullInterSignalBiasNs(const double &_value) { std::get< 24>(values_) = _value; }
+        inline const double &getFullInterSignalBiasUncertaintyNs() const { return std::get< 25>(values_); }
+        inline void setFullInterSignalBiasUncertaintyNs(const double &_value) { std::get< 25>(values_) = _value; }
         inline bool operator==(const IDLGnssMeasurementsData& _other) const {
-        return (getFlags() == _other.getFlags() && getSvId() == _other.getSvId() && getSvType() == _other.getSvType() && getTimeOffsetNs() == _other.getTimeOffsetNs() && getStateMask() == _other.getStateMask() && getReceivedSvTimeNs() == _other.getReceivedSvTimeNs() && getReceivedSvTimeSubNs() == _other.getReceivedSvTimeSubNs() && getReceivedSvTimeUncertaintyNs() == _other.getReceivedSvTimeUncertaintyNs() && getCarrierToNoiseDbHz() == _other.getCarrierToNoiseDbHz() && getPseudorangeRateMps() == _other.getPseudorangeRateMps() && getPseudorangeRateUncertaintyMps() == _other.getPseudorangeRateUncertaintyMps() && getAdrStateMask() == _other.getAdrStateMask() && getAdrMeters() == _other.getAdrMeters() && getAdrUncertaintyMeters() == _other.getAdrUncertaintyMeters() && getCarrierFrequencyHz() == _other.getCarrierFrequencyHz() && getCarrierCycles() == _other.getCarrierCycles() && getCarrierPhase() == _other.getCarrierPhase() && getCarrierPhaseUncertainty() == _other.getCarrierPhaseUncertainty() && getMultipathIndicator() == _other.getMultipathIndicator() && getSignalToNoiseRatioDb() == _other.getSignalToNoiseRatioDb() && getAgcLevelDb() == _other.getAgcLevelDb() && getBasebandCarrierToNoiseDbHz() == _other.getBasebandCarrierToNoiseDbHz() && getGnssSignalType() == _other.getGnssSignalType() && getFullInterSignalBiasNs() == _other.getFullInterSignalBiasNs() && getFullInterSignalBiasUncertaintyNs() == _other.getFullInterSignalBiasUncertaintyNs() && getCycleSlipCount() == _other.getCycleSlipCount());
+        return (getFlags() == _other.getFlags() && getSvId() == _other.getSvId() && getCycleSlipCount() == _other.getCycleSlipCount() && getSvType() == _other.getSvType() && getTimeOffsetNs() == _other.getTimeOffsetNs() && getStateMask() == _other.getStateMask() && getReceivedSvTimeNs() == _other.getReceivedSvTimeNs() && getReceivedSvTimeSubNs() == _other.getReceivedSvTimeSubNs() && getReceivedSvTimeUncertaintyNs() == _other.getReceivedSvTimeUncertaintyNs() && getCarrierToNoiseDbHz() == _other.getCarrierToNoiseDbHz() && getPseudorangeRateMps() == _other.getPseudorangeRateMps() && getPseudorangeRateUncertaintyMps() == _other.getPseudorangeRateUncertaintyMps() && getAdrStateMask() == _other.getAdrStateMask() && getAdrMeters() == _other.getAdrMeters() && getAdrUncertaintyMeters() == _other.getAdrUncertaintyMeters() && getCarrierFrequencyHz() == _other.getCarrierFrequencyHz() && getCarrierCycles() == _other.getCarrierCycles() && getCarrierPhase() == _other.getCarrierPhase() && getCarrierPhaseUncertainty() == _other.getCarrierPhaseUncertainty() && getMultipathIndicator() == _other.getMultipathIndicator() && getSignalToNoiseRatioDb() == _other.getSignalToNoiseRatioDb() && getAgcLevelDb() == _other.getAgcLevelDb() && getBasebandCarrierToNoiseDbHz() == _other.getBasebandCarrierToNoiseDbHz() && getGnssSignalType() == _other.getGnssSignalType() && getFullInterSignalBiasNs() == _other.getFullInterSignalBiasNs() && getFullInterSignalBiasUncertaintyNs() == _other.getFullInterSignalBiasUncertaintyNs());
         }
         inline bool operator!=(const IDLGnssMeasurementsData &_other) const {
             return !((*this) == _other);
@@ -3070,19 +3117,21 @@ public:
         }
     
     };
-    struct IDLGnssMeasurements : CommonAPI::Struct< IDLGnssMeasurementsClock, std::vector< IDLGnssMeasurementsData >, bool> {
+    struct IDLGnssMeasurements : CommonAPI::Struct< IDLGnssMeasurementsClock, std::vector< IDLGnssMeasurementsData >, bool, int16_t> {
     
         IDLGnssMeasurements()
         {
             std::get< 0>(values_) = IDLGnssMeasurementsClock();
             std::get< 1>(values_) = std::vector< IDLGnssMeasurementsData >();
             std::get< 2>(values_) = false;
+            std::get< 3>(values_) = 0;
         }
-        IDLGnssMeasurements(const IDLGnssMeasurementsClock &_clock, const std::vector< IDLGnssMeasurementsData > &_measurements, const bool &_isNHz)
+        IDLGnssMeasurements(const IDLGnssMeasurementsClock &_clock, const std::vector< IDLGnssMeasurementsData > &_measurements, const bool &_isNHz, const int16_t &_reportingLatency)
         {
             std::get< 0>(values_) = _clock;
             std::get< 1>(values_) = _measurements;
             std::get< 2>(values_) = _isNHz;
+            std::get< 3>(values_) = _reportingLatency;
         }
         inline const IDLGnssMeasurementsClock &getClock() const { return std::get< 0>(values_); }
         inline void setClock(const IDLGnssMeasurementsClock &_value) { std::get< 0>(values_) = _value; }
@@ -3090,8 +3139,10 @@ public:
         inline void setMeasurements(const std::vector< IDLGnssMeasurementsData > &_value) { std::get< 1>(values_) = _value; }
         inline const bool &getIsNHz() const { return std::get< 2>(values_); }
         inline void setIsNHz(const bool _value) { std::get< 2>(values_) = _value; }
+        inline const int16_t &getReportingLatency() const { return std::get< 3>(values_); }
+        inline void setReportingLatency(const int16_t &_value) { std::get< 3>(values_) = _value; }
         inline bool operator==(const IDLGnssMeasurements& _other) const {
-        return (getClock() == _other.getClock() && getMeasurements() == _other.getMeasurements() && getIsNHz() == _other.getIsNHz());
+        return (getClock() == _other.getClock() && getMeasurements() == _other.getMeasurements() && getIsNHz() == _other.getIsNHz() && getReportingLatency() == _other.getReportingLatency());
         }
         inline bool operator!=(const IDLGnssMeasurements &_other) const {
             return !((*this) == _other);
@@ -3241,14 +3292,140 @@ public:
         }
     
     };
+    
+    struct MapMatchingFeedbackDataValidity : CommonAPI::Enumeration< uint64_t> {
+        enum Literal : uint64_t {
+            MMF_DATA_INVALID = 0,
+            MMF_DATA_VALID_UTC_TIME = 1,
+            MMF_DATA_VALID_LAT_DIFF = 2,
+            MMF_DATA_VALID_LONG_DIFF = 4,
+            MMF_DATA_VALID_TUNNEL = 8,
+            MMF_DATA_VALID_BEARING = 16,
+            MMF_DATA_VALID_ALTITUDE = 32,
+            MMF_DATA_VALID_HOR_ACC = 64,
+            MMF_DATA_VALID_ALT_ACC = 128,
+            MMF_DATA_VALID_BEARING_ACC = 256
+        };
+    
+        MapMatchingFeedbackDataValidity()
+            : CommonAPI::Enumeration< uint64_t>(static_cast< uint64_t>(Literal::MMF_DATA_INVALID)) {}
+        MapMatchingFeedbackDataValidity(Literal _literal)
+            : CommonAPI::Enumeration< uint64_t>(static_cast< uint64_t>(_literal)) {}
+    
+        inline bool validate() const {
+            switch (value_) {
+                case static_cast< uint64_t>(Literal::MMF_DATA_INVALID):
+                case static_cast< uint64_t>(Literal::MMF_DATA_VALID_UTC_TIME):
+                case static_cast< uint64_t>(Literal::MMF_DATA_VALID_LAT_DIFF):
+                case static_cast< uint64_t>(Literal::MMF_DATA_VALID_LONG_DIFF):
+                case static_cast< uint64_t>(Literal::MMF_DATA_VALID_TUNNEL):
+                case static_cast< uint64_t>(Literal::MMF_DATA_VALID_BEARING):
+                case static_cast< uint64_t>(Literal::MMF_DATA_VALID_ALTITUDE):
+                case static_cast< uint64_t>(Literal::MMF_DATA_VALID_HOR_ACC):
+                case static_cast< uint64_t>(Literal::MMF_DATA_VALID_ALT_ACC):
+                case static_cast< uint64_t>(Literal::MMF_DATA_VALID_BEARING_ACC):
+                return true;
+            default:
+                return false;
+            }
+        }
+    
+        inline bool operator==(const MapMatchingFeedbackDataValidity &_other) const { return (value_ == _other.value_); }
+        inline bool operator!=(const MapMatchingFeedbackDataValidity &_other) const { return (value_ != _other.value_); }
+        inline bool operator<=(const MapMatchingFeedbackDataValidity &_other) const { return (value_ <= _other.value_); }
+        inline bool operator>=(const MapMatchingFeedbackDataValidity &_other) const { return (value_ >= _other.value_); }
+        inline bool operator<(const MapMatchingFeedbackDataValidity &_other) const { return (value_ < _other.value_); }
+        inline bool operator>(const MapMatchingFeedbackDataValidity &_other) const { return (value_ > _other.value_); }
+    
+        inline bool operator==(const Literal &_value) const { return (value_ == static_cast< uint64_t>(_value)); }
+        inline bool operator!=(const Literal &_value) const { return (value_ != static_cast< uint64_t>(_value)); }
+        inline bool operator<=(const Literal &_value) const { return (value_ <= static_cast< uint64_t>(_value)); }
+        inline bool operator>=(const Literal &_value) const { return (value_ >= static_cast< uint64_t>(_value)); }
+        inline bool operator<(const Literal &_value) const { return (value_ < static_cast< uint64_t>(_value)); }
+        inline bool operator>(const Literal &_value) const { return (value_ > static_cast< uint64_t>(_value)); }
+    
+        const char* toString() const noexcept
+        {
+            switch(value_)
+            {
+            case static_cast< uint64_t>(Literal::MMF_DATA_INVALID): return "MMF_DATA_INVALID";
+            case static_cast< uint64_t>(Literal::MMF_DATA_VALID_UTC_TIME): return "MMF_DATA_VALID_UTC_TIME";
+            case static_cast< uint64_t>(Literal::MMF_DATA_VALID_LAT_DIFF): return "MMF_DATA_VALID_LAT_DIFF";
+            case static_cast< uint64_t>(Literal::MMF_DATA_VALID_LONG_DIFF): return "MMF_DATA_VALID_LONG_DIFF";
+            case static_cast< uint64_t>(Literal::MMF_DATA_VALID_TUNNEL): return "MMF_DATA_VALID_TUNNEL";
+            case static_cast< uint64_t>(Literal::MMF_DATA_VALID_BEARING): return "MMF_DATA_VALID_BEARING";
+            case static_cast< uint64_t>(Literal::MMF_DATA_VALID_ALTITUDE): return "MMF_DATA_VALID_ALTITUDE";
+            case static_cast< uint64_t>(Literal::MMF_DATA_VALID_HOR_ACC): return "MMF_DATA_VALID_HOR_ACC";
+            case static_cast< uint64_t>(Literal::MMF_DATA_VALID_ALT_ACC): return "MMF_DATA_VALID_ALT_ACC";
+            case static_cast< uint64_t>(Literal::MMF_DATA_VALID_BEARING_ACC): return "MMF_DATA_VALID_BEARING_ACC";
+            default: return "UNDEFINED";
+            }
+        }
+    };
+    struct MapMatchingFeedbackData : CommonAPI::Struct< uint64_t, uint64_t, double, double, float, double, float, float, float, bool> {
+    
+        MapMatchingFeedbackData()
+        {
+            std::get< 0>(values_) = 0ull;
+            std::get< 1>(values_) = 0ull;
+            std::get< 2>(values_) = 0.0;
+            std::get< 3>(values_) = 0.0;
+            std::get< 4>(values_) = 0.0f;
+            std::get< 5>(values_) = 0.0;
+            std::get< 6>(values_) = 0.0f;
+            std::get< 7>(values_) = 0.0f;
+            std::get< 8>(values_) = 0.0f;
+            std::get< 9>(values_) = false;
+        }
+        MapMatchingFeedbackData(const uint64_t &_validityMask, const uint64_t &_utcTimestampMs, const double &_mapMatchedLatitudeDifference, const double &_mapMatchedLongitudeDifference, const float &_bearing, const double &_altitude, const float &_horizontalAccuracy, const float &_altitudeAccuracy, const float &_bearingAccuracy, const bool &_isTunnel)
+        {
+            std::get< 0>(values_) = _validityMask;
+            std::get< 1>(values_) = _utcTimestampMs;
+            std::get< 2>(values_) = _mapMatchedLatitudeDifference;
+            std::get< 3>(values_) = _mapMatchedLongitudeDifference;
+            std::get< 4>(values_) = _bearing;
+            std::get< 5>(values_) = _altitude;
+            std::get< 6>(values_) = _horizontalAccuracy;
+            std::get< 7>(values_) = _altitudeAccuracy;
+            std::get< 8>(values_) = _bearingAccuracy;
+            std::get< 9>(values_) = _isTunnel;
+        }
+        inline const uint64_t &getValidityMask() const { return std::get< 0>(values_); }
+        inline void setValidityMask(const uint64_t &_value) { std::get< 0>(values_) = _value; }
+        inline const uint64_t &getUtcTimestampMs() const { return std::get< 1>(values_); }
+        inline void setUtcTimestampMs(const uint64_t &_value) { std::get< 1>(values_) = _value; }
+        inline const double &getMapMatchedLatitudeDifference() const { return std::get< 2>(values_); }
+        inline void setMapMatchedLatitudeDifference(const double &_value) { std::get< 2>(values_) = _value; }
+        inline const double &getMapMatchedLongitudeDifference() const { return std::get< 3>(values_); }
+        inline void setMapMatchedLongitudeDifference(const double &_value) { std::get< 3>(values_) = _value; }
+        inline const float &getBearing() const { return std::get< 4>(values_); }
+        inline void setBearing(const float &_value) { std::get< 4>(values_) = _value; }
+        inline const double &getAltitude() const { return std::get< 5>(values_); }
+        inline void setAltitude(const double &_value) { std::get< 5>(values_) = _value; }
+        inline const float &getHorizontalAccuracy() const { return std::get< 6>(values_); }
+        inline void setHorizontalAccuracy(const float &_value) { std::get< 6>(values_) = _value; }
+        inline const float &getAltitudeAccuracy() const { return std::get< 7>(values_); }
+        inline void setAltitudeAccuracy(const float &_value) { std::get< 7>(values_) = _value; }
+        inline const float &getBearingAccuracy() const { return std::get< 8>(values_); }
+        inline void setBearingAccuracy(const float &_value) { std::get< 8>(values_) = _value; }
+        inline const bool &getIsTunnel() const { return std::get< 9>(values_); }
+        inline void setIsTunnel(const bool _value) { std::get< 9>(values_) = _value; }
+        inline bool operator==(const MapMatchingFeedbackData& _other) const {
+        return (getValidityMask() == _other.getValidityMask() && getUtcTimestampMs() == _other.getUtcTimestampMs() && getMapMatchedLatitudeDifference() == _other.getMapMatchedLatitudeDifference() && getMapMatchedLongitudeDifference() == _other.getMapMatchedLongitudeDifference() && getBearing() == _other.getBearing() && getAltitude() == _other.getAltitude() && getHorizontalAccuracy() == _other.getHorizontalAccuracy() && getAltitudeAccuracy() == _other.getAltitudeAccuracy() && getBearingAccuracy() == _other.getBearingAccuracy() && getIsTunnel() == _other.getIsTunnel());
+        }
+        inline bool operator!=(const MapMatchingFeedbackData &_other) const {
+            return !((*this) == _other);
+        }
+    
+    };
 };
 
 const char* LocIdlAPI::getInterface() {
-    return ("com.qualcomm.qti.location.LocIdlAPI:v0_1");
+    return ("com.qualcomm.qti.location.LocIdlAPI:v0_2");
 }
 
 CommonAPI::Version LocIdlAPI::getInterfaceVersion() {
-    return CommonAPI::Version(0, 1);
+    return CommonAPI::Version(0, 2);
 }
 
 
@@ -3263,6 +3440,6 @@ namespace CommonAPI {
 
 
 // Compatibility
-namespace v0_1 = v0;
+namespace v0_2 = v0;
 
 #endif // V0_COM_QUALCOMM_QTI_LOCATION_LOC_IDL_API_HPP_

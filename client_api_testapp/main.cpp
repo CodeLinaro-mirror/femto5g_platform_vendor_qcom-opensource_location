@@ -100,6 +100,7 @@ static uint32_t numEngineNmeaCb = 0;
 static uint32_t numDataCb         = 0;
 static uint32_t numGnssMeasurementsCb = 0;
 static uint32_t numGnssEphemerisCb = 0;
+static uint32_t  numNmeaSentencesCb = 0;
 
 static LocationClientApi* pLcaClient = nullptr;
 static location_integration::LocationIntegrationApi* pIntClient = nullptr;
@@ -128,6 +129,7 @@ enum ReportType {
     DC_REPORT          = 1 << 6,
     ENGINE_NMEA_REPORT = 1 << 7,
     EPHEMERIS_REPORT   = 1 << 8,
+    NMEA_SENTENCES_REPORT = 1 << 9,
 };
 
 enum TrackingSessionType {
@@ -249,6 +251,7 @@ static void resetCounters() {
     numEngineNmeaCb = 0;
     numDataCb = 0;
     numGnssMeasurementsCb = 0;
+    numNmeaSentencesCb = 0;
 }
 
 static void cleanupAfterAutoStart() {
@@ -290,19 +293,18 @@ static void onResponseCb(location_client::LocationResponse response) {
 
 static void onLocationCb(const location_client::Location& location) {
     numFixes++;
-    // There is no sessionStatus for LCA Location. So check for horizontal accuracy of
-    // less than 20meters for a successful fix count.
-    if ((location.flags & LOCATION_HAS_ACCURACY_BIT) && (location.horizontalAccuracy <= 20)) {
-        numValidFixes++;
+    if (LOC_SESS_SUCCESS == location.sessionStatus) {
+         numValidFixes++;
     }
     if (outputEnabled) {
         if (detailedOutputEnabled) {
             printf("<<< onLocationCb cnt=(%u/%u): %s\n", numValidFixes, numFixes,
                     location.toString().c_str());
         } else {
-            printf("<<< onLocationCb cnt=(%u/%u): time=%" PRIu64" mask=0x%x lat=%f lon=%f alt=%f"
-                   " horzacc=%f\n",
+            printf("<<< onLocationCb cnt=(%u/%u): session status %d time=%" PRIu64
+                   " mask=0x%x lat=%f lon=%f alt=%f horzacc=%f\n",
                    numValidFixes, numFixes,
+                   location.sessionStatus,
                    location.timestamp,
                    location.flags,
                    location.latitude,
@@ -379,9 +381,10 @@ static void onGnssLocationCb(const location_client::GnssLocation& location) {
             printf("<<< onGnssLocationCb cnt=(%u/%u): %s\n", numValidFixes, numFixes,
                     location.toString().c_str());
         } else {
-            printf("<<< onGnssLocationCb cnt=(%u/%u): time=%" PRIu64" mask=0x%x lat=%f lon=%f "
-                   "alt=%f\n",
+            printf("<<< onGnssLocationCb cnt=(%u/%u): session status %d time=%" PRIu64
+                   " mask=0x%x lat=%f lon=%f alt=%f\n",
                     numValidFixes, numFixes,
+                    location.sessionStatus,
                     location.timestamp,
                     location.flags,
                     location.latitude,
@@ -514,6 +517,19 @@ static void onEngineNmeaCb(LocOutputEngineType engType,
     if (outputEnabled) {
         printf("<<< onEngineNmeaCb cnt=%u engine type=%u time=%" PRIu64" nmea=%s",
             numEngineNmeaCb, engType, timestamp, nmea.c_str());
+    }
+    if (routeToNMEAPort && openPort()) {
+                sendNMEAToTty(nmea);
+    }
+}
+
+static void onNmeaSentencesCb(LocOutputEngineType engType,
+                           uint64_t timestamp,
+                           const std::string& nmea) {
+    numNmeaSentencesCb++;
+    if (outputEnabled) {
+        printf("<<< onNmeaSentencesCb cnt=%u engine type=%u time=%" PRIu64" nmea=%s \n",
+            numNmeaSentencesCb, engType, timestamp, nmea.c_str());
     }
     if (routeToNMEAPort && openPort()) {
                 sendNMEAToTty(nmea);
@@ -1161,6 +1177,9 @@ static void setupGnssReportCbs(uint32_t reportType, GnssReportCbs& reportcbs) {
     if (reportType & EPHEMERIS_REPORT) {
         reportcbs.gnssEphReportCallback = GnssEphReportCb(onGnssEphemerisCb);
     }
+    if (reportType & NMEA_SENTENCES_REPORT) {
+        reportcbs.nmeaSentencesCallback = NmeaSentencesCb(onNmeaSentencesCb);
+    }
 }
 
 static void setupEngineReportCbs(uint32_t reportType, EngineReportCbs& reportcbs) {
@@ -1190,6 +1209,9 @@ static void setupEngineReportCbs(uint32_t reportType, EngineReportCbs& reportcbs
     }
     if (reportType & EPHEMERIS_REPORT) {
         reportcbs.gnssEphReportCallback = GnssEphReportCb(onGnssEphemerisCb);
+    }
+    if (reportType & NMEA_SENTENCES_REPORT) {
+        reportcbs.nmeaSentencesCallback = NmeaSentencesCb(onNmeaSentencesCb);
     }
 }
 
@@ -1507,7 +1529,7 @@ static bool checkForAutoStart(int argc, char *argv[]) {
     uint32_t aidingDataMask = 0;
     int interval = 100;
     LocReqEngineTypeMask reqEngMask = (LocReqEngineTypeMask) 0x7;
-    uint32_t reportType = 0x1fd;
+    uint32_t reportType =  0x2fd;
     TrackingSessionType trackingType = NO_TRACKING;
 
     //Specifying the expected options
@@ -2527,7 +2549,7 @@ int main(int argc, char *argv[]) {
                     pLcaClient = new LocationClientApi(onCapabilitiesCb);
                 }
                 if (pLcaClient) {
-                    uint32_t reportType = 0x1fd;
+                    uint32_t reportType = 0x2fd;
                     uint32_t tbfMsec = 100;
                     LocReqEngineTypeMask reqEngMask = (LocReqEngineTypeMask)
                         (LOC_REQ_ENGINE_FUSED_BIT|LOC_REQ_ENGINE_SPE_BIT|
@@ -2547,7 +2569,7 @@ int main(int argc, char *argv[]) {
                     pLcaClient = new LocationClientApi(onCapabilitiesCb);
                 }
                 if (pLcaClient) {
-                    uint32_t reportType = 0x1ff;
+                    uint32_t reportType = 0x2ff;
                     uint32_t tbfMsec = 100;
                     getTrackingParams(buf, &reportType, &tbfMsec, nullptr);
                     reportcbs = {};

@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -497,6 +497,7 @@ void IpcListener::onReceive(const char* data, uint32_t length,
             case E_INTAPI_REGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID:
             case E_INTAPI_DEREGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID:
             case E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_REQ_MSG_ID:
+            case E_INTAPI_CONFIG_MAP_MATCHED_FEEDBACK_MSG_ID:
             {
                 PBLocAPIGenericRespMsg pbLocApiGenericRsp;
                 if (0 == pbLocApiGenericRsp.ParseFromString(pbLocApiMsg.payload())) {
@@ -1948,10 +1949,39 @@ void LocationIntegrationApiImpl::processRegisterGnssSignalTypesRespCb(
         if (msg->mSignalTypeMask & ::GNSS_SIGNAL_BEIDOU_B2BQ) {
             gnssSignalTypeMask |= location_client::GNSS_SIGNAL_BEIDOU_B2BQ_BIT;
         }
+        if (msg->mSignalTypeMask & ::GNSS_SIGNAL_NAVIC_L1) {
+            gnssSignalTypeMask |= location_client::GNSS_SIGNAL_NAVIC_L1_BIT;
+        }
         LOC_LOGd("received GNSS signal Types : %x, send out supported GNSS signal types: %x",
                 msg->mSignalTypeMask, gnssSignalTypeMask);
         mIntegrationCbs.gnssSignalTypesCb((location_client::GnssSignalTypeMask)gnssSignalTypeMask);
     }
+}
+
+uint32_t LocationIntegrationApiImpl::gnssInjectMmfData(const GnssMapMatchedData& mmfData) {
+    struct InjectMmfDataReq : public LocMsg {
+        InjectMmfDataReq(LocationIntegrationApiImpl* apiImpl,
+                         const GnssMapMatchedData& mapData) :
+                mApiImpl(apiImpl),
+                mMapData(mapData) {}
+        virtual ~InjectMmfDataReq() {}
+        void proc() const {
+            string pbStr;
+            LocInjectMmfDataReqMsg msg(mApiImpl->mSocketName,
+                    const_cast<GnssMapMatchedData&>(mMapData),
+                    &mApiImpl->mPbufMsgConv);
+            if (msg.serializeToProtobuf(pbStr)) {
+                mApiImpl->sendConfigMsgToHalDaemon(CONFIG_MAP_MATCHED_FEEDBACK, pbStr);
+            } else {
+                LOC_LOGe("LocConfigAidingDataDeletionReqMsg serializeToProtobuf failed");
+            }
+        }
+        LocationIntegrationApiImpl* mApiImpl;
+        const GnssMapMatchedData mMapData;
+    };
+    mMsgTask.sendMsg(new (nothrow) InjectMmfDataReq(this, mmfData));
+
+    return 0;
 }
 
 /******************************************************************************

@@ -32,8 +32,8 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef E01HELLOWORLDSTUBIMPL_HPP_
-#define E01HELLOWORLDSTUBIMPL_HPP_
+#ifndef LOCIDLAPISTUBIMPL_HPP
+#define LOCIDLAPISTUBIMPL_HPP
 
 #include <iostream>
 #include <thread>
@@ -78,6 +78,10 @@ public:
     virtual void configConstellations(const std::shared_ptr<CommonAPI::ClientId> client,
             std::vector< LocIdlAPI::IDLGnssSvIdInfo > svList,
             configConstellationsReply_t reply);
+
+    virtual void injectMapMatchedFeedbackData(const std::shared_ptr<CommonAPI::ClientId> client,
+            LocIdlAPI::MapMatchingFeedbackData mmfData, injectMapMatchedFeedbackDataReply_t reply);
+
     uint32_t mCapsMask;
 
     const LocIdlAPIService* mApiService;
@@ -85,4 +89,4 @@ public:
     ~LocIdlAPIStubImpl();
 };
 
-#endif // E01HELLOWORLDSTUBIMPL_HPP_
+#endif // LOCIDLAPISTUBIMPL_HPP

@@ -156,6 +156,10 @@ public:
     int convertAntennaInfoToPB(const AntennaInformation& antennaInfo,
             PBAntennaInformation* pbAntennaInfo) const;
 
+    // GnssMapMatchedData to PBGnssMapMatchedData
+    int convertGnssMmfDataToPB(const GnssMapMatchedData mmfData,
+           PBGnssMapMatchedData* pbMmfData) const;
+
     // Memory cleanup - Free up memory after PB conversion and serializing data
     inline void freeUpPBLocAPIStartTrackingReqMsg(PBLocAPIStartTrackingReqMsg &pbLocApiStartTrack)
             const {
@@ -376,6 +380,9 @@ public:
         pbLocApiMeasInd.clear_gnssmeasurementsnotification();
     }
 
+    inline void freeUpPBLocInjectMmfDataReqMsg(PBLocInjectMmfDataReqMsg &pbLogMmfDataInd) const {
+        pbLogMmfDataInd.clear_gnssmmfdata();
+    }
     inline void freeUpPBLocAPILocationSystemInfoIndMsg(PBLocAPILocationSystemInfoIndMsg
             &pbLocApiLocSysInfoInd) const {
         // PBLeapSecondChangeInfo - PBLocApiGnssSystemTimeStructType gpsTimestampLsChange = 1;
@@ -635,6 +642,8 @@ public:
             XtraConfigParams& xtraParams) const;
     int pbConvertToXtraStatus(const PBXtraStatus &pbXtraStatus,
             XtraStatus& xtraStatus) const;
+    int pbConvertToGnssMmfData(const PBGnssMapMatchedData& pbMmfData,
+            GnssMapMatchedData& mmfData) const;
 
     // MASK CONVERSION
     // ***************
@@ -877,6 +886,7 @@ private:
             const GnssMeasurementsMultipathIndicator &gnssMeasMultiPathIndic) const;
     PBLocApiGnss_LocSvSystemEnumType getPBEnumForGnssLocSvSystem(
             const Gnss_LocSvSystemEnumType &gnssLocSvSysEnumType) const;
+    PBAgcStatus getPBEnumForAgcStatus(const AgcStatus &agcStatus) const;
     // PBLocationSessionStatus from/to loc_sess_status
     PBLocationSessionStatus getPBEnumForLocSessionStatus(const loc_sess_status &status) const;
     PBGnssEphemerisType getPBEnumForGnssEphemerisType(
@@ -968,6 +978,7 @@ private:
             const PBGnssEphemerisSource& pbGnssEphemerisSource) const;
     GnssEphemerisHealth getEnumForPBGnssEphemerisHealth(
             const PBGnssEphemerisHealth& pbGnssEphemerisHealth) const;
+    AgcStatus getEnumForPBAgcStatus(const PBAgcStatus &pbAgcStatus) const;
 
     // ** Special enum conversion
     // PBLocApiGnss_LocSvSystemEnumType to GnssSvType

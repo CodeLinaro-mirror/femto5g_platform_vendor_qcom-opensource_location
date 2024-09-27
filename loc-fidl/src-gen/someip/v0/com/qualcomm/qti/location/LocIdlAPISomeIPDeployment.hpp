@@ -61,6 +61,7 @@ typedef CommonAPI::SomeIP::EnumerationDeployment<uint8_t> IDLGnssMeasurementsMul
 typedef CommonAPI::SomeIP::EnumerationDeployment<uint8_t> IDLGnssMeasurementsClockFlagsMaskDeployment_t;
 typedef CommonAPI::SomeIP::EnumerationDeployment<uint8_t> IDLAidingDataDeletionMaskDeployment_t;
 typedef CommonAPI::SomeIP::EnumerationDeployment<uint8_t> IDLGnssConstellationTypeDeployment_t;
+typedef CommonAPI::SomeIP::EnumerationDeployment<uint8_t> MapMatchingFeedbackDataValidityDeployment_t;
 typedef CommonAPI::SomeIP::StructDeployment<
     CommonAPI::SomeIP::IntegerDeployment<uint64_t>,
     CommonAPI::SomeIP::IntegerDeployment<uint64_t>,
@@ -70,7 +71,7 @@ typedef CommonAPI::SomeIP::StructDeployment<
     CommonAPI::SomeIP::IntegerDeployment<uint64_t>
 > IDLLocationReportSvUsedInPositionDeployment_t;
 typedef CommonAPI::SomeIP::StructDeployment<
-    CommonAPI::SomeIP::IntegerDeployment<uint32_t>,
+    CommonAPI::SomeIP::IntegerDeployment<uint16_t>,
     CommonAPI::SomeIP::IntegerDeployment<uint16_t>,
     CommonAPI::SomeIP::IntegerDeployment<uint32_t>
 > IDLGnssMeasUsageInfoDeployment_t;
@@ -386,7 +387,7 @@ typedef CommonAPI::SomeIP::StructDeployment<
     >,
     CommonAPI::SomeIP::ArrayDeployment<
         CommonAPI::SomeIP::StructDeployment<
-            CommonAPI::SomeIP::IntegerDeployment<uint32_t>,
+            CommonAPI::SomeIP::IntegerDeployment<uint16_t>,
             CommonAPI::SomeIP::IntegerDeployment<uint16_t>,
             CommonAPI::SomeIP::IntegerDeployment<uint32_t>
         >
@@ -416,9 +417,15 @@ typedef CommonAPI::SomeIP::StructDeployment<
         CommonAPI::SomeIP::IntegerDeployment<uint16_t>
     >,
     CommonAPI::SomeIP::IntegerDeployment<uint64_t>,
-    CommonAPI::SomeIP::IntegerDeployment<uint64_t>
+    CommonAPI::SomeIP::IntegerDeployment<uint64_t>,
+    CommonAPI::EmptyDeployment,
+    CommonAPI::SomeIP::IntegerDeployment<uint64_t>,
+    CommonAPI::SomeIP::IntegerDeployment<uint32_t>,
+    CommonAPI::SomeIP::IntegerDeployment<int16_t>,
+    CommonAPI::SomeIP::IntegerDeployment<uint8_t>
 > IDLLocationReportDeployment_t;
 typedef CommonAPI::SomeIP::StructDeployment<
+    CommonAPI::SomeIP::IntegerDeployment<uint16_t>,
     CommonAPI::SomeIP::IntegerDeployment<uint16_t>,
     ::v0::com::qualcomm::qti::location::LocIdlAPI_::IDLGnssSvTypeDeployment_t,
     CommonAPI::EmptyDeployment,
@@ -427,8 +434,7 @@ typedef CommonAPI::SomeIP::StructDeployment<
     CommonAPI::SomeIP::IntegerDeployment<uint32_t>,
     CommonAPI::EmptyDeployment,
     CommonAPI::SomeIP::IntegerDeployment<uint32_t>,
-    CommonAPI::EmptyDeployment,
-    CommonAPI::SomeIP::IntegerDeployment<uint16_t>
+    CommonAPI::EmptyDeployment
 > IDLGnssSvDeployment_t;
 typedef CommonAPI::SomeIP::StructDeployment<
     CommonAPI::SomeIP::ArrayDeployment<
@@ -444,6 +450,7 @@ typedef CommonAPI::SomeIP::StructDeployment<
 typedef CommonAPI::SomeIP::StructDeployment<
     CommonAPI::SomeIP::IntegerDeployment<uint32_t>,
     CommonAPI::SomeIP::IntegerDeployment<uint16_t>,
+    CommonAPI::SomeIP::IntegerDeployment<uint8_t>,
     ::v0::com::qualcomm::qti::location::LocIdlAPI_::IDLGnssSvTypeDeployment_t,
     CommonAPI::EmptyDeployment,
     CommonAPI::SomeIP::IntegerDeployment<uint32_t>,
@@ -466,8 +473,7 @@ typedef CommonAPI::SomeIP::StructDeployment<
     CommonAPI::EmptyDeployment,
     CommonAPI::SomeIP::IntegerDeployment<uint32_t>,
     CommonAPI::EmptyDeployment,
-    CommonAPI::EmptyDeployment,
-    CommonAPI::SomeIP::IntegerDeployment<uint8_t>
+    CommonAPI::EmptyDeployment
 > IDLGnssMeasurementsDataDeployment_t;
 typedef CommonAPI::SomeIP::StructDeployment<
     CommonAPI::SomeIP::IntegerDeployment<uint32_t>,
@@ -506,6 +512,7 @@ typedef CommonAPI::SomeIP::StructDeployment<
         CommonAPI::SomeIP::StructDeployment<
             CommonAPI::SomeIP::IntegerDeployment<uint32_t>,
             CommonAPI::SomeIP::IntegerDeployment<uint16_t>,
+            CommonAPI::SomeIP::IntegerDeployment<uint8_t>,
             ::v0::com::qualcomm::qti::location::LocIdlAPI_::IDLGnssSvTypeDeployment_t,
             CommonAPI::EmptyDeployment,
             CommonAPI::SomeIP::IntegerDeployment<uint32_t>,
@@ -528,16 +535,28 @@ typedef CommonAPI::SomeIP::StructDeployment<
             CommonAPI::EmptyDeployment,
             CommonAPI::SomeIP::IntegerDeployment<uint32_t>,
             CommonAPI::EmptyDeployment,
-            CommonAPI::EmptyDeployment,
-            CommonAPI::SomeIP::IntegerDeployment<uint8_t>
+            CommonAPI::EmptyDeployment
         >
     >,
-    CommonAPI::EmptyDeployment
+    CommonAPI::EmptyDeployment,
+    CommonAPI::SomeIP::IntegerDeployment<int16_t>
 > IDLGnssMeasurementsDeployment_t;
 typedef CommonAPI::SomeIP::StructDeployment<
     ::v0::com::qualcomm::qti::location::LocIdlAPI_::IDLGnssConstellationTypeDeployment_t,
     CommonAPI::SomeIP::IntegerDeployment<uint32_t>
 > IDLGnssSvIdInfoDeployment_t;
+typedef CommonAPI::SomeIP::StructDeployment<
+    CommonAPI::SomeIP::IntegerDeployment<uint64_t>,
+    CommonAPI::SomeIP::IntegerDeployment<uint64_t>,
+    CommonAPI::EmptyDeployment,
+    CommonAPI::EmptyDeployment,
+    CommonAPI::EmptyDeployment,
+    CommonAPI::EmptyDeployment,
+    CommonAPI::EmptyDeployment,
+    CommonAPI::EmptyDeployment,
+    CommonAPI::EmptyDeployment,
+    CommonAPI::EmptyDeployment
+> MapMatchingFeedbackDataDeployment_t;
 
 // Type-specific deployments
 COMMONAPI_EXPORT extern IDLGnssReportCbInfoMaskDeployment_t IDLGnssReportCbInfoMaskDeployment;
@@ -574,6 +593,7 @@ COMMONAPI_EXPORT extern IDLGnssMeasurementsClockFlagsMaskDeployment_t IDLGnssMea
 COMMONAPI_EXPORT extern ::v0::com::qualcomm::qti::location::LocIdlAPI_::IDLGnssMeasurementsDataDeployment_t IDLGnssMeasurementsDataDeployment;
 COMMONAPI_EXPORT extern CommonAPI::SomeIP::ArrayDeployment< ::v0::com::qualcomm::qti::location::LocIdlAPI_::IDLGnssMeasurementsDataDeployment_t > IDLGnssMeasurements_measurementsDeployment;
 COMMONAPI_EXPORT extern ::v0::com::qualcomm::qti::location::LocIdlAPI_::IDLGnssMeasurementsDeployment_t IDLGnssMeasurementsDeployment;
+COMMONAPI_EXPORT extern MapMatchingFeedbackDataValidityDeployment_t MapMatchingFeedbackDataValidityDeployment;
 
 // Attribute-specific deployments
 
