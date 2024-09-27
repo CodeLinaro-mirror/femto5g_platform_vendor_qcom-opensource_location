@@ -186,6 +186,8 @@ public:
     virtual void setPositionAssistedClockEstimatorMode(bool enabled,
                                                        LocApiResponse* adapterResponse=nullptr);
     virtual void getGnssEnergyConsumed();
+    virtual void updateSystemPowerState(PowerStateType powerState);
+
     virtual void requestForAidingData(GnssAidingDataSvMask svDataMask);
 
     virtual LocationError setXtraVersionCheckSync(uint32_t check);
