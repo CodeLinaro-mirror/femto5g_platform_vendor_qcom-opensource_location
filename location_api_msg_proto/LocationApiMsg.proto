@@ -29,7 +29,7 @@
  /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022, 2024 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -62,6 +62,11 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/*
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
 // ============================================================================
 // LocationApiMsg.proto
 // Location Api messages definition - structs, enums etc
@@ -82,8 +87,8 @@ enum LocationApiMsgVersion {
     LOCAPI_MSG_VER_MAJOR = 1;
     // Minor - New features / API addition, new message/elemtent addition.
     // Bump the last byte of version i.e. x.2 to x.3
-    // Minor version 17: Add geodetic datum type in ConfigOutputNmea msg
-    LOCAPI_MSG_VER_MINOR = 17;
+    // Minor version 23: Support ODCPI based position injection
+    LOCAPI_MSG_VER_MINOR = 23;
 }
 
 // ============================================================================
@@ -166,6 +171,8 @@ enum PBELocMsgID {
     // Single shot fix request/response msg
     PB_E_LOCAPI_GET_SINGLE_POS_REQ_MSG_ID = 38;
     PB_E_LOCAPI_GET_SINGLE_POS_RESP_MSG_ID = 39;
+    // Ephemeris Data
+    PB_E_LOCAPI_EPH_MSG_ID = 40;
 
     // ping
     PB_E_LOCAPI_PINGTEST_MSG_ID = 99;
@@ -187,6 +194,12 @@ enum PBELocMsgID {
     PB_E_INTAPI_CONFIG_ENGINE_INTEGRITY_RISK_MSG_ID = 213;
     PB_E_INTAPI_CONFIG_XTRA_PARAMS_MSG_ID = 214;
     PB_E_INTAPI_INJECT_LOCATION_MSG_ID = 215;
+    PB_E_INTAPI_CONFIG_MERKLE_TREE_MSG_ID = 216;
+    PB_E_INTAPI_CONFIG_OSNMA_ENABLEMENT_MSG_ID = 217;
+    PB_E_INTAPI_CONFIG_MAP_MATCHED_FEEDBACK_MSG_ID = 218;
+    PB_E_INTAPI_CONFIG_REGISTER_ODCPI_INIT_MSG_ID = 219;
+    PB_E_INTAPI_CONFIG_ODCPI_INJECT_CB_MSG_ID = 220;
+    PB_E_INTAPI_CONFIG_ODCPI_INJECT_MSG_ID = 221;
 
     // integration API config retrieval request/response
     PB_E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID  = 300;
@@ -206,6 +219,9 @@ enum PBELocMsgID {
 
     PB_E_INTAPI_REGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID = 310;
     PB_E_INTAPI_DEREGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID = 311;
+
+    PB_E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_REQ_MSG_ID = 312;
+    PB_E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_RESP_MSG_ID = 313;
 }
 
 enum PBClientType {
@@ -217,7 +233,7 @@ enum PBClientType {
 enum PBLocationCallbacksMask {
     PB_E_LOC_CB_INVALID                     = 0;
     /**< Register for DBT location report */
-    PB_E_LOC_CB_DISTANCE_BASED_TRACKING_BIT = 0x1;
+    PB_E_LOC_CB_TRACKING_BIT                = 0x1;
     /**< Register for GNSS Location */
     PB_E_LOC_CB_GNSS_LOCATION_INFO_BIT      = 0x2;
     /**< Register for GNSS SV */
@@ -244,6 +260,10 @@ enum PBLocationCallbacksMask {
     PB_E_LOC_CB_GNSS_NHZ_MEAS_BIT           = 0x1000;
     /**< Register for disater and crisis report */
     PB_E_LOC_CB_GNSS_DC_REPORT_BIT          = 0x2000;
+    /**< Register for Engine NMEA */
+    PB_E_LOC_CB_ENGINE_NMEA_BIT             = 0x4000;
+    /**< Register for GNSS EPH */
+    PB_E_LOC_CB_GNSS_EPH_BIT                = 0x8000;
 }
 
 enum PBEngineInfoCallbacksMask {
@@ -273,6 +293,7 @@ enum PBGeofenceBreachTypeMask {
 message PBLocAPINmeaSerializedPayload {
     uint64 timestamp = 1;
     string nmea = 2;
+    PBLocApiOutputEngineType locOutputEngType = 3;
 }
 
 message PBLocAPIBatchNotification {
@@ -512,6 +533,11 @@ message PBLocAPIDcReportIndMsg {
     PBGnssDcReportInfo dcReportInfo = 1;
 }
 
+
+// defintion for message with msg id of PB_E_LOCAPI_EPH_MSG_ID
+message PBLocAPIEphIndMsg {
+    PBGnssEphemerisNotification gnssEphemerisNotification = 1;
+}
 //*******************************************************************
 // IPC message structure - Single-shot Terrestrial fix
 //*******************************************************************
@@ -614,6 +640,7 @@ message PBLocConfigUserConsentTerrestrialPositioningReqMsg {
 message PBLocConfigOutputNmeaTypesReqMsg {
     uint32 nmeaTypesMask = 1;
     PBGnssGeodeticDatumType nmeaDatumType = 2;
+    uint32 nmeaReqEngMask = 3;
 }
 
 // defintion for message with msg id of
@@ -627,6 +654,35 @@ message PBLocConfigEngineIntegrityRiskReqMsg {
 message PBLocConfigXtraReqMsg {
     bool enable = 1;
     PBXtraConfigParams xtraParams = 2;
+}
+
+// defintion for message with msg id of PB_E_INTAPI_CONFIG_MERKLE_TREE_MSG_ID
+message PBLocConfigMerkleTreeReqMsg {
+    string mMerkleTreeConfig = 1;
+}
+
+// defintion for message with msg id of PB_E_INTAPI_CONFIG_OSNMA_ENABLEMENT_MSG_ID
+message PBLocConfigOsnmaEnablementReqMsg {
+    bool mEnable = 1;
+}
+
+// defintion for message with msg id of
+// PB_E_INTAPI_CONFIG_REGISTER_ODCPI_INIT_MSG_ID
+message PBLocConfigOdcpiInitReqMsg {
+    bool mRegOdcpiInit = 1;
+    PBOdcpiPriority mPriority = 2;
+}
+
+// defintion for message with msg id of
+// PB_E_INTAPI_CONFIG_ODCPI_INJECT_CB_MSG_ID
+message PBLocConfigOdcpiInjectReqCBMsg {
+    PBOdcpiRequestInfo mRequestInfo = 1;
+}
+
+// defintion for message with msg id of
+// PB_E_INTAPI_CONFIG_ODCPI_INJECT_MSG_ID
+message PBLocConfigOdcpiInjectReqMsg {
+    PBLocation mLocation = 1;
 }
 
 //******************************************************************************
@@ -710,6 +766,18 @@ message PBLocIntApiInjectLocationMsg {
     PBLocation location = 1;
 }
 
+// defintion for message with msg id of
+// PB_E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_REQ_MSG_ID
+message PBLocConfigRegisterGnssSignalTypesUpdateReqMsg {
+    bool mRegisterUpdate = 1; // true for register and false for unregister
+}
+
+// defintion for message with msg id of
+// PB_E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_RESP_MSG_ID
+message PBLocConfigRegisterGnssSignalTypesUpdateRespMsg {
+    uint32 mSignalTypeMask = 1; //Specifies GNSS signal type - bitwise OR of PBGnssSignalTypeMask
+}
+
 //*****************************
 // IPC message structure - ping
 //*****************************
@@ -722,6 +790,11 @@ message PBLocAPIPingTestReqMsg {
 message PBLocAPIPingTestIndMsg {
     uint32 numberOfPing = 1;
     repeated uint32 data = 2;
+}
+
+// defintion for message with msg id of PB_E_INTAPI_CONFIG_MAP_MATCHED_FEEDBACK_MSG_ID
+message PBLocInjectMmfDataReqMsg {
+    PBGnssMapMatchedData gnssMmfData = 1;
 }
 
 //*******************************
