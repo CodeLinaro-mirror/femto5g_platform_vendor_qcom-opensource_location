@@ -26,12 +26,47 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+ /*
+Changes from Qualcomm Innovation Center are provided under the following license:
+
+Copyright (c) 2022, 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted (subject to the limitations in the
+disclaimer below) provided that the following conditions are met:
+
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+
+    * Redistributions in binary form must reproduce the above
+      copyright notice, this list of conditions and the following
+      disclaimer in the documentation and/or other materials provided
+      with the distribution.
+
+    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
+      contributors may be used to endorse or promote products derived
+      from this software without specific prior written permission.
+
+NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
 /*
- * Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
- * Copyright (c) 2023- 2024 Qualcomm Innovation Center, Inc. All rights reserved.
- * SPDX-License-Identifier: BSD-3-Clause-Clear */
-
-
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+ * Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
 // ============================================================================
 // LocationApiMsg.proto
 // Location Api messages definition - structs, enums etc
@@ -51,12 +86,12 @@ enum LocationApiMsgVersion {
     option allow_alias = true;
 
     LOCAPI_MSG_VER_INVALID = 0;
-    // Major changes - compatibility breakage. Bump the first byte of version i.e. 1.x.y to 2.0.0
+    // Major changes - compatibility breakage. Bump the first byte of version i.e. 1.x to 2.0
     LOCAPI_MSG_VER_MAJOR = 1;
     // Minor - New features / API addition, new message/elemtent addition.
     // Bump the last byte of version i.e. x.2 to x.3
-    // Minor version 21: Support Ephemeris reporting for LCA
-    LOCAPI_MSG_VER_MINOR = 21;
+    // Minor version 23: Support ODCPI based position injection
+    LOCAPI_MSG_VER_MINOR = 23;
     // Micro - Bug fixes. Bump the last byte of version i.e. x.y.2 to x.y.3
     LOCAPI_MSG_VER_MICRO = 0;
 }
@@ -166,6 +201,10 @@ enum PBELocMsgID {
     PB_E_INTAPI_INJECT_LOCATION_MSG_ID = 215;
     PB_E_INTAPI_CONFIG_MERKLE_TREE_MSG_ID = 216;
     PB_E_INTAPI_CONFIG_OSNMA_ENABLEMENT_MSG_ID = 217;
+    PB_E_INTAPI_CONFIG_MAP_MATCHED_FEEDBACK_MSG_ID = 218;
+    PB_E_INTAPI_CONFIG_REGISTER_ODCPI_INIT_MSG_ID = 219;
+    PB_E_INTAPI_CONFIG_ODCPI_INJECT_CB_MSG_ID = 220;
+    PB_E_INTAPI_CONFIG_ODCPI_INJECT_MSG_ID = 221;
 
     // integration API config retrieval request/response
     PB_E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID  = 300;
@@ -631,6 +670,26 @@ message PBLocConfigMerkleTreeReqMsg {
 message PBLocConfigOsnmaEnablementReqMsg {
     bool mEnable = 1;
 }
+
+// defintion for message with msg id of
+// PB_E_INTAPI_CONFIG_REGISTER_ODCPI_INIT_MSG_ID
+message PBLocConfigOdcpiInitReqMsg {
+    bool mRegOdcpiInit = 1;
+    PBOdcpiPriority mPriority = 2;
+}
+
+// defintion for message with msg id of
+// PB_E_INTAPI_CONFIG_ODCPI_INJECT_CB_MSG_ID
+message PBLocConfigOdcpiInjectReqCBMsg {
+    PBOdcpiRequestInfo mRequestInfo = 1;
+}
+
+// defintion for message with msg id of
+// PB_E_INTAPI_CONFIG_ODCPI_INJECT_MSG_ID
+message PBLocConfigOdcpiInjectReqMsg {
+    PBLocation mLocation = 1;
+}
+
 //******************************************************************************
 // IPC message structure - Location Integration API Get request/response message
 //******************************************************************************
@@ -736,6 +795,11 @@ message PBLocAPIPingTestReqMsg {
 message PBLocAPIPingTestIndMsg {
     uint32 numberOfPing = 1;
     repeated uint32 data = 2;
+}
+
+// defintion for message with msg id of PB_E_INTAPI_CONFIG_MAP_MATCHED_FEEDBACK_MSG_ID
+message PBLocInjectMmfDataReqMsg {
+    PBGnssMapMatchedData gnssMmfData = 1;
 }
 
 //*******************************
