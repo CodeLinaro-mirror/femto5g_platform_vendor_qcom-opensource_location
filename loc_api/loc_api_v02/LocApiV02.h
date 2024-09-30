@@ -241,7 +241,6 @@ private:
   CycleSlipCountMap mCurrentCycleSlipCountMapNHz;
 
   GnssMeasurements*  mGnssMeasurements;
-  bool mPreferredSignalTypeReceived;
   int  mMsInWeek;
   bool mAgcIsPresent;
   timeBiases mTimeBiases;
@@ -258,7 +257,6 @@ private:
   std::string mPackageName[eQMI_LOC_R3_V02+1];
   bool mIsFullTracking;
   qmiLocGnssSignalTypeMaskT_v02 mPreferredSignalType;
-  referenceSignalTypeForIsb mReferenceSignalTypeForIsb;
   ModemGnssQesdkFeatureMask mQesdkFeatureMask;
   // GPTP inititialization
   bool mIsGptpInitialized;
@@ -418,7 +416,6 @@ private:
               sizeof(GnssSvMeasurementHeader);
       }
       memset(&mTimeBiases, 0, sizeof(mTimeBiases));
-      mPreferredSignalTypeReceived = false;
       mMsInWeek = -1;
       mAgcIsPresent = false;
   }
@@ -434,8 +431,6 @@ private:
         GnssSvType& svType);
 
   void setGnssBiasesForL1CA();
-  void setGnssBiasesForB1I();
-  void setGnssBiases();
 
   /* convert and report ODCPI request */
   void requestOdcpi(
