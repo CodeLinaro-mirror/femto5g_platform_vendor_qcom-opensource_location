@@ -724,15 +724,6 @@ typedef union
 
     const qmiLocSetXtraVersionCheckReqMsgT_v02 *pSetXtraVersionCheckReq;
 
-    const qmiLocGdtUploadBeginStatusReqMsgT_v02* pGdtUploadBeginStatusReq;
-    /* QMI_LOC_GDT_UPLOAD_BEGIN_STATUS_REQ_V02 */
-
-    const qmiLocGdtUploadEndReqMsgT_v02* pGdtUploadEndReq;
-    /* QMI_LOC_GDT_UPLOAD_END_REQ_V02*/
-
-    const qmiLocInjectGtpClientDownloadedDataReqMsgT_v02 *pInjectGtpClientDownloadedDataReq;
-    /* QMI_LOC_INJECT_GTP_CLIENT_DOWNLOADED_DATA_REQ_V02 */
-
     const qmiLocSetGNSSConstRepConfigReqMsgT_v02 *pSetGNSSConstRepConfigReq;
     /*QMI_LOC_SET_GNSS_CONSTELL_REPORT_CONFIG_V02*/
 
@@ -750,21 +741,6 @@ typedef union
 
     const qmiLocGetSupportedFeatureReqMsgT_v02 *pGetSupportedFeatureReq;
     /* QMI_LOC_GET_SUPPORTED_FEATURE_REQ_V02*/
-
-    const qmiLocGtpApStatusReqMsgT_v02* pGtpApStatusReq;
-    /* QMI_LOC_GTP_AP_STATUS_REQ_V02 */
-
-    const qmiLocGdtDownloadBeginStatusReqMsgT_v02* pGdtDownloadBeginStatusReq;
-    /* QMI_LOC_GDT_DOWNLOAD_BEGIN_STATUS_REQ_V02 */
-
-    const qmiLocGdtDownloadReadyStatusReqMsgT_v02* pGdtDownloadReadyStatusReq;
-    /* QMI_LOC_GDT_DOWNLOAD_READY_STATUS_REQ_V02 */
-
-    const qmiLocGdtReceiveDoneStatusReqMsgT_v02* pGdtReceiveDoneStatusReq;
-    /* QMI_LOC_GDT_RECEIVE_DONE_STATUS_REQ_V02 */
-
-    const qmiLocGdtDownloadEndStatusReqMsgT_v02* pGdtDownloadEndStatusReq;
-    /* QMI_LOC_GDT_DOWNLOAD_END_STATUS_REQ_V02*/
 
     const qmiLocDeleteGNSSServiceDataReqMsgT_v02* pDeleteGNSSServiceDataReq;
     /* QMI_LOC_DELETE_GNSS_SERVICE_DATA_REQ_V02*/
@@ -1070,20 +1046,6 @@ typedef union
         The eventIndId field in the event indication callback is set to
         QMI_LOC_EVENT_SV_POLYNOMIAL_REPORT_IND_V02. @newpagetable */
 
-   const qmiLocEventGdtUploadBeginStatusReqIndMsgT_v02* pGdtUploadBeginEvent;
-   /**< Sent by the engine to notify the client about a GDT upload
-        begine event.
-
-       The eventIndId field in the event indication callback is set to
-       QMI_LOC_EVENT_GDT_UPLOAD_BEGIN_STATUS_REQ_IND_V02. @newpagetable */
-
-   const qmiLocEventGdtUploadEndReqIndMsgT_v02* pGdtUploadEndEvent;
-   /**< Sent by the engine to notify the client about a GDT upload
-        end event.
-
-       The eventIndId field in the event indication callback is set to
-       QMI_LOC_EVENT_GDT_UPLOAD_END_REQ_IND_V02. @newpagetable */
-
    const qmiLocEventDbtPositionReportIndMsgT_v02 *pDbtPositionReportEvent;
    /**< Sent by the engine to notify the client of a distance based
         tracking position report.
@@ -1108,29 +1070,10 @@ typedef union
         The eventIndId field in the event indication callback is set to
         QMI_LOC_EVENT_BATCHING_STATUS_IND_V02. */
 
-   const qmiLocEventGdtDownloadBeginReqIndMsgT_v02 *pGdtDownloadBeginReqEvent;
-   /**< Sent by the engine to notify the client about a GDT download
-        begin event.
-        QMI_LOC_EVENT_GDT_DOWNLOAD_BEGIN_REQ_IND_V02. */
-
-   const qmiLocEventGdtReceiveDoneIndMsgT_v02 *pGdtReceiveDoneEvent;
-   /**< Sent by the engine to notify the client about a GDT download
-        receive done event.
-        QMI_LOC_EVENT_GDT_RECEIVE_DONE_IND_V02. */
-
-   const qmiLocEventGdtDownloadEndReqIndMsgT_v02 *pGdtDownloadEndReqEvent;
-   /**< Sent by the engine to notify the client about a GDT download
-        end event.
-        QMI_LOC_EVENT_GDT_DOWNLOAD_END_REQ_IND_V02. */
-
    const qmiLocEventInjectSrnApDataReqIndMsgT_v02 *pInjectSrnApDataReqEvent;
    /**< Sent by the engine to notify the client about a SRN Ap data
         request.
         QMI_LOC_EVENT_INJECT_SRN_AP_DATA_REQ_IND_V02. */
-
-   const qmiLocEventFdclServiceReqIndMsgT_v02 *pFdclServiceReqEvent;
-  /**< Sent by the engine to request the client for FDCL data
-    QMI_LOC_EVENT_FDCL_SERVICE_REQ_IND_V02. */
 
    const qmiLocGetBlacklistSvIndMsgT_v02 *pGetBlacklistSvEvent;
    /**< Sent by the engine to provide current blackisting SV info.
@@ -1644,21 +1587,6 @@ typedef union
 
     const qmiLocGetSupportedFeatureIndMsgT_v02 *pGetSupportedFeatureInd;
     /*QMI_LOC_GET_SUPPORTED_FEATURE_IND_V02*/
-
-    const qmiLocGtpApStatusIndMsgT_v02 *pGtpApStatusInd;
-    /*QMI_LOC_GTP_AP_STATUS_IND_V02*/
-
-    const qmiLocGdtDownloadBeginStatusIndMsgT_v02 *pGdtDownloadBeginStatusInd;
-    /*QMI_LOC_GDT_DOWNLOAD_BEGIN_STATUS_IND_V02*/
-
-    const qmiLocGdtDownloadReadyStatusIndMsgT_v02 *pGdtDownloadReadyStatusInd;
-    /*QMI_LOC_GDT_DOWNLOAD_READY_STATUS_IND_V02*/
-
-    const qmiLocGdtReceiveDoneStatusIndMsgT_v02 *pGdtReceiveDoneStatusInd;
-    /*QMI_LOC_GDT_RECEIVE_DONE_STATUS_IND_V02*/
-
-    const qmiLocGdtDownloadEndStatusIndMsgT_v02 *pGdtDownloadEndStatusInd;
-    /*QMI_LOC_GDT_DOWNLOAD_END_STATUS_IND_V02*/
 
     const qmiLocDeleteGNSSServiceDataIndMsgT_v02 *pDeleteGNSSServiceDataInd;
     /* QMI_LOC_DELETE_GNSS_SERVICE_DATA_REQ_V02*/

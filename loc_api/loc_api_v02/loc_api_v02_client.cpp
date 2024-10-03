@@ -246,13 +246,6 @@ static const locClientEventIndTableStructT locClientEventIndTable[]= {
    { QMI_LOC_EVENT_SV_POLYNOMIAL_REPORT_IND_V02,
     sizeof(qmiLocEventGnssSvPolyIndMsgT_v02) },
 
-  // for GDT
-  { QMI_LOC_EVENT_GDT_UPLOAD_BEGIN_STATUS_REQ_IND_V02,
-    sizeof(qmiLocEventGdtUploadBeginStatusReqIndMsgT_v02) },
-
-  { QMI_LOC_EVENT_GDT_UPLOAD_END_REQ_IND_V02,
-    sizeof(qmiLocEventGdtUploadEndReqIndMsgT_v02) },
-
   { QMI_LOC_EVENT_DBT_POSITION_REPORT_IND_V02,
     sizeof(qmiLocEventDbtPositionReportIndMsgT_v02) },
 
@@ -265,16 +258,6 @@ static const locClientEventIndTableStructT locClientEventIndTable[]= {
   // Batching Status event
   { QMI_LOC_EVENT_BATCHING_STATUS_IND_V02,
     sizeof(qmiLocEventBatchingStatusIndMsgT_v02) },
-
-  // TDP download
-  { QMI_LOC_EVENT_GDT_DOWNLOAD_BEGIN_REQ_IND_V02,
-    sizeof(qmiLocEventGdtDownloadBeginReqIndMsgT_v02) },
-
-  { QMI_LOC_EVENT_GDT_RECEIVE_DONE_IND_V02,
-    sizeof(qmiLocEventGdtReceiveDoneIndMsgT_v02) },
-
-  { QMI_LOC_EVENT_GDT_DOWNLOAD_END_REQ_IND_V02,
-    sizeof(qmiLocEventGdtDownloadEndReqIndMsgT_v02) },
 
   // SRN Ap data inject request
   { QMI_LOC_EVENT_INJECT_SRN_AP_DATA_REQ_IND_V02,
@@ -647,17 +630,6 @@ static const locClientRespIndTableStructT locClientRespIndTable[]= {
    { QMI_LOC_GET_AVAILABLE_WWAN_POSITION_IND_V02,
      sizeof(qmiLocGetAvailWwanPositionIndMsgT_v02)},
 
-   // for TDP
-   { QMI_LOC_INJECT_GTP_CLIENT_DOWNLOADED_DATA_IND_V02,
-     sizeof(qmiLocInjectGtpClientDownloadedDataIndMsgT_v02) },
-
-   // for GDT
-   { QMI_LOC_GDT_UPLOAD_BEGIN_STATUS_IND_V02,
-     sizeof(qmiLocGdtUploadBeginStatusIndMsgT_v02) },
-
-   { QMI_LOC_GDT_UPLOAD_END_IND_V02,
-     sizeof(qmiLocGdtUploadEndIndMsgT_v02) },
-
    { QMI_LOC_SET_GNSS_CONSTELL_REPORT_CONFIG_IND_V02,
      sizeof(qmiLocSetGNSSConstRepConfigIndMsgT_v02)},
 
@@ -672,23 +644,6 @@ static const locClientRespIndTableStructT locClientRespIndTable[]= {
 
    { QMI_LOC_QUERY_AON_CONFIG_IND_V02,
      sizeof(qmiLocQueryAonConfigIndMsgT_v02)},
-
-    // for GTP
-   { QMI_LOC_GTP_AP_STATUS_IND_V02,
-     sizeof(qmiLocGtpApStatusIndMsgT_v02) },
-
-    // for GDT
-   { QMI_LOC_GDT_DOWNLOAD_BEGIN_STATUS_IND_V02,
-     sizeof(qmiLocGdtDownloadBeginStatusIndMsgT_v02) },
-
-   { QMI_LOC_GDT_DOWNLOAD_READY_STATUS_IND_V02,
-    sizeof(qmiLocGdtDownloadReadyStatusIndMsgT_v02) },
-
-   { QMI_LOC_GDT_RECEIVE_DONE_STATUS_IND_V02,
-    sizeof(qmiLocGdtReceiveDoneStatusIndMsgT_v02) },
-
-   { QMI_LOC_GDT_DOWNLOAD_END_STATUS_IND_V02,
-     sizeof(qmiLocGdtDownloadEndStatusIndMsgT_v02) },
 
    { QMI_LOC_GET_SUPPORTED_FEATURE_IND_V02,
      sizeof(qmiLocGetSupportedFeatureIndMsgT_v02) },
@@ -1653,24 +1608,6 @@ bool validateRequest(
         break;
     }
 
-    case QMI_LOC_INJECT_GTP_CLIENT_DOWNLOADED_DATA_REQ_V02:
-    {
-        *pOutLen = sizeof(qmiLocInjectGtpClientDownloadedDataReqMsgT_v02);
-        break;
-    }
-
-    case QMI_LOC_GDT_UPLOAD_BEGIN_STATUS_REQ_V02:
-    {
-        *pOutLen = sizeof(qmiLocGdtUploadBeginStatusReqMsgT_v02);
-        break;
-    }
-
-    case QMI_LOC_GDT_UPLOAD_END_REQ_V02:
-    {
-        *pOutLen = sizeof(qmiLocGdtUploadEndReqMsgT_v02);
-        break;
-    }
-
     case QMI_LOC_SET_GNSS_CONSTELL_REPORT_CONFIG_V02:
     {
         *pOutLen = sizeof(qmiLocSetGNSSConstRepConfigReqMsgT_v02);
@@ -1698,36 +1635,6 @@ bool validateRequest(
     case QMI_LOC_QUERY_AON_CONFIG_REQ_V02:
     {
         *pOutLen = sizeof(qmiLocQueryAonConfigReqMsgT_v02);
-        break;
-    }
-
-    case QMI_LOC_GTP_AP_STATUS_REQ_V02:
-    {
-        *pOutLen = sizeof(qmiLocGtpApStatusReqMsgT_v02);
-        break;
-    }
-
-    case QMI_LOC_GDT_DOWNLOAD_BEGIN_STATUS_REQ_V02:
-    {
-        *pOutLen = sizeof(qmiLocGdtDownloadBeginStatusReqMsgT_v02);
-        break;
-    }
-
-    case QMI_LOC_GDT_DOWNLOAD_READY_STATUS_REQ_V02:
-    {
-        *pOutLen = sizeof(qmiLocGdtDownloadReadyStatusReqMsgT_v02);
-        break;
-    }
-
-    case QMI_LOC_GDT_RECEIVE_DONE_STATUS_REQ_V02:
-    {
-        *pOutLen = sizeof(qmiLocGdtReceiveDoneStatusReqMsgT_v02);
-        break;
-    }
-
-    case QMI_LOC_GDT_DOWNLOAD_END_STATUS_REQ_V02:
-    {
-        *pOutLen = sizeof(qmiLocGdtDownloadEndStatusReqMsgT_v02);
         break;
     }
 
