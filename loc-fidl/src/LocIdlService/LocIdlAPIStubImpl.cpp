@@ -41,7 +41,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "LocIdlAPIStubImpl.hpp"
 #include <time.h>
 #define NSEC_IN_ONE_SEC       (1000000000ULL)   /* nanosec in a sec */
-using namespace v0::com::qualcomm::qti::location;
+using namespace v1::com::qualcomm::qti::location;
 
 using namespace location_client;
 
@@ -53,75 +53,73 @@ LocIdlAPIStubImpl::LocIdlAPIStubImpl(const LocIdlAPIService* apiService):
 LocIdlAPIStubImpl::~LocIdlAPIStubImpl() {
 }
 
-
-const uint32_t & LocIdlAPIStubImpl::getGnssCapabilitiesMaskAttribute (
-    const std::shared_ptr<CommonAPI::ClientId> client
-)
+void LocIdlAPIStubImpl::StartPositionSessionLocationReport(
+            const std::shared_ptr<CommonAPI::ClientId> client,
+            uint32_t intervalInMs, uint32_t gnssReportCallbackMask,
+            StartPositionSessionLocationReportReply_t reply)
 {
-    return mCapsMask;
-
-}
-
-void LocIdlAPIStubImpl::startPositionSession
-(
-    const std::shared_ptr<CommonAPI::ClientId> client,
-    uint32_t intervalInMs, uint32_t gnssReportCallbackMask,
-    startPositionSessionReply_t reply
-)
-{
-    std::cout << "==== startPositionSession1 _intervalInMs " << intervalInMs <<\
-            "_gnssReportCallbackMask " << gnssReportCallbackMask << std::endl;
+    LOC_LOGe("==== Start Fused report Session intervalInMs %d gnssReportCallbackMask %d",
+            intervalInMs, gnssReportCallbackMask);
     if (mApiService) {
         mApiService->startPositionSession(client, intervalInMs, gnssReportCallbackMask, reply);
     }
 }
 
-void LocIdlAPIStubImpl::startPositionSession
-(
-    const std::shared_ptr<CommonAPI::ClientId> client,
-    uint32_t intervalInMs, uint32_t locReqEngMask,
-    uint32_t engReportCallbackMask, startPositionSession1Reply_t reply
-)
+void LocIdlAPIStubImpl::StartPositionSessionEngineSpecificLocation(
+            const std::shared_ptr<CommonAPI::ClientId> client,
+            uint32_t intervalInMs, uint32_t locReqEngMask, uint32_t engReportCallbackMask,
+            StartPositionSessionEngineSpecificLocationReply_t reply)
+
 {
-    std::cout << "==== startPositionSession2 _intervalInMs " << intervalInMs\
-            << " locReqEngMask " << locReqEngMask << std::endl;
+    LOC_LOGe("==== Start Engine Specific Session intervalInMs %d locReqEngMask %d",
+            intervalInMs, locReqEngMask);
     if (mApiService) {
         mApiService->startPositionSession(client, intervalInMs, engReportCallbackMask, reply);
     }
 }
 
-void LocIdlAPIStubImpl::stopPositionSession
-(
-    const std::shared_ptr<CommonAPI::ClientId> client,
-    stopPositionSessionReply_t reply
-)
+void LocIdlAPIStubImpl::StopPositionSession(
+            const std::shared_ptr<CommonAPI::ClientId> client,
+            StopPositionSessionReply_t reply)
 {
+    LOC_LOGi("==== STOP Session request");
     if (mApiService) {
         mApiService->stopPositionSession(client, reply);
     }
-    reply();
+    reply(LocationTypes::LocationStatusT::LOCATION_STATUS_T_SUCCESS);
 }
 
-void LocIdlAPIStubImpl::deleteAidingData(const std::shared_ptr<CommonAPI::ClientId> client,
-    uint32_t aidingDataMask,
-    deleteAidingDataReply_t reply) {
+void LocIdlAPIStubImpl::DeleteAidingData(const std::shared_ptr<CommonAPI::ClientId> client,
+            uint32_t deleteMask, DeleteAidingDataReply_t reply)
+{
     if (mApiService) {
-        mApiService->LIAdeleteAidingData(client, aidingDataMask, reply);
+        mApiService->deleteAidingDataRequest(client, deleteMask, reply);
     }
 }
 
-/// This is the method that will be called on remote calls on the method configConstellations.
-void LocIdlAPIStubImpl::configConstellations(const std::shared_ptr<CommonAPI::ClientId> client,
-    std::vector< LocIdlAPI::IDLGnssSvIdInfo > svList,
-    configConstellationsReply_t reply) {
-    // This API is currently not supported.
-    reply(LocIdlAPI::IDLLocationResponse::IDL_LOC_RESP_NOT_SUPPORTED);
-}
-
-void LocIdlAPIStubImpl::injectMapMatchedFeedbackData(
+void LocIdlAPIStubImpl::ConfigConstellations(
         const std::shared_ptr<CommonAPI::ClientId> client,
-        LocIdlAPI::MapMatchingFeedbackData mmfData, injectMapMatchedFeedbackDataReply_t reply) {
+        std::vector<LocationTypes::GnssSvIdInfoT > svList, ConfigConstellationsReply_t reply)
+{
+    // This API is currently not supported.
+    reply(LocationTypes::LocationStatusT::LOCATION_STATUS_T_NOT_SUPPORTED);
+}
+
+void LocIdlAPIStubImpl::InjectMapMatchedFeedbackData(
+        const std::shared_ptr<CommonAPI::ClientId> client,
+        LocationTypes::MapMatchingFeedbackDataT mmfData)
+{
     if (mApiService) {
-        mApiService->injectMapMatchedFeedbackData(client, mmfData, reply);
+        mApiService->injectMapMatchedFeedbackData(client, mmfData);
     }
+}
+void LocIdlAPIStubImpl::GetLocationCapabilities(const std::shared_ptr<CommonAPI::ClientId> client,
+            GetLocationCapabilitiesReply_t reply) {
+    if (mApiService) {
+        uint32_t mask = mApiService->getLocationCapabilitiesMask();
+        reply(mask);
+    } else {
+        reply(0);
+    }
+
 }
