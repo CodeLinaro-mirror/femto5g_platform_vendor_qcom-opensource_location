@@ -765,7 +765,8 @@ typedef uint64_t LCAGnssLocationInfoFlagMask;
 #define LCA_GNSS_LOCATION_INFO_AGE_OF_CORRECTION_BIT                        (1ULL<<41)
     /** GnssLocation has valid GnssLocation::leapSecondsUnc. <br/> */
 #define LCA_GNSS_LOCATION_INFO_LEAP_SECONDS_UNC_BIT                         (1ULL<<42)
-
+    /** GnssLocation has valid GnssLocation::posReportingInterval. <br/> */
+#define LCA_GNSS_LOCATION_INFO_REPORT_INTERVAL_BIT                          (1ULL<<43)
 
 /** Specify the reliability level of
  *  GnssLocation::horReliability and
@@ -1525,6 +1526,11 @@ struct GnssLocation : public Location {
      *  Units -- Seconds */
     uint8_t leapSecondsUnc;
 
+    /** Current GNSS engine reporting interval
+     *  Time interval at which GNSS engine is delivering position reports
+     *  and does not denote client requested interval.
+     *  Units -- milli-seconds */
+    uint32_t posReportingInterval;
 
     /* Default constructor to initalize GnssLocation structure */
     inline GnssLocation() :
