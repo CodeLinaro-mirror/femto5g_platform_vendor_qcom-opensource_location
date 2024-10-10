@@ -261,7 +261,7 @@ static uint16_t parseYearOfHw(::LocationCapabilitiesMask mask) {
     return yearOfHw;
 }
 
-static void parseLocation(const ::Location &halLocation, Location& location) {
+void LocationClientApiImpl::parseLocation(const ::Location &halLocation, Location& location) {
     uint32_t flags = 0;
 
     location.timestamp = halLocation.timestamp;
@@ -354,7 +354,7 @@ static void parseLocation(const ::Location &halLocation, Location& location) {
     location.techMask = (LocationTechnologyMask)flags;
 }
 
-static Location parseLocation(const ::Location &halLocation) {
+Location LocationClientApiImpl::parseLocation(const ::Location &halLocation) {
     Location location;
     parseLocation(halLocation, location);
     return location;
@@ -693,7 +693,7 @@ static GnssSystemTime parseSystemTime(const ::GnssSystemTime &halSystemTime) {
 static GnssLocation parseLocationInfo(const ::GnssLocationInfoNotification &halLocationInfo) {
 
     GnssLocation locationInfo;
-    parseLocation(halLocationInfo.location, locationInfo);
+    LocationClientApiImpl::parseLocation(halLocationInfo.location, locationInfo);
     uint64_t flags = 0;
 
     if (::GNSS_LOCATION_INFO_ALTITUDE_MEAN_SEA_LEVEL_BIT & halLocationInfo.flags) {
@@ -765,9 +765,6 @@ static GnssLocation parseLocationInfo(const ::GnssLocationInfoNotification &halL
     }
     if (::GNSS_LOCATION_INFO_LEAP_SECONDS_BIT & halLocationInfo.flags) {
        flags |= GNSS_LOCATION_INFO_LEAP_SECONDS_BIT;
-    }
-    if (::GNSS_LOCATION_INFO_TIME_UNC_BIT & halLocationInfo.flags) {
-        flags |= GNSS_LOCATION_INFO_TIME_UNC_BIT;
     }
     if (::GNSS_LOCATION_INFO_NUM_SV_USED_IN_POSITION_BIT & halLocationInfo.flags) {
         flags |= GNSS_LOCATION_INFO_NUM_SV_USED_IN_POSITION_BIT;
@@ -1096,7 +1093,7 @@ static GnssMeasurements parseGnssMeasurements(const ::GnssMeasurementsNotificati
     return gnssMeasurements;
 }
 
-static LocationResponse parseLocationError(::LocationError error) {
+LocationResponse LocationClientApiImpl::parseLocationError(::LocationError error) {
     LocationResponse response;
 
     switch (error) {
@@ -1149,6 +1146,46 @@ static LocationSystemInfo parseLocationSystemInfo(
     return systemInfo;
 }
 
+GeofenceBreachTypeMask LocationClientApiImpl::parseGeofenceBreachType(
+        GeofenceBreachType breachType) {
+    int mask = 0;
+    switch (breachType) {
+        case GEOFENCE_BREACH_ENTER:
+            mask |= GEOFENCE_BREACH_ENTER_BIT;
+            break;
+        case GEOFENCE_BREACH_EXIT:
+            mask |= GEOFENCE_BREACH_EXIT_BIT;
+            break;
+        case GEOFENCE_BREACH_DWELL_IN:
+            mask |= GEOFENCE_BREACH_DWELL_IN_BIT;
+            break;
+        case GEOFENCE_BREACH_DWELL_OUT:
+            mask |= GEOFENCE_BREACH_DWELL_OUT_BIT;
+            break;
+    }
+    return (GeofenceBreachTypeMask)mask;
+}
+
+GeofenceBreachType LocationClientApiImpl::parseGeofenceBreachTypeMask(
+        ::GeofenceBreachTypeMask breachTypeMask) {
+    GeofenceBreachType breachType = (GeofenceBreachType)0;
+    switch (breachTypeMask) {
+        case ::GEOFENCE_BREACH_ENTER_BIT:
+            breachType = GEOFENCE_BREACH_ENTER;
+            break;
+        case ::GEOFENCE_BREACH_EXIT_BIT:
+            breachType = GEOFENCE_BREACH_EXIT;
+            break;
+        case ::GEOFENCE_BREACH_DWELL_IN_BIT:
+            breachType = GEOFENCE_BREACH_DWELL_IN;
+            break;
+        case ::GEOFENCE_BREACH_DWELL_OUT_BIT:
+            breachType = GEOFENCE_BREACH_DWELL_OUT;
+            break;
+    }
+    return breachType;
+}
+
 void LocationClientApiImpl::logLocation(const Location &location,
                                         LocReportTriggerType reportTriggerType) {
     GnssLocation gnssLocation = {};
@@ -1173,6 +1210,11 @@ void LocationClientApiImpl::logLocation(const GnssLocation &gnssLocation,
                                         LocReportTriggerType reportTriggerType) {
     mLogger.log(gnssLocation,
                 {mCapsMask, mSessionStartBootTimestampNs, reportTriggerType});
+}
+
+void LocationClientApiImpl::logGeofenceBreach(const GeofenceBreachNotification& breachNotif,
+            const std::vector<Geofence> &geofences) {
+    mLogger.log(breachNotif, geofences);
 }
 
 /******************************************************************************
@@ -1859,7 +1901,6 @@ void LocationClientApiImpl::eraseGeofenceMap(size_t count, uint32_t* ids) {
 
 uint32_t* LocationClientApiImpl::addGeofences(size_t count, GeofenceOption* options,
         GeofenceInfo* infos) {
-
     if (!mHalRegistered) {
         LOC_LOGe(">>> addGeofences - Not registered yet");
         return nullptr;
@@ -2018,6 +2059,15 @@ void LocationClientApiImpl::modifyGeofences(
                 for (int i=0; i < gfCountUsed; ++i) {
                     gfModReqPayLoad.gfPayload[i].gfClientId = mGfIds[i];
                     gfModReqPayLoad.gfPayload[i].gfOption = mGfOptions[i];
+                    mApiImpl->mGeofenceMap.at(mGfIds[i]).setBreachType(
+                            (GeofenceBreachTypeMask)mGfOptions[i].breachTypeMask);
+                    mApiImpl->mGeofenceMap.at(mGfIds[i]).setResponsiveness(
+                            mGfOptions[i].responsiveness);
+                    mApiImpl->mGeofenceMap.at(mGfIds[i]).setDwellTime(mGfOptions[i].dwellTime);
+                    LOC_LOGv(">>> updateGfOption, clientID: %d, %d %d %d", mGfIds[i],
+                            mApiImpl->mGeofenceMap.at(mGfIds[i]).getBreachType(),
+                            mApiImpl->mGeofenceMap.at(mGfIds[i]).getResponsiveness(),
+                            mApiImpl->mGeofenceMap.at(mGfIds[i]).getDwellTime());
                 }
 
                 string pbStr;
@@ -2666,7 +2716,7 @@ void IpcListener::onReceive(const char* data, uint32_t length,
                 if (locApiMsg.msgId != E_LOCAPI_STOP_TRACKING_MSG_ID) {
                     LocAPIGenericRespMsg respMsg(sockName.c_str(), eLocMsgid, pbLocApiGenericRsp,
                             &mApiImpl.mPbufMsgConv);
-                    LocationResponse response = parseLocationError(respMsg.err);
+                    LocationResponse response = mApiImpl.parseLocationError(respMsg.err);
                     mApiImpl.invokePositionSessionResponseCb(response);
                 }
                 break;
@@ -2679,32 +2729,45 @@ void IpcListener::onReceive(const char* data, uint32_t length,
             case E_LOCAPI_RESUME_GEOFENCES_MSG_ID:
             {
                 LOC_LOGd("<<< collective response message, msgId = %d", locApiMsg.msgId);
-                PBLocAPICollectiveRespMsg pbLocApiCollctvRespMsg;
-                if (0 == pbLocApiCollctvRespMsg.ParseFromString(pbLocApiMsg.payload())) {
-                    LOC_LOGe("Failed to parse pbLocApiCollctvRespMsg from payload!!");
-                    return;
-                }
-                LocAPICollectiveRespMsg msg(sockName.c_str(), eLocMsgid, pbLocApiCollctvRespMsg,
-                        &mApiImpl.mPbufMsgConv);
-                const LocAPICollectiveRespMsg* pRespMsg = (LocAPICollectiveRespMsg*)(&msg);
-                std::vector<pair<Geofence, LocationResponse>> responses{};
-                int count = pRespMsg->collectiveRes.resp.size();
-                LOC_LOGd("CollectiveRes Pload count:%d", count);
-                for (int i=0; i < count; i++) {
-                    responses.push_back(make_pair(
-                            mApiImpl.mGeofenceMap.at(
-                                pRespMsg->collectiveRes.resp[i].clientId),
-                            parseLocationError(
-                                pRespMsg->collectiveRes.resp[i].error)));
-                    if ((LOCATION_ERROR_SUCCESS !=
-                            pRespMsg->collectiveRes.resp[i].error) ||
-                            (E_LOCAPI_REMOVE_GEOFENCES_MSG_ID == locApiMsg.msgId)) {
-                        mApiImpl.eraseGeofenceMap(1, const_cast<uint32_t*>(
-                                &(pRespMsg->collectiveRes.resp[i].clientId)));
-                    }
-                }
                 if (mApiImpl.mCollectiveResCb) {
+                    PBLocAPICollectiveRespMsg pbLocApiCollctvRespMsg;
+                    if (0 == pbLocApiCollctvRespMsg.ParseFromString(pbLocApiMsg.payload())) {
+                        LOC_LOGe("Failed to parse pbLocApiCollctvRespMsg from payload!!");
+                        return;
+                    }
+                    LocAPICollectiveRespMsg msg(sockName.c_str(), eLocMsgid,
+                            pbLocApiCollctvRespMsg, &mApiImpl.mPbufMsgConv);
+                    const LocAPICollectiveRespMsg* pRespMsg = (LocAPICollectiveRespMsg*)(&msg);
+                    int count = pRespMsg->collectiveRes.resp.size();
+                    LOC_LOGd("CollectiveRes Pload count:%d", count);
+                    LocationError* errs = new LocationError[count];
+                    uint32_t* ids = new uint32_t[count];
+                    std::vector<pair<Geofence, LocationResponse>> responses{};
+                    if (errs != nullptr && ids != nullptr) {
+                        for (int i=0; i < count; i++) {
+                            ids[i] = pRespMsg->collectiveRes.resp[i].clientId;
+                            errs[i] = pRespMsg->collectiveRes.resp[i].error;
+                            responses.push_back(make_pair(mApiImpl.mGeofenceMap.at(
+                                    pRespMsg->collectiveRes.resp[i].clientId),
+                                    mApiImpl.parseLocationError(
+                                    pRespMsg->collectiveRes.resp[i].error)));
+                        }
+                    }
                     mApiImpl.mCollectiveResCb(responses);
+                    for (int i=0; i < count; i++) {
+                        if ((LOCATION_ERROR_SUCCESS !=
+                                pRespMsg->collectiveRes.resp[i].error) ||
+                                (E_LOCAPI_REMOVE_GEOFENCES_MSG_ID == locApiMsg.msgId)) {
+                            mApiImpl.eraseGeofenceMap(1, const_cast<uint32_t*>(
+                                    &(pRespMsg->collectiveRes.resp[i].clientId)));
+                        }
+                    }
+                    if (ids) {
+                        delete[] ids;
+                    }
+                    if (errs) {
+                        delete[] errs;
+                    }
                 }
                 if (mApiImpl.mPositionSessionResponseCbPending) {
                     mApiImpl.mPositionSessionResponseCbPending = false;
@@ -2726,7 +2789,8 @@ void IpcListener::onReceive(const char* data, uint32_t length,
                 if ((mApiImpl.mSessionId != LOCATION_CLIENT_SESSION_ID_INVALID) &&
                         (mApiImpl.mCallbacksMask & E_LOC_CB_TRACKING_BIT)) {
                     const LocAPILocationIndMsg* pLocationIndMsg = (LocAPILocationIndMsg*)(&msg);
-                    Location location = parseLocation(pLocationIndMsg->locationNotification);
+                    Location location = mApiImpl.parseLocation(
+                            pLocationIndMsg->locationNotification);
                     if (mApiImpl.mLocationCb) {
                         mApiImpl.mLocationCb(location);
                     }
@@ -2756,7 +2820,7 @@ void IpcListener::onReceive(const char* data, uint32_t length,
                         int batchCount = pBatchingIndMsg->batchNotification.location.size();
                         LOC_LOGd("Batch count : %d", batchCount);
                         for (int i=0; i < batchCount; i++) {
-                            Location location = parseLocation(
+                            Location location = mApiImpl.parseLocation(
                                     pBatchingIndMsg->batchNotification.location[i]);
                             locationVector.push_back(location);
                             mApiImpl.logLocation(location,
@@ -2793,20 +2857,33 @@ void IpcListener::onReceive(const char* data, uint32_t length,
                             &mApiImpl.mPbufMsgConv);
                     const LocAPIGeofenceBreachIndMsg* pGfBreachIndMsg =
                         (LocAPIGeofenceBreachIndMsg*)(&msg);
-                    std::vector<Geofence> geofences;
-                    int gfBreachCnt = pGfBreachIndMsg->gfBreachNotification.id.size();
-                    for (int i=0; i < gfBreachCnt; i++) {
-                        geofences.push_back(mApiImpl.mGeofenceMap.at(
-                                                pGfBreachIndMsg->gfBreachNotification.id[i]));
+
+                    GeofenceBreachNotification gfBrNotif;
+                    gfBrNotif.size = sizeof(GeofenceBreachNotification);
+                    gfBrNotif.count = pGfBreachIndMsg->gfBreachNotification.id.size();
+                    gfBrNotif.timestamp = pGfBreachIndMsg->gfBreachNotification.timestamp;
+                    gfBrNotif.location = pGfBreachIndMsg->gfBreachNotification.location;
+                    gfBrNotif.type = LocationClientApiImpl::parseGeofenceBreachTypeMask(
+                            pGfBreachIndMsg->gfBreachNotification.type);
+                    gfBrNotif.ids = (uint32_t *)malloc(sizeof(uint32_t) * gfBrNotif.count);
+                    if (nullptr == gfBrNotif.ids) {
+                        LOC_LOGe("failed to alloc gfBrNotif.ids!!");
+                        break;
                     }
-                    Location location = parseLocation(
-                            pGfBreachIndMsg->gfBreachNotification.location);
-                    mApiImpl.logLocation(location, LOC_REPORT_TRIGGER_GEOFENCE_SESSION);
+                    std::vector<Geofence> geofences;
+                    for (int i=0; i < gfBrNotif.count; i++) {
+                        gfBrNotif.ids[i] = pGfBreachIndMsg->gfBreachNotification.id[i];
+                        geofences.push_back(mApiImpl.getMappedGeofence(gfBrNotif.ids[i]));
+                    }
+
                     if (mApiImpl.mGfBreachCb) {
-                        mApiImpl.mGfBreachCb(geofences, location,
+                        mApiImpl.mGfBreachCb(geofences, mApiImpl.parseLocation(
+                                pGfBreachIndMsg->gfBreachNotification.location),
                                 GeofenceBreachTypeMask(pGfBreachIndMsg->gfBreachNotification.type),
                                 pGfBreachIndMsg->gfBreachNotification.timestamp);
                     }
+                    mApiImpl.logGeofenceBreach(gfBrNotif, geofences);
+                    free(gfBrNotif.ids);
                 }
                 break;
             }
@@ -3050,10 +3127,11 @@ void IpcListener::onReceive(const char* data, uint32_t length,
                     LocAPIGetSingleTerrestrialPosRespMsg msg(sockName.c_str(), pbMsg,
                                                              &mApiImpl.mPbufMsgConv);
                     if (mApiImpl.mSingleTerrestrialPosRespCb) {
-                        mApiImpl.mSingleTerrestrialPosRespCb(parseLocationError(msg.mErrorCode));
+                        mApiImpl.mSingleTerrestrialPosRespCb(mApiImpl.parseLocationError(
+                                msg.mErrorCode));
                     }
                     if (msg.mErrorCode == ::LOCATION_ERROR_SUCCESS) {
-                        Location terrestialPos = parseLocation(msg.mLocation);
+                        Location terrestialPos = mApiImpl.parseLocation(msg.mLocation);
                         mApiImpl.mSingleTerrestrialPosCb(terrestialPos);
                         mApiImpl.logLocation(terrestialPos,
                                              LOC_REPORT_TRIGGER_SINGLE_TERRESTRIAL_FIX);
@@ -3078,11 +3156,11 @@ void IpcListener::onReceive(const char* data, uint32_t length,
                     LocAPIGetSinglePosRespMsg msg(sockName.c_str(), pbMsg,
                                                   &mApiImpl.mPbufMsgConv);
                     if (mApiImpl.mSinglePosRespCb) {
-                        mApiImpl.mSinglePosRespCb(parseLocationError(msg.mErrorCode));
+                        mApiImpl.mSinglePosRespCb(mApiImpl.parseLocationError(msg.mErrorCode));
                     }
                     if (msg.mErrorCode == ::LOCATION_ERROR_SUCCESS ||
                             msg.mErrorCode == ::LOCATION_ERROR_TIMEOUT) {
-                        Location loc = parseLocation(msg.mLocation);
+                        Location loc = mApiImpl.parseLocation(msg.mLocation);
                         mApiImpl.mSinglePosCb(loc);
                         mApiImpl.logLocation(loc, LOC_REPORT_TRIGGER_SINGLE_FIX);
                     }
