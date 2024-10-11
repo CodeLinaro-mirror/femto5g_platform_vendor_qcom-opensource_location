@@ -69,6 +69,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <mutex>
 #include <log_util.h>
 #include <loc_pla.h>
+#include <loc_misc_utils.h>
 #include <unordered_map>
 
 #include <ILocationAPI.h>
@@ -175,6 +176,8 @@ public:
     BatchingMode mBatchingMode;
     std::queue<ELocMsgID> mPendingMessages;
     std::queue<ELocMsgID> mGfPendingMessages;
+    bool filterPositionReport(const GnssLocationInfoNotification& notification,
+            LocOutputEngineType engType);
 
 private:
     struct AntennaInfoHalClientCallback : public AntennaInfoCallback {
@@ -257,6 +260,11 @@ private:
     shared_ptr<LocIpcSender> mIpcSender;
     std::unordered_map<uint32_t, uint32_t> mGfIdsMap; //geofence ID map, clientId-->session
     AntennaInfoHalClientCallback mAntennaInfoCb;
+    // To keep track of Boot time of previous position report sent
+    uint64_t mPrevPosReportSentBootTimeMsec[LOC_OUTPUT_ENGINE_COUNT];
+    // To keep track of First final fix recieved
+    bool mFirstFixalFixReceived[LOC_OUTPUT_ENGINE_COUNT];
+
 };
 
 #endif //LOCHAL_CLIENT_HANDLER_H

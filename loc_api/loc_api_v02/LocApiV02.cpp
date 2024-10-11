@@ -3373,6 +3373,11 @@ void LocApiV02 :: reportPosition (
                      location.gpsLocation.longitude, location.gpsLocation.accuracy);
             sessStatus = LOC_SESS_FAILURE;
         }
+        // Filling report rate for SPE reports
+        if (mMinInterval) {
+            locationExtended.posReportingInterval = mMinInterval;
+            locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_REPORT_INTERVAL;
+        }
 
         LocApiBase::reportPosition(location,
                                    locationExtended,
@@ -3762,6 +3767,7 @@ void  LocApiV02 :: reportSv (
                         }
                     }
                     if (gnssSv_ref.cN0Dbhz > rfLoss) {
+                        mask |= GNSS_SV_OPTIONS_HAS_BASEBAND_CARRIER_TO_NOISE_BIT;
                         gnssSv_ref.basebandCarrierToNoiseDbHz = gnssSv_ref.cN0Dbhz - rfLoss;
                     }
                 }
@@ -5536,6 +5542,10 @@ void LocApiV02::reportGnssMeasurementData(
             uint64_t elapsedgPTPTime = 0;
             /* deal with gPTP time */
             /* Fill PTP time corresponding to Time of generation of meas packet */
+            if (!mIsGptpInitialized && gptpInit()) {
+                mIsGptpInitialized = true;
+            }
+
             if (mIsGptpInitialized) {
                 bool gotMPQTickPtpTime = gptpGetPtpTimeFromQTimeTickCount(&elapsedgPTPTime,
                         gnss_measurement_report_ptr.refCountTicks);
@@ -6472,6 +6482,10 @@ void LocApiV02 :: reportDcMessage(const qmiLocEventDcReportIndMsgT_v02* pDcRepor
         dcReportInfo.dcReportData.resize(pDcReportIndMsg->dcReportData_len);
         for (uint32_t i = 0; i < pDcReportIndMsg->dcReportData_len; i++) {
             dcReportInfo.dcReportData[i] = pDcReportIndMsg->dcReportData[i];
+        }
+        if (pDcReportIndMsg->prn_valid) {
+            dcReportInfo.prnValid = 1;
+            dcReportInfo.prn = pDcReportIndMsg->prn;
         }
         LocApiBase::reportDcMessage(dcReportInfo);
     }
@@ -7472,6 +7486,11 @@ void LocApiV02 :: eventCb(locClientHandleType /*clientHandle*/,
   {
     //Position Report
     case QMI_LOC_EVENT_POSITION_REPORT_IND_V02:
+#ifdef PTP_SUPPORTED
+      if (!mIsGptpInitialized && gptpInit()) {
+          mIsGptpInitialized = true;
+      }
+#endif
       reportPosition(eventPayload.pPositionReportEvent);
       break;
 
@@ -9565,10 +9584,18 @@ LocApiV02::setConstellationControl(const GnssSvTypeConfig& config,
     setConstellationConfigMsg.enableMask_valid = true;
     setConstellationConfigMsg.enableMask = config.enabledSvTypesMask;
 
+    bool disableSupported = ContextBase::isFeatureSupported(
+            LOC_SUPPORTED_FEATURE_CONSTELLATION_DISABLEMENT);
+    if (disableSupported) {
+       setConstellationConfigMsg.disableMask_valid = true;
+       setConstellationConfigMsg.disableMask = config.blacklistedSvTypesMask;
+    }
+
     // disableMask is not supported in modem
     // if we set disableMask, QMI call will return error
-    LOC_LOGE("setConstellationControl: "
+    LOC_LOGE("setConstellationControl: disableSupported %d,"
              "enable: %d 0x%" PRIx64 ", blacklisted: %d 0x%" PRIx64 "",
+             disableSupported,
              setConstellationConfigMsg.enableMask_valid,
              setConstellationConfigMsg.enableMask,
              setConstellationConfigMsg.disableMask_valid,
