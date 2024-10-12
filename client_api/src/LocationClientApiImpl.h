@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -198,17 +198,26 @@ public:
                       const std::vector<Geofence>& geofences);
 
     inline uint16_t getYearOfHw() {return mYearOfHw;}
+    inline Geofence getMappedGeofence(uint32_t id) { return mGeofenceMap.at(id); }
+    inline bool isGeofenceMapEmpty() { return mGeofenceMap.empty(); }
 
     void getSingleTerrestrialPos(uint32_t timeoutMsec, TerrestrialTechMask techMask,
                                  float horQoS, LocationCb terrestrialPositionCallback,
                                  ResponseCb responseCallback);
     void getSinglePos(uint32_t timeoutMsec, float horQoS, LocationCb positionCallback,
                       ResponseCb responseCallback);
-    // utilities
+    static LocationResponse parseLocationError(::LocationError error);
+    static void parseLocation(const ::Location &halLocation, Location& location);
+    static Location parseLocation(const ::Location &halLocation);
+    static GeofenceBreachTypeMask parseGeofenceBreachType(GeofenceBreachType breachType);
+    static GeofenceBreachType parseGeofenceBreachTypeMask(::GeofenceBreachTypeMask breachTypeMask);
+
     void logLocation(const Location &location,
                      LocReportTriggerType reportTriggerType);
     void logLocation(const GnssLocation &gnssLocation,
                      LocReportTriggerType reportTriggerType);
+    void logGeofenceBreach(const GeofenceBreachNotification& breachNotif,
+            const std::vector<Geofence> &geofences);
 
     void pingTest(PingTestCb pingTestCallback);
     bool isInTracking() { return mSessionId != LOCATION_CLIENT_SESSION_ID_INVALID; }
