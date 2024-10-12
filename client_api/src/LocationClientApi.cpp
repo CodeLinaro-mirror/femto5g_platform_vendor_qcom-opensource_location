@@ -1146,7 +1146,9 @@ DECLARE_TBL(LCAGnssLocationInfoFlagMask) = {
     {LCA_GNSS_LOCATION_INFO_PROTECT_ALONG_TRACK_BIT, "PROTECT_ALONG_TRACK"},
     {LCA_GNSS_LOCATION_INFO_PROTECT_CROSS_TRACK_BIT, "PROTECT_CROSS_TRACK"},
     {LCA_GNSS_LOCATION_INFO_PROTECT_VERTICAL_BIT, "PROTECT_VERTICA"},
-    {LCA_GNSS_LOCATION_INFO_DGNSS_STATION_ID_BIT, "DGNSS_STATION_ID"}
+    {LCA_GNSS_LOCATION_INFO_DGNSS_STATION_ID_BIT, "DGNSS_STATION_ID"},
+    {LCA_GNSS_LOCATION_INFO_LEAP_SECONDS_UNC_BIT, "LEAP_SECONDS_UNC"},
+    {LCA_GNSS_LOCATION_INFO_REPORT_INTERVAL_BIT, "REPORT_INTERVAL"},
 };
 // LocationReliability
 DECLARE_TBL(LocationReliability) = {
@@ -1565,6 +1567,7 @@ string GnssLocation::toString() const {
     out += FIELDVAL_DEC(baseLineLength);
     out += FIELDVAL_DEC(ageMsecOfCorrections);
     out += FIELDVAL_DEC(leapSecondsUnc);
+    out += FIELDVAL_DEC(posReportingInterval);
     return out;
 }
 
@@ -1729,7 +1732,8 @@ string GnssDcReport::toString() const {
 
         free(ptr);
     }
-
+    out += FIELDVAL_DEC(prnValid);
+    out += FIELDVAL_DEC(prn);
     return out;
 }
 

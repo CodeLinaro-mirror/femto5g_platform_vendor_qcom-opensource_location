@@ -68,6 +68,9 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <LocHalDaemonClientHandler.h>
 #include <LocationApiService.h>
 
+// Postion report Interval Gaurd band in msec
+#define POSITION_REPORT_GAURD_BAND (30)
+
 shared_ptr<LocIpcSender> LocHalDaemonClientHandler::createSender(const string socket) {
     SockNode sockNode(SockNode::create(socket));
     return sockNode.createSender();
@@ -930,6 +933,56 @@ void LocHalDaemonClientHandler::onGeofenceBreachCb(
     }
 }
 
+bool LocHalDaemonClientHandler::filterPositionReport(
+        const GnssLocationInfoNotification& notification,
+        LocOutputEngineType engType) {
+
+    uint64_t curBootTimeMsec = getBootTimeMilliSec();
+    // minInterval must be atleast 100msec
+    uint32_t lowerBound = mOptions.minInterval - POSITION_REPORT_GAURD_BAND;
+
+    // Check for first final fix. We need to pass it asap.
+    if (!mFirstFixalFixReceived[engType]) {
+        if (LOC_SESS_SUCCESS == notification.location.sessionStatus) {
+            mFirstFixalFixReceived[engType] = true;
+            mPrevPosReportSentBootTimeMsec[engType] = curBootTimeMsec;
+            return false;
+        }
+    } else {
+        // To check if Intermediate fixes are received mid session
+        if (LOC_SESS_SUCCESS != notification.location.sessionStatus) {
+            mFirstFixalFixReceived[engType] = false;
+        }
+    }
+
+    // If GPS time is accurate, filter position reports based on GpsWeekMs
+    if (notification.gnssSystemTime.hasAccurateGpsTime() &&
+           (notification.gnssSystemTime.u.gpsSystemTime.systemMsec % mOptions.minInterval == 0 )) {
+        mPrevPosReportSentBootTimeMsec[engType] = curBootTimeMsec;
+        return false;
+    } else {
+        /** Use Boot time to send out reports */
+        if (mPrevPosReportSentBootTimeMsec[engType]) {
+            if (curBootTimeMsec >= mPrevPosReportSentBootTimeMsec[engType]) {
+                // Check if time elapsed is greater than clientRequested time with band of 30msec
+                if (lowerBound <= (curBootTimeMsec - mPrevPosReportSentBootTimeMsec[engType])) {
+                    mPrevPosReportSentBootTimeMsec[engType] = curBootTimeMsec;
+                    return false;
+                }
+            } else {
+                // Time Diff is -ve, send the report and update Prev boot time
+                mPrevPosReportSentBootTimeMsec[engType] = curBootTimeMsec;
+                return false;
+            }
+        } else {
+            // First position report received. Send it to client
+            mPrevPosReportSentBootTimeMsec[engType] = curBootTimeMsec;
+            return false;
+        }
+    }
+    return true;
+}
+
 void LocHalDaemonClientHandler::onGnssLocationInfoCb(
         const GnssLocationInfoNotification& notification) {
 
@@ -937,7 +990,8 @@ void LocHalDaemonClientHandler::onGnssLocationInfoCb(
     LOC_LOGd("--< onGnssLocationInfo, client name %s, ipc valid %d, sub mask 0x%x", mName.c_str(),
              (nullptr != mIpcSender), mSubscriptionMask);
 
-    if ((nullptr != mIpcSender) &&
+    bool filterReport = filterPositionReport(notification, notification.locOutputEngType);
+    if (!filterReport && (nullptr != mIpcSender) &&
         (mSubscriptionMask & E_LOC_CB_GNSS_LOCATION_INFO_BIT)) {
         string pbStr;
         LocAPILocationInfoIndMsg msg(SERVICE_NAME, notification, &mService->mPbufMsgConv);
@@ -963,9 +1017,11 @@ void LocHalDaemonClientHandler::onEngLocationsInfoCb(
              "client name %s, ipc valid %d, sub mask 0x%x",
              count, mOptions.locReqEngTypeMask, mName.c_str(),
              (nullptr != mIpcSender), mSubscriptionMask);
+    bool filterReport = filterPositionReport(*engLocationsInfoNotification,
+            engLocationsInfoNotification->locOutputEngType);
 
-    if ((nullptr != mIpcSender) &&
-        (mSubscriptionMask & E_LOC_CB_ENGINE_LOCATIONS_INFO_BIT)) {
+    if (!filterReport && (nullptr != mIpcSender) &&
+            (mSubscriptionMask & E_LOC_CB_ENGINE_LOCATIONS_INFO_BIT)) {
 
         int reportCount = 0;
         GnssLocationInfoNotification engineLocationInfoNotification[LOC_OUTPUT_ENGINE_COUNT];
