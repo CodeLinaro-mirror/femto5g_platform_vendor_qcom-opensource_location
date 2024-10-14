@@ -3302,8 +3302,8 @@ void LocApiV02 :: reportPosition (
                         locationExtended.measUsageInfo[idx].gnssConstellation =
                             GNSS_LOC_SV_SYSTEM_NAVIC;
                         locationExtended.measUsageInfo[idx].gnssSignalType =
-                            (multiBandTypesAvailable ?
-                                location_report_ptr->gnssSvUsedSignalTypeList[idx] :
+                            (multiBandTypesAvailable ? convertQmiGnssSignalType(
+                                location_report_ptr->gnssSvUsedSignalTypeList[idx]) :
                                 GNSS_SIGNAL_NAVIC_L5);
                     }
                 }
