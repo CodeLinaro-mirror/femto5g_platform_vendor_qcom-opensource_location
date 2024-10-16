@@ -965,14 +965,6 @@ typedef union
         The eventIndId field in the event indication callback is set to
         QMI_LOC_EVENT_LOCATION_SERVER_CONNECTION_REQ_IND_V02. */
 
-   const qmiLocEventNiGeofenceNotificationIndMsgT_v02*
-     pNiGeofenceNotificationEvent;
-   /**< Sent by the engine to notify the client about changes to a
-        network-initiated geofence.
-
-        The eventIndId field in the event indication callback is set to
-        QMI_LOC_EVENT_NI_GEOFENCE_NOTIFICATION_IND_V02. */
-
    const qmiLocEventGeofenceGenAlertIndMsgT_v02* pGeofenceGenAlertEvent;
    /**< Sent by the engine to notify the client about updates that may
         affect a geofence operation.
@@ -1007,12 +999,6 @@ typedef union
         QMI_LOC_EVENT_MOTION_DATA_CONTROL_IND_V02. @newpagetable */
 
    const qmiLocEventInjectWifiApDataReqIndMsgT_v02* pWifiApDataReqEvent;
-   const qmiLocEventLiveBatchedPositionReportIndMsgT_v02* pBatchPositionReportEvent;
-   /**< Sent by the engine to notify the client that live batch location
-        is ready, and the location info.
-
-        The eventIndId field in the event indication callback is set to
-        QMI_LOC_EVENT_LIVE_BATCHED_POSITION_REPORT_IND_V02. */
 
    const qmiLocEventBatchFullIndMsgT_v02* pBatchCount;
    /**< Sent by the engine to notify the client that batch location is
@@ -1020,19 +1006,6 @@ typedef union
 
         The eventIndId field in the event indication callback is set to
         QMI_LOC_EVENT_BATCH_FULL_IND_V02. */
-
-   const qmiLocEventVehicleDataReadyIndMsgT_v02* pVehicleDataReadyEvent;
-   /**< Sent by the engine to recommend how vehicle sensor data is
-        sent to the location engine.
-        The eventIndId field in the event indication callback is set to
-        QMI_LOC_EVENT_VEHICLE_DATA_READY_STATUS_IND_V02. @newpagetable */
-
-   const qmiLocEventGeofenceProximityIndMsgT_v02* pGeofenceProximityEvent;
-   /**< Sent by the engine to notify the client about a geofence proximity
-        event.
-
-        The eventIndId field in the event indication callback is set to
-        QMI_LOC_EVENT_GEOFENCE_PROXIMITY_NOTIFICATION_IND_V02. @newpagetable */
 
    const qmiLocEventGnssSvMeasInfoIndMsgT_v02* pGnssSvRawInfoEvent;
 
@@ -1051,11 +1024,6 @@ typedef union
         tracking position report.
         QMI_LOC_EVENT_DBT_POSITION_REPORT_IND_V02*/
 
-   const qmiLocEventDbtSessionStatusIndMsgT_v02 *pDbtSessionStatusEvent;
-   /**< Sent by the engine to notify the client of the status of the
-      DBT session.
-      QMI_LOC_EVENT_DBT_SESSION_STATUS_IND_V02*/
-
    const qmiLocEventGeofenceBatchedDwellIndMsgT_v02 *pGeofenceBatchedDwellEvent;
    /**< Sent by the engine to notify the client of the dwell time inside
       or outside of a Geofence for a specified time.
@@ -1070,11 +1038,6 @@ typedef union
         The eventIndId field in the event indication callback is set to
         QMI_LOC_EVENT_BATCHING_STATUS_IND_V02. */
 
-   const qmiLocEventInjectSrnApDataReqIndMsgT_v02 *pInjectSrnApDataReqEvent;
-   /**< Sent by the engine to notify the client about a SRN Ap data
-        request.
-        QMI_LOC_EVENT_INJECT_SRN_AP_DATA_REQ_IND_V02. */
-
    const qmiLocGetBlacklistSvIndMsgT_v02 *pGetBlacklistSvEvent;
    /**< Sent by the engine to provide current blackisting SV info.
         QMI_LOC_GET_BLACKLIST_SV_IND_V02. */
@@ -1082,10 +1045,6 @@ typedef union
    const qmiLocGetConstellationConfigIndMsgT_v02 *pGetConstellationConfigEvent;
    /**< Sent by the engine to provide current constellation control info.
         QMI_LOC_GET_CONSTELLATION_CONTROL_IND_V02. */
-
-   const qmiLocEventBsObsDataServiceReqIndMsgT_v02 *pBsObsDataServiceReqEvent;
-  /**< Sent by the engine to notify the client about BS CS data available
-    QMI_LOC_EVENT_BS_OBS_DATA_SERVICE_REQ_IND_V02. */
 
    const qmiLocGpsEphemerisReportIndMsgT_v02 *pGpsEphemerisReportEvent;
   /**< Sent by the engine when GPS ephemeris are available
