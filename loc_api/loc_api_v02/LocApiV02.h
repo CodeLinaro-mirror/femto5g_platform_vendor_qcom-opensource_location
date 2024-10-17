@@ -382,10 +382,6 @@ private:
   void reportNiRequest(
     const qmiLocEventNiNotifyVerifyReqIndMsgT_v02 *ni_req_ptr);
 
-  /* report the xtra server info */
-  void reportXtraServerUrl(
-    const qmiLocEventInjectPredictedOrbitsReqIndMsgT_v02* server_request_ptr);
-
   /* convert and report GNSS measurement data to loc eng */
   void reportGnssMeasurementData(
     const qmiLocEventGnssSvMeasInfoIndMsgT_v02& gnss_measurement_report_ptr);
@@ -628,7 +624,6 @@ public:
   -1 on failure
   */
   virtual int setSvMeasurementConstellation(const locClientEventMaskType mask);
-  virtual LocationError setXtraVersionCheckSync(uint32_t check);
 
   virtual LocPosTechMask convertPosTechMask(qmiLocPosTechMaskT_v02 mask);
   virtual LocNavSolutionMask convertNavSolutionMask(qmiLocNavSolutionMaskT_v02 mask);

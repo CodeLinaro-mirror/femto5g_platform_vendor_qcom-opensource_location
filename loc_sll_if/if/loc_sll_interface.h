@@ -25,6 +25,11 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+/*
+Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
+Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 
 /** @file loc-sll-interface.h
 */
@@ -305,31 +310,6 @@ typedef struct {
     void (*sllReportData)(GnssDataNotification& dataNotify, int msInWeek, void *context);
 
     /**
-       The SLL event to report XTRA Server details. This interface API should
-       call by SLL. The Event processing is done in SLL context and same context
-       Adapter API will called. SLL need to support multiple execution contexts.
-       The execution context will identify using ‘void *context’ variable.
-
-       @param url1[Input]     XTRA Server URL -1.
-
-       @param url2[Input]     XTRA Server URL -2.
-
-       @param url3[Input]     XTRA Server URL -3.
-
-       @param maxlength[Input]  Max length of URLs.
-
-       @param context[Input]    Context Pointer of Synergy Location API.
-
-       @return
-           None.
-
-       @dependencies
-           None.
-    */
-    void (*sllReportXtraServer)(const char* url1, const char* url2,
-            const char* url3, const int maxlength, void *context);
-
-    /**
        The SLL event to report Location System Info. This interface API should
        call by SLL. The Event processing is done in SLL context and same context
        Adapter API will called. SLL need to support multiple execution contexts.
@@ -350,22 +330,6 @@ typedef struct {
     */
     void (*sllReportLocationSystemInfo)(const LocationSystemInfo& locationSystemInfo,
             void *context);
-
-    /**
-       The SLL event to request XTRA Data. This interface API should be call by SLL.
-       The Event processing is done in SLL context and same context Adapter API
-       will called. SLL need to support multiple execution contexts.
-       The execution context will identify using ‘void *context’ variable.
-
-       @param context[Input]    Context Pointer of Synergy Location API.
-
-       @return
-           None.
-
-       @dependencies
-           None.
-    */
-    void (*sllRequestXtraData)(void *context);
 
     /**
        The SLL event to request Time info. This interface API should be call by SLL.
@@ -908,27 +872,6 @@ typedef struct {
            None.
    */
    enum loc_api_adapter_err (*sllSetXtraData)(char* data, int length, void *context);
-
-   /**
-       The interface function to request for XTRA Server to SLL. This interface API should be call by
-       Synergy LOC API. This API will be called multiple times in different execution contexts.
-       The execution context will identify using ‘void *context’ variable.
-
-       @datatypes
-    #loc_api_adapter_err
-
-       @param context[Input]  Context Pointer of Synergy Location API.
-
-       @return
-           loc_api_adapter_err[Output]
-                              The return status LOC_API_ADAPTER_ERR_SUCCESS indicate command
-                              is successfully received and other status indicate as failure.
-
-       @dependencies
-           None.
-   */
-   enum loc_api_adapter_err (*sllRequestXtraServer)(void *context);
-
 
    /**
        The interface function to indicate status of open ATL connection.
