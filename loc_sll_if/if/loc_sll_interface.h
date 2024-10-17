@@ -1808,6 +1808,8 @@ typedef struct {
     */
     enum loc_api_adapter_err (*sllRequestXtraConfigInfo)(const uint32_t configMask,
                                              const uint32_t configReqSource, void *context);
+    enum loc_api_adapter_err (*sllupdateSystemPowerState)(PowerStateType powerState,
+                                             void *context);
 
 } SllInterfaceReq;
 
