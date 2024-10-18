@@ -79,8 +79,8 @@ enum LocationApiDataTypesVersion {
     LOCAPI_DATA_TYPES_VER_MAJOR = 1;
     // Minor - New features / API addition, new message/elemtent addition.
     // Bump the last byte of version i.e. x.2 to x.3
-    // Minor version 49: Support Extended Ephemeris data, ODCPI DBH position
-    LOCAPI_DATA_TYPES_VER_MINOR = 49;
+    // Minor version 50: Support Xtra end user consent status
+    LOCAPI_DATA_TYPES_VER_MINOR = 50;
 }
 
 // ============================================================================
@@ -1696,6 +1696,8 @@ message PBXtraStatus {
     // XTRA_DATA_STATUS_VALID.
     // For all other XtraDataStatus, this field will be set to 0.
     uint32 xtraValidForHours = 3;
+    // End user consent status for xtra assistance data usage
+    bool userConsentStatus = 4;
 };
 
 message PBTimespec {
