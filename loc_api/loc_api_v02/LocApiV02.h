@@ -128,6 +128,10 @@ typedef uint64_t GpsSvMeasHeaderFlags;
 #define BIAS_BDSB1_BDSB2BI_VALID        0x04000000
 #define BIAS_BDSB1_BDSB2BI_UNC_VALID    0x08000000
 
+#define BIAS_GLOG1_VALID                0x10000000
+#define BIAS_GLOG1_UNC_VALID            0x20000000
+
+
 typedef struct {
     uint64_t flags;
 
@@ -162,6 +166,8 @@ typedef struct {
     float bdsB1_bdsB2aUnc;
     float bdsB1_bdsB2bi;
     float bdsB1_bdsB2biUnc;
+    float gloG1;
+    float gloG1Unc;
 } timeBiases;
 
 typedef struct {
@@ -202,6 +208,12 @@ enum GnssRfBand {
 typedef std::unordered_map<string, MeasCacheInfo> CycleSlipCountMap;
 typedef CycleSlipCountMap::iterator CycleSlipCountMapItr;
 
+typedef struct {
+    GnssSvType svType;
+    double carrierFrequencyHz;
+    GnssMeasurementsCodeType codeType;
+} referenceSignalTypeForIsb;
+
 /* This class derives from the LocApiBase class.
    The members of this class are responsible for converting
    the Loc API V02 data structures into Loc Adapter data structures.
@@ -229,7 +241,7 @@ private:
   CycleSlipCountMap mCurrentCycleSlipCountMapNHz;
 
   GnssMeasurements*  mGnssMeasurements;
-  bool mGPSreceived;
+  bool mPreferredSignalTypeReceived;
   int  mMsInWeek;
   bool mAgcIsPresent;
   timeBiases mTimeBiases;
@@ -251,6 +263,9 @@ private:
   // Dwell Time Allignment
   uint8_t mDwellAlignTimeMsValid;
   uint32_t mDwellAlignTimeMs;
+
+  qmiLocGnssSignalTypeMaskT_v02 mPreferredSignalType;
+  referenceSignalTypeForIsb mReferenceSignalTypeForIsb;
 
   // Below two member variables are for elapsedRealTime calculation
   RealtimeEstimator mMeasElapsedRealTimeCal;
@@ -407,7 +422,7 @@ private:
               sizeof(GnssSvMeasurementHeader);
       }
       memset(&mTimeBiases, 0, sizeof(mTimeBiases));
-      mGPSreceived = false;
+      mPreferredSignalTypeReceived = false;
       mMsInWeek = -1;
       mAgcIsPresent = false;
   }
@@ -422,6 +437,8 @@ private:
         const qmiLocEventGnssSvMeasInfoIndMsgT_v02& gnss_measurement_report_ptr,
         GnssSvType& svType);
 
+  void setGnssBiasesForL1CA();
+  void setGnssBiasesForB1I();
   void setGnssBiases();
 
   /* convert and report ODCPI request */
