@@ -1559,7 +1559,9 @@ struct GnssLocation : public Location {
             drSolutionStatusMask((DrSolutionStatusMask)0),
             altitudeAssumed(false),
             integrityRiskUsed(0), protectAlongTrack(0.0f),
-            protectCrossTrack(0.0f), protectVertical(0.0f) {
+            protectCrossTrack(0.0f), protectVertical(0.0f),
+            baseLineLength(0), ageMsecOfCorrections(0),
+            leapSecondsUnc(0), posReportingInterval(0) {
     }
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
@@ -1762,6 +1764,10 @@ struct GnssDcReport {
     uint32_t             numValidBits;
     /** dc report data, packed into uint8_t. <br/>  */
     std::vector<uint8_t> dcReportData;
+    /** SV's Pseudo-Random Number validity */
+    bool                 prnValid;
+    /** SV's Pseudo-Random Number. */
+    uint8_t              prn;
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
     string toString() const;
