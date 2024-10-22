@@ -568,8 +568,9 @@ static void onGnssDcReportCb(const location_client::GnssDcReport & dcReport) {
     if (detailedOutputEnabled) {
         printf("<<< DC report %s\n", dcReport.toString().c_str());
     } else {
-        printf("DC report type %d, valid bits cnt %d, data byte cnt %d\n",
-               dcReport.dcReportType, dcReport.numValidBits, dcReport.dcReportData.size());
+        printf("DC report type %d, valid bits cnt %d, data byte cnt %d PRN %d \n",
+               dcReport.dcReportType, dcReport.numValidBits,
+               dcReport.dcReportData.size(), dcReport.prn);
     }
 }
 

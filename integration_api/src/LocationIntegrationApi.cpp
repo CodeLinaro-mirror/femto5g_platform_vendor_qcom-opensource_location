@@ -113,7 +113,7 @@ bool LocationIntegrationApi::configConstellations(
     } else {
         constellationEnablementConfig.size = sizeof(constellationEnablementConfig);
         constellationEnablementConfig.enabledSvTypesMask =
-                GNSS_SV_TYPES_MASK_GPS_BIT|
+                GNSS_SV_TYPES_MASK_GPS_BIT|GNSS_SV_TYPES_MASK_NAVIC_BIT|
                 GNSS_SV_TYPES_MASK_GLO_BIT|GNSS_SV_TYPES_MASK_BDS_BIT|
                 GNSS_SV_TYPES_MASK_QZSS_BIT|GNSS_SV_TYPES_MASK_GAL_BIT;
         blacklistSvConfig.size = sizeof(GnssSvIdConfig);

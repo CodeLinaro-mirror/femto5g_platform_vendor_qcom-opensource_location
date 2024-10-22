@@ -58,7 +58,8 @@ void LocationIntegrationApiDiagLog::diagLogMmfData(const mapMatchedFeedbackData&
         mmfDataInfo = (diagMapMatchedFeedbackData*)mDiagIface->logAlloc(
                 LOG_GNSS_LIA_API_MMF_REPORT_C, size, &bufferSrc);
         if (mmfDataInfo) {
-            mmfDataInfo->version = LOG_CLIENT_MMF_DIAG_MSG_VERSION;
+            mmfDataInfo->header.version = LOG_CLIENT_MMF_DIAG_MSG_VERSION;
+            mmfDataInfo->header.timeTickMsec = getBootTimeMilliSec();
             fillDiagMmfDataInfo(mmfDataInfo, inMmfData);
             mDiagIface->logCommit(mmfDataInfo, bufferSrc,
                     LOG_GNSS_LIA_API_MMF_REPORT_C,
