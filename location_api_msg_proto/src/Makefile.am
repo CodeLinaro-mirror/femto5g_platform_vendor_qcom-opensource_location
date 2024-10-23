@@ -1,16 +1,29 @@
 AM_CFLAGS = \
      -I./ \
      -D__STDC_FORMAT_MACROS \
-     -Dstrlcpy=g_strlcpy \
-     -Dstrlcat=g_strlcat \
      $(GPSUTILS_CFLAGS) \
-     -std=c++14
+     -std=c++17
+
+if USE_G_STRLCPY
+    AM_CFLAGS += -Dstrlcpy=g_strlcpy
+endif
+if USE_G_STRLCAT
+    AM_CFLAGS += -Dstrlcat=g_strlcat
+endif
 
 ACLOCAL_AMFLAGS = -I m4
 
 requiredlibs = \
     $(GPSUTILS_LIBS) \
     -lprotobuf-lite
+if PROTOBUF_INC_LIBS
+requiredlibs += \
+    -labsl_strings \
+    -labsl_string_view \
+    -labsl_log_internal_message \
+    -labsl_log_internal_proto \
+    -labsl_log_internal_check_op
+endif
 
 liblocation_api_msg_proto_la_SOURCES = \
     LocationApiDataTypes.pb.cc \

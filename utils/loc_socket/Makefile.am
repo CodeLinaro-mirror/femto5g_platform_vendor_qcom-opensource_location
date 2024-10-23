@@ -11,7 +11,7 @@ if USE_QSOCKET
 endif
 
 ACLOCAL_AMFLAGS = -I m4
-AM_CPPFLAGS = -std=c++14
+AM_CPPFLAGS = -std=c++17
 
 requiredlibs = \
     $(QMIFW_LIBS) \
