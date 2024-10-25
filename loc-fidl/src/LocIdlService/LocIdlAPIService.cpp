@@ -52,8 +52,8 @@ using namespace v1::com::qualcomm::qti::location;
 using namespace location_client;
 
 static bool capabilitiesReceived = false;
-static uint32_t posCount = 0;
-static uint32_t latentPosCount = 0;
+static uint64_t posCount = 0;
+static uint64_t latentPosCount = 0;
 static bool exitFromMemUsageMsgTask = false;
 /** Latency threshold for Position reports in msec */
 #define MAX_POSITION_LATENCY   20
@@ -86,7 +86,10 @@ class LocationTrackingSessCbHandler {
                             int64_t curBootTimeNs = ((int64_t)curBootTime.tv_sec * 1000000000) +
                                     (int64_t)curBootTime.tv_nsec;
                             int16_t latencyMs = 0;
-                            latencyMs = (int16_t)((curBootTimeNs - n.elapsedRealTimeNs)/1000000);
+                            if (LOCATION_HAS_ELAPSED_REAL_TIME_BIT  & n.flags) {
+                                latencyMs = (int16_t)((curBootTimeNs -
+                                        n.elapsedRealTimeNs)/1000000);
+                            }
                             if (latencyMs > MAX_POSITION_LATENCY) {
                                   latentPosCount++;
                             }
@@ -194,11 +197,130 @@ class LocationTrackingSessCbHandler {
                             for (auto gnssLocation : engLocations) {
                                 LocationTypes::LocationReportT idlLocRpt =
                                         pClientApiService->parseLocationReport(gnssLocation);
+                                struct timespec curBootTime = {};
+                                clock_gettime(CLOCK_BOOTTIME, &curBootTime);
+                                int64_t curBootTimeNs = (
+                                        (int64_t)curBootTime.tv_sec * 1000000000) +
+                                        (int64_t)curBootTime.tv_nsec;
+                                int16_t latencyMs = 0;
+                                if (LOCATION_HAS_ELAPSED_REAL_TIME_BIT  & gnssLocation.flags) {
+                                    latencyMs = (int16_t)((curBootTimeNs -
+                                            gnssLocation.elapsedRealTimeNs)/1000000);
+                                }
+                                idlLocRpt.setReportingLatency(latencyMs);
+                                if (pClientApiService->mDiagLogIface) {
+                                    pClientApiService->mDiagLogIface->diagLogGnssReportInfo(
+                                            OUTPUT_PVT_REPORT, latencyMs, latentPosCount);
+                                }
                                 idlEngLocVector.push_back(idlLocRpt);
                             }
                             if (pClientApiService->mService) {
                                 pClientApiService->mService->fireGnssEngineLocationsReportEvent(
                                         idlEngLocVector);
+                            }
+                        }
+                    };
+                }
+            if (engReportCallbackMask &
+                        LocationTypes::EngineReportCbMaskT::ERCMT_SV_CB_INFO_BIT) {
+                    mEngineCallbackOptions.gnssSvCallback =
+                            [pClientApiService](const std::vector<::GnssSv>& gnssSvs) {
+                        std::vector<LocationTypes::GnssSvDataT> idlSVReportVector;
+                        LOC_LOGd("Number of SV's recevived -- %d", gnssSvs.size());
+                        if (pClientApiService->mLcaIdlConverter) {
+                            for (auto GnssSv : gnssSvs) {
+                                //Convert Location report from LCA to FIDL format
+                                LocationTypes::GnssSvDataT idlSVRpt =
+                                    pClientApiService->parseGnssSvReport(GnssSv);
+                                idlSVReportVector.push_back(idlSVRpt);
+                            }
+                            if (pClientApiService->mService) {
+                                pClientApiService->mService->fireGnssSvReportEvent(
+                                        idlSVReportVector);
+                            }
+                        }
+                    };
+                }
+                if (engReportCallbackMask &
+                        LocationTypes::EngineReportCbMaskT::ERCMT_NMEA_CB_INFO_BIT) {
+                    mEngineCallbackOptions.nmeaSentencesCallback =
+                            [pClientApiService](::LocOutputEngineType engType,
+                                    uint64_t timestamp, const std::string nmea) {
+                        if (pClientApiService->mService) {
+                            pClientApiService->mService->fireGnssNmeaEvent(timestamp, nmea);
+                        }
+                    };
+                }
+                if (engReportCallbackMask &
+                        LocationTypes::EngineReportCbMaskT::ERCMT_ENGINE_NMEA_CB_INFO_BIT) {
+                    mEngineCallbackOptions.nmeaSentencesCallback =
+                            [pClientApiService](::LocOutputEngineType engType,
+                                    uint64_t timestamp, const std::string nmea) {
+                        LocationTypes::LocOutputEngineTypeT idlEngType =
+                                LocationTypes::LocOutputEngineTypeT::LOETT_COUNT;
+                        switch (engType)  {
+                            case LOC_OUTPUT_ENGINE_FUSED:
+                                idlEngType =
+                                    LocationTypes::LocOutputEngineTypeT::LOETT_FUSED;
+                                break;
+                            case LOC_OUTPUT_ENGINE_SPE:
+                                idlEngType = LocationTypes::LocOutputEngineTypeT::LOETT_SPE;
+                                break;
+                            case LOC_OUTPUT_ENGINE_PPE:
+                                idlEngType = LocationTypes::LocOutputEngineTypeT::LOETT_PPE;
+                                break;
+                            case LOC_OUTPUT_ENGINE_VPE:
+                                idlEngType = LocationTypes::LocOutputEngineTypeT::LOETT_VPE;
+                                break;
+                            default:
+                                idlEngType =
+                                    LocationTypes::LocOutputEngineTypeT::LOETT_COUNT;
+                            break;
+                        }
+                        if (pClientApiService->mService) {
+                            pClientApiService->mService->fireEngineNmeaEvent(
+                                    idlEngType, timestamp, nmea);
+                        }
+                    };
+                }
+                if (engReportCallbackMask &
+                        LocationTypes::EngineReportCbMaskT::ERCMT_MEAS_CB_INFO_BIT) {
+                    mEngineCallbackOptions.gnssMeasurementsCallback =
+                            [pClientApiService](const ::GnssMeasurements gnssMeasurements) {
+                        if (pClientApiService->mLcaIdlConverter) {
+                            LocationTypes::GnssMeasurementsT idlGnssMeasurement =
+                                    pClientApiService->parseGnssMeasurements(gnssMeasurements);
+                            struct timespec curBootTime = {};
+                            clock_gettime(CLOCK_BOOTTIME, &curBootTime);
+                            int64_t curBootTimeNs = ((int64_t)curBootTime.tv_sec * 1000000000) +
+                                    (int64_t)curBootTime.tv_nsec;
+                            int16_t latencyMs = 0;
+                            latencyMs = (int16_t)((curBootTimeNs -
+                                    gnssMeasurements.clock.elapsedRealTime)/1000000);
+                            idlGnssMeasurement.setReportingLatency(latencyMs);
+                            if (pClientApiService->mDiagLogIface) {
+                                pClientApiService->mDiagLogIface->diagLogGnssReportInfo(
+                                        OUTPUT_MEAS_REPORT, latencyMs, 0);
+                            }
+                            if (pClientApiService->mService) {
+                                pClientApiService->mService->fireGnssMeasurementReportEvent(
+                                        idlGnssMeasurement);
+                            }
+                        }
+                    };
+                }
+                 // GnssDataCb
+                 if (engReportCallbackMask &
+                        LocationTypes::EngineReportCbMaskT::ERCMT_DATA_CB_INFO_BIT) {
+                    mEngineCallbackOptions.gnssDataCallback =
+                            [pClientApiService] (const ::GnssData n) {
+                        //Convert GnssData report from LCA to FIDL format
+                        if (pClientApiService->mLcaIdlConverter) {
+                            LocationTypes::GnssDataT idlGnssDataRpt =
+                                    pClientApiService->parseGnssDataReport(n);
+                            if (pClientApiService->mService) {
+                                pClientApiService->mService->fireGnssDataReportEvent(
+                                        idlGnssDataRpt);
                             }
                         }
                     };
@@ -713,6 +835,7 @@ void LocIdlAPIService::startPositionSession
         inline virtual void proc() const {
             if (mLCAService) {
                 mLCAService->numControlRequests++;
+                mLCAService->mGnssReportMask |= mEngReportCallbackMask;
                 LOC_LOGi("==== startPositionSession Engine Specific %u 0X%X 0X%X ",
                         mIntervalInMs, mLocReqEngMask, mEngReportCallbackMask);
                 LocationTrackingSessCbHandler cbHandler(mLCAService, mLocReqEngMask,
