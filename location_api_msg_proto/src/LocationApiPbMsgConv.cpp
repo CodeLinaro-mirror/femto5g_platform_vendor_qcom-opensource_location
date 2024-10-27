@@ -6615,6 +6615,7 @@ int LocationApiPbMsgConv::pbConvertToAntennaInfo(
     int count = pbAntennaInfo.antennainfos_size();
     for (int i = 0; i < count; i++) {
         GnssAntennaInformation gnssAntennaInfo;
+        memset(((void*)(&gnssAntennaInfo)), 0, sizeof(gnssAntennaInfo));
         pbConvertToGnssAntennaInformaiton(pbAntennaInfo.antennainfos(i), gnssAntennaInfo);
         antennaInfo.antennaInfos.push_back(std::move(gnssAntennaInfo));
     }
