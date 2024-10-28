@@ -376,10 +376,9 @@ LocApiV02 :: LocApiV02(LOC_API_ADAPTER_EVENT_MASK_T exMask,
     mTimeBiases{},
     mPlatformPowerState(eQMI_LOC_POWER_STATE_UNKNOWN_V02),
     mIsFullTracking(true),
-    mPreferredSignalType(QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L1CA_V02),
-    mPreferredSvSystemType(GNSS_SV_TYPE_GPS),
-    mQesdkFeatureMask(0),
-    mIsGptpInitialized(false)
+    mIsGptpInitialized(false),
+    mDwellAlignTimeMsValid(0),
+    mDwellAlignTimeMs(0)
 {
   // initialize loc_sync_req interface
   loc_sync_req_init();
@@ -742,7 +741,8 @@ locClientEventMaskType LocApiV02 :: adjustLocClientEventMask(locClientEventMaskT
         // device in suspended/shutdown state, clear the engine state and leap second info mask
         // to avoid wake up
         qmiMask &= ~(QMI_LOC_EVENT_MASK_ENGINE_STATE_V02 |
-                QMI_LOC_EVENT_MASK_NEXT_LS_INFO_REPORT_V02);
+                QMI_LOC_EVENT_MASK_NEXT_LS_INFO_REPORT_V02 |
+                QMI_LOC_EVENT_DWELL_TIME_ALIGNMENT_INFO_V02);
         syslog(LOG_INFO, "adjustLocClientEventMask, oldQmiMask=0x%" PRIx64 " "
                "qmiMask=0x%" PRIx64 " mInSession: %d, power state %d, retry queue empty %d",
                oldQmiMask, qmiMask, mInSession, mPlatformPowerState, mResenders.empty());
@@ -2324,8 +2324,10 @@ locClientEventMaskType LocApiV02 :: convertLocClientEventMask(
   if (mask & LOC_API_ADAPTER_BIT_BS_OBS_DATA_SERVICE_REQ)
       eventMask |= QMI_LOC_EVENT_MASK_BS_OBS_DATA_SERVICE_REQ_V02;
 
-  if (mask & LOC_API_ADAPTER_BIT_LOC_SYSTEM_INFO)
+  if (mask & LOC_API_ADAPTER_BIT_LOC_SYSTEM_INFO) {
       eventMask |= QMI_LOC_EVENT_MASK_NEXT_LS_INFO_REPORT_V02;
+      eventMask |= QMI_LOC_EVENT_DWELL_TIME_ALIGNMENT_INFO_V02;
+  }
 
   if (mask & LOC_API_ADAPTER_BIT_EVENT_REPORT_INFO)
       eventMask |= QMI_LOC_EVENT_MASK_GNSS_EVENT_REPORT_V02;
@@ -4657,7 +4659,8 @@ void  LocApiV02 :: reportSystemInfo(
              "current gps time:valid:%d, week: %d, msec: %d,"
              "current leap second:valid %d, seconds %d, "
              "next gps time: valid %d, week: %d, msec: %d,"
-             "next leap second: valid %d, seconds %d",
+             "next leap second: valid %d, seconds %d,"
+             "dwell allign time valid %d dwell allign time %d",
              system_info_ptr->systemInfo,
              system_info_ptr->nextLeapSecondInfo_valid,
              system_info_ptr->nextLeapSecondInfo.gpsTimeCurrent_valid,
@@ -4669,7 +4672,8 @@ void  LocApiV02 :: reportSystemInfo(
              system_info_ptr->nextLeapSecondInfo.gpsTimeNextLsEvent.gpsWeek,
              system_info_ptr->nextLeapSecondInfo.gpsTimeNextLsEvent.gpsTimeOfWeekMs,
              system_info_ptr->nextLeapSecondInfo.leapSecondsNext_valid,
-             system_info_ptr->nextLeapSecondInfo.leapSecondsNext);
+             system_info_ptr->nextLeapSecondInfo.leapSecondsNext,
+             system_info_ptr->dwellAlignTimeMs_valid, system_info_ptr->dwellAlignTimeMs);
 
     LocationSystemInfo systemInfo = {};
     if ((system_info_ptr->systemInfo == eQMI_LOC_NEXT_LEAP_SECOND_INFO_V02) &&
@@ -4708,6 +4712,12 @@ void  LocApiV02 :: reportSystemInfo(
             systemInfo.leapSecondSysInfo.leapSecondCurrent =
                     nextLeapSecondInfo.leapSecondsCurrent;
         }
+    }
+
+    // Save Dwell Time Allignement and pass in Meas reports
+    if (system_info_ptr->dwellAlignTimeMs_valid) {
+        mDwellAlignTimeMsValid = 1;
+        mDwellAlignTimeMs = system_info_ptr->dwellAlignTimeMs;
     }
 
     if (systemInfo.systemInfoMask) {
@@ -6374,6 +6384,11 @@ void LocApiV02::convertGnssMeasurementsHeader(const Gnss_LocSvSystemEnumType loc
         svMeasSetHead.dgnssRefStationId =
                 gnss_measurement_info.dgnssRefStationId;
         svMeasSetHead.flags |= GNSS_SV_MEAS_HEADER_HAS_DGNSS_REF_STATION_ID;
+    }
+
+    if (mDwellAlignTimeMsValid) {
+        svMeasSetHead.flags |= GNSS_SV_MEAS_HEADER_HAS_DWELL_ALIGN_TIME_MSEC;
+        svMeasSetHead.dwellAlignTimeMsec = mDwellAlignTimeMs;
     }
 }
 
