@@ -573,6 +573,10 @@ void printPosResport(const LocIdlAPI::IDLLocationReport &_locationReport)
 {
     const LocIdlAPI::IDLLocation &location = _locationReport.getLocInfo();
 
+    if (!mIsGptpInitialized && gptpInit()) {
+        mIsGptpInitialized = true;
+    }
+
     static unsigned int posCount;
     uint64_t gptp_time_ns = 0;
     bool retPtp = false;

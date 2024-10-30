@@ -5389,6 +5389,10 @@ void LocApiV02::reportGnssMeasurementData(
             uint64_t elapsedgPTPTime = 0;
             /* deal with gPTP time */
             /* Fill PTP time corresponding to Time of generation of meas packet */
+            if (!mIsGptpInitialized && gptpInit()) {
+                mIsGptpInitialized = true;
+            }
+
             if (mIsGptpInitialized) {
                 bool gotMPQTickPtpTime = gptpGetPtpTimeFromQTimeTickCount(&elapsedgPTPTime,
                         gnss_measurement_report_ptr.refCountTicks);
@@ -7479,6 +7483,11 @@ void LocApiV02 :: eventCb(locClientHandleType /*clientHandle*/,
   {
     //Position Report
     case QMI_LOC_EVENT_POSITION_REPORT_IND_V02:
+#ifdef PTP_SUPPORTED
+      if (!mIsGptpInitialized && gptpInit()) {
+          mIsGptpInitialized = true;
+      }
+#endif
       reportPosition(eventPayload.pPositionReportEvent);
       break;
 
