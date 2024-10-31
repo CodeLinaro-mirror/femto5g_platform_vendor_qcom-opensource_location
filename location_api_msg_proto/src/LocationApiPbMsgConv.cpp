@@ -1944,6 +1944,10 @@ uint32_t LocationApiPbMsgConv::getPBMaskForGnssLocationInfoExtFlagMask(
         pbGnssLocInfoFlagMask |= PB_GNSS_LOCATION_INFO_LEAP_SECONDS_UNC_BIT;
     }
 
+    if (gnssLocInfoFlagMask & LDT_GNSS_LOCATION_INFO_REPORT_INTERVAL_BIT) {
+        pbGnssLocInfoFlagMask |= PB_GNSS_LOCATION_INFO_REPORT_INTERVAL_BIT;
+    }
+
     return pbGnssLocInfoFlagMask;
 }
 
@@ -3374,7 +3378,9 @@ uint64_t LocationApiPbMsgConv::getGnssLocationInfoFlagMaskFromPB(
     if (pbGnssLocInfoExtFlagMask & PB_GNSS_LOCATION_INFO_LEAP_SECONDS_UNC_BIT) {
         gnssLocInfoFlagMask |= LDT_GNSS_LOCATION_INFO_LEAP_SECONDS_UNC_BIT;
     }
-
+    if (pbGnssLocInfoExtFlagMask & PB_GNSS_LOCATION_INFO_REPORT_INTERVAL_BIT) {
+        gnssLocInfoFlagMask |= LDT_GNSS_LOCATION_INFO_REPORT_INTERVAL_BIT;
+    }
     LocApiPb_LOGv("LocApiPB: pbGnssLocInfoFlagMask:0x%x, pbGnssLocInfoExtFlagMask:0x%x, "
                   "gnssLocInfoFlagMask:0x%" PRIu64"", pbGnssLocInfoFlagMask,
                   pbGnssLocInfoExtFlagMask, gnssLocInfoFlagMask);
@@ -4525,8 +4531,10 @@ int LocationApiPbMsgConv::convertGnssLocInfoNotifToPB(
     pbGnssLocInfoNotif->set_agemsecofcorrections(gnssLocInfoNotif.ageMsecOfCorrections);
     // uint32    leapSecondsUnc = 50;
     pbGnssLocInfoNotif->set_leapsecondsunc(gnssLocInfoNotif.leapSecondsUnc);
+    // uint32 posReportingInterval  = 51;
+    pbGnssLocInfoNotif->set_posreportinginterval(gnssLocInfoNotif.posReportingInterval);
 
-    LocApiPb_LOGv("LocApiPB: gnssLocInfoNotif - GLocInfoFlgMask:%" PRIu64", pdop:%f, hdop:%f, "
+    LocApiPb_LOGv("LocApiPB: gnssLocInfoNotif - GLocInfoFlgMask:%" PRIx64", pdop:%f, hdop:%f, "
             "vdop:%f",
             gnssLocInfoNotif.flags, gnssLocInfoNotif.pdop, gnssLocInfoNotif.hdop,
             gnssLocInfoNotif.vdop);
@@ -5742,7 +5750,10 @@ int LocationApiPbMsgConv::pbConvertToGnssLocInfoNotif(
    // uint32    leapSecondsUnc = 50;
    gnssLocInfoNotif.leapSecondsUnc = pbGnssLocInfoNotif.leapsecondsunc();
 
-   LOC_LOGv("LocApiPB: pbGnssLocInfoNotif -GLocInfoFlgMask:0x%" PRIx64 ", pdop:%f, "
+    // uint32 posReportingInterval  = 51;
+    gnssLocInfoNotif.posReportingInterval  = pbGnssLocInfoNotif.posreportinginterval();
+
+    LOC_LOGv("LocApiPB: pbGnssLocInfoNotif -GLocInfoFlgMask:0x%" PRIx64 ", pdop:%f, "
             "hdop:%f, vdop:%f",
             gnssLocInfoNotif.flags, gnssLocInfoNotif.pdop, gnssLocInfoNotif.hdop,
             gnssLocInfoNotif.vdop);
