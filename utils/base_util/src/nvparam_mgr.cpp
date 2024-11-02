@@ -1080,7 +1080,12 @@ int NvParamMgrImpl::wrapper_mprintf(char* &output_buf, unsigned int &output_size
       }
       else
       {
-        output_buf = (char*) realloc (output_buf, output_size);
+        char* temp_ptr = (char*) realloc (output_buf, output_size);
+        if (NULL == temp_ptr)
+        {
+          free(output_buf);
+        }
+        output_buf = temp_ptr;
       }
 
       if (output_buf == NULL)
