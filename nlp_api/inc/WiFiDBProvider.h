@@ -51,12 +51,32 @@ typedef struct {
 } ApScan;
 
 typedef struct {
+    uint8_t macAddress[6];
+    float rssi;
+    uint64_t deltaTime;
+    // ssid per spec is up to 32 bytes of any char
+    // make it 33 bytes to make sure it will be null terminated
+    char ssid[33];
+    uint32_t frequency;
+    uint8_t reserve[8];
+} ApScanExt;
+
+typedef struct {
     NlpLocation location;
     CellInfo cellInfo;
     uint64_t scanTimestamp;
     ApScan* ap_scan_list;
     uint16_t ap_scan_list_count;
 } APObsLocData;
+
+typedef struct {
+    NlpLocation location;
+    CellInfoExt cellInfo;
+    uint64_t scanTimestamp;
+    ApScanExt* ap_scan_list;
+    uint16_t ap_scan_list_count;
+    uint8_t reserve[16];
+} APObsLocDataExt;
 
 /** @brief
     All the memory pointers returned in these callbacks will be freed after call returns.
@@ -67,5 +87,11 @@ typedef struct {
             ApBsListStatus ap_status, const void* clientData);
     void (*onServiceRequest)(const void* clientData);
 } WiFiDBProviderResponseListener;
+
+typedef struct {
+    void (*onApObsLocDataAvailableExt)(const APObsLocDataExt* ap_obs_list,
+            uint32_t ap_obs_list_count, ApBsListStatus ap_status, const void* clientData);
+    void (*onServiceRequest)(const void* clientData);
+} WiFiDBProviderResponseListenerExt;
 
 #endif /* WIFI_DB_PROV_H */
