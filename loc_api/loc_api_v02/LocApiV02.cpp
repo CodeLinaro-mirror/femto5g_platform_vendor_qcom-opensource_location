@@ -3892,6 +3892,10 @@ void  LocApiV02 :: reportSvPolynomial(const qmiLocEventGnssSvPolyIndMsgT_v02 *gn
             svPolynomial.is_valid |= ULP_GNSS_SV_POLY_BIT_SBAS_IONODELAY;
             svPolynomial.sbasIonoDelay = gnss_sv_poly_ptr->sbasIonoDelay;
         }
+        if (1 == gnss_sv_poly_ptr->sbasCorrUnc_valid) {
+            svPolynomial.is_valid |= ULP_GNSS_SV_POLY_BIT_SBAS_CORRUNC;
+            svPolynomial.sbasCorrUnc = gnss_sv_poly_ptr->sbasCorrUnc;
+        }
         if (1 == gnss_sv_poly_ptr->tropoDelay_valid) {
             svPolynomial.is_valid |= ULP_GNSS_SV_POLY_BIT_TROPODELAY;
             svPolynomial.tropoDelay = gnss_sv_poly_ptr->tropoDelay;
@@ -4317,6 +4321,11 @@ void LocApiV02::populateFeatureStatusReport
         featureMap[LOCATION_QWES_FEATURE_STATUS_GNSS_NHZ] = true;
     } else {
         featureMap[LOCATION_QWES_FEATURE_STATUS_GNSS_NHZ] = false;
+    }
+    if (featureStatusReport & QMI_LOC_FEATURE_STATUS_SBAS_V02) {
+        featureMap[LOCATION_QWES_FEATURE_TYPE_SBAS] = true;
+    } else {
+        featureMap[LOCATION_QWES_FEATURE_TYPE_SBAS] = false;
     }
 }
 
@@ -11440,6 +11449,63 @@ void LocApiV02::configPrecisePositioning(uint32_t featureId, bool enable,
         if (adapterResponse) {
             adapterResponse->returnToSender(err);
         }
+    }));
+}
+
+void LocApiV02::configPrecisePositioning(PreciseType preciseType, bool enable,
+        LocApiResponse* adapterResponse) {
+    sendMsg(new LocApiMsg([this, preciseType, enable, adapterResponse] () {
+        LocationError err = LOCATION_ERROR_SUCCESS;
+        qmiLocSetPreciseSessionConfigReqMsgT_v02 req;
+        qmiLocGenReqStatusIndMsgT_v02 ind;
+        locClientStatusEnumType status;
+        locClientReqUnionType req_union;
+
+        LOC_LOGD("configPrecisePositioning: preciseType %d, enable %d", preciseType, enable);
+        memset(&req, 0, sizeof(req));
+        memset(&ind, 0, sizeof(ind));
+        req.sessionCmd_valid = true;
+        req.sessionCmd = enable ? eQMI_LOC_PRECISE_SESSION_START_V02 :
+                eQMI_LOC_PRECISE_SESSION_STOP_V02;
+
+        req.sessionType_valid = false;
+        switch (preciseType) {
+        case PRECISE_TYPE_EDGNSS:
+            req.sessionType_valid = true;
+            req.sessionType = eQMI_LOC_PRECISE_SESSION_TYPE_EDGNSS_V02;
+            break;
+        case PRECISE_TYPE_RTK:
+            req.sessionType_valid = true;
+            req.sessionType = eQMI_LOC_PRECISE_SESSION_TYPE_RTK_V02;
+            break;
+        case PRECISE_TYPE_WOCS:
+            req.sessionType_valid = true;
+            req.sessionType = eQMI_LOC_PRECISE_SESSION_TYPE_WOCS_V02;
+            break;
+        default:
+            LOC_LOGe("Invalid precise type %d", preciseType);
+            break;
+        }
+
+        req_union.pSetPreciseSessionConfigReq = &req;
+        status = locSyncSendReq(QMI_LOC_SET_PRECISE_SESSION_CONFIG_REQ_V02,
+                                req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
+                                QMI_LOC_SET_PRECISE_SESSION_CONFIG_IND_V02,
+                                &ind);
+        LOC_LOGd("configPrecisePositioning: Ind. status 0x%x", ind.status);
+
+        if (status != eLOC_CLIENT_SUCCESS || ind.status != eQMI_LOC_SUCCESS_V02) {
+            if (status == eLOC_CLIENT_FAILURE_UNSUPPORTED ||
+                    status == eLOC_CLIENT_FAILURE_INVALID_MESSAGE_ID) {
+                err = LOCATION_ERROR_NOT_SUPPORTED;
+            } else {
+                err = LOCATION_ERROR_GENERAL_FAILURE;
+            }
+        }
+        if (adapterResponse) {
+            adapterResponse->returnToSender(err);
+        }
+
     }));
 }
 

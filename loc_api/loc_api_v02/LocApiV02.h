@@ -653,6 +653,8 @@ public:
 
   virtual void configPrecisePositioning(uint32_t featureId, bool enable,
           const std::string& appHash, LocApiResponse* adapterResponse=nullptr);
+  virtual void configPrecisePositioning(PreciseType preciseType, bool enable,
+          LocApiResponse* adapterResponse=nullptr);
   /* Requests for SV/Constellation Control */
   virtual LocationError setBlacklistSvSync(const GnssSvIdConfig& config);
   virtual void setBlacklistSv(const GnssSvIdConfig& config,

@@ -845,6 +845,9 @@ typedef union
     const qmiLocSetNtnStatusReqMsgT_v02
             *pSetNtnStatusReq;
     /*QMI_LOC_SET_NTN_STATUS_REQ_V02*/
+    const qmiLocSetPreciseSessionConfigReqMsgT_v02
+            *pSetPreciseSessionConfigReq;
+    /*QMI_LOC_SET_PRECISE_SEESION_CONFIG_REQ_V02*/
 }locClientReqUnionType;
 
 
