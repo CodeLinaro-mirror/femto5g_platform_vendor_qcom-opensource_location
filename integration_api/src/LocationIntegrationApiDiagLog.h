@@ -10,9 +10,10 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 
 #include "LocationIntegrationApi.h"
 #include "LocDiagIfaceApi.h"
+#include "loc_misc_utils.h"
 
 /** Packet Versions */
-#define LOG_CLIENT_MMF_DIAG_MSG_VERSION             (0)
+#define LOG_CLIENT_MMF_DIAG_MSG_VERSION             (1)
 
 /** Packet Log Codes */
 #ifndef LOG_GNSS_LIA_API_MMF_REPORT_C
@@ -50,6 +51,16 @@ typedef struct PACKED_POST {
   } log_hdr_type;
 #endif
 
+/** @brief LIA API Diag logger header for all messages. */
+typedef PACKED struct PACKED_POST {
+    /** Used by Logging Module */
+    log_hdr_type logHeader;
+    /** Message Version */
+    uint8_t version;
+    /** Boot time during logging of packet in milliseconds */
+    uint64_t timeTickMsec;
+} diagLogGenericHeader;
+
  enum diagMmfDataValidity {
 
     DIAG_MMF_VALID_UTC_TIME     = (1<<0),
@@ -64,12 +75,9 @@ typedef struct PACKED_POST {
 };
 
 typedef PACKED struct PACKED_POST {
-    /** Used by Logging Module
-      *  Mandatory field */
-    log_hdr_type logHeader;
-    /** clientDiag Message Version
-     *  Mandatory field */
-    uint8_t version;
+    /** LIA API Diag logger header for all messages. */
+    diagLogGenericHeader header;
+
     /** Validity fields for MMF data fields to follow
      *  Flags defined uisng enum mmfDataValidity */
     uint64_t validityMask;

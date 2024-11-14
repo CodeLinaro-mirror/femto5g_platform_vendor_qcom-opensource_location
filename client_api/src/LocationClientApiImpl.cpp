@@ -909,6 +909,11 @@ GnssLocation LocationClientApiImpl::parseLocationInfo(
         flags |= LCA_GNSS_LOCATION_INFO_LEAP_SECONDS_UNC_BIT;
     }
 
+    if (LDT_GNSS_LOCATION_INFO_REPORT_INTERVAL_BIT & halLocationInfo.flags) {
+        flags |= LCA_GNSS_LOCATION_INFO_REPORT_INTERVAL_BIT;
+        locationInfo.posReportingInterval = halLocationInfo.posReportingInterval;
+    }
+
     locationInfo.gnssInfoFlags = flags;
     locationInfo.altitudeMeanSeaLevel = halLocationInfo.altitudeMeanSeaLevel;
     locationInfo.pdop = halLocationInfo.pdop;
@@ -1284,6 +1289,9 @@ GnssDcReport LocationClientApiImpl::parseDcReport(const::GnssDcReportInfo &halDc
     }
     dcReport.numValidBits = halDcReport.numValidBits;
     dcReport.dcReportData = std::move(halDcReport.dcReportData);
+    dcReport.prnValid = halDcReport.prnValid;
+    dcReport.prn = halDcReport.prn;
+
     return dcReport;
 }
 
