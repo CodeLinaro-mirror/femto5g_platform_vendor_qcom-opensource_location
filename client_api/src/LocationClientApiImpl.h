@@ -268,6 +268,8 @@ public:
                      LocReportTriggerType reportTriggerType);
     void logGeofenceBreach(const GeofenceBreachNotification& breachNotif,
             const std::vector<Geofence> &geofences);
+    static GnssMeasCodeType parseGnssMeasCodeType(
+            const ::GnssMeasurementsCodeType &halGnssMeasCodeType);
 
     LCAReportLoggerUtil & getLogger() {
         return mLogger;
