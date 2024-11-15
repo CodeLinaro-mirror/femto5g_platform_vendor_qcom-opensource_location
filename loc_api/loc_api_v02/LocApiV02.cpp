@@ -7348,6 +7348,7 @@ void LocApiV02 :: convertGnssMeasurements(
 
     // code type
     if (gnss_measurement_report_ptr.measurementCodeType_valid) {
+        measurementData.flags |= GNSS_MEASUREMENTS_DATA_MEAS_CODE_TYPE_BIT;
         switch (gnss_measurement_report_ptr.measurementCodeType)
         {
         case eQMI_LOC_GNSS_CODE_TYPE_A_V02:
@@ -7392,6 +7393,7 @@ void LocApiV02 :: convertGnssMeasurements(
     memset(measurementData.otherCodeTypeName, 0, GNSS_MAX_NAME_LENGTH);
     if (GNSS_MEASUREMENTS_CODE_TYPE_OTHER == measurementData.codeType) {
         if (gnss_measurement_report_ptr.otherCodeTypeName_valid) {
+            measurementData.flags |= GNSS_MEASUREMENTS_DATA_OTHER_MEAS_CODE_TYPE_BIT;
             strlcpy(measurementData.otherCodeTypeName,
                     gnss_measurement_report_ptr.otherCodeTypeName,
                     std::min((uint32_t)sizeof(measurementData.otherCodeTypeName),
