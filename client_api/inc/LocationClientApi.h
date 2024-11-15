@@ -1849,6 +1849,12 @@ enum GnssMeasurementsDataFlagsMask{
     /** GnssMeasurementsData has valid
      *  GnssMeasurementsData::basebandCarrierToNoiseDbHz. <br/> */
     GNSS_MEASUREMENTS_DATA_BASEBAND_CARRIER_TO_NOISE_BIT    = (1<<22),
+    /** GnssMeasurementsData has valid
+     *  GnssMeasurementsData::measCodeType. <br/> */
+    GNSS_MEASUREMENTS_DATA_MEAS_CODE_TYPE_BIT               = (1<<23),
+    /** GnssMeasurementsData has valid
+     *  GnssMeasurementsData::otherCodeType. <br/> */
+    GNSS_MEASUREMENTS_DATA_OTHER_MEAS_CODE_TYPE_BIT         = (1<<24),
 };
 
 /** Specify GNSS measurement state in
@@ -1957,6 +1963,27 @@ enum GnssMeasurementsClockFlagsMask {
     GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_GPTP_TIME_UNC_BIT         = (1<<12),
 };
 
+enum GnssMeasCodeType {
+    GNSS_MEAS_CODE_TYPE_UNKNOWN  = 0,
+    GNSS_MEAS_CODE_TYPE_A        = 1,
+    GNSS_MEAS_CODE_TYPE_B        = 2,
+    GNSS_MEAS_CODE_TYPE_C        = 3,
+    GNSS_MEAS_CODE_TYPE_I        = 4,
+    GNSS_MEAS_CODE_TYPE_L        = 5,
+    GNSS_MEAS_CODE_TYPE_M        = 6,
+    GNSS_MEAS_CODE_TYPE_P        = 7,
+    GNSS_MEAS_CODE_TYPE_Q        = 8,
+    GNSS_MEAS_CODE_TYPE_S        = 9,
+    GNSS_MEAS_CODE_TYPE_W        = 10,
+    GNSS_MEAS_CODE_TYPE_X        = 11,
+    GNSS_MEAS_CODE_TYPE_Y        = 12,
+    GNSS_MEAS_CODE_TYPE_Z        = 13,
+    GNSS_MEAS_CODE_TYPE_N        = 14,
+    GNSS_MEAS_CODE_TYPE_D        = 15,
+    GNSS_MEAS_CODE_TYPE_E        = 16,
+    GNSS_MEAS_CODE_TYPE_OTHER    = 255,
+};
+
 /** Specify the SV pseudo range and carrier phase measurement
  *  from standard SPE engine. <br/>
  *
@@ -2052,7 +2079,11 @@ struct GnssMeasurementsData {
     double fullInterSignalBiasUncertaintyNs;
     /** Increments when a cycle slip is detected. <br/> */
     uint8_t cycleSlipCount;
-
+    /**  GNSS Measurement Code Type */
+    GnssMeasCodeType measCodeType;
+    /** Measurement Code type, If measCodeType is GNSS_MEAS_CODE_TYPE_OTHER and
+        GnssMeasurementsDataFlagsMask::GNSS_MEASUREMENTS_DATA_OTHER_MEAS_CODE_TYPE_BIT is set */
+    string otherCodeTypeName;
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
     string toString() const;
