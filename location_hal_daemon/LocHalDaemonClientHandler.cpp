@@ -937,6 +937,11 @@ bool LocHalDaemonClientHandler::filterPositionReport(
         const GnssLocationInfoNotification& notification,
         LocOutputEngineType engType) {
 
+    // For min interval 0, pass reports at engine running rate
+    if (!mOptions.minInterval || LOC_OUTPUT_ENGINE_COUNT <= engType) {
+        return false;
+    }
+
     uint64_t curBootTimeMsec = getBootTimeMilliSec();
     // minInterval must be atleast 100msec
     uint32_t lowerBound = mOptions.minInterval - POSITION_REPORT_GAURD_BAND;

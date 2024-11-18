@@ -48,7 +48,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <chrono>
 #include <fstream>
 #include <CommonAPI/CommonAPI.hpp>
-#include <v0/com/qualcomm/qti/location/LocIdlAPIProxy.hpp>
+#include <v1/com/qualcomm/qti/location/LocationProxy.hpp>
 #include <time.h>
 #include <cstdlib>
 #include <cstring>
@@ -66,13 +66,20 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define GID_GPS (1021)
 
-using namespace v0::com::qualcomm::qti::location;
+using namespace v1::com::qualcomm::qti::location;
 using namespace std;
 #define NSEC_IN_ONE_SEC       (1000000000ULL)   /* nanosec in a sec */
 
-std::shared_ptr<LocIdlAPIProxy<>> myProxy;
+std::shared_ptr<LocationProxy<>> myProxy;
 bool verbose = false;
 bool fileReadDone = false;
+/* Requested tbf in msec */
+uint32_t tbf = 100;
+uint32_t engineType = 0x1; //Default fused report
+/** Session Type
+ *  0 = Fused Session
+    1 = engine specific */
+uint8_t sessionType = 0;
 
 static const char MMF_TRUTH_FILE[] = "/data/vendor/location/";
 #define MAX_LINE_TO_READ 100
@@ -89,6 +96,9 @@ uint32_t nmeaSubscription;
 uint32_t measSubscription;
 uint32_t nHzmeasSubscription;
 uint32_t dataSubscription;
+uint32_t capsSubscription;
+uint32_t engineNmeaSubscription;
+uint32_t enginePvtSubscription;
 
 enum BdsFields {
     BDS_INSTEST_GPS_WEEK = 1,
@@ -157,7 +167,7 @@ std::thread t[2];
 
 bool mmfON = false;
 
-void mmfDataInjection(LocIdlAPI::MapMatchingFeedbackData  &mapData);
+void mmfDataInjection(LocationTypes::MapMatchingFeedbackDataT  &mapData);
 
 static bool mIsGptpInitialized = false;
 
@@ -185,6 +195,11 @@ void ToolUsage()
     cout << " REPORT_NMEA       0x04   4" <<endl;
     cout << " REPORT_GNSSDATA   0x08   8" <<endl;
     cout << " REPORT_1HZ_MEAS   0x10   16" <<endl;
+    cout << " Use -t for specifiying tbf " <<endl;
+    cout << " To start fused or Engine specific use -s option 0: Fused 1:Engine specific " <<endl;
+    cout << " For Engine specific session, select engine type using -e " <<endl;
+    cout << " 0: Fused 0x1:SPE: 0x2:PPE 0x3:DRE " <<endl;
+    cout << " LocIdlAPIClient -m 31 -d 300 -v -s 1 -e 7 -t 100 " <<endl;
     cout << " ===========================================" << endl<<endl;
     cout << " Example 4: Map Matching feedback with live location" << endl;
     cout << " LocIdlAPIClient -f 1,12.98226941,77.6985102,866.776" <<endl;
@@ -195,11 +210,11 @@ void ToolUsage()
     return;
 }
 
-void printMeasurement(const LocIdlAPI::IDLGnssMeasurements& gnssMeasurements)
+void printMeasurement(const LocationTypes::GnssMeasurementsT& gnssMeasurements)
 {
     static unsigned int measCount;
     uint64_t gptp_time_ns = 0;
-    const LocIdlAPI::IDLGnssMeasurementsClock &clk = gnssMeasurements.getClock();
+    const LocationTypes::GnssMeasurementsClockT &clk = gnssMeasurements.getClock();
     static bool printMeasHeader = true;
 
     if (printMeasHeader) {
@@ -226,15 +241,15 @@ void printMeasurement(const LocIdlAPI::IDLGnssMeasurements& gnssMeasurements)
         cout << "DriftUncNsps  " << clk.getDriftUncertaintyNsps() << endl;
         cout << "HwClockCount  " << clk.getHwClockDiscontinuityCount() << endl;
 
-        const vector<LocIdlAPI::IDLGnssMeasurementsData > &measData =
+        const vector<LocationTypes::GnssMeasurementsDataT > &measData =
                                         gnssMeasurements.getMeasurements();
         for (uint16_t idx = 0; idx < measData.size(); idx++) {
             cout <<"Idx  "<< idx << endl;
 
             cout <<"MeasFlags "<< measData[idx].getFlags() << endl;
-            cout <<"svId "<< measData[idx].getSvType() << endl;
+            cout <<"svId "<< measData[idx].getSvId() << endl;
 
-            cout <<"svType "<< measData[idx].getSvType() << endl;
+            cout <<"svType "<< static_cast<int>(measData[idx].getSvType()) << endl;
             cout <<"timeOffsetNs"<< measData[idx].getTimeOffsetNs() << endl;
             cout <<"stateMask "<< measData[idx].getStateMask() << endl;
             cout <<"receivedSvTimeNs "<< measData[idx].getReceivedSvTimeNs() << endl;
@@ -266,6 +281,7 @@ void printMeasurement(const LocIdlAPI::IDLGnssMeasurements& gnssMeasurements)
                     ""<< measData[idx].getFullInterSignalBiasUncertaintyNs() << endl;
             cout <<"cycleSlipCount "<< static_cast<int>(measData[idx].getCycleSlipCount()) << endl;
         }
+        cout <<"ReportingLatency "<< gnssMeasurements.getReportingLatency() << endl;
         cout << "-------" << endl;
     }
 }
@@ -369,38 +385,38 @@ void readThread()
 void sendMmfInfo(MMF_POSITION_INFO &truth, MMF_POSITION_INFO &pos)
 {
     uint32_t mask = 0;
-    LocIdlAPI::MapMatchingFeedbackData  mapData = {};
+    LocationTypes::MapMatchingFeedbackDataT  mapData = {};
 
-    mask |= LocIdlAPI::MapMatchingFeedbackDataValidity::MMF_DATA_VALID_UTC_TIME;
+    mask |= LocationTypes::MapMatchingFeedbackDataValidityT::MMFDVT_UTC_TIME;
     mapData.setUtcTimestampMs(pos.utcTimestampMs);
-    mask |= LocIdlAPI::MapMatchingFeedbackDataValidity::MMF_DATA_VALID_TUNNEL;
+    mask |= LocationTypes::MapMatchingFeedbackDataValidityT::MMFDVT_TUNNEL;
     mapData.setIsTunnel(pos.isTunnel);
     if (((truth.validityMask & DATA_VALID_LAT) == DATA_VALID_LAT)) {
-        mask |= LocIdlAPI::MapMatchingFeedbackDataValidity::MMF_DATA_VALID_LAT_DIFF;
+        mask |= LocationTypes::MapMatchingFeedbackDataValidityT::MMFDVT_LAT_DIFF;
         mapData.setMapMatchedLatitudeDifference(truth.lat - pos.lat);
     }
     if (((truth.validityMask & DATA_VALID_LONG) == DATA_VALID_LONG)) {
-        mask |= LocIdlAPI::MapMatchingFeedbackDataValidity::MMF_DATA_VALID_LONG_DIFF;
+        mask |= LocationTypes::MapMatchingFeedbackDataValidityT::MMFDVT_LONG_DIFF;
         mapData.setMapMatchedLongitudeDifference(truth.lon - pos.lon);
     }
     if (((truth.validityMask & DATA_VALID_ALTITUDE) == DATA_VALID_ALTITUDE)) {
-        mask |= LocIdlAPI::MapMatchingFeedbackDataValidity::MMF_DATA_VALID_ALTITUDE;
+        mask |= LocationTypes::MapMatchingFeedbackDataValidityT::MMFDVT_ALTITUDE;
         mapData.setAltitude(truth.alt);
     }
     if (((truth.validityMask & DATA_VALID_BEARING) == DATA_VALID_BEARING)) {
-        mask |= LocIdlAPI::MapMatchingFeedbackDataValidity::MMF_DATA_VALID_BEARING;
+        mask |= LocationTypes::MapMatchingFeedbackDataValidityT::MMFDVT_BEARING;
         mapData.setBearing(truth.bearing);
     }
     if (((truth.validityMask & DATA_VALID_HOR_ACC) == DATA_VALID_HOR_ACC)) {
-        mask |= LocIdlAPI::MapMatchingFeedbackDataValidity::MMF_DATA_VALID_HOR_ACC;
+        mask |= LocationTypes::MapMatchingFeedbackDataValidityT::MMFDVT_HOR_ACC;
         mapData.setHorizontalAccuracy(truth.horizontalAccuracy);
     }
     if (((truth.validityMask & DATA_VALID_ALT_ACC) == DATA_VALID_ALT_ACC)) {
-        mask |= LocIdlAPI::MapMatchingFeedbackDataValidity::MMF_DATA_VALID_ALT_ACC;
+        mask |= LocationTypes::MapMatchingFeedbackDataValidityT::MMFDVT_ALT_ACC;
         mapData.setAltitudeAccuracy(truth.altitudeAccuracy);
     }
     if (((truth.validityMask & DATA_VALID_BEARING_ACC) == DATA_VALID_BEARING_ACC)) {
-        mask |= LocIdlAPI::MapMatchingFeedbackDataValidity::MMF_DATA_VALID_BEARING_ACC;
+        mask |= LocationTypes::MapMatchingFeedbackDataValidityT::MMFDVT_BEARING_ACC;
         mapData.setBearingAccuracy(truth.bearingAccuracy);
     }
     mapData.setValidityMask(mask);
@@ -569,9 +585,9 @@ void mmfComputation()
     return;
 }
 
-void printPosResport(const LocIdlAPI::IDLLocationReport &_locationReport)
+void printPosResport(const LocationTypes::LocationReportT &_locationReport)
 {
-    const LocIdlAPI::IDLLocation &location = _locationReport.getLocInfo();
+    const LocationTypes::LocationT &location = _locationReport.getLocInfo();
 
     if (!mIsGptpInitialized && gptpInit()) {
         mIsGptpInitialized = true;
@@ -594,10 +610,10 @@ void printPosResport(const LocIdlAPI::IDLLocationReport &_locationReport)
         MMF_POSITION_INFO posInfo;
         static uint32_t tunnelTracker;
         uint32_t posMask =  _locationReport.getPosTechMask();
-        if (posMask & LocIdlAPI::IDLLocationTechnologyMask::IDL_LOC_TECH_GNSS_BIT) {
+        if (posMask & LocationTypes::LocationTechnologyMaskT::LTMT_GNSS_BIT) {
             tunnelTracker = 0;
-        } else if ((posMask & LocIdlAPI::IDLLocationTechnologyMask::IDL_LOC_TECH_SENSORS_BIT) &&
-            !(posMask & LocIdlAPI::IDLLocationTechnologyMask::IDL_LOC_TECH_GNSS_BIT)) {
+        } else if ((posMask & LocationTypes::LocationTechnologyMaskT::LTMT_SENSORS_BIT) &&
+            !(posMask & LocationTypes::LocationTechnologyMaskT::LTMT_GNSS_BIT)) {
             tunnelTracker++;
         }
         posInfo.utcTimestampMs = location.getTimestamp();
@@ -609,11 +625,12 @@ void printPosResport(const LocIdlAPI::IDLLocationReport &_locationReport)
         } else {
             posInfo.isTunnel = false;
         }
-        const LocIdlAPI::IDLGnssSystemTime &gnssTime = _locationReport.getGnssSystemTime();
-        const LocIdlAPI::IDLSystemTimeStructUnion &time = gnssTime.getTimeUnion();
-        if (time.isType<LocIdlAPI::IDLGnssSystemTimeStructType>()) {
-            const LocIdlAPI::IDLGnssSystemTimeStructType &systemTime =
-                            time.get<LocIdlAPI::IDLGnssSystemTimeStructType>();
+        const LocationTypes::GnssSystemTimeT &gnssTime = _locationReport.getGnssSystemTime();
+        const LocationTypes::SystemTimeStructT &time = gnssTime.getSystemTime();
+
+         if (gnssTime.getGnssSystemTimeSrc() != LocationTypes::GnssLocSvSystemTypeT::GLSSTT_GLO) {
+            const LocationTypes::GnssSystemTimeStructTypeT &systemTime =
+                                time.getGnssSystemTime();
             posInfo.gpsWeek = systemTime.getSystemWeek();
             posInfo.gpsWeekMsec = systemTime.getSystemMsec();
             posInfo.gpsTimeMsec = (posInfo.gpsWeek * NUM_SEC_IN_WEEK * 1000) + posInfo.gpsWeekMsec;
@@ -628,24 +645,24 @@ void printPosResport(const LocIdlAPI::IDLLocationReport &_locationReport)
     }
 
     uint64_t lFlags = _locationReport.getLocationInfoFlags();
-    if (lFlags &  LocIdlAPI::IDLLCALocationInfoFlagMask::IDL_LOC_INFO_GPTP_TIME_BIT) {
+    if (lFlags &  LocationTypes::LocationReportExtendedFlagMaskT::LREFMT_GPTP_TIME_BIT){
         retPtp = gptpGetCurPtpTime(&gptp_time_ns);
         if (retPtp) {
             cout <<"PVT, "
                 "" << location.getTimestamp()<< ", "
                 "" <<location.getLatitude() << ", " << location.getLongitude() << ", "
                 "" << gptp_time_ns << ", "
-                "" << _locationReport.getElapsedgPTPTime() <<", "
+                "" << _locationReport.getElapsedgPtpTime()<<", "
                 "" << fixed << setprecision(3) << ""
                 "" <<(float)(gptp_time_ns -
-                            _locationReport.getElapsedgPTPTime()) / (float)1000000 <<""
+                            _locationReport.getElapsedgPtpTime()) / (float)1000000 <<""
                 ""  << endl;
         } else {
             cout <<"PVT, "
                 "" << location.getTimestamp()<< ", "
                 "" <<location.getLatitude() << ", " << location.getLongitude() << ", "
                 "" << "NA" << ", "
-                "" << _locationReport.getElapsedgPTPTime() <<", "
+                "" << _locationReport.getElapsedgPtpTime() <<", "
                 "" << fixed << setprecision(3) << ""
                 "" <<"NA" <<""
                 ""  << endl;
@@ -709,7 +726,7 @@ void printPosResport(const LocIdlAPI::IDLLocationReport &_locationReport)
         cout << "UpVelocityStdDeviatio    "<< _locationReport.getUpVelocityStdDeviation() << endl;
         cout << "NumSvUsedInPosition      " << _locationReport.getNumSvUsedInPosition() << endl;
 
-        const LocIdlAPI::IDLLocationReportSvUsedInPosition &svUsed =
+        const LocationTypes::LocationReportSvUsedInPositionT &svUsed =
                                 _locationReport.getSvUsedInPosition();
         cout << "GpsSvUsedIdsMask     "<< svUsed.getGpsSvUsedIdsMask() << endl;
         cout << "GalSvUsedIdsMask     "<< svUsed.getGalSvUsedIdsMask() << endl;
@@ -722,7 +739,7 @@ void printPosResport(const LocIdlAPI::IDLLocationReport &_locationReport)
         cout << "NavSolutionMask      "<< _locationReport.getNavSolutionMask() << endl;
         cout << "PosTechMask          "<< _locationReport.getPosTechMask() << endl;
 
-        const LocIdlAPI::IDLLocationReportPositionDynamics &posDynamics =
+        const LocationTypes::LocationReportPositionDynamicsT &posDynamics =
                                     _locationReport.getBodyFrameData();
         cout << "BodyFrameDataMask    "<< posDynamics.getBodyFrameDataMask() << endl;
         cout << "LongAccel            "<< posDynamics.getLongAccel() << endl;
@@ -744,23 +761,37 @@ void printPosResport(const LocIdlAPI::IDLLocationReport &_locationReport)
         cout << "YawRate              "<< posDynamics.getYawRate() << endl;
         cout << "YawRateUnc           "<< posDynamics.getYawRateUnc() << endl;
 
-        const LocIdlAPI::IDLGnssSystemTime &gnssTime = _locationReport.getGnssSystemTime();
-        cout << "getLocationCbEvent GnssSystemTimeSrc " << gnssTime.getGnssSystemTimeSrc() << endl;
-        const LocIdlAPI::IDLSystemTimeStructUnion &time = gnssTime.getTimeUnion();
-        if (time.isType<LocIdlAPI::IDLGnssSystemTimeStructType>()) {
-              const LocIdlAPI::IDLGnssSystemTimeStructType &systemTime =
-                                time.get<LocIdlAPI::IDLGnssSystemTimeStructType>();
+        const LocationTypes::GnssSystemTimeT &gnssTime = _locationReport.getGnssSystemTime();
+        cout << "GnssSystemTimeSrc " << static_cast<int>(gnssTime.getGnssSystemTimeSrc()) << endl;
+        const LocationTypes::SystemTimeStructT &time = gnssTime.getSystemTime();
+        if (gnssTime.getGnssSystemTimeSrc() ==
+                LocationTypes::GnssLocSvSystemTypeT::GLSSTT_GLO) {
+              const LocationTypes::GnssGloTimeStructTypeT &systemTime =
+                                time.getGloSystemTime();
+              cout <<"ValidityMask    " <<systemTime.getValidityMask() <<endl ;
+              cout <<"GloDays         " <<systemTime.getGloDays() <<endl ;
+              cout <<"GloFourYear     " <<systemTime.getGloFourYear() <<endl ;
+              cout <<"ClkTimeBias     " <<systemTime.getGloClkTimeBias() <<endl ;
+              cout <<"ClkTimeUncMs    " <<systemTime.getGloClkTimeUncMs() <<endl ;
+              cout <<"GloMsec         " <<systemTime.getGloMsec() <<endl ;
+              cout <<"NumClockResets  " <<systemTime.getNumClockResets() <<endl ;
+              cout <<"RefCount        " <<systemTime.getRefFCount() <<endl ;
+        } else {
+              const LocationTypes::GnssSystemTimeStructTypeT &systemTime =
+                                time.getGnssSystemTime();
+              cout <<"ValidityMask    " <<systemTime.getValidityMask() <<endl ;
               cout <<"SystemWeek      " <<systemTime.getSystemWeek() <<endl ;
-              cout <<"SystemWeekMs    " <<systemTime.getSystemMsec() <<endl ;
-              cout <<"SysClkTimeBias  " <<systemTime.getSystemClkTimeBias() <<endl ;
-              cout <<"SysClkTimeUncMs " <<systemTime.getSystemClkTimeUncMs() <<endl ;
-              cout <<"RefFCount       " <<systemTime.getRefFCount() <<endl ;
+              cout <<"SystemMsec      " <<systemTime.getSystemMsec() <<endl ;
+              cout <<"ClkTimeBias     " <<systemTime.getSystemClkTimeBias() <<endl ;
+              cout <<"ClkTimeUncMs    " <<systemTime.getSystemClkTimeUncMs() <<endl ;
+              cout <<"RefFcount       " <<systemTime.getRefFcount() <<endl ;
               cout <<"NumClockResets  " <<systemTime.getNumClockResets() <<endl ;
         }
 
-        const vector<LocIdlAPI::IDLGnssMeasUsageInfo> &meas = _locationReport.getMeasUsageInfo();
+        const vector<LocationTypes::GnssMeasUsageInfoT> &meas =
+                _locationReport.getMeasUsageInfo();
         for (uint8_t idx = 0; idx < meas.size() && idx < 176; idx++) {
-            cout << "GnssConstellation    "<< meas[idx].getGnssConstellation()<<endl ;
+            cout << "GnssConstellation    "<< static_cast<int>(meas[idx].getGnssConstellation())<<endl ;
             cout << "GnssSignalType       "<< meas[idx].getGnssSignalType()<<endl ;
             cout << "GnssSvId             "<< meas[idx].getGnssSvId()<<endl ;
         }
@@ -768,45 +799,48 @@ void printPosResport(const LocIdlAPI::IDLLocationReport &_locationReport)
         cout << "LeapSeconds      " << static_cast<int>(_locationReport.getLeapSeconds()) << endl;
         cout << "CalibrationConfidence "
             "" << static_cast<int>(_locationReport.getCalibrationConfidencePercent()) << endl;
-        cout << "CalibrationStatus    " << _locationReport.getCalibrationStatus() << endl;
-        cout << "LocOutputEngType     " << _locationReport.getLocOutputEngType() << endl;
+        cout << "CalibrationStatus    "
+            "" << _locationReport.getCalibrationStatus() << endl;
+        cout << "LocOutputEngType     "
+            "" << static_cast<int>(_locationReport.getLocOutputEngType()) << endl;
         cout << "LocOutputEngMask     " << _locationReport.getLocOutputEngMask() << endl;
         cout << "ConformityIndex      " << _locationReport.getConformityIndex() << endl;
 
-        const LocIdlAPI::IDLLLAInfo &lla = _locationReport.getLlaVRPBased();
+        const LocationTypes::LlaInfoT &lla = _locationReport.getLlaVrpBased();
         cout << "Latitude             " << lla.getLatitude() << endl;
         cout << "Longitude            " << lla.getLongitude() << endl;
         cout << "Altitude             " << lla.getAltitude() << endl;
 
-        const vector<float> &emu = _locationReport.getEnuVelocityVRPBased();
+        const vector<float> &emu = _locationReport.getEnuVelocityVrpBased();
         for (int k = 0; k < emu.size(); k++) {
             cout << "Emu                  " << emu[k] << endl;
         }
 
         cout << "DrSolutionStatusMask " << _locationReport.getDrSolutionStatusMask() << endl;
         cout << "AltitudeAssumed      " << _locationReport.getAltitudeAssumed() << endl;
-        cout << "SessionStatus        " << _locationReport.getSessionStatus() << endl;
+        cout << "SessionStatus        "
+            "" << static_cast<int>(_locationReport.getSessionStatus()) << endl;
         cout << "IntegrityRiskUsed    " << _locationReport.getIntegrityRiskUsed() << endl;
         cout << "ProtectAlongTrack    " << _locationReport.getProtectAlongTrack() << endl;
         cout << "ProtectCrossTrack    " << _locationReport.getProtectCrossTrack() << endl;
         cout << "ProtectVertical      " << _locationReport.getProtectVertical() << endl;
         cout << "LocationInfoFlags    " << _locationReport.getLocationInfoFlags() << endl;
 
-        const vector<uint16_t> &dgnss = _locationReport.getDgnssStationId();
+        const vector<uint32_t> &dgnss = _locationReport.getDgnssStationId();
         for (int idx = 0; idx < dgnss.size(); idx++) {
                cout << "DgnssStationId        " << dgnss[idx] << endl;
         }
-        cout << "ElapsedPTPTimeNs  " << _locationReport.getElapsedgPTPTime() << endl;
+        cout << "ElapsedPTPTimeNs  " << _locationReport.getElapsedgPtpTime() << endl;
         cout << "ReportingLatency  " << _locationReport.getReportingLatency() << endl;
         cout << "LeapSecondsUnc    " << _locationReport.getLeapSecondsUnc() << endl;
         cout << "BaseLineLength    " << _locationReport.getBaseLineLength() << endl;
         cout << "AgeMsecOfCorrections " << _locationReport.getAgeMsecOfCorrections() << endl;
-        cout << "CurrReportingRate " << _locationReport.getCurrReportingRate() << endl;
+        cout << "CurrReportingRate " << _locationReport.getPosReportingInterval() << endl;
         cout << "-------" << endl;
     }
 }
 
-void printGnssData(const LocIdlAPI::IDLGnssData& gnssData)
+void printGnssData(const LocationTypes::GnssDataT& gnssData)
 {
    vector<uint32_t> dataMask = gnssData.getGnssDataMask();
    vector<double> jammerInd = gnssData.getJammerInd();
@@ -815,7 +849,7 @@ void printGnssData(const LocIdlAPI::IDLGnssData& gnssData)
    if (verbose) {
        cout << "Type, SignalType, Mask, JammeInd, Agc" << endl;
        cout << "-------" << endl;
-       for (int i = 0; i < (dataMask.size() - 1); i++) {
+       for (int i = 0; i < (dataMask.size()); i++) {
            cout << "GNSSDATA, " << i << " , "<< dataMask[i] << " , "
                 "" << jammerInd[i] << " , " << agc[i] << endl;
        }
@@ -823,7 +857,7 @@ void printGnssData(const LocIdlAPI::IDLGnssData& gnssData)
    }
 }
 
-void printSVInfo(const vector<LocIdlAPI::IDLGnssSv> &gnssSv)
+void printSVInfo(const vector<LocationTypes::GnssSvDataT > &gnssSv)
 {
     static unsigned int svCount;
     static bool printSVHeader = true;
@@ -840,12 +874,12 @@ void printSVInfo(const vector<LocIdlAPI::IDLGnssSv> &gnssSv)
         cout << "-------" << endl;
         for (uint16_t idx = 0; idx < gnssSv.size(); idx++) {
             cout << "svId  " << gnssSv[idx].getSvId() << endl;
-            cout << "Type    " << gnssSv[idx].getType() << endl;
-            cout << "CN0Dbhz  " << gnssSv[idx].getCN0Dbhz() << endl;
+            cout << "Type    " << static_cast<int>(gnssSv[idx].getType()) << endl;
+            cout << "CN0Dbhz  " << gnssSv[idx].getCN0DbHz() << endl;
             cout << "setElevation    " << gnssSv[idx].getElevation() << endl;
             cout << "Azimuth  " << gnssSv[idx].getAzimuth() << endl;
             cout << "CarrierFrequencyHz    " << gnssSv[idx].getCarrierFrequencyHz() << endl;
-            cout << "GnssSignalTypeMask" << gnssSv[idx].getGnssSignalTypeMask() << endl;
+            cout << "GnssSignalTypeMask" << gnssSv[idx].getGnssSignalType() << endl;
             cout << "BasebandCarrierToNoiseDbHz    "
                     "" << gnssSv[idx].getBasebandCarrierToNoiseDbHz() << endl;
             cout << "GloFrequency" << gnssSv[idx].getGloFrequency() << endl;
@@ -877,25 +911,36 @@ void printNmea(const uint64_t timestamp, const string &nmea)
 void DeInitHandles()
 {
     CommonAPI::CallStatus callStatus;
-
+    LocationTypes::LocationStatusT sessStatus =
+            LocationTypes::LocationStatusT::LOCATION_STATUS_T_SUCCESS;
     if (sessionStarted && myProxy) {
-        if (mask & LocIdlAPI::IDLGnssReportCbInfoMask::IDL_DATA_CB_INFO_BIT) {
-            myProxy->getGnssDataEvent().unsubscribe(dataSubscription);
+        if (mask & LocationTypes::GnssReportCbInfoMaskT::GRCIMT_DATA_CB_INFO_BIT ||
+                mask & LocationTypes::EngineReportCbMaskT::ERCMT_DATA_CB_INFO_BIT) {
+            myProxy->getGnssDataReportEvent().unsubscribe(dataSubscription);
         }
-        if (mask & LocIdlAPI::IDLGnssReportCbInfoMask::IDL_LOC_CB_INFO_BIT) {
-            myProxy->getLocationReportEvent().unsubscribe(pvtSubscription);
+        if (mask & LocationTypes::GnssReportCbInfoMaskT::GRCIMT_LOCATION_CB_INFO_BIT) {
+            myProxy->getGnssLocationReportEvent().unsubscribe(pvtSubscription);
         }
-        if (mask & LocIdlAPI::IDLGnssReportCbInfoMask::IDL_1HZ_MEAS_CB_INFO_BIT) {
-            myProxy->getGnssMeasurementsEvent().unsubscribe(measSubscription);
+        if (mask & LocationTypes::GnssReportCbInfoMaskT::GRCIMT_MEAS_CB_INFO_BIT ||
+                mask & LocationTypes::EngineReportCbMaskT::ERCMT_MEAS_CB_INFO_BIT) {
+            myProxy->getGnssMeasurementReportEvent().unsubscribe(measSubscription);
         }
-        if (mask & LocIdlAPI::IDLGnssReportCbInfoMask::IDL_SV_CB_INFO_BIT) {
-            myProxy->getGnssSvEvent().unsubscribe(svSubscription);
+        if (mask & LocationTypes::GnssReportCbInfoMaskT::GRCIMT_SV_CB_INFO_BIT ||
+                mask & LocationTypes::EngineReportCbMaskT::ERCMT_SV_CB_INFO_BIT) {
+            myProxy->getGnssSvReportEvent().unsubscribe(svSubscription);
         }
-        if (mask & LocIdlAPI::IDLGnssReportCbInfoMask::IDL_NMEA_CB_INFO_BIT) {
+        if (mask & LocationTypes::GnssReportCbInfoMaskT::GRCIMT_NMEA_CB_INFO_BIT ||
+                mask & LocationTypes::EngineReportCbMaskT::ERCMT_NMEA_CB_INFO_BIT) {
             myProxy->getGnssNmeaEvent().unsubscribe(nmeaSubscription);
         }
-
-        myProxy->stopPositionSession(callStatus, &info);
+        if (mask & LocationTypes::EngineReportCbMaskT::ERCMT_NMEA_CB_INFO_BIT) {
+            myProxy->getEngineNmeaEvent().unsubscribe(engineNmeaSubscription);
+        }
+        if (mask & LocationTypes::EngineReportCbMaskT::ERCMT_LOCATION_CB_INFO_BIT) {
+            myProxy->getGnssEngineLocationsReportEvent().unsubscribe(enginePvtSubscription);
+        }
+        myProxy->getGnssCapabilitiesEvent().unsubscribe(capsSubscription);
+        myProxy->StopPositionSession(callStatus, sessStatus, &info);
     } else {
         cout << "Either session not started or mProxy is NULL !! "<< endl;
     }
@@ -934,6 +979,17 @@ void signalHandler(int signal) {
     return;
 }
 
+void getLocationCapabilities() {
+    if (myProxy) {
+        CommonAPI::CallStatus callStatus;
+        uint32_t capsMask = 0;
+        myProxy->GetLocationCapabilities(callStatus, capsMask, &info);
+        if (callStatus == CommonAPI::CallStatus::SUCCESS)
+            cout << "caps received " << capsMask << endl;
+    }
+
+}
+
 bool parseCommandLine(int argc, char* argv[], int &delay)
 {
     extern char *optarg;
@@ -956,7 +1012,7 @@ bool parseCommandLine(int argc, char* argv[], int &delay)
 
     if (argc > 1) {
         while ((opt = getopt(argc, argv,
-                  "m:d:f:hv")) != -1) {
+                  "m:d:f:t:s:e:hvg")) != -1) {
              switch (opt) {
                  case 'm':
                     mask = atoi(optarg);
@@ -1026,7 +1082,19 @@ bool parseCommandLine(int argc, char* argv[], int &delay)
                         }
                         mmfON = true;
                         flag = true;
-                     }
+                    }
+                    break;
+                 case 'g':
+                    getLocationCapabilities();
+                    break;
+                 case 't':
+                    tbf = atoi(optarg);
+                    break;
+                 case 's':
+                    sessionType = atoi(optarg);
+                    break;
+                 case 'e':
+                    engineType = atoi(optarg);
                     break;
                  case 'h':
                  default:
@@ -1071,44 +1139,89 @@ void subscribeGnssResports()
             }
         });
         // Subscribe for receiving values
-        myProxy->getGnssCapabilitiesMaskAttribute().getChangedEvent().subscribe(
-            [&](const uint32_t &val) {
-                    cout << "Received caps change event: " << val << endl;
+        capsSubscription = myProxy->getGnssCapabilitiesEvent().subscribe(
+             [&](const uint32_t &val) {
+             cout << "Received caps change event: " << val << endl;
+        });
+        if (!sessionType) {
+            if (mask & LocationTypes::GnssReportCbInfoMaskT::GRCIMT_DATA_CB_INFO_BIT) {
+                dataSubscription = myProxy->getGnssDataReportEvent().subscribe(
+                [&](const LocationTypes::GnssDataT& gnssData){
+                    printGnssData(gnssData);
                 });
+            }
 
-        if (mask & LocIdlAPI::IDLGnssReportCbInfoMask::IDL_DATA_CB_INFO_BIT) {
-            dataSubscription = myProxy->getGnssDataEvent().subscribe(
-            [&](const LocIdlAPI::IDLGnssData& gnssData){
-                printGnssData(gnssData);
-            });
-        }
+            if (mask & LocationTypes::GnssReportCbInfoMaskT::GRCIMT_LOCATION_CB_INFO_BIT) {
+                pvtSubscription = myProxy->getGnssLocationReportEvent().subscribe(
+                [&](const LocationTypes::LocationReportT &locationReportInfo) {
+                    printPosResport(locationReportInfo);
+                });
+            }
 
-        if (mask & LocIdlAPI::IDLGnssReportCbInfoMask::IDL_LOC_CB_INFO_BIT) {
-            pvtSubscription = myProxy->getLocationReportEvent().subscribe(
-            [&](const LocIdlAPI::IDLLocationReport &_locationReport) {
-                printPosResport(_locationReport);
-            });
-        }
+            if (mask & LocationTypes::GnssReportCbInfoMaskT::GRCIMT_MEAS_CB_INFO_BIT) {
+                measSubscription = myProxy->getGnssMeasurementReportEvent().subscribe(
+                [&](const LocationTypes::GnssMeasurementsT& gnssMeasurements) {
+                    printMeasurement(gnssMeasurements);
+                });
+            }
 
-        if (mask & LocIdlAPI::IDLGnssReportCbInfoMask::IDL_1HZ_MEAS_CB_INFO_BIT) {
-            measSubscription = myProxy->getGnssMeasurementsEvent().subscribe(
-            [&](const LocIdlAPI::IDLGnssMeasurements& gnssMeasurements) {
-                printMeasurement(gnssMeasurements);
-            });
-        }
+            if (mask & LocationTypes::GnssReportCbInfoMaskT::GRCIMT_SV_CB_INFO_BIT) {
+                svSubscription = myProxy->getGnssSvReportEvent().subscribe(
+                [&](const vector<LocationTypes::GnssSvDataT> &gnssSv) {
+                    printSVInfo(gnssSv);
+                });
+            }
 
-        if (mask & LocIdlAPI::IDLGnssReportCbInfoMask::IDL_SV_CB_INFO_BIT) {
-            svSubscription = myProxy->getGnssSvEvent().subscribe(
-            [&](const vector<LocIdlAPI::IDLGnssSv> &gnssSv) {
-                printSVInfo(gnssSv);
-            });
-        }
+            if (mask & LocationTypes::GnssReportCbInfoMaskT::GRCIMT_NMEA_CB_INFO_BIT) {
+                nmeaSubscription = myProxy->getGnssNmeaEvent().subscribe(
+                [&](const uint64_t timestamp, const string nmea){
+                    printNmea(timestamp, nmea);
+                });
+            }
+        }else if (sessionType == 1) {
+            if (mask & LocationTypes::EngineReportCbMaskT::ERCMT_DATA_CB_INFO_BIT) {
+                dataSubscription = myProxy->getGnssDataReportEvent().subscribe(
+                [&](const LocationTypes::GnssDataT& gnssData){
+                    printGnssData(gnssData);
+                });
+            }
 
-        if (mask & LocIdlAPI::IDLGnssReportCbInfoMask::IDL_NMEA_CB_INFO_BIT) {
-            nmeaSubscription = myProxy->getGnssNmeaEvent().subscribe(
-            [&](const uint64_t timestamp, const string nmea){
-                printNmea(timestamp, nmea);
-            });
+            if (mask & LocationTypes::EngineReportCbMaskT::ERCMT_LOCATION_CB_INFO_BIT) {
+                enginePvtSubscription = myProxy->getGnssEngineLocationsReportEvent().subscribe(
+                [&](const vector<LocationTypes::LocationReportT> &locationReportInfo) {
+                    for (int i = 0; i < locationReportInfo.size(); i++)
+                        printPosResport(locationReportInfo[i]);
+                });
+            }
+
+            if (mask & LocationTypes::EngineReportCbMaskT::ERCMT_MEAS_CB_INFO_BIT) {
+                measSubscription = myProxy->getGnssMeasurementReportEvent().subscribe(
+                [&](const LocationTypes::GnssMeasurementsT& gnssMeasurements) {
+                    printMeasurement(gnssMeasurements);
+                });
+            }
+
+            if (mask & LocationTypes::EngineReportCbMaskT::ERCMT_SV_CB_INFO_BIT) {
+                svSubscription = myProxy->getGnssSvReportEvent().subscribe(
+                [&](const vector<LocationTypes::GnssSvDataT> &gnssSv) {
+                    printSVInfo(gnssSv);
+                });
+            }
+
+            if (mask & LocationTypes::EngineReportCbMaskT::ERCMT_NMEA_CB_INFO_BIT) {
+                nmeaSubscription = myProxy->getGnssNmeaEvent().subscribe(
+                [&](const uint64_t timestamp, const string nmea){
+                    printNmea(timestamp, nmea);
+                });
+            }
+            if (mask & LocationTypes::EngineReportCbMaskT::ERCMT_ENGINE_NMEA_CB_INFO_BIT) {
+                engineNmeaSubscription = myProxy->getEngineNmeaEvent().subscribe(
+                [&](LocationTypes::LocOutputEngineTypeT,
+                        const uint64_t timestamp, const string nmea){
+                    printNmea(timestamp, nmea);
+                });
+            }
+
         }
     } else {
         cout << " mProxy is NULL !! "<< endl;
@@ -1117,20 +1230,33 @@ void subscribeGnssResports()
 
 void sessionStart()
 {
-    uint32_t _intervalInMs = 100;
-    LocIdlAPI::IDLLocationResponse resp;
+    uint32_t intervalInMs = tbf;
+    LocationTypes::LocationStatusT resp;
     CommonAPI::CallStatus callStatus;
     info.sender_ = 1234;
 
     sleep(1);
     if (myProxy) {
-        myProxy->startPositionSession(_intervalInMs, mask, callStatus, resp, &info);
-        if (callStatus != CommonAPI::CallStatus::SUCCESS) {
-            cout << "startPositionSession() Remote call failed! callStatus "
-            "" << (int)callStatus << endl;
-            sessionStarted = false;
-        } else {
-            sessionStarted = true;
+        if (!sessionType) {
+            myProxy->StartPositionSessionLocationReport(intervalInMs, mask,
+                    callStatus, resp, &info);
+            if (callStatus != CommonAPI::CallStatus::SUCCESS) {
+                cout << "StartPositionSessionLocationReport() Remote call failed! callStatus "
+                "" << (int)callStatus << endl;
+                sessionStarted = false;
+            } else {
+                sessionStarted = true;
+            }
+        } else if (sessionType == 1) {
+            myProxy->StartPositionSessionEngineSpecificLocation(intervalInMs, engineType, mask,
+                    callStatus, resp, &info);
+            if (callStatus != CommonAPI::CallStatus::SUCCESS) {
+                cout << "StartPositionSessionEngineSpecificLocation() Remote call failed! Status "
+                "" << (int)callStatus << endl;
+                sessionStarted = false;
+            } else {
+                sessionStarted = true;
+            }
         }
     } else {
         cout << " mProxy is NULL !! "<< endl;
@@ -1196,15 +1322,10 @@ void setRequiredPermToRunAsIdlClient() {
     }
 }
 
-void mmfDataInjection(LocIdlAPI::MapMatchingFeedbackData  &mapData)
+void mmfDataInjection(LocationTypes::MapMatchingFeedbackDataT   &mapData)
 {
     CommonAPI::CallStatus callStatus;
-    LocIdlAPI::IDLLocationResponse resp;
-
-    myProxy->injectMapMatchedFeedbackData(mapData, callStatus, resp);
-    if (callStatus != CommonAPI::CallStatus::SUCCESS) {
-        cout << "mmf not sent" << endl;
-    }
+    myProxy->InjectMapMatchedFeedbackData(mapData, callStatus);
 }
 
 int main(int argc, char* argv[])
@@ -1212,19 +1333,17 @@ int main(int argc, char* argv[])
     setRequiredPermToRunAsIdlClient();
 
     int delay;
-    string clientName;
-    std::cout << "Enter client-name: ";
-    std::cin >> clientName;
-
+    string clientName = "location-fidl-test-client";
     CommonAPI::Runtime::setProperty("LogContext", "LocIdlAPI");
     CommonAPI::Runtime::setProperty("LogApplication", "LocIdlAPI");
     CommonAPI::Runtime::setProperty("LibraryBase", "LocIdlAPI");
-
+    CommonAPI::Version version = Location::getInterfaceVersion();
+    std::cout << "Version: " << version.Major << "." << version.Minor << endl;
     shared_ptr < CommonAPI::Runtime > runtime = CommonAPI::Runtime::get();
     string domain = "local";
-    string instance = "com.qualcomm.qti.location.LocIdlAPI";
+    string instance = "com.qualcomm.qti.location.Location";
     if (runtime) {
-        myProxy = runtime->buildProxy<LocIdlAPIProxy>(domain, instance, clientName);
+        myProxy = runtime->buildProxy<LocationProxy>(domain, instance, clientName);
     } else {
         LOC_LOGe("CAPI error runtime is NULL !!");
         return 0;

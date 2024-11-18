@@ -254,9 +254,13 @@ private:
   std::string mPackageName[eQMI_LOC_NTN_V02+1];
   bool mIsFullTracking;
   qmiLocGnssSignalTypeMaskT_v02 mPreferredSignalType;
+  GnssSvType mPreferredSvSystemType;
   ModemGnssQesdkFeatureMask mQesdkFeatureMask;
   // GPTP inititialization
   bool mIsGptpInitialized;
+  // Dwell Time Allignment
+  uint8_t mDwellAlignTimeMsValid;
+  uint32_t mDwellAlignTimeMs;
 
   // Below two member variables are for elapsedRealTime calculation
   RealtimeEstimator mMeasElapsedRealTimeCal;
@@ -486,6 +490,7 @@ private:
             const qmiLocGnssBandsSupportedIndMsgT_v02* pGnssBandsSupportedIndMsg);
 
   GnssMeasurementsCodeType getCodeType(qmiLocGnssSignalTypeMaskT_v02 gnssSignalType);
+  GnssSvType getSvTypeFromSignalType(qmiLocGnssSignalTypeMaskT_v02 gnssSignalType);
   void updateGnssCapabNotification(GnssCapabNotification& gnssCapabNotification,
                                    qmiLocGnssSignalTypeMaskT_v02 gnssSignalType);
 

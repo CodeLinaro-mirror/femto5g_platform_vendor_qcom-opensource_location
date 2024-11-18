@@ -376,9 +376,9 @@ LocApiV02 :: LocApiV02(LOC_API_ADAPTER_EVENT_MASK_T exMask,
     mTimeBiases{},
     mPlatformPowerState(eQMI_LOC_POWER_STATE_UNKNOWN_V02),
     mIsFullTracking(true),
-    mPreferredSignalType(QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L1CA_V02),
-    mQesdkFeatureMask(0),
-    mIsGptpInitialized(false)
+    mIsGptpInitialized(false),
+    mDwellAlignTimeMsValid(0),
+    mDwellAlignTimeMs(0)
 {
   // initialize loc_sync_req interface
   loc_sync_req_init();
@@ -741,7 +741,8 @@ locClientEventMaskType LocApiV02 :: adjustLocClientEventMask(locClientEventMaskT
         // device in suspended/shutdown state, clear the engine state and leap second info mask
         // to avoid wake up
         qmiMask &= ~(QMI_LOC_EVENT_MASK_ENGINE_STATE_V02 |
-                QMI_LOC_EVENT_MASK_NEXT_LS_INFO_REPORT_V02);
+                QMI_LOC_EVENT_MASK_NEXT_LS_INFO_REPORT_V02 |
+                QMI_LOC_EVENT_DWELL_TIME_ALIGNMENT_INFO_V02);
         syslog(LOG_INFO, "adjustLocClientEventMask, oldQmiMask=0x%" PRIx64 " "
                "qmiMask=0x%" PRIx64 " mInSession: %d, power state %d, retry queue empty %d",
                oldQmiMask, qmiMask, mInSession, mPlatformPowerState, mResenders.empty());
@@ -2323,8 +2324,10 @@ locClientEventMaskType LocApiV02 :: convertLocClientEventMask(
   if (mask & LOC_API_ADAPTER_BIT_BS_OBS_DATA_SERVICE_REQ)
       eventMask |= QMI_LOC_EVENT_MASK_BS_OBS_DATA_SERVICE_REQ_V02;
 
-  if (mask & LOC_API_ADAPTER_BIT_LOC_SYSTEM_INFO)
+  if (mask & LOC_API_ADAPTER_BIT_LOC_SYSTEM_INFO) {
       eventMask |= QMI_LOC_EVENT_MASK_NEXT_LS_INFO_REPORT_V02;
+      eventMask |= QMI_LOC_EVENT_DWELL_TIME_ALIGNMENT_INFO_V02;
+  }
 
   if (mask & LOC_API_ADAPTER_BIT_EVENT_REPORT_INFO)
       eventMask |= QMI_LOC_EVENT_MASK_GNSS_EVENT_REPORT_V02;
@@ -3329,6 +3332,17 @@ void LocApiV02 :: reportPosition (
             locationExtended.numOfDgnssStationId = i;
         } else {
             LOC_LOGa("no dgnss station id");
+        }
+
+        if (location_report_ptr->payload_valid) {
+            locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_EXTENDED_DATA;
+            locationExtended.extendedDataLen = location_report_ptr->payload_len;
+            if (locationExtended.extendedDataLen <= sizeof(locationExtended.extendedData)) {
+                memcpy(locationExtended.extendedData,
+                        location_report_ptr->payload,
+                        location_report_ptr->payload_len);
+            }
+
         }
 
         if (location_report_ptr->systemTick_valid &&
@@ -4645,7 +4659,8 @@ void  LocApiV02 :: reportSystemInfo(
              "current gps time:valid:%d, week: %d, msec: %d,"
              "current leap second:valid %d, seconds %d, "
              "next gps time: valid %d, week: %d, msec: %d,"
-             "next leap second: valid %d, seconds %d",
+             "next leap second: valid %d, seconds %d,"
+             "dwell allign time valid %d dwell allign time %d",
              system_info_ptr->systemInfo,
              system_info_ptr->nextLeapSecondInfo_valid,
              system_info_ptr->nextLeapSecondInfo.gpsTimeCurrent_valid,
@@ -4657,7 +4672,8 @@ void  LocApiV02 :: reportSystemInfo(
              system_info_ptr->nextLeapSecondInfo.gpsTimeNextLsEvent.gpsWeek,
              system_info_ptr->nextLeapSecondInfo.gpsTimeNextLsEvent.gpsTimeOfWeekMs,
              system_info_ptr->nextLeapSecondInfo.leapSecondsNext_valid,
-             system_info_ptr->nextLeapSecondInfo.leapSecondsNext);
+             system_info_ptr->nextLeapSecondInfo.leapSecondsNext,
+             system_info_ptr->dwellAlignTimeMs_valid, system_info_ptr->dwellAlignTimeMs);
 
     LocationSystemInfo systemInfo = {};
     if ((system_info_ptr->systemInfo == eQMI_LOC_NEXT_LEAP_SECOND_INFO_V02) &&
@@ -4696,6 +4712,12 @@ void  LocApiV02 :: reportSystemInfo(
             systemInfo.leapSecondSysInfo.leapSecondCurrent =
                     nextLeapSecondInfo.leapSecondsCurrent;
         }
+    }
+
+    // Save Dwell Time Allignement and pass in Meas reports
+    if (system_info_ptr->dwellAlignTimeMs_valid) {
+        mDwellAlignTimeMsValid = 1;
+        mDwellAlignTimeMs = system_info_ptr->dwellAlignTimeMs;
     }
 
     if (systemInfo.systemInfoMask) {
@@ -6363,6 +6385,11 @@ void LocApiV02::convertGnssMeasurementsHeader(const Gnss_LocSvSystemEnumType loc
                 gnss_measurement_info.dgnssRefStationId;
         svMeasSetHead.flags |= GNSS_SV_MEAS_HEADER_HAS_DGNSS_REF_STATION_ID;
     }
+
+    if (mDwellAlignTimeMsValid) {
+        svMeasSetHead.flags |= GNSS_SV_MEAS_HEADER_HAS_DWELL_ALIGN_TIME_MSEC;
+        svMeasSetHead.dwellAlignTimeMsec = mDwellAlignTimeMs;
+    }
 }
 
 /* convert and report ODCPI request */
@@ -6441,7 +6468,14 @@ void LocApiV02::processGnssBandsSupportedInd(
 
     if (pGnssBandsSupportedIndMsg->primaryGnssSignalType_valid) {
         mPreferredSignalType = pGnssBandsSupportedIndMsg->primaryGnssSignalType;
+        mPreferredSvSystemType = getSvTypeFromSignalType(mPreferredSignalType);
     }
+
+    LOC_LOGd("primaryGnssSignalType: %" PRIu64 ", supported signals: %" PRIu64 ", "
+             "preferred sv type %d",
+             pGnssBandsSupportedIndMsg->primaryGnssSignalType,
+             pGnssBandsSupportedIndMsg->gnssSupportedSignals,
+             mPreferredSvSystemType);
 
     if (pGnssBandsSupportedIndMsg->gnssSupportedSignals_valid) {
         GnssCapabNotification gnssCapabNotification = {};
@@ -6473,29 +6507,27 @@ void LocApiV02::processGnssBandsSupportedInd(
     }
 }
 
-void LocApiV02::updateGnssCapabNotification(GnssCapabNotification& gnssCapabNotification,
-                                            qmiLocGnssSignalTypeMaskT_v02 gnssSignalType) {
+GnssSvType LocApiV02::getSvTypeFromSignalType(qmiLocGnssSignalTypeMaskT_v02 gnssSignalType) {
+
+    GnssSvType svType = GNSS_SV_TYPE_UNKNOWN;
 
     switch (gnssSignalType) {
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L1CA_V02:
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L1C_V02:
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L2C_L_V02:
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L5_Q_V02:
-        gnssCapabNotification.gnssSignalType[gnssCapabNotification.count].svType =
-                GNSS_SV_TYPE_GPS;
+        svType = GNSS_SV_TYPE_GPS;
         break;
 
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GLONASS_G1_V02:
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GLONASS_G2_V02:
-        gnssCapabNotification.gnssSignalType[gnssCapabNotification.count].svType =
-                GNSS_SV_TYPE_GLONASS;
+        svType = GNSS_SV_TYPE_GLONASS;
         break;
 
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GALILEO_E1_C_V02:
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GALILEO_E5A_Q_V02:
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GALILEO_E5B_Q_V02:
-        gnssCapabNotification.gnssSignalType[gnssCapabNotification.count].svType =
-                GNSS_SV_TYPE_GALILEO;
+        svType = GNSS_SV_TYPE_GALILEO;
         break;
 
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B1_I_V02:
@@ -6505,29 +6537,36 @@ void LocApiV02::updateGnssCapabNotification(GnssCapabNotification& gnssCapabNoti
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2A_Q_V02:
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_I_V02:
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q_V02:
-        gnssCapabNotification.gnssSignalType[gnssCapabNotification.count].svType =
-                GNSS_SV_TYPE_BEIDOU;
+        svType = GNSS_SV_TYPE_BEIDOU;
         break;
 
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1CA_V02:
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1S_V02:
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L2C_L_V02:
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L5_Q_V02:
-        gnssCapabNotification.gnssSignalType[gnssCapabNotification.count].svType =
-                GNSS_SV_TYPE_QZSS;
+        svType = GNSS_SV_TYPE_QZSS;
         break;
 
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_SBAS_L1_CA_V02:
-        gnssCapabNotification.gnssSignalType[gnssCapabNotification.count].svType =
-                GNSS_SV_TYPE_SBAS;
+        svType = GNSS_SV_TYPE_SBAS;
         break;
 
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_NAVIC_L5_V02:
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_NAVIC_L1_V02:
-        gnssCapabNotification.gnssSignalType[gnssCapabNotification.count].svType =
-                GNSS_SV_TYPE_NAVIC;
+        svType = GNSS_SV_TYPE_NAVIC;
+        break;
+    default:
+        // unknown signal type
         break;
     }
+    return svType;
+}
+
+void LocApiV02::updateGnssCapabNotification(GnssCapabNotification& gnssCapabNotification,
+                                            qmiLocGnssSignalTypeMaskT_v02 gnssSignalType) {
+
+    gnssCapabNotification.gnssSignalType[gnssCapabNotification.count].svType =
+           getSvTypeFromSignalType(gnssSignalType);
     gnssCapabNotification.gnssSignalType[gnssCapabNotification.count].carrierFrequencyHz =
             convertSignalTypeToCarrierFrequency(gnssSignalType, 8);
     gnssCapabNotification.gnssSignalType[gnssCapabNotification.count].codeType =
@@ -9489,42 +9528,56 @@ LocApiV02::setBlacklistSvSync(const GnssSvIdConfig& config)
     memset(&genReqStatusIndMsg, 0, sizeof(genReqStatusIndMsg));
 
     // Fill in the request details
-    setBlacklistSvMsg.gps_persist_blacklist_sv_valid = true;
-    setBlacklistSvMsg.gps_persist_blacklist_sv = config.gpsBlacklistSvMask,
-    setBlacklistSvMsg.gps_clear_persist_blacklist_sv_valid = true;
-    setBlacklistSvMsg.gps_clear_persist_blacklist_sv = ~config.gpsBlacklistSvMask;
+    if (mPreferredSvSystemType != GNSS_SV_TYPE_GPS) {
+       setBlacklistSvMsg.gps_persist_blacklist_sv_valid = true;
+       setBlacklistSvMsg.gps_persist_blacklist_sv = config.gpsBlacklistSvMask,
+       setBlacklistSvMsg.gps_clear_persist_blacklist_sv_valid = true;
+       setBlacklistSvMsg.gps_clear_persist_blacklist_sv = ~config.gpsBlacklistSvMask;
+    }
 
-    setBlacklistSvMsg.glo_persist_blacklist_sv_valid = true;
-    setBlacklistSvMsg.glo_persist_blacklist_sv = config.gloBlacklistSvMask;
-    setBlacklistSvMsg.glo_clear_persist_blacklist_sv_valid = true;
-    setBlacklistSvMsg.glo_clear_persist_blacklist_sv = ~config.gloBlacklistSvMask;
+    if (mPreferredSvSystemType != GNSS_SV_TYPE_GLONASS) {
+       setBlacklistSvMsg.glo_persist_blacklist_sv_valid = true;
+       setBlacklistSvMsg.glo_persist_blacklist_sv = config.gloBlacklistSvMask;
+       setBlacklistSvMsg.glo_clear_persist_blacklist_sv_valid = true;
+       setBlacklistSvMsg.glo_clear_persist_blacklist_sv = ~config.gloBlacklistSvMask;
+    }
 
-    setBlacklistSvMsg.bds_persist_blacklist_sv_valid = true;
-    setBlacklistSvMsg.bds_persist_blacklist_sv = config.bdsBlacklistSvMask;
-    setBlacklistSvMsg.bds_clear_persist_blacklist_sv_valid = true;
-    setBlacklistSvMsg.bds_clear_persist_blacklist_sv = ~config.bdsBlacklistSvMask;
+    if (mPreferredSvSystemType != GNSS_SV_TYPE_BEIDOU) {
+       setBlacklistSvMsg.bds_persist_blacklist_sv_valid = true;
+       setBlacklistSvMsg.bds_persist_blacklist_sv = config.bdsBlacklistSvMask;
+       setBlacklistSvMsg.bds_clear_persist_blacklist_sv_valid = true;
+       setBlacklistSvMsg.bds_clear_persist_blacklist_sv = ~config.bdsBlacklistSvMask;
+    }
 
-    setBlacklistSvMsg.qzss_persist_blacklist_sv_valid = true;
-    setBlacklistSvMsg.qzss_persist_blacklist_sv = config.qzssBlacklistSvMask;
-    setBlacklistSvMsg.qzss_clear_persist_blacklist_sv_valid = true;
-    setBlacklistSvMsg.qzss_clear_persist_blacklist_sv = ~config.qzssBlacklistSvMask;
+    if (mPreferredSvSystemType != GNSS_SV_TYPE_QZSS) {
+       setBlacklistSvMsg.qzss_persist_blacklist_sv_valid = true;
+       setBlacklistSvMsg.qzss_persist_blacklist_sv = config.qzssBlacklistSvMask;
+       setBlacklistSvMsg.qzss_clear_persist_blacklist_sv_valid = true;
+       setBlacklistSvMsg.qzss_clear_persist_blacklist_sv = ~config.qzssBlacklistSvMask;
+    }
 
-    setBlacklistSvMsg.gal_persist_blacklist_sv_valid = true;
-    setBlacklistSvMsg.gal_persist_blacklist_sv = config.galBlacklistSvMask;
-    setBlacklistSvMsg.gal_clear_persist_blacklist_sv_valid = true;
-    setBlacklistSvMsg.gal_clear_persist_blacklist_sv = ~config.galBlacklistSvMask;
+    if (mPreferredSvSystemType != GNSS_SV_TYPE_GALILEO) {
+       setBlacklistSvMsg.gal_persist_blacklist_sv_valid = true;
+       setBlacklistSvMsg.gal_persist_blacklist_sv = config.galBlacklistSvMask;
+       setBlacklistSvMsg.gal_clear_persist_blacklist_sv_valid = true;
+       setBlacklistSvMsg.gal_clear_persist_blacklist_sv = ~config.galBlacklistSvMask;
+    }
 
-    setBlacklistSvMsg.sbas_persist_blacklist_sv_valid = true;
-    setBlacklistSvMsg.sbas_persist_blacklist_sv = config.sbasBlacklistSvMask,
-    setBlacklistSvMsg.sbas_clear_persist_blacklist_sv_valid = true;
-    setBlacklistSvMsg.sbas_clear_persist_blacklist_sv = ~config.sbasBlacklistSvMask;
+    if (mPreferredSvSystemType != GNSS_SV_TYPE_SBAS) {
+       setBlacklistSvMsg.sbas_persist_blacklist_sv_valid = true;
+       setBlacklistSvMsg.sbas_persist_blacklist_sv = config.sbasBlacklistSvMask,
+       setBlacklistSvMsg.sbas_clear_persist_blacklist_sv_valid = true;
+       setBlacklistSvMsg.sbas_clear_persist_blacklist_sv = ~config.sbasBlacklistSvMask;
+    }
 
-    setBlacklistSvMsg.navic_persist_blacklist_sv_valid = true;
-    setBlacklistSvMsg.navic_persist_blacklist_sv = config.navicBlacklistSvMask,
-    setBlacklistSvMsg.navic_clear_persist_blacklist_sv_valid = true;
-    setBlacklistSvMsg.navic_clear_persist_blacklist_sv = ~config.navicBlacklistSvMask;
+    if (mPreferredSvSystemType != GNSS_SV_TYPE_NAVIC) {
+       setBlacklistSvMsg.navic_persist_blacklist_sv_valid = true;
+       setBlacklistSvMsg.navic_persist_blacklist_sv = config.navicBlacklistSvMask,
+       setBlacklistSvMsg.navic_clear_persist_blacklist_sv_valid = true;
+       setBlacklistSvMsg.navic_clear_persist_blacklist_sv = ~config.navicBlacklistSvMask;
+    }
 
-    LOC_LOGd(">>> configConstellations, "
+    LOC_LOGd(">>> configConstellations, perferred sv system type %d"
              "gps blacklist mask =0x%" PRIx64 ", "
              "glo blacklist mask =0x%" PRIx64 ", "
              "qzss blacklist mask =0x%" PRIx64 ",\n"
@@ -9532,6 +9585,7 @@ LocApiV02::setBlacklistSvSync(const GnssSvIdConfig& config)
              "gal blacklist mask =0x%" PRIx64 ",\n"
              "sbas blacklist mask =0x%" PRIx64 ", "
              "navic blacklist mask =0x%" PRIx64 ",\n",
+             mPreferredSvSystemType,
              setBlacklistSvMsg.gps_persist_blacklist_sv,
              setBlacklistSvMsg.glo_persist_blacklist_sv,
              setBlacklistSvMsg.qzss_persist_blacklist_sv,
@@ -9603,16 +9657,52 @@ LocApiV02::setConstellationControl(const GnssSvTypeConfig& config,
     // Fill in the request details
     setConstellationConfigMsg.resetConstellations = false;
 
-    setConstellationConfigMsg.enableMask_valid = true;
-    setConstellationConfigMsg.enableMask = config.enabledSvTypesMask;
-
     bool disableSupported = ContextBase::isFeatureSupported(
             LOC_SUPPORTED_FEATURE_CONSTELLATION_DISABLEMENT);
-
     if (disableSupported) {
        setConstellationConfigMsg.disableMask_valid = true;
-       setConstellationConfigMsg.disableMask = config.blacklistedSvTypesMask;
+       if (mPreferredSvSystemType != GNSS_SV_TYPE_GPS) {
+          setConstellationConfigMsg.disableMask |=
+               (QMI_LOC_CONSTELLATION_GPS_V02 & config.blacklistedSvTypesMask);
+       }
+
+       if (mPreferredSvSystemType != GNSS_SV_TYPE_GLONASS) {
+          setConstellationConfigMsg.disableMask |=
+               (QMI_LOC_CONSTELLATION_GLO_V02 & config.blacklistedSvTypesMask);
+       }
+
+       if (mPreferredSvSystemType !=  GNSS_SV_TYPE_BEIDOU) {
+          setConstellationConfigMsg.disableMask |=
+               (QMI_LOC_CONSTELLATION_BDS_V02 & config.blacklistedSvTypesMask);
+       }
+
+       if (mPreferredSvSystemType != GNSS_SV_TYPE_QZSS) {
+          setConstellationConfigMsg.disableMask |=
+               (QMI_LOC_CONSTELLATION_QZSS_V02 & config.blacklistedSvTypesMask);
+       }
+
+       if (mPreferredSvSystemType != GNSS_SV_TYPE_GALILEO) {
+          setConstellationConfigMsg.disableMask |=
+               (QMI_LOC_CONSTELLATION_GAL_V02 & config.blacklistedSvTypesMask);
+       }
+
+       if (mPreferredSvSystemType != GNSS_SV_TYPE_NAVIC) {
+          setConstellationConfigMsg.disableMask |=
+               (QMI_LOC_CONSTELLATION_NAVIC_V02 & config.blacklistedSvTypesMask);
+       }
     }
+
+    setConstellationConfigMsg.enableMask_valid = true;
+    setConstellationConfigMsg.enableMask =
+         (QMI_LOC_CONSTELLATION_GPS_V02 | QMI_LOC_CONSTELLATION_GLO_V02 |
+          QMI_LOC_CONSTELLATION_BDS_V02 | QMI_LOC_CONSTELLATION_QZSS_V02 |
+          QMI_LOC_CONSTELLATION_GAL_V02 | QMI_LOC_CONSTELLATION_NAVIC_V02);
+    setConstellationConfigMsg.enableMask &= ~setConstellationConfigMsg.disableMask;
+
+    LOC_LOGI("setConstellationControl:input perferred constellation %d, disableSupported %d,"
+             "enable: 0x%" PRIx64 ", blacklisted: 0x%" PRIx64 "",
+             mPreferredSvSystemType, disableSupported,
+             config.enabledSvTypesMask, config.blacklistedSvTypesMask);
 
     LOC_LOGI("setConstellationControl:disableSupported %d,"
              "enable: %d 0x%" PRIx64 ", blacklisted: %d 0x%" PRIx64 "",
