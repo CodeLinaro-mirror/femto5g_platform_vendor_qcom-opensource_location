@@ -7,8 +7,9 @@
 #define QSOCKET_LOC_SERVER_SERVICE_ID                   5025
 #define QSOCKET_LOC_SERVER_INSTANCE_ID                  1
 #define QSOCKET_LOC_CLIENT_SERVICE_ID                   5025
-#define QSOCKET_LOC_CLIENT_AP_WWAN_INSTANCE_ID          6
+#define QSOCKET_LOC_CLIENT_AP_WWAN_UEA_INSTANCE_ID      6
 #define QSOCKET_LOC_CLIENT_AP_RIL_SERVICE_INSTANCE_ID   7
+#define QSOCKET_LOC_CLIENT_AP_WWAN_INSTANCE_ID          8
 
 // Define the min and max msg id for each sub features
 #define QSOCK_LOC_WWAN_MSG_ID_RANGE_MIN 1
@@ -16,6 +17,9 @@
 
 #define QSOCK_LOC_RIL_SERVICE_MSG_ID_RANGE_MIN 101
 #define QSOCK_LOC_RIL_SERVICE_MSG_ID_RANGE_MAX 200
+
+#define QSOCK_LOC_WWAN_UEB_MSG_ID_RANGE_MIN 201
+#define QSOCK_LOC_WWAN_UEB_MSG_ID_RANGE_MAX 300
 
 // Other features msg id range to follow
 
