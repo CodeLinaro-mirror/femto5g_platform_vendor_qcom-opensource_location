@@ -86,6 +86,9 @@ public:
     typedef void (*LogGeofenceBreach)(const GeofenceBreachNotification& breachNotif,
             const std::vector<Geofence>& geofences);
     typedef void (*LogGnssEphemeris)(const GnssEphemeris& ephInfo);
+    typedef void (*LogGnssData)(const GnssData& gnssData);
+    typedef void (*LogGnssExtendedDataInfo)(uint8_t type,
+            const std::vector<uint8_t> &gnssExtendedDataVector);
 
     LCAReportLoggerUtil();
     void log(const GnssLocation& gnssLocation,
@@ -97,6 +100,8 @@ public:
     void log(const GeofenceBreachNotification& breachNotif,
             const std::vector<Geofence>& geofences);
     void log(const GnssEphemeris& ephInfo);
+    void log(const GnssData& gnssData);
+    void log(uint8_t type, const std::vector<uint8_t> &gnssExtendedDataVector);
 
 private:
     LogGnssLocation mLogLocation;
@@ -106,6 +111,8 @@ private:
     LogGnssDcReport mLogDcReport;
     LogGeofenceBreach mLogGeofenceBreach;
     LogGnssEphemeris mLogEph;
+    LogGnssData mLogGnssData;
+    LogGnssExtendedDataInfo mLogOemDREInfo;
 };
 
 

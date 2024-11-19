@@ -376,7 +376,9 @@ LocApiV02 :: LocApiV02(LOC_API_ADAPTER_EVENT_MASK_T exMask,
     mPlatformPowerState(eQMI_LOC_POWER_STATE_UNKNOWN_V02),
     mQesdkFeatureMask(0),
     mIsFullTracking(true),
-    mIsGptpInitialized(false)
+    mIsGptpInitialized(false),
+    mDwellAlignTimeMsValid(0),
+    mDwellAlignTimeMs(0)
 {
   // initialize loc_sync_req interface
   loc_sync_req_init();
@@ -744,7 +746,8 @@ locClientEventMaskType LocApiV02 :: adjustLocClientEventMask(locClientEventMaskT
         // device in suspended/shutdown state, clear the engine state and leap second info mask
         // to avoid wake up
         qmiMask &= ~(QMI_LOC_EVENT_MASK_ENGINE_STATE_V02 |
-                QMI_LOC_EVENT_MASK_NEXT_LS_INFO_REPORT_V02);
+                QMI_LOC_EVENT_MASK_NEXT_LS_INFO_REPORT_V02 |
+                QMI_LOC_EVENT_DWELL_TIME_ALIGNMENT_INFO_V02);
         syslog(LOG_INFO, "adjustLocClientEventMask, oldQmiMask=0x%" PRIx64 " "
                "qmiMask=0x%" PRIx64 " mInSession: %d, power state %d, retry queue empty %d",
                oldQmiMask, qmiMask, mInSession, mPlatformPowerState, mResenders.empty());
@@ -1359,7 +1362,7 @@ LocApiV02::deleteAidingData(const GnssAidingData& data, LocApiResponse *adapterR
   }
 
   if (eLOC_CLIENT_FAILURE_UNSUPPORTED == status ||
-      eLOC_CLIENT_FAILURE_INTERNAL == status) {
+      eLOC_CLIENT_FAILURE_INTERNAL == status || eQMI_LOC_SUCCESS_V02 != delete_gnss_resp.status) {
       // If the new API is not supported we fall back on the old one
       // The error could be eLOC_CLIENT_FAILURE_INTERNAL if
       // QMI_LOC_DELETE_GNSS_SERVICE_DATA_REQ_V02 is not in the .idl file
@@ -2356,8 +2359,10 @@ locClientEventMaskType LocApiV02 :: convertLocClientEventMask(
   if (mask & LOC_API_ADAPTER_BIT_BS_OBS_DATA_SERVICE_REQ)
       eventMask |= QMI_LOC_EVENT_MASK_BS_OBS_DATA_SERVICE_REQ_V02;
 
-  if (mask & LOC_API_ADAPTER_BIT_LOC_SYSTEM_INFO)
+  if (mask & LOC_API_ADAPTER_BIT_LOC_SYSTEM_INFO) {
       eventMask |= QMI_LOC_EVENT_MASK_NEXT_LS_INFO_REPORT_V02;
+      eventMask |= QMI_LOC_EVENT_DWELL_TIME_ALIGNMENT_INFO_V02;
+  }
 
   if (mask & LOC_API_ADAPTER_BIT_EVENT_REPORT_INFO)
       eventMask |= QMI_LOC_EVENT_MASK_GNSS_EVENT_REPORT_V02;
@@ -3341,6 +3346,17 @@ void LocApiV02 :: reportPosition (
             LOC_LOGa("no dgnss station id");
         }
 
+        if (location_report_ptr->payload_valid) {
+            locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_EXTENDED_DATA;
+            locationExtended.extendedDataLen = location_report_ptr->payload_len;
+            if (locationExtended.extendedDataLen <= sizeof(locationExtended.extendedData)) {
+                memcpy(locationExtended.extendedData,
+                        location_report_ptr->payload,
+                        location_report_ptr->payload_len);
+            }
+
+        }
+
         if (location_report_ptr->systemTick_valid &&
                 location_report_ptr->systemTickUnc_valid) {
             locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_SYSTEM_TICK;
@@ -3372,6 +3388,11 @@ void LocApiV02 :: reportPosition (
                      sessStatus, location.gpsLocation.flags, location.gpsLocation.latitude,
                      location.gpsLocation.longitude, location.gpsLocation.accuracy);
             sessStatus = LOC_SESS_FAILURE;
+        }
+        // Filling report rate for SPE reports
+        if (mMinInterval) {
+            locationExtended.posReportingInterval = mMinInterval;
+            locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_REPORT_INTERVAL;
         }
 
         LocApiBase::reportPosition(location,
@@ -3762,6 +3783,7 @@ void  LocApiV02 :: reportSv (
                         }
                     }
                     if (gnssSv_ref.cN0Dbhz > rfLoss) {
+                        mask |= GNSS_SV_OPTIONS_HAS_BASEBAND_CARRIER_TO_NOISE_BIT;
                         gnssSv_ref.basebandCarrierToNoiseDbHz = gnssSv_ref.cN0Dbhz - rfLoss;
                     }
                 }
@@ -4649,7 +4671,8 @@ void  LocApiV02 :: reportSystemInfo(
              "current gps time:valid:%d, week: %d, msec: %d,"
              "current leap second:valid %d, seconds %d, "
              "next gps time: valid %d, week: %d, msec: %d,"
-             "next leap second: valid %d, seconds %d",
+             "next leap second: valid %d, seconds %d,"
+             "dwell allign time valid %d dwell allign time %d",
              system_info_ptr->systemInfo,
              system_info_ptr->nextLeapSecondInfo_valid,
              system_info_ptr->nextLeapSecondInfo.gpsTimeCurrent_valid,
@@ -4661,7 +4684,8 @@ void  LocApiV02 :: reportSystemInfo(
              system_info_ptr->nextLeapSecondInfo.gpsTimeNextLsEvent.gpsWeek,
              system_info_ptr->nextLeapSecondInfo.gpsTimeNextLsEvent.gpsTimeOfWeekMs,
              system_info_ptr->nextLeapSecondInfo.leapSecondsNext_valid,
-             system_info_ptr->nextLeapSecondInfo.leapSecondsNext);
+             system_info_ptr->nextLeapSecondInfo.leapSecondsNext,
+             system_info_ptr->dwellAlignTimeMs_valid, system_info_ptr->dwellAlignTimeMs);
 
     LocationSystemInfo systemInfo = {};
     if ((system_info_ptr->systemInfo == eQMI_LOC_NEXT_LEAP_SECOND_INFO_V02) &&
@@ -4700,6 +4724,12 @@ void  LocApiV02 :: reportSystemInfo(
             systemInfo.leapSecondSysInfo.leapSecondCurrent =
                     nextLeapSecondInfo.leapSecondsCurrent;
         }
+    }
+
+    // Save Dwell Time Allignement and pass in Meas reports
+    if (system_info_ptr->dwellAlignTimeMs_valid) {
+        mDwellAlignTimeMsValid = 1;
+        mDwellAlignTimeMs = system_info_ptr->dwellAlignTimeMs;
     }
 
     if (systemInfo.systemInfoMask) {
@@ -5509,6 +5539,8 @@ void LocApiV02::reportGnssMeasurementData(
         m1HzMeasurementsInfo.clock.flags = measInfo.clock.flags;
         m1HzMeasurementsInfo.clock.timeNs = measInfo.clock.timeNs;
         m1HzMeasurementsInfo.clock.fullBiasNs = measInfo.clock.fullBiasNs;
+        // Clear previous measurement data.
+        m1HzMeasurementsInfo.measurements.clear();
         for (int meas = 0; (meas < measInfo.count) && (meas < GNSS_MEASUREMENTS_MAX); meas++) {
             GnssBasicMeasurementsData measurement = {};
             measurement.svId = measInfo.measurements[meas].svId;
@@ -5534,6 +5566,10 @@ void LocApiV02::reportGnssMeasurementData(
             uint64_t elapsedgPTPTime = 0;
             /* deal with gPTP time */
             /* Fill PTP time corresponding to Time of generation of meas packet */
+            if (!mIsGptpInitialized && gptpInit()) {
+                mIsGptpInitialized = true;
+            }
+
             if (mIsGptpInitialized) {
                 bool gotMPQTickPtpTime = gptpGetPtpTimeFromQTimeTickCount(&elapsedgPTPTime,
                         gnss_measurement_report_ptr.refCountTicks);
@@ -6409,6 +6445,11 @@ void LocApiV02::convertGnssMeasurementsHeader(const Gnss_LocSvSystemEnumType loc
                 gnss_measurement_info.dgnssRefStationId;
         svMeasSetHead.flags |= GNSS_SV_MEAS_HEADER_HAS_DGNSS_REF_STATION_ID;
     }
+
+    if (mDwellAlignTimeMsValid) {
+        svMeasSetHead.flags |= GNSS_SV_MEAS_HEADER_HAS_DWELL_ALIGN_TIME_MSEC;
+        svMeasSetHead.dwellAlignTimeMsec = mDwellAlignTimeMs;
+    }
 }
 
 /* convert and report ODCPI request */
@@ -6470,6 +6511,10 @@ void LocApiV02 :: reportDcMessage(const qmiLocEventDcReportIndMsgT_v02* pDcRepor
         dcReportInfo.dcReportData.resize(pDcReportIndMsg->dcReportData_len);
         for (uint32_t i = 0; i < pDcReportIndMsg->dcReportData_len; i++) {
             dcReportInfo.dcReportData[i] = pDcReportIndMsg->dcReportData[i];
+        }
+        if (pDcReportIndMsg->prn_valid) {
+            dcReportInfo.prnValid = 1;
+            dcReportInfo.prn = pDcReportIndMsg->prn;
         }
         LocApiBase::reportDcMessage(dcReportInfo);
     }
@@ -7032,6 +7077,7 @@ bool LocApiV02 :: convertGnssMeasurements(
         }
         measurementData.adrMeters =
             (SPEED_OF_LIGHT / measurementData.carrierFrequencyHz) * measurementData.carrierPhase;
+        measurementData.flags |= GNSS_MEASUREMENTS_DATA_ADR_BIT;
     } else {
         measurementData.adrMeters = 0.0;
     }
@@ -7048,6 +7094,7 @@ bool LocApiV02 :: convertGnssMeasurements(
             measurementData.adrUncertaintyMeters =
                 (SPEED_OF_LIGHT / measurementData.carrierFrequencyHz) *
                 gnss_measurement_report_ptr.svCarrierPhaseUncertainty[index];
+            measurementData.flags |= GNSS_MEASUREMENTS_DATA_ADR_UNCERTAINTY_BIT;
         } else {
             measurementData.adrUncertaintyMeters = 0.0;
         }
@@ -7056,6 +7103,7 @@ bool LocApiV02 :: convertGnssMeasurements(
             measurementData.adrUncertaintyMeters =
                 (SPEED_OF_LIGHT / measurementData.carrierFrequencyHz) *
                 gnss_measurement_report_ptr.extSvCarrierPhaseUncertainty[index];
+            measurementData.flags |= GNSS_MEASUREMENTS_DATA_ADR_UNCERTAINTY_BIT;
         } else {
             measurementData.adrUncertaintyMeters = 0.0;
         }
@@ -7467,6 +7515,11 @@ void LocApiV02 :: eventCb(locClientHandleType /*clientHandle*/,
   {
     //Position Report
     case QMI_LOC_EVENT_POSITION_REPORT_IND_V02:
+#ifdef PTP_SUPPORTED
+      if (!mIsGptpInitialized && gptpInit()) {
+          mIsGptpInitialized = true;
+      }
+#endif
       reportPosition(eventPayload.pPositionReportEvent);
       break;
 
@@ -9560,10 +9613,18 @@ LocApiV02::setConstellationControl(const GnssSvTypeConfig& config,
     setConstellationConfigMsg.enableMask_valid = true;
     setConstellationConfigMsg.enableMask = config.enabledSvTypesMask;
 
+    bool disableSupported = ContextBase::isFeatureSupported(
+            LOC_SUPPORTED_FEATURE_CONSTELLATION_DISABLEMENT);
+    if (disableSupported) {
+       setConstellationConfigMsg.disableMask_valid = true;
+       setConstellationConfigMsg.disableMask = config.blacklistedSvTypesMask;
+    }
+
     // disableMask is not supported in modem
     // if we set disableMask, QMI call will return error
-    LOC_LOGE("setConstellationControl: "
+    LOC_LOGE("setConstellationControl: disableSupported %d,"
              "enable: %d 0x%" PRIx64 ", blacklisted: %d 0x%" PRIx64 "",
+             disableSupported,
              setConstellationConfigMsg.enableMask_valid,
              setConstellationConfigMsg.enableMask,
              setConstellationConfigMsg.disableMask_valid,

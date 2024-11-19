@@ -95,9 +95,9 @@ find_package (vsomeip3 3.1.20 REQUIRED)
 # Source Files
 set(PRJ_SRC_PATH ../../src/LocIdlClient)
 set(PRJ_SRC_GEN_PATH ../../src-gen)
-set(PRJ_SRC_GEN_COMMONAPI_PATH ${PRJ_SRC_GEN_PATH}/core/v0/com/qualcomm/qti/location)
-set(PRJ_SRC_GEN_COMMONAPI_DBUS_PATH ${PRJ_SRC_GEN_PATH}/dbus/v0/com/qualcomm/qti/location)
-set(PRJ_SRC_GEN_COMMONAPI_SOMEIP_PATH ${PRJ_SRC_GEN_PATH}/someip/v0/com/qualcomm/qti/location)
+set(PRJ_SRC_GEN_COMMONAPI_PATH ${PRJ_SRC_GEN_PATH}/core/v1/com/qualcomm/qti/location)
+set(PRJ_SRC_GEN_COMMONAPI_DBUS_PATH ${PRJ_SRC_GEN_PATH}/dbus/v1/com/qualcomm/qti/location)
+set(PRJ_SRC_GEN_COMMONAPI_SOMEIP_PATH ${PRJ_SRC_GEN_PATH}/someip/v1/com/qualcomm/qti/location)
 
 set(PRJ_NAME_CLIENT ${PRJ_NAME}Client)
 
@@ -176,7 +176,6 @@ set(EXAMPLE_CONFIG_FILES
 
 set(EXAMPLE_CONFIG_FILES
     "vsomeip-client.json"
-    "vsomeip-location.json"
     "commonapi4someip.ini"
     "vsomeip-local.json"
 )
