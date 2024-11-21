@@ -2993,6 +2993,16 @@ typedef std::function<void(
     const GnssEphemeris& ephInfo
 )> GnssEphReportCb;
 
+/** @brief
+    GNSSExtendedDataInfoCb is for receiving gnss extended Data
+    <br/>
+    @param payload: vectory of binary data
+           <br/>
+*/
+typedef std::function<void(
+    const std::vector<uint8_t>& payload
+)> GNSSExtendedDataInfoCb;
+
 /** Specify the set of callbacks to receive the reports when
  *  invoking startPositionSession(uint32_t,
  *  LocReqEngineTypeMask, const GnssReportCbs&, ResponseCb) with
@@ -3108,6 +3118,9 @@ struct EngineReportCbs {
      * gnssNmeaCb and/or EngineNmeaCb is subscribed or not.
      * Recommend to use NmeaSentencesCb. <br/> */
     NmeaSentencesCb nmeaSentencesCallback;
+    /** Callback to receive GNSS Extended Data from modem GNSS
+     *  engine. <br/> */
+    GNSSExtendedDataInfoCb gnssExtendedDataInfoCallback;
 };
 
 /**

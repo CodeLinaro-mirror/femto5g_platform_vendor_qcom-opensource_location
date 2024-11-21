@@ -87,8 +87,8 @@ enum LocationApiMsgVersion {
     LOCAPI_MSG_VER_MAJOR = 1;
     // Minor - New features / API addition, new message/elemtent addition.
     // Bump the last byte of version i.e. x.2 to x.3
-    // Minor version 22: Support Map matched feedback data
-    LOCAPI_MSG_VER_MINOR = 22;
+    // Minor version 24: Support End User Xtra Consent
+    LOCAPI_MSG_VER_MINOR = 24;
 }
 
 // ============================================================================
@@ -197,6 +197,10 @@ enum PBELocMsgID {
     PB_E_INTAPI_CONFIG_MERKLE_TREE_MSG_ID = 216;
     PB_E_INTAPI_CONFIG_OSNMA_ENABLEMENT_MSG_ID = 217;
     PB_E_INTAPI_CONFIG_MAP_MATCHED_FEEDBACK_MSG_ID = 218;
+    PB_E_INTAPI_CONFIG_REGISTER_ODCPI_INIT_MSG_ID = 219;
+    PB_E_INTAPI_CONFIG_ODCPI_INJECT_CB_MSG_ID = 220;
+    PB_E_INTAPI_CONFIG_ODCPI_INJECT_MSG_ID = 221;
+    PB_E_INTAPI_CONFIG_XTRA_USER_CONSENT_MSG_ID = 222;
 
     // integration API config retrieval request/response
     PB_E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID  = 300;
@@ -662,6 +666,26 @@ message PBLocConfigMerkleTreeReqMsg {
 message PBLocConfigOsnmaEnablementReqMsg {
     bool mEnable = 1;
 }
+
+// defintion for message with msg id of
+// PB_E_INTAPI_CONFIG_REGISTER_ODCPI_INIT_MSG_ID
+message PBLocConfigOdcpiInitReqMsg {
+    bool mRegOdcpiInit = 1;
+    PBOdcpiPriority mPriority = 2;
+}
+
+// defintion for message with msg id of
+// PB_E_INTAPI_CONFIG_ODCPI_INJECT_CB_MSG_ID
+message PBLocConfigOdcpiInjectReqCBMsg {
+    PBOdcpiRequestInfo mRequestInfo = 1;
+}
+
+// defintion for message with msg id of
+// PB_E_INTAPI_CONFIG_ODCPI_INJECT_MSG_ID
+message PBLocConfigOdcpiInjectReqMsg {
+    PBLocation mLocation = 1;
+}
+
 //******************************************************************************
 // IPC message structure - Location Integration API Get request/response message
 //******************************************************************************
@@ -772,6 +796,11 @@ message PBLocAPIPingTestIndMsg {
 // defintion for message with msg id of PB_E_INTAPI_CONFIG_MAP_MATCHED_FEEDBACK_MSG_ID
 message PBLocInjectMmfDataReqMsg {
     PBGnssMapMatchedData gnssMmfData = 1;
+}
+
+// defintion for message with msg id of PB_E_INTAPI_CONFIG_XTRA_USER_CONSENT_MSG_ID
+message PBLocInjectXtraUserConsentMsg {
+    bool userConsent = 1;
 }
 
 //*******************************
