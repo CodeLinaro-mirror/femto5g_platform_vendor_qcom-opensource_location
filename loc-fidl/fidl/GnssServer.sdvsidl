@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+# Copyright (c) 2024- 2025 Qualcomm Innovation Center, Inc. All rights reserved.
 #    SPDX-License-Identifier: BSD-3-Clause-Clear */
 
 # proto-file: //system/software_defined_vehicle/core_services/vsidl/syntax/sdvsidl.proto
@@ -14,7 +14,7 @@ sdv_service_bundle {
   # Define both offered and consumed_interface
   offered_interface {
     interface_name: "Location"
-    interface_version: "1.0"
+    interface_version: "1.1"
     interface_instance_name: "IvcLocation"
     interface_instance_id: 1
     service_id: 60928
@@ -103,7 +103,7 @@ sdv_service_bundle {
 
     method_fire_forget {
       method_name: "InjectMapMatchedFeedbackData"
-      method_id: 32006
+      method_id: 1
       topic {
         topic_name: "sdv.connectivity.location.InjectMapMatchedFeedbackData"
         attribute_mapping {key: "mmf_data", value: "mmfData"}
@@ -115,7 +115,7 @@ sdv_service_bundle {
       method_definition {
         method_vsidl_name: "StartPositionSessionLocationReport"
         method_someip_name: "StartPositionSessionLocationReport"
-        method_id: 32001
+        method_id: 2
         input_attribute {key: "interval_in_ms", value: "intervalInMs"}
         input_attribute {key: "gnss_report_callback_mask", value: "gnssReportCallbackMask"}
         output_attribute {key: "status", value: "status"}
@@ -124,7 +124,7 @@ sdv_service_bundle {
       method_definition {
         method_vsidl_name: "StartPositionSessionEngineSpecificLocation"
         method_someip_name: "StartPositionSessionEngineSpecificLocation"
-        method_id: 32002
+        method_id: 3
         input_attribute {key: "interval_in_ms", value: "intervalInMs"}
         input_attribute {key: "loc_req_eng_mask", value: "locReqEngMask"}
         input_attribute {key: "eng_report_callback_mask", value: "engReportCallbackMask"}
@@ -134,14 +134,14 @@ sdv_service_bundle {
       method_definition {
         method_vsidl_name: "StopPositionSession"
         method_someip_name: "StopPositionSession"
-        method_id: 32003
+        method_id: 4
         output_attribute {key: "status", value: "status"}
       }
 
       method_definition {
         method_vsidl_name: "DeleteAidingData"
         method_someip_name: "DeleteAidingData"
-        method_id: 32004
+        method_id: 5
         input_attribute {key: "delete_mask", value: "deleteMask"}
         output_attribute {key: "status", value: "status"}
       }
@@ -149,9 +149,15 @@ sdv_service_bundle {
       method_definition {
         method_vsidl_name: "ConfigConstellations"
         method_someip_name: "ConfigConstellations"
-        method_id: 32005
+        method_id: 6
         input_attribute {key: "sv_list", value: "svList"}
         output_attribute {key: "status", value: "status"}
+      }
+      method_definition {
+        method_vsidl_name: "GetLocationCapabilities"
+        method_someip_name: "GetLocationCapabilities"
+        method_id: 7
+        output_attribute {key: "capabilities_mask", value: "capabilitiesMask"}
       }
     }
   }
