@@ -79,8 +79,8 @@ enum LocationApiDataTypesVersion {
     LOCAPI_DATA_TYPES_VER_MAJOR = 1;
     // Minor - New features / API addition, new message/elemtent addition.
     // Bump the last byte of version i.e. x.2 to x.3
-    // Minor version 50: Support Xtra end user consent status
-    LOCAPI_DATA_TYPES_VER_MINOR = 50;
+    // Minor version 51: Support Measurement Code Types
+    LOCAPI_DATA_TYPES_VER_MINOR = 51;
 }
 
 // ============================================================================
@@ -537,6 +537,8 @@ enum PBGnssMeasurementsDataFlagsMask {
     PB_GNSS_MEASUREMENTS_DATA_CYCLE_SLIP_COUNT_BIT             = 0x00100000;
     PB_GNSS_MEASUREMENTS_DATA_GNSS_SIGNAL_TYPE_BIT             = 0x00200000;
     PB_GNSS_MEASUREMENTS_DATA_BASEBAND_CARRIER_TO_NOISE_BIT    = 0x00400000;
+    PB_GNSS_MEASUREMENTS_DATA_MEAS_CODE_TYPE_BIT               = 0x00800000;
+    PB_GNSS_MEASUREMENTS_DATA_OTHER_MEAS_CODE_TYPE_BIT         = 0x01000000;
 }
 
 enum PBGnssMeasurementsStateMask {
@@ -986,6 +988,26 @@ message PBGnssMeasurementsClock {
     uint64 elapsedgPTPTimeUnc = 14;
 }
 
+enum PBGnssMeasurementsCodeType {
+    PB_GNSS_MEASUREMENTS_CODE_TYPE_A       = 0;
+    PB_GNSS_MEASUREMENTS_CODE_TYPE_B       = 1;
+    PB_GNSS_MEASUREMENTS_CODE_TYPE_C       = 2;
+    PB_GNSS_MEASUREMENTS_CODE_TYPE_I       = 3;
+    PB_GNSS_MEASUREMENTS_CODE_TYPE_L       = 4;
+    PB_GNSS_MEASUREMENTS_CODE_TYPE_M       = 5;
+    PB_GNSS_MEASUREMENTS_CODE_TYPE_P       = 6;
+    PB_GNSS_MEASUREMENTS_CODE_TYPE_Q       = 7;
+    PB_GNSS_MEASUREMENTS_CODE_TYPE_S       = 8;
+    PB_GNSS_MEASUREMENTS_CODE_TYPE_W       = 9;
+    PB_GNSS_MEASUREMENTS_CODE_TYPE_X       = 10;
+    PB_GNSS_MEASUREMENTS_CODE_TYPE_Y       = 11;
+    PB_GNSS_MEASUREMENTS_CODE_TYPE_Z       = 12;
+    PB_GNSS_MEASUREMENTS_CODE_TYPE_N       = 13;
+    PB_GNSS_MEASUREMENTS_CODE_TYPE_D       = 14;
+    PB_GNSS_MEASUREMENTS_CODE_TYPE_E       = 15;
+    PB_GNSS_MEASUREMENTS_CODE_TYPE_OTHER   = 255;
+}
+
 message PBGnssMeasurementsData {
     // bitwise OR of PBGnssMeasurementsDataFlagsMask
     uint32 flags = 1;
@@ -1021,6 +1043,8 @@ message PBGnssMeasurementsData {
     double fullInterSignalBiasUncertaintyNs = 24;
     uint32 cycleSlipCount = 25;
     float receivedSvTimeSubNs = 26;
+    PBGnssMeasurementsCodeType codeType = 27;
+    string otherCodeTypeName = 28;
 }
 
 message PBLocApiGnssLocationPositionDynamics {
