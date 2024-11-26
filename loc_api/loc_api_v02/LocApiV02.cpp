@@ -25,6 +25,10 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+/* Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
 #define LOG_NDEBUG 0
 #define LOG_TAG "LocSvc_ApiV02"
 
@@ -913,7 +917,7 @@ void LocApiV02 ::
         location.timestamp = (time_info_current.tv_sec)*1e3 +
             (time_info_current.tv_nsec)/1e6;
     }
-
+    location.techMask |= LOCATION_TECHNOLOGY_WIFI_BIT;
     injectPosition(location, false);
 }
 
@@ -968,13 +972,23 @@ void LocApiV02::injectPosition(const Location& location, bool onDemandCpi)
         injectPositionReq.onDemandCpi_valid = 1;
         injectPositionReq.onDemandCpi = 1;
     }
+    if (location.techMask & LOCATION_TECHNOLOGY_WIFI_BIT) {
+        injectPositionReq.positionSrc_valid = 1;
+        injectPositionReq.positionSrc = eQMI_LOC_POSITION_SRC_WIFI_V02;
+    } else {
+        injectPositionReq.positionSrc_valid = 1;
+        injectPositionReq.positionSrc = eQMI_LOC_POSITION_SRC_OTHER_V02;
+    }
 
-    LOC_LOGv("Lat=%lf, Lon=%lf, Acc=%.2lf rawAcc=%.2lf horConfidence=%d"
-             "rawHorConfidence=%d onDemandCpi=%d",
+    LOC_LOGv("Lat=%lf, Lon=%lf, Acc=%.2lf rawAcc=%.2lf horConfidence=%d, alt=%f, alt acc=%f"
+             "rawHorConfidence=%d onDemandCpi=%d positionSrc=%d",
              injectPositionReq.latitude, injectPositionReq.longitude,
              injectPositionReq.horUncCircular, injectPositionReq.rawHorUncCircular,
-             injectPositionReq.horConfidence, injectPositionReq.rawHorConfidence,
-             injectPositionReq.onDemandCpi);
+             injectPositionReq.horConfidence, injectPositionReq.altitudeWrtEllipsoid,
+             injectPositionReq.vertUnc,
+             injectPositionReq.rawHorConfidence,
+             injectPositionReq.onDemandCpi,
+             injectPositionReq.positionSrc);
 
     LOC_SEND_SYNC_REQ(InjectPosition, INJECT_POSITION, injectPositionReq);
 
