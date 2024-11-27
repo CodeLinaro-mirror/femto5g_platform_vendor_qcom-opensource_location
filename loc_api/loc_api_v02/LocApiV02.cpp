@@ -4114,6 +4114,21 @@ void  LocApiV02 :: reportSvPolynomial(const qmiLocEventGnssSvPolyIndMsgT_v02 *gn
             }
         }
 
+        if (1 == gnss_sv_poly_ptr->navicTgdL1_valid) {
+            svPolynomial.is_valid |= ULP_GNSS_SV_POLY_BIT_NAVIC_TGD_L1;
+            svPolynomial.navicTgdL1 = gnss_sv_poly_ptr->navicTgdL1;
+        }
+
+        if (1 == gnss_sv_poly_ptr->navicIscL1D_valid) {
+            svPolynomial.is_valid |= ULP_GNSS_SV_POLY_BIT_NAVIC_ISC_L1D;
+            svPolynomial.navicIscL1D = gnss_sv_poly_ptr->navicIscL1D;
+        }
+
+        if (1 == gnss_sv_poly_ptr->navicIscL1P_valid) {
+            svPolynomial.is_valid |= ULP_GNSS_SV_POLY_BIT_NAVIC_ISC_L1P;
+            svPolynomial.navicIscL1P = gnss_sv_poly_ptr->navicIscL1P;
+        }
+
         //Report SV Poly
         LocApiBase::reportSvPolynomial(svPolynomial);
 
@@ -6516,6 +6531,28 @@ void LocApiV02::convertGnssMeasurementsHeader(const Gnss_LocSvSystemEnumType loc
             mTimeBiases.galE1_galE5bUnc =
                     gnss_measurement_info.GalE1E5bTimeBias.timeBiasUnc * 1000000;
             mTimeBiases.flags |= BIAS_GALE1_GALE5B_UNC_VALID;
+        }
+    }
+
+    // Intra system time bias calculations for NAVIC
+    if (1 == gnss_measurement_info.navicL5L1TimeBias_valid) {
+        qmiLocInterSystemBiasStructT_v02* interSystemBias =
+                (qmiLocInterSystemBiasStructT_v02*)&gnss_measurement_info.navicL5L1TimeBias;
+
+        getInterSystemTimeBias("navicL5L1TimeBias",
+                               svMeasSetHead.navicL5L1TimeBias, interSystemBias);
+        svMeasSetHead.flags |= GNSS_SV_MEAS_HEADER_HAS_NAVICL5L1_TIME_BIAS;
+
+        if (gnss_measurement_info.navicL5L1TimeBias.validMask & QMI_LOC_SYS_TIME_BIAS_VALID_V02) {
+            mTimeBiases.navicL5_navicL1 =
+                    gnss_measurement_info.navicL5L1TimeBias.timeBias * 1000000;
+            mTimeBiases.flags |= BIAS_NAVICL5_NAVICL1_VALID;
+        }
+        if (gnss_measurement_info.navicL5L1TimeBias.validMask &
+            QMI_LOC_SYS_TIME_BIAS_UNC_VALID_V02) {
+            mTimeBiases.navicL5_navicL1Unc =
+                    gnss_measurement_info.navicL5L1TimeBias.timeBiasUnc * 1000000;
+            mTimeBiases.flags |= BIAS_NAVICL5_NAVICL1_UNC_VALID;
         }
     }
 
