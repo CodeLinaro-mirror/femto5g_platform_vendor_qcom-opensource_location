@@ -45,6 +45,388 @@ void LocIdlClientDevice::fillPosTechMask(unsigned int techmask, unsigned int &ou
     }
 }
 
+uint32_t LocIdlClientDevice::parseConstellationType(LocationTypes::GnssConstellationTypeT idlConstellation)
+{
+    uint32_t res = 0;
+    switch(idlConstellation) {
+        case LocationTypes::GnssConstellationTypeT::GCTT_GLONASS:
+            res = GNSS_LOC_SV_SYSTEM_GLONASS;
+            break;
+        case LocationTypes::GnssConstellationTypeT::GCTT_QZSS:
+            res = GNSS_LOC_SV_SYSTEM_QZSS;
+            break;
+        case LocationTypes::GnssConstellationTypeT::GCTT_BEIDOU:
+            res = GNSS_LOC_SV_SYSTEM_BDS;
+            break;
+        case LocationTypes::GnssConstellationTypeT::GCTT_GALILEO:
+            res = GNSS_LOC_SV_SYSTEM_GALILEO;
+            break;
+        case LocationTypes::GnssConstellationTypeT::GCTT_SBAS:
+            res = GNSS_LOC_SV_SYSTEM_SBAS;
+            break;
+        case LocationTypes::GnssConstellationTypeT::GCTT_NAVIC:
+            res = GNSS_LOC_SV_SYSTEM_NAVIC;
+            break;
+        case LocationTypes::GnssConstellationTypeT::GCTT_GPS:
+            res = GNSS_LOC_SV_SYSTEM_GPS;
+            break;
+    }
+    return res;
+}
+
+uint32_t LocIdlClientDevice::parseSvType(LocationTypes::GnssSvTypeT svType)
+{
+    uint32_t res = 0;
+    switch(svType) {
+        case LocationTypes::GnssSvTypeT::GNSS_SV_TYPE_T_GPS:
+            res = GNSS_SV_TYPE_GPS;
+            break;
+        case LocationTypes::GnssSvTypeT::GNSS_SV_TYPE_T_SBAS:
+            res = GNSS_SV_TYPE_SBAS;
+            break;
+        case LocationTypes::GnssSvTypeT::GNSS_SV_TYPE_T_GLONASS:
+            res = GNSS_SV_TYPE_GLONASS;
+            break;
+        case LocationTypes::GnssSvTypeT::GNSS_SV_TYPE_T_QZSS:
+            res = GNSS_SV_TYPE_QZSS;
+            break;
+        case LocationTypes::GnssSvTypeT::GNSS_SV_TYPE_T_BEIDOU:
+            res = GNSS_SV_TYPE_BEIDOU;
+            break;
+        case LocationTypes::GnssSvTypeT::GNSS_SV_TYPE_T_GALILEO:
+            res = GNSS_SV_TYPE_GALILEO;
+            break;
+        case LocationTypes::GnssSvTypeT::GNSS_SV_TYPE_T_NAVIC:
+            res = GNSS_SV_TYPE_NAVIC;
+            break;
+    }
+    return res;
+}
+
+uint32_t LocIdlClientDevice::parseMeasStateMask(uint32_t stateMask)
+{
+    uint32_t resMask = 0;
+    if (LocationTypes::GnssMeasurementsStateMaskT::GMSMT_UNKNOWN & stateMask) {
+      resMask |= GNSS_MEASUREMENTS_STATE_UNKNOWN_BIT;
+    }
+
+    if (LocationTypes::GnssMeasurementsStateMaskT::GMSMT_CODE_LOCK & stateMask) {
+      resMask |= GNSS_MEASUREMENTS_STATE_CODE_LOCK_BIT;
+    }
+
+    if (LocationTypes::GnssMeasurementsStateMaskT::GMSMT_BIT_SYNC & stateMask) {
+      resMask |= GNSS_MEASUREMENTS_STATE_BIT_SYNC_BIT;
+    }
+
+    if (LocationTypes::GnssMeasurementsStateMaskT::GMSMT_SUBFRAME_SYNC & stateMask) {
+      resMask |= GNSS_MEASUREMENTS_STATE_SUBFRAME_SYNC_BIT;
+    }
+
+    if (LocationTypes::GnssMeasurementsStateMaskT::GMSMT_TOW_DECODED & stateMask) {
+      resMask |= GNSS_MEASUREMENTS_STATE_TOW_DECODED_BIT;
+    }
+
+    if (LocationTypes::GnssMeasurementsStateMaskT::GMSMT_MSEC_AMBIGUOUS & stateMask) {
+      resMask |= GNSS_MEASUREMENTS_STATE_MSEC_AMBIGUOUS_BIT;
+    }
+
+    if (LocationTypes::GnssMeasurementsStateMaskT::GMSMT_SYMBOL_SYNC & stateMask) {
+      resMask |= GNSS_MEASUREMENTS_STATE_SYMBOL_SYNC_BIT;
+    }
+
+    if (LocationTypes::GnssMeasurementsStateMaskT::GMSMT_GLO_STRING_SYNC & stateMask) {
+      resMask |= GNSS_MEASUREMENTS_STATE_GLO_STRING_SYNC_BIT;
+    }
+
+    if (LocationTypes::GnssMeasurementsStateMaskT::GMSMT_GLO_TOD_DECODED & stateMask) {
+      resMask |= GNSS_MEASUREMENTS_STATE_GLO_TOD_DECODED_BIT;
+    }
+
+    if (LocationTypes::GnssMeasurementsStateMaskT::GMSMT_BDS_D2_BIT_SYNC & stateMask) {
+      resMask |= GNSS_MEASUREMENTS_STATE_BDS_D2_BIT_SYNC_BIT;
+    }
+
+    if (LocationTypes::GnssMeasurementsStateMaskT::GMSMT_BDS_D2_SUBFRAME_SYNC & stateMask) {
+      resMask |= GNSS_MEASUREMENTS_STATE_BDS_D2_SUBFRAME_SYNC_BIT;
+    }
+
+    if (LocationTypes::GnssMeasurementsStateMaskT::GMSMT_GAL_E1BC_CODE_LOCK & stateMask) {
+      resMask |= GNSS_MEASUREMENTS_STATE_GAL_E1BC_CODE_LOCK_BIT;
+    }
+
+    if (LocationTypes::GnssMeasurementsStateMaskT::GMSMT_GAL_E1C_2ND_CODE_LOCK & stateMask) {
+      resMask |= GNSS_MEASUREMENTS_STATE_GAL_E1C_2ND_CODE_LOCK_BIT;
+    }
+
+    if (LocationTypes::GnssMeasurementsStateMaskT::GMSMT_GAL_E1B_PAGE_SYNC & stateMask) {
+      resMask |= GNSS_MEASUREMENTS_STATE_GAL_E1B_PAGE_SYNC_BIT;
+    }
+
+    if (LocationTypes::GnssMeasurementsStateMaskT::GMSMT_SBAS_SYNC & stateMask) {
+      resMask |= GNSS_MEASUREMENTS_STATE_SBAS_SYNC_BIT;
+    }
+
+    return resMask;
+}
+
+uint32_t LocIdlClientDevice::parseAdrStateMask(uint32_t adrStatemask)
+{
+    uint32_t retAdrMask = 0;
+    if (LocationTypes::GnssMeasurementsAdrStateMaskT::GMASMT_STATE_UNKNOWN & adrStatemask) {
+        retAdrMask |= GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_UNKNOWN;
+    }
+
+    if (LocationTypes::GnssMeasurementsAdrStateMaskT::GMASMT_STATE_VALID_BIT & adrStatemask) {
+        retAdrMask |= GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_VALID_BIT;
+    }
+
+    if (LocationTypes::GnssMeasurementsAdrStateMaskT::GMASMT_STATE_RESET_BIT & adrStatemask) {
+        retAdrMask |= GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_RESET_BIT;
+    }
+
+    if (LocationTypes::GnssMeasurementsAdrStateMaskT::GMASMT_STATE_CYCLE_SLIP_BIT & adrStatemask) {
+        retAdrMask |= GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_CYCLE_SLIP_BIT;
+    }
+
+    if (LocationTypes::GnssMeasurementsAdrStateMaskT::GMASMT_STATE_HALF_CYCLE_RESOLVED_BIT & adrStatemask) {
+        retAdrMask |= GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_HALF_CYCLE_RESOLVED_BIT;
+    }
+
+    return retAdrMask;
+}
+
+uint32_t LocIdlClientDevice::parseMultiPathIndicator(uint32_t multipathIndicator)
+{
+    uint32_t resMultiPathInd = 0;
+    switch (multipathIndicator) {
+    case LocationTypes::GnssMeasurementsMultipathIndicatorT::GMMIT_PRESENT:
+        resMultiPathInd = GNSS_MEASUREMENTS_MULTIPATH_INDICATOR_PRESENT;
+        break;
+    case LocationTypes::GnssMeasurementsMultipathIndicatorT::GMMIT_NOT_PRESENT:
+        resMultiPathInd = GNSS_MEASUREMENTS_MULTIPATH_INDICATOR_NOT_PRESENT;
+        break;
+    }
+
+    return resMultiPathInd;
+}
+
+uint32_t LocIdlClientDevice::parseDataMask(uint32_t mask)
+{
+    uint32_t retDataMask = 0;
+    if (LocationTypes::GnssDataMaskT::GDMT_JAMMER_IND_BIT & mask) {
+        retDataMask |= GNSS_LOC_DATA_JAMMER_IND_BIT;
+    }
+    if (LocationTypes::GnssDataMaskT::GDMT_AGC_BIT & mask) {
+        retDataMask |= GNSS_LOC_DATA_AGC_BIT;
+    }
+    return retDataMask;
+}
+
+uint32_t LocIdlClientDevice::parseGnssSvOptionsMask(uint32_t idlOptionMask)
+{
+    uint32_t optionMask = 0;
+
+    if (LocationTypes::GnssSvOptionsMaskT::GSOMT_HAS_EPHEMER_BIT & idlOptionMask) {
+        optionMask |= GNSS_SV_OPTIONS_HAS_EPHEMER_BIT;
+    }
+
+    if (LocationTypes::GnssSvOptionsMaskT::GSOMT_HAS_ALMANAC_BIT & idlOptionMask) {
+        optionMask |= GNSS_SV_OPTIONS_HAS_ALMANAC_BIT;
+    }
+
+    if (LocationTypes::GnssSvOptionsMaskT::GSOMT_HAS_USED_IN_FIX_BIT  & idlOptionMask) {
+        optionMask |= GNSS_SV_OPTIONS_USED_IN_FIX_BIT;
+    }
+
+    if (LocationTypes::GnssSvOptionsMaskT::GSOMT_HAS_CARRIER_FREQ_BIT & idlOptionMask) {
+        optionMask |= GNSS_SV_OPTIONS_HAS_CARRIER_FREQUENCY_BIT;
+    }
+
+    if (LocationTypes::GnssSvOptionsMaskT::GSOMT_HAS_GNSS_SIGNAL_TYPE_BIT & idlOptionMask) {
+        optionMask |= GNSS_SV_OPTIONS_HAS_GNSS_SIGNAL_TYPE_BIT;
+    }
+
+    if (LocationTypes::GnssSvOptionsMaskT::GSOMT_HAS_BASEBAND_CARRIER_TO_NOISE_BIT & idlOptionMask) {
+        optionMask |= GNSS_SV_OPTIONS_HAS_BASEBAND_CARRIER_TO_NOISE_BIT;
+    }
+
+    if (LocationTypes::GnssSvOptionsMaskT::GSOMT_HAS_ELEVATION_BIT & idlOptionMask) {
+        optionMask |= GNSS_SV_OPTIONS_HAS_ELEVATION_BIT;
+    }
+
+    if (LocationTypes::GnssSvOptionsMaskT::GSOMT_HAS_AZIMUTH_BIT & idlOptionMask) {
+        optionMask |= GNSS_SV_OPTIONS_HAS_AZIMUTH_BIT;
+    }
+    return optionMask;
+}
+
+
+uint32_t LocIdlClientDevice::parseDrSolutionStatusMask(uint32_t idlDrSolMask)
+{
+    uint32_t drSolutionStatusMask = 0;
+    if (LocationTypes::DrSolutionStatusMaskT::DSSMT_VEHICLE_SENSOR_SPEED_INPUT_DETECTED & idlDrSolMask) {
+        drSolutionStatusMask |= VEHICLE_SENSOR_SPEED_INPUT_DETECTED;
+    }
+    if (LocationTypes::DrSolutionStatusMaskT::DSSMT_VEHICLE_SENSOR_SPEED_INPUT_USED & idlDrSolMask) {
+        drSolutionStatusMask |= VEHICLE_SENSOR_SPEED_INPUT_USED;
+    }
+    return drSolutionStatusMask;
+}
+
+uint32_t LocIdlClientDevice::parsegnssSystemTime(uint8_t idlTimeSrc)
+{
+    uint32_t timeSrc= 0;
+    switch (idlTimeSrc) {
+        case LocationTypes::GnssLocSvSystemTypeT::GLSSTT_GPS:
+            timeSrc = GNSS_LOC_SV_SYSTEM_GPS;
+            break;
+        case LocationTypes::GnssLocSvSystemTypeT::GLSSTT_GAL:
+            timeSrc = GNSS_LOC_SV_SYSTEM_GALILEO;
+            break;
+        case LocationTypes::GnssLocSvSystemTypeT::GLSSTT_SBAS:
+            timeSrc = GNSS_LOC_SV_SYSTEM_SBAS;
+            break;
+        case LocationTypes::GnssLocSvSystemTypeT::GLSSTT_GLO:
+            timeSrc = GNSS_LOC_SV_SYSTEM_GLONASS;
+            break;
+        case LocationTypes::GnssLocSvSystemTypeT::GLSSTT_BDS:
+            timeSrc = GNSS_LOC_SV_SYSTEM_BDS;
+            break;
+         case LocationTypes::GnssLocSvSystemTypeT::GLSSTT_QZSS:
+            timeSrc = GNSS_LOC_SV_SYSTEM_QZSS;
+            break;
+        case LocationTypes::GnssLocSvSystemTypeT::GLSSTT_NAVIC:
+            timeSrc = GNSS_LOC_SV_SYSTEM_NAVIC;
+            break;
+    }
+    return timeSrc;
+}
+
+uint32_t LocIdlClientDevice::parseLocReliability(uint32_t idlReliability)
+{
+    uint32_t reliability = LOCATION_RELIABILITY_NOT_SET;
+    switch (idlReliability) {
+        case LocationTypes::LocationReliabilityT::LOCATION_RELIABILIT_T_VERY_LOW:
+            reliability = LOCATION_RELIABILITY_VERY_LOW;
+            break;
+        case LocationTypes::LocationReliabilityT::LOCATION_RELIABILIT_T_LOW:
+            reliability = LOCATION_RELIABILITY_LOW;
+            break;
+        case LocationTypes::LocationReliabilityT::LOCATION_RELIABILIT_T_MEDIUM:
+            reliability = LOCATION_RELIABILITY_MEDIUM;
+            break;
+        case LocationTypes::LocationReliabilityT::LOCATION_RELIABILIT_T_HIGH:
+            reliability = LOCATION_RELIABILITY_HIGH;
+            break;
+        default:
+            reliability = LOCATION_RELIABILITY_NOT_SET;
+            break;
+    }
+    return reliability;
+}
+
+uint32_t LocIdlClientDevice::parseSignalType (uint32_t idlSignalType)
+{
+    uint32_t gnssSignalType = 0;
+
+    switch(idlSignalType) {
+        case LocationTypes::GnssSignalTypeT::GSTT_GPS_L1CA_BIT:
+            gnssSignalType = GNSS_SIGNAL_GPS_L1CA;
+            break;
+        case LocationTypes::GnssSignalTypeT::GSTT_GPS_L1C_BIT:
+            gnssSignalType = GNSS_SIGNAL_GPS_L1C;
+            break;
+        case LocationTypes::GnssSignalTypeT::GSTT_GPS_L2_BIT:
+            gnssSignalType = GNSS_SIGNAL_GPS_L2;
+            break;
+        case LocationTypes::GnssSignalTypeT::GSTT_GPS_L5_BIT:
+            gnssSignalType = GNSS_SIGNAL_GPS_L5;
+            break;
+        case LocationTypes::GnssSignalTypeT::GSTT_GLONASS_G1_BIT:
+            gnssSignalType = GNSS_SIGNAL_GLONASS_G1;
+            break;
+        case LocationTypes::GnssSignalTypeT::GSTT_GLONASS_G2_BIT:
+            gnssSignalType = GNSS_SIGNAL_GLONASS_G2;
+            break;
+        case LocationTypes::GnssSignalTypeT::GSTT_GALILEO_E1_BIT:
+            gnssSignalType = GNSS_SIGNAL_GALILEO_E1;
+            break;
+        case LocationTypes::GnssSignalTypeT::GSTT_GALILEO_E5A_BIT:
+            gnssSignalType = GNSS_SIGNAL_GALILEO_E5A;
+            break;
+        case LocationTypes::GnssSignalTypeT::GSTT_GALILEO_E5B_BIT:
+            gnssSignalType = GNSS_SIGNAL_GALILEO_E5B;
+            break;
+        case LocationTypes::GnssSignalTypeT::GSTT_BEIDOU_B1_BIT:
+            gnssSignalType = GNSS_SIGNAL_BEIDOU_B1;
+            break;
+        case LocationTypes::GnssSignalTypeT::GSTT_BEIDOU_B2_BIT:
+            gnssSignalType = GNSS_SIGNAL_BEIDOU_B2;
+            break;
+        case LocationTypes::GnssSignalTypeT::GSTT_QZSS_L1CA_BIT:
+            gnssSignalType = GNSS_SIGNAL_QZSS_L1CA;
+            break;
+        case LocationTypes::GnssSignalTypeT::GSTT_QZSS_L1S_BIT:
+            gnssSignalType = GNSS_SIGNAL_QZSS_L1S;
+            break;
+        case LocationTypes::GnssSignalTypeT::GSTT_QZSS_L2_BIT:
+            gnssSignalType = GNSS_SIGNAL_QZSS_L2;
+            break;
+        case LocationTypes::GnssSignalTypeT::GSTT_QZSS_L5_BIT:
+            gnssSignalType = GNSS_SIGNAL_QZSS_L5;
+            break;
+        case LocationTypes::GnssSignalTypeT::GSTT_SBAS_L1_BIT:
+            gnssSignalType = GNSS_SIGNAL_SBAS_L1;
+            break;
+        case LocationTypes::GnssSignalTypeT::GSTT_BEIDOU_B1I_BIT:
+            gnssSignalType = GNSS_SIGNAL_BEIDOU_B1I;
+            break;
+        case LocationTypes::GnssSignalTypeT::GSTT_BEIDOU_B1C_BIT:
+            gnssSignalType = GNSS_SIGNAL_BEIDOU_B1C;
+            break;
+        case LocationTypes::GnssSignalTypeT::GSTT_BEIDOU_B2I_BIT:
+            gnssSignalType = GNSS_SIGNAL_BEIDOU_B2I;
+            break;
+        case LocationTypes::GnssSignalTypeT::GSTT_BEIDOU_B2AI_BIT:
+            gnssSignalType = GNSS_SIGNAL_BEIDOU_B2AI;
+            break;
+        case LocationTypes::GnssSignalTypeT::GSTT_NAVIC_L5_BIT:
+            gnssSignalType = GNSS_SIGNAL_NAVIC_L5;
+            break;
+        case LocationTypes::GnssSignalTypeT::GSTT_BEIDOU_B2AQ_BIT:
+            gnssSignalType = GNSS_SIGNAL_BEIDOU_B2AQ;
+            break;
+        case LocationTypes::GnssSignalTypeT::GSTT_BEIDOU_B2BI_BIT:
+            gnssSignalType = GNSS_SIGNAL_BEIDOU_B2BI;
+            break;
+        case LocationTypes::GnssSignalTypeT::GSTT_BEIDOU_B2BQ_BIT:
+            gnssSignalType = GNSS_SIGNAL_BEIDOU_B2BQ;
+            break;
+    }
+    LOC_LOGE("idlSignalType %u gnssSignalType %u", idlSignalType, gnssSignalType);
+    return gnssSignalType;
+}
+
+uint32_t LocIdlClientDevice::parseEngMask(uint32_t idlEngMask) {
+    uint32_t engMask = 0;
+    if (LocationTypes::PositioningEngineMaskT::PEMT_STANDARD_POSITIONING_ENGINE & idlEngMask) {
+        engMask |= STANDARD_POSITIONING_ENGINE;
+    }
+
+    if (LocationTypes::PositioningEngineMaskT::PEMT_DEAD_RECKONING_ENGINE & idlEngMask) {
+        engMask |= DEAD_RECKONING_ENGINE;
+    }
+
+    if (LocationTypes::PositioningEngineMaskT::PEMT_PRECISE_POSITIONING_ENGINE  & idlEngMask) {
+        engMask |= PRECISE_POSITIONING_ENGINE;
+    }
+
+    if (LocationTypes::PositioningEngineMaskT::PEMT_VP_POSITIONING_ENGINE & idlEngMask) {
+        engMask |= VP_POSITIONING_ENGINE;
+    }
+    return engMask;
+}
+
 
 void LocIdlClientDevice::getLocationRpt(
                             const LocationTypes::LocationReportT &_locationReport,
@@ -214,7 +596,7 @@ void LocIdlClientDevice::getLocationExtendedRpt(
     }
     if (lFlags & LocationTypes::LocationReportFlagMaskT::LRFMT_HOR_RELIABILITY) {
         gpsLocExt.flags |= GPS_LOCATION_EXTENDED_HAS_HOR_RELIABILITY;
-        uint32_t hReliability = _locationReport.getHorReliability();
+        uint32_t hReliability = parseLocReliability(_locationReport.getHorReliability());
         gpsLocExt.horizontal_reliability = (LocReliability)hReliability;
 
         gnssPosDiag.gnssInfoFlags |=  LOC_IDL_CLIENT_DIAG_GNSS_LOCATION_INFO_HOR_RELIABILITY_BIT;
@@ -222,7 +604,7 @@ void LocIdlClientDevice::getLocationExtendedRpt(
     }
     if (lFlags & LocationTypes::LocationReportFlagMaskT::LRFMT_VER_RELIABILITY) {
         gpsLocExt.flags |= GPS_LOCATION_EXTENDED_HAS_VERT_RELIABILITY;
-        uint32_t vReliability = _locationReport.getVerReliability();
+        uint32_t vReliability = parseLocReliability(_locationReport.getVerReliability());
         gpsLocExt.vertical_reliability = (LocReliability)vReliability;
 
         gnssPosDiag.gnssInfoFlags |=  LOC_IDL_CLIENT_DIAG_GNSS_LOCATION_INFO_VER_RELIABILITY_BIT;
@@ -517,7 +899,7 @@ void LocIdlClientDevice::getLocationExtendedRpt(
     }
 
     const LocationTypes::GnssSystemTimeT &gnssTime = _locationReport.getGnssSystemTime();
-    uint32_t timeSrc = gnssTime.getGnssSystemTimeSrc();
+    uint32_t timeSrc = parsegnssSystemTime(gnssTime.getGnssSystemTimeSrc());
     gpsLocExt.gnssSystemTime.gnssSystemTimeSrc = (Gnss_LocSvSystemEnumType)timeSrc;
     const LocationTypes::SystemTimeStructT &time = gnssTime.getSystemTime();
 
@@ -703,15 +1085,16 @@ void LocIdlClientDevice::getLocationExtendedRpt(
         gnssPosDiag.numOfMeasReceived = meas.size();
 
         for (int idx = 0; idx < meas.size() && idx < GNSS_SV_MAX; idx++) {
-            uint32_t constellation = meas[idx].getGnssConstellation();
+            uint32_t constellation = parseConstellationType(meas[idx].getGnssConstellation());
+            uint32_t sigType = parseSignalType(meas[idx].getGnssSignalType());
             gpsLocExt.measUsageInfo[idx].gnssConstellation =
                                             (Gnss_LocSvSystemEnumType)constellation;
-            gpsLocExt.measUsageInfo[idx].gnssSignalType = meas[idx].getGnssSignalType();
+            gpsLocExt.measUsageInfo[idx].gnssSignalType = sigType;
             gpsLocExt.measUsageInfo[idx].gnssSvId = meas[idx].getGnssSvId();
 
             gnssPosDiag.measUsageInfo[idx].gnssConstellation =
                                 (locIdlClientDiagGnss_LocSvSystemEnumType)constellation;
-            gnssPosDiag.measUsageInfo[idx].gnssSignalType = meas[idx].getGnssSignalType();
+            gnssPosDiag.measUsageInfo[idx].gnssSignalType = sigType;
             gnssPosDiag.measUsageInfo[idx].gnssSvId = meas[idx].getGnssSvId();
         }
     }
@@ -768,12 +1151,13 @@ void LocIdlClientDevice::getLocationExtendedRpt(
         gnssPosDiag.locOutputEngType = (locIdlClientDiagLocOutputEngineType)engType;
     }
     if (lFlags & LocationTypes::LocationReportFlagMaskT::LRFMT_OUTPUT_ENG_MASK) {
+        uint32_t engMask = parseEngMask(_locationReport.getLocOutputEngMask());
         gpsLocExt.flags |= GPS_LOCATION_EXTENDED_HAS_OUTPUT_ENG_MASK;
-        gpsLocExt.locOutputEngMask = _locationReport.getLocOutputEngMask();
+        gpsLocExt.locOutputEngMask = engMask;
 
         gnssPosDiag.gnssInfoFlags |=  LOC_IDL_CLIENT_DIAG_GNSS_LOCATION_INFO_OUTPUT_ENG_MASK_BIT;
         gnssPosDiag.locOutputEngMask =
-                    (locIdlClientDiagPositioningEngineMask)_locationReport.getLocOutputEngMask();
+                    (locIdlClientDiagPositioningEngineMask)engMask;
     }
     if (lFlags & LocationTypes::LocationReportFlagMaskT::LRFMT_CONFORMITY_INDEX) {
         gpsLocExt.flags |= GPS_LOCATION_EXTENDED_HAS_CONFORMITY_INDEX;
@@ -808,19 +1192,12 @@ void LocIdlClientDevice::getLocationExtendedRpt(
     }
     if (lFlags & LocationTypes::LocationReportFlagMaskT::LRFMT_DR_SOL_STATUS_MASK) {
         gpsLocExt.flags |= GPS_LOCATION_EXTENDED_HAS_DR_SOLUTION_STATUS_MASK;
-        uint64_t mask = _locationReport.getDrSolutionStatusMask();
-        gpsLocExt.drSolutionStatusMask = 0;
+        uint32_t mask = parseDrSolutionStatusMask(_locationReport.getDrSolutionStatusMask());
+        gpsLocExt.drSolutionStatusMask = mask;
 
         gnssPosDiag.gnssInfoFlags |=
                 LOC_IDL_CLIENT_DIAG_GNSS_LOCATION_INFO_DR_SOLUTION_STATUS_MASK_BIT;
         gnssPosDiag.drSolutionStatusMask = (locIdlClientDiagDrSolutionStatusMask)mask;
-
-        if (mask & LocationTypes::DrSolutionStatusMaskT::
-                    DSSMT_VEHICLE_SENSOR_SPEED_INPUT_DETECTED)
-            gpsLocExt.drSolutionStatusMask |= VEHICLE_SENSOR_SPEED_INPUT_DETECTED;
-        if (mask & LocationTypes::DrSolutionStatusMaskT::
-                    DSSMT_VEHICLE_SENSOR_SPEED_INPUT_USED)
-            gpsLocExt.drSolutionStatusMask |= VEHICLE_SENSOR_SPEED_INPUT_USED;
     }
     if (lFlags & LocationTypes::LocationReportExtendedFlagMaskT::LREFMT_ALTITUDE_ASSUMED) {
         gpsLocExt.flags |= GPS_LOCATION_EXTENDED_HAS_ALTITUDE_ASSUMED;
@@ -958,7 +1335,7 @@ void LocIdlClientDevice::getMeasurementSet(const LocationTypes::GnssMeasurements
         if (flags & LocationTypes::GnssMeasurementsDataFlagsMaskT::GMDFMT_SV_TYPE_BIT) {
             svMeasurementSet.gnssMeasNotification.measurements[idx].flags |=
                                                             GNSS_MEASUREMENTS_DATA_SV_TYPE_BIT;
-            uint32_t stype = measData[idx].getSvType();
+            uint32_t stype = parseSvType(measData[idx].getSvType());
             svMeasurementSet.gnssMeasNotification.measurements[idx].svType = (GnssSvType)stype;
 
             gnssMeasDiag.measurements[idx].flags |=
@@ -968,10 +1345,10 @@ void LocIdlClientDevice::getMeasurementSet(const LocationTypes::GnssMeasurements
         svMeasurementSet.gnssMeasNotification.measurements[idx].timeOffsetNs =
                                                             measData[idx].getTimeOffsetNs();
         if (flags & LocationTypes::GnssMeasurementsDataFlagsMaskT::GMDFMT_STATE_BIT) {
+            uint32_t stateMask = parseMeasStateMask(measData[idx].getStateMask());
             svMeasurementSet.gnssMeasNotification.measurements[idx].flags |=
                                                             GNSS_MEASUREMENTS_DATA_STATE_BIT;
-            svMeasurementSet.gnssMeasNotification.measurements[idx].stateMask =
-                                                                measData[idx].getStateMask();
+            svMeasurementSet.gnssMeasNotification.measurements[idx].stateMask = stateMask;
 
             gnssMeasDiag.measurements[idx].flags |=
                                     LOC_IDL_CLIENT_DIAG_GNSS_MEASUREMENTS_DATA_STATE_BIT;
@@ -1039,14 +1416,14 @@ void LocIdlClientDevice::getMeasurementSet(const LocationTypes::GnssMeasurements
                     measData[idx].getPseudorangeRateUncertaintyMps();
         }
         if (flags & LocationTypes::GnssMeasurementsDataFlagsMaskT::GMDFMT_ADR_STATE_BIT) {
+            uint32_t adrStateMask = parseAdrStateMask(measData[idx].getAdrStateMask());
             svMeasurementSet.gnssMeasNotification.measurements[idx].flags |=
                                             GNSS_MEASUREMENTS_DATA_ADR_STATE_BIT;
-            svMeasurementSet.gnssMeasNotification.measurements[idx].adrStateMask =
-                                                measData[idx].getAdrStateMask();
+            svMeasurementSet.gnssMeasNotification.measurements[idx].adrStateMask = adrStateMask;
 
             gnssMeasDiag.measurements[idx].flags |=
                             LOC_IDL_CLIENT_DIAG_GNSS_MEASUREMENTS_DATA_ADR_STATE_BIT;
-            gnssMeasDiag.measurements[idx].adrStateMask = measData[idx].getAdrStateMask();
+            gnssMeasDiag.measurements[idx].adrStateMask = adrStateMask;
         }
         if (flags & LocationTypes::GnssMeasurementsDataFlagsMaskT::GMDFMT_ADR_BIT) {
             svMeasurementSet.gnssMeasNotification.measurements[idx].flags |=
@@ -1119,7 +1496,7 @@ void LocIdlClientDevice::getMeasurementSet(const LocationTypes::GnssMeasurements
                 LocationTypes::GnssMeasurementsDataFlagsMaskT::GMDFMT_MULTIPATH_IND_BIT) {
             svMeasurementSet.gnssMeasNotification.measurements[idx].flags |=
                                                     GNSS_MEASUREMENTS_DATA_MULTIPATH_INDICATOR_BIT;
-            uint32_t mPathIndicator = measData[idx].getMultipathIndicator();
+            uint32_t mPathIndicator = parseMultiPathIndicator(measData[idx].getMultipathIndicator());
             svMeasurementSet.gnssMeasNotification.measurements[idx].multipathIndicator =
                                                 (GnssMeasurementsMultipathIndicator)mPathIndicator;
 
@@ -1183,14 +1560,14 @@ void LocIdlClientDevice::getMeasurementSet(const LocationTypes::GnssMeasurements
         }
         if (flags &
             LocationTypes::GnssMeasurementsDataFlagsMaskT::GMDFMT_GNSS_SIGNAL_TYPE_BIT) {
+            uint32_t sigType = parseSignalType(measData[idx].getGnssSignalType());
             svMeasurementSet.gnssMeasNotification.measurements[idx].flags |=
                                                     GNSS_MEASUREMENTS_DATA_GNSS_SIGNAL_TYPE_BIT;
-            svMeasurementSet.gnssMeasNotification.measurements[idx].gnssSignalType =
-                                                    measData[idx].getGnssSignalType();
+            svMeasurementSet.gnssMeasNotification.measurements[idx].gnssSignalType = sigType;
 
             gnssMeasDiag.measurements[idx].flags |=
                                 LOC_IDL_CLIENT_DIAG_GNSS_MEASUREMENTS_DATA_FULL_ISB_BIT;
-            gnssMeasDiag.measurements[idx].gnssSignalType = measData[idx].getGnssSignalType();
+            gnssMeasDiag.measurements[idx].gnssSignalType = sigType;
         }
         if (flags &
             LocationTypes::GnssMeasurementsDataFlagsMaskT::
@@ -1359,32 +1736,43 @@ void LocIdlClientDevice::getSvRpt(const vector<LocationTypes::GnssSvDataT> &gnss
     gnssSVDiag.count = gnssSvf.size();
     svNotify.gnssSignalTypeMaskValid = true;
 
-    for (uint16_t idx = 0; idx < GNSS_SV_MAX && idx < gnssSvf.size(); idx++) {
-        svNotify.gnssSvs[idx].size = sizeof(GnssSv);
-        svNotify.gnssSvs[idx].svId = gnssSvf[idx].getSvId();
-        gnssSVDiag.gnssSvs[idx].svId = gnssSvf[idx].getSvId();
-        uint32_t stype = gnssSvf[idx].getType();
-        svNotify.gnssSvs[idx].type = (GnssSvType)stype;
-        gnssSVDiag.gnssSvs[idx].type = (locIdlClientDiagGnssSvType)stype;
-        svNotify.gnssSvs[idx].cN0Dbhz = gnssSvf[idx].getCN0DbHz();
-        gnssSVDiag.gnssSvs[idx].cN0Dbhz =  gnssSvf[idx].getCN0DbHz();
-        svNotify.gnssSvs[idx].elevation = gnssSvf[idx].getElevation();
-        gnssSVDiag.gnssSvs[idx].elevation =  gnssSvf[idx].getElevation();
-        svNotify.gnssSvs[idx].azimuth = gnssSvf[idx].getAzimuth();
-        gnssSVDiag.gnssSvs[idx].azimuth =  gnssSvf[idx].getAzimuth();
-        uint32_t optMask = gnssSvf[idx].getGnssSvOptionsMask();
-        svNotify.gnssSvs[idx].gnssSvOptionsMask = (GnssSvOptionsMask)optMask;
-        gnssSVDiag.gnssSvs[idx].gnssSvOptionsMask =  (locIdlClientDiagGnssSvOptionsMask)optMask;
-        svNotify.gnssSvs[idx].carrierFrequencyHz = gnssSvf[idx].getCarrierFrequencyHz();
-        gnssSVDiag.gnssSvs[idx].carrierFrequencyHz =  gnssSvf[idx].getCarrierFrequencyHz();
-        uint32_t sigMask = gnssSvf[idx].getGnssSignalType();
-        svNotify.gnssSvs[idx].gnssSignalTypeMask = (GnssSignalTypeMask)sigMask;
-        gnssSVDiag.gnssSvs[idx].gnssSignalTypeMask =  (locIdlClientDiagGnssSignalTypeMask)sigMask;
-        svNotify.gnssSvs[idx].basebandCarrierToNoiseDbHz =
-                            gnssSvf[idx].getBasebandCarrierToNoiseDbHz();
-        gnssSVDiag.gnssSvs[idx].basebandCarrierToNoiseDbHz =
-                            gnssSvf[idx].getBasebandCarrierToNoiseDbHz();
-        svNotify.gnssSvs[idx].gloFrequency = gnssSvf[idx].getGloFrequency();
-        gnssSVDiag.gnssSvs[idx].gloFrequency =  gnssSvf[idx].getGloFrequency();
+    if (gnssSvf.size() > GNSS_SV_MAX)
+        svNotify.count = GNSS_SV_MAX;
+
+    if (gnssSvf.size() > LOC_IDL_CLIENT_DIAG_GNSS_SV_MAX)
+        gnssSVDiag.count = LOC_IDL_CLIENT_DIAG_GNSS_SV_MAX;
+
+    for (uint16_t idx = 0; idx < gnssSvf.size(); idx++) {
+        uint32_t stype = parseSvType(gnssSvf[idx].getType());
+        uint32_t optMask = parseGnssSvOptionsMask(gnssSvf[idx].getGnssSvOptionsMask());
+        uint32_t sigMask = parseSignalType(gnssSvf[idx].getGnssSignalType());
+
+        if (idx < GNSS_SV_MAX) {
+            svNotify.gnssSvs[idx].size = sizeof(GnssSv);
+            svNotify.gnssSvs[idx].svId = gnssSvf[idx].getSvId();
+            svNotify.gnssSvs[idx].type = (GnssSvType)stype;
+            svNotify.gnssSvs[idx].cN0Dbhz = gnssSvf[idx].getCN0DbHz();
+            svNotify.gnssSvs[idx].elevation = gnssSvf[idx].getElevation();
+            svNotify.gnssSvs[idx].azimuth = gnssSvf[idx].getAzimuth();
+            svNotify.gnssSvs[idx].gnssSvOptionsMask = (GnssSvOptionsMask)optMask;
+            svNotify.gnssSvs[idx].carrierFrequencyHz = gnssSvf[idx].getCarrierFrequencyHz();
+            svNotify.gnssSvs[idx].gnssSignalTypeMask = (GnssSignalTypeMask)sigMask;
+            svNotify.gnssSvs[idx].basebandCarrierToNoiseDbHz =
+                                gnssSvf[idx].getBasebandCarrierToNoiseDbHz();
+            svNotify.gnssSvs[idx].gloFrequency = gnssSvf[idx].getGloFrequency();
+        }
+        if (idx < LOC_IDL_CLIENT_DIAG_GNSS_SV_MAX) {
+            gnssSVDiag.gnssSvs[idx].svId = gnssSvf[idx].getSvId();
+            gnssSVDiag.gnssSvs[idx].type = (locIdlClientDiagGnssSvType)stype;
+            gnssSVDiag.gnssSvs[idx].cN0Dbhz =  gnssSvf[idx].getCN0DbHz();
+            gnssSVDiag.gnssSvs[idx].elevation =  gnssSvf[idx].getElevation();
+            gnssSVDiag.gnssSvs[idx].azimuth =  gnssSvf[idx].getAzimuth();
+            gnssSVDiag.gnssSvs[idx].gnssSvOptionsMask =  (locIdlClientDiagGnssSvOptionsMask)optMask;
+            gnssSVDiag.gnssSvs[idx].carrierFrequencyHz =  gnssSvf[idx].getCarrierFrequencyHz();
+            gnssSVDiag.gnssSvs[idx].gnssSignalTypeMask =  (locIdlClientDiagGnssSignalTypeMask)sigMask;
+            gnssSVDiag.gnssSvs[idx].basebandCarrierToNoiseDbHz =
+                                gnssSvf[idx].getBasebandCarrierToNoiseDbHz();
+            gnssSVDiag.gnssSvs[idx].gloFrequency =  gnssSvf[idx].getGloFrequency();
+        }
     }
 }

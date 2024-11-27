@@ -124,6 +124,19 @@ public:
     void sendGetCapabilityMsg();
     void sendDeviceCapabilityEvent();
     bool getGptpSyncStatus();
+    uint32_t parseConstellationType(
+            LocationTypes::GnssConstellationTypeT idlConstellation);
+    uint32_t parseSvType(LocationTypes::GnssSvTypeT svType);
+    uint32_t parseMeasStateMask(uint32_t stateMask);
+    uint32_t parseAdrStateMask(uint32_t adrStatemask);
+    uint32_t parseMultiPathIndicator(uint32_t multipathIndicator);
+    uint32_t parseDataMask(uint32_t mask);
+    uint32_t parseGnssSvOptionsMask(uint32_t idlOptionMask);
+    uint32_t parsegnssSystemTime(uint8_t idlTimeSrc);
+    uint32_t parseLocReliability(uint32_t idlReliability);
+    uint32_t parseSignalType (uint32_t idlSignalType);
+    uint32_t parseDrSolutionStatusMask(uint32_t idlDrSolMask);
+    uint32_t parseEngMask(uint32_t idlEngMask);
 private:
    static LocIdlClientDevice* mInstance;
 };

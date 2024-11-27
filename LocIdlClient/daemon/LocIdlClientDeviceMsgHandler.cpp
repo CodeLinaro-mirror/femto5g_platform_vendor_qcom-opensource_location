@@ -384,7 +384,8 @@ void LocIdlClientDevice::sendGnssDataRespEvent(const LocationTypes::GnssDataT& g
     uint64_t gptp_time_ns = 0;
     uint32_t rSize = dataMask.size() - 1;
 
-    for  (int i = 0; i < rSize; i++) {
+    for  (int i = 1; i < rSize; i++) {
+        uint32_t dMask = parseDataMask(dataMask[i]);
         if (i < GNSS_LOC_MAX_NUMBER_OF_SIGNAL_TYPES) {
             dataNotify.gnssDataMask[i] = (uint32_t)dataMask[i];
             dataNotify.jammerInd[i] = (double)jammerInd[i];
