@@ -40,7 +40,7 @@ endif
 libloc_socket_la_LIBADD = $(requiredlibs) -lstdc++
 
 #Create and Install libraries
-library_include_HEADERS =
+library_include_HEADERS = loc_qsocket_api.h
 lib_LTLIBRARIES = libloc_socket.la
 
 library_includedir = $(pkgincludedir)

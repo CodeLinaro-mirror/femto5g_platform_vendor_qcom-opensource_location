@@ -1890,6 +1890,9 @@ uint32_t LocationApiPbMsgConv::getPBMaskForGnssLocationInfoFlagMask(
     if (gnssLocInfoFlagMask & LDT_GNSS_LOCATION_INFO_ENU_VELOCITY_VRP_BASED_BIT) {
         pbGnssLocInfoFlagMask |= PB_GNSS_LOCATION_INFO_ENU_VELOCITY_VRP_BASED_BIT;
     }
+    if (gnssLocInfoFlagMask & LDT_GNSS_LOCATION_INFO_DR_SOLUTION_STATUS_MASK_BIT) {
+        pbGnssLocInfoFlagMask |= PB_GNSS_LOCATION_INFO_DR_SOLUTION_STATUS_MASK_BIT;
+    }
     LocApiPb_LOGv("LocApiPB: gnssLocInfoFlagMask:%" PRIx64", pbGnssLocInfoFlagMask:%x",
             gnssLocInfoFlagMask, pbGnssLocInfoFlagMask);
     return pbGnssLocInfoFlagMask;
@@ -1900,9 +1903,6 @@ uint32_t LocationApiPbMsgConv::getPBMaskForGnssLocationInfoExtFlagMask(
 
     uint32_t pbGnssLocInfoFlagMask = 0;
     // (1ULL<<32) and onwards
-    if (gnssLocInfoFlagMask & LDT_GNSS_LOCATION_INFO_DR_SOLUTION_STATUS_MASK_BIT) {
-        pbGnssLocInfoFlagMask |= PB_GNSS_LOCATION_INFO_DR_SOLUTION_STATUS_MASK_BIT;
-    }
 
     if (gnssLocInfoFlagMask & LDT_GNSS_LOCATION_INFO_ALTITUDE_ASSUMED_BIT) {
         pbGnssLocInfoFlagMask |= PB_GNSS_LOCATION_INFO_ALTITUDE_ASSUMED_BIT;
@@ -1932,8 +1932,23 @@ uint32_t LocationApiPbMsgConv::getPBMaskForGnssLocationInfoExtFlagMask(
         pbGnssLocInfoFlagMask |= PB_GNSS_LOCATION_INFO_DGNSS_STATION_ID_MASK_BIT;
     }
 
+    if (gnssLocInfoFlagMask & LDT_GNSS_LOCATION_INFO_BASE_LINE_LENGTH_BIT) {
+        pbGnssLocInfoFlagMask |= PB_GNSS_LOCATION_INFO_BASE_LINE_LENGTH_BIT;
+    }
+
+    if (gnssLocInfoFlagMask & LDT_GNSS_LOCATION_INFO_AGE_OF_CORRECTION_BIT) {
+        pbGnssLocInfoFlagMask |= PB_GNSS_LOCATION_INFO_AGE_OF_CORRECTION_BIT;
+    }
+
     if (gnssLocInfoFlagMask & LDT_GNSS_LOCATION_INFO_LEAP_SECONDS_UNC_BIT) {
         pbGnssLocInfoFlagMask |= PB_GNSS_LOCATION_INFO_LEAP_SECONDS_UNC_BIT;
+    }
+
+    if (gnssLocInfoFlagMask & LDT_GNSS_LOCATION_INFO_REPORT_INTERVAL_BIT) {
+        pbGnssLocInfoFlagMask |= PB_GNSS_LOCATION_INFO_REPORT_INTERVAL_BIT;
+    }
+    if (gnssLocInfoFlagMask & LDT_GNSS_LOCATION_INFO_EXTENDED_DATA_BIT) {
+        pbGnssLocInfoFlagMask |=  PB_GNSS_LOCATION_INFO_EXTENDED_DATA_BIT;
     }
 
     return pbGnssLocInfoFlagMask;
@@ -3357,8 +3372,20 @@ uint64_t LocationApiPbMsgConv::getGnssLocationInfoFlagMaskFromPB(
     if (pbGnssLocInfoExtFlagMask & PB_GNSS_LOCATION_INFO_DGNSS_STATION_ID_MASK_BIT) {
         gnssLocInfoFlagMask |= LDT_GNSS_LOCATION_INFO_DGNSS_STATION_ID_BIT;
     }
+    if (pbGnssLocInfoExtFlagMask & PB_GNSS_LOCATION_INFO_BASE_LINE_LENGTH_BIT) {
+        gnssLocInfoFlagMask |= LDT_GNSS_LOCATION_INFO_BASE_LINE_LENGTH_BIT;
+    }
+    if (pbGnssLocInfoExtFlagMask & PB_GNSS_LOCATION_INFO_AGE_OF_CORRECTION_BIT) {
+        gnssLocInfoFlagMask |= LDT_GNSS_LOCATION_INFO_AGE_OF_CORRECTION_BIT;
+    }
     if (pbGnssLocInfoExtFlagMask & PB_GNSS_LOCATION_INFO_LEAP_SECONDS_UNC_BIT) {
         gnssLocInfoFlagMask |= LDT_GNSS_LOCATION_INFO_LEAP_SECONDS_UNC_BIT;
+    }
+    if (pbGnssLocInfoExtFlagMask & PB_GNSS_LOCATION_INFO_REPORT_INTERVAL_BIT) {
+        gnssLocInfoFlagMask |= LDT_GNSS_LOCATION_INFO_REPORT_INTERVAL_BIT;
+    }
+    if (pbGnssLocInfoExtFlagMask & PB_GNSS_LOCATION_INFO_EXTENDED_DATA_BIT) {
+        gnssLocInfoFlagMask |= LDT_GNSS_LOCATION_INFO_EXTENDED_DATA_BIT ;
     }
     LocApiPb_LOGv("LocApiPB: pbGnssLocInfoFlagMask:0x%x, pbGnssLocInfoExtFlagMask:0x%x, "
                   "gnssLocInfoFlagMask:0x%" PRIu64"", pbGnssLocInfoFlagMask,
@@ -3748,11 +3775,15 @@ int LocationApiPbMsgConv::convertGnssSvIdConfigToPB(const GnssSvIdConfig &gnssSv
     // uint64_t navicBlacklistSvMask = 6;
     pbGnssSvIdCfg->set_navicblacklistsvmask(gnssSvIdCfg.navicBlacklistSvMask);
 
+    // uint64_t gpsBlacklistSvMask = 7;
+    pbGnssSvIdCfg->set_gpsblacklistsvmask(gnssSvIdCfg.gpsBlacklistSvMask);
+
     LocApiPb_LOGd("LocApiPB: gnssSvIdCfg - Glo: %" PRIu64 ",Bds: %" PRIu64 ",Qzss: %" PRIu64 \
-            ",Gal: %" PRIu64 ",Sbas: %" PRIu64",Nav: %" PRIu64, gnssSvIdCfg.gloBlacklistSvMask,
+            ",Gal: %" PRIu64 ",Sbas: %" PRIu64",Nav: %" PRIu64", GPS: %" PRIu64 " ",
+            gnssSvIdCfg.gloBlacklistSvMask,
             gnssSvIdCfg.bdsBlacklistSvMask, gnssSvIdCfg.qzssBlacklistSvMask,
             gnssSvIdCfg.galBlacklistSvMask, gnssSvIdCfg.sbasBlacklistSvMask,
-            gnssSvIdCfg.navicBlacklistSvMask);
+            gnssSvIdCfg.navicBlacklistSvMask, gnssSvIdCfg.gpsBlacklistSvMask);
     return 0;
 }
 
@@ -4500,11 +4531,21 @@ int LocationApiPbMsgConv::convertGnssLocInfoNotifToPB(
     for (uint32_t iter = 0; iter < gnssLocInfoNotif.numOfDgnssStationId; iter++) {
         pbGnssLocInfoNotif->add_dgnssstationid(gnssLocInfoNotif.dgnssStationId[iter]);
     }
-
+    // double baseLineLength = 48;
+    pbGnssLocInfoNotif->set_baselinelength(gnssLocInfoNotif.baseLineLength);
+    // uint64 ageMsecOfCorrections = 49;
+    pbGnssLocInfoNotif->set_agemsecofcorrections(gnssLocInfoNotif.ageMsecOfCorrections);
     // uint32    leapSecondsUnc = 50;
     pbGnssLocInfoNotif->set_leapsecondsunc(gnssLocInfoNotif.leapSecondsUnc);
+    // uint32 posReportingInterval  = 51;
+    pbGnssLocInfoNotif->set_posreportinginterval(gnssLocInfoNotif.posReportingInterval);
+    // bytes gnssExtendedData= 52;
+    if (LDT_GNSS_LOCATION_INFO_EXTENDED_DATA_BIT  & gnssLocInfoNotif.flags) {
+        pbGnssLocInfoNotif->set_gnssextendeddata(gnssLocInfoNotif.extendedData,
+                gnssLocInfoNotif.extendedDataLen);
+    }
 
-    LocApiPb_LOGv("LocApiPB: gnssLocInfoNotif - GLocInfoFlgMask:%" PRIu64", pdop:%f, hdop:%f, "
+    LocApiPb_LOGv("LocApiPB: gnssLocInfoNotif - GLocInfoFlgMask:%" PRIx64", pdop:%f, hdop:%f, "
             "vdop:%f",
             gnssLocInfoNotif.flags, gnssLocInfoNotif.pdop, gnssLocInfoNotif.hdop,
             gnssLocInfoNotif.vdop);
@@ -4564,6 +4605,8 @@ int LocationApiPbMsgConv::convertGnssDcReportToPB(
     for (uint32_t i = 0; i < dcReportInfo.dcReportData.size(); i++) {
         pbDcReportInfo->add_dcreportdata((uint32_t)dcReportInfo.dcReportData[i]);
     }
+    pbDcReportInfo->set_prnvalid(dcReportInfo.prnValid);
+    pbDcReportInfo->set_prn(dcReportInfo.prn);
     return 0;
 }
 
@@ -4576,6 +4619,8 @@ int LocationApiPbMsgConv::pbConvertToDcReport(
     for (uint32_t i = 0; i < pbDcReportInfo.dcreportdata_size(); i++) {
         dcReportInfo.dcReportData.push_back((uint8_t) (pbDcReportInfo.dcreportdata(i)));
     }
+    dcReportInfo.prnValid = pbDcReportInfo.prnvalid();
+    dcReportInfo.prn = static_cast<uint8_t>(pbDcReportInfo.prn());
     return 0;
 }
 
@@ -5705,18 +5750,38 @@ int LocationApiPbMsgConv::pbConvertToGnssLocInfoNotif(
     // float    protectVertical = 46;
     gnssLocInfoNotif.protectVertical = pbGnssLocInfoNotif.protectvertical();
 
-    // repeated uint32 dgnssStationId
+    // repeated uint32 dgnssStationId = 47;
     uint32_t cnt = (uint32_t) pbGnssLocInfoNotif.dgnssstationid_size();
     uint32_t i = 0;
     for (i = 0; i < cnt && i < DGNSS_STATION_ID_MAX ; i++) {
         gnssLocInfoNotif.dgnssStationId[i] = (uint16_t)pbGnssLocInfoNotif.dgnssstationid(i);
     }
     gnssLocInfoNotif.numOfDgnssStationId = i;
+    // double baseLineLength = 48;
+    gnssLocInfoNotif.baseLineLength = pbGnssLocInfoNotif.baselinelength();
+    // uint64 ageMsecOfCorrections = 49;
+    gnssLocInfoNotif.ageMsecOfCorrections = pbGnssLocInfoNotif.agemsecofcorrections();
 
    // uint32    leapSecondsUnc = 50;
    gnssLocInfoNotif.leapSecondsUnc = pbGnssLocInfoNotif.leapsecondsunc();
 
-   LOC_LOGv("LocApiPB: pbGnssLocInfoNotif -GLocInfoFlgMask:0x%" PRIx64 ", pdop:%f, "
+    // uint32 posReportingInterval  = 51;
+    gnssLocInfoNotif.posReportingInterval  = pbGnssLocInfoNotif.posreportinginterval();
+
+    // bytes gnssExtendedData = 52;
+    if (LDT_GNSS_LOCATION_INFO_EXTENDED_DATA_BIT  & gnssLocInfoNotif.flags) {
+        const std::string& extendedDataStr = pbGnssLocInfoNotif.gnssextendeddata();
+        gnssLocInfoNotif.extendedDataLen = extendedDataStr.length();
+        if (gnssLocInfoNotif.extendedDataLen > 0 &&
+                (gnssLocInfoNotif.extendedDataLen <= sizeof(gnssLocInfoNotif.extendedData))) {
+            memcpy(gnssLocInfoNotif.extendedData,
+                    extendedDataStr.c_str(), extendedDataStr.length());
+        } else {
+            LOC_LOGw("received incorrect payload for oemDreData %d", extendedDataStr.length());
+        }
+    }
+
+    LOC_LOGv("LocApiPB: pbGnssLocInfoNotif -GLocInfoFlgMask:0x%" PRIx64 ", pdop:%f, "
             "hdop:%f, vdop:%f",
             gnssLocInfoNotif.flags, gnssLocInfoNotif.pdop, gnssLocInfoNotif.hdop,
             gnssLocInfoNotif.vdop);
@@ -5970,11 +6035,15 @@ int LocationApiPbMsgConv::pbConvertToGnssSvIdConfig(const PBGnssSvIdConfig &pbGn
     // uint64_t navicBlacklistSvMask = 6;
     gnssSvIdConfig.navicBlacklistSvMask = pbGnssSvIdConfig.navicblacklistsvmask();
 
+    // uint64_t gpsBlacklistSvMask = 7;
+    gnssSvIdConfig.gpsBlacklistSvMask = pbGnssSvIdConfig.gpsblacklistsvmask();
+
     LOC_LOGv("LocApiPB: BlackListSvMask - Glo: %" PRIu64 ",Bds: %" PRIu64 ",Qzss: %" PRIu64 \
-            ",Gal: %" PRIu64 ",Sbas: %" PRIu64",Nav: %" PRIu64, gnssSvIdConfig.gloBlacklistSvMask,
+            ",Gal: %" PRIu64 ",Sbas: %" PRIu64",Nav: %" PRIu64 " GPS: %" PRIu64 " ",
+            gnssSvIdConfig.gloBlacklistSvMask,
             gnssSvIdConfig.bdsBlacklistSvMask, gnssSvIdConfig.qzssBlacklistSvMask,
             gnssSvIdConfig.galBlacklistSvMask, gnssSvIdConfig.sbasBlacklistSvMask,
-            gnssSvIdConfig.navicBlacklistSvMask);
+            gnssSvIdConfig.navicBlacklistSvMask, gnssSvIdConfig.gpsBlacklistSvMask);
     return 0;
 }
 

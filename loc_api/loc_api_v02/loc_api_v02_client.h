@@ -724,15 +724,6 @@ typedef union
 
     const qmiLocSetXtraVersionCheckReqMsgT_v02 *pSetXtraVersionCheckReq;
 
-    const qmiLocGdtUploadBeginStatusReqMsgT_v02* pGdtUploadBeginStatusReq;
-    /* QMI_LOC_GDT_UPLOAD_BEGIN_STATUS_REQ_V02 */
-
-    const qmiLocGdtUploadEndReqMsgT_v02* pGdtUploadEndReq;
-    /* QMI_LOC_GDT_UPLOAD_END_REQ_V02*/
-
-    const qmiLocInjectGtpClientDownloadedDataReqMsgT_v02 *pInjectGtpClientDownloadedDataReq;
-    /* QMI_LOC_INJECT_GTP_CLIENT_DOWNLOADED_DATA_REQ_V02 */
-
     const qmiLocSetGNSSConstRepConfigReqMsgT_v02 *pSetGNSSConstRepConfigReq;
     /*QMI_LOC_SET_GNSS_CONSTELL_REPORT_CONFIG_V02*/
 
@@ -750,21 +741,6 @@ typedef union
 
     const qmiLocGetSupportedFeatureReqMsgT_v02 *pGetSupportedFeatureReq;
     /* QMI_LOC_GET_SUPPORTED_FEATURE_REQ_V02*/
-
-    const qmiLocGtpApStatusReqMsgT_v02* pGtpApStatusReq;
-    /* QMI_LOC_GTP_AP_STATUS_REQ_V02 */
-
-    const qmiLocGdtDownloadBeginStatusReqMsgT_v02* pGdtDownloadBeginStatusReq;
-    /* QMI_LOC_GDT_DOWNLOAD_BEGIN_STATUS_REQ_V02 */
-
-    const qmiLocGdtDownloadReadyStatusReqMsgT_v02* pGdtDownloadReadyStatusReq;
-    /* QMI_LOC_GDT_DOWNLOAD_READY_STATUS_REQ_V02 */
-
-    const qmiLocGdtReceiveDoneStatusReqMsgT_v02* pGdtReceiveDoneStatusReq;
-    /* QMI_LOC_GDT_RECEIVE_DONE_STATUS_REQ_V02 */
-
-    const qmiLocGdtDownloadEndStatusReqMsgT_v02* pGdtDownloadEndStatusReq;
-    /* QMI_LOC_GDT_DOWNLOAD_END_STATUS_REQ_V02*/
 
     const qmiLocDeleteGNSSServiceDataReqMsgT_v02* pDeleteGNSSServiceDataReq;
     /* QMI_LOC_DELETE_GNSS_SERVICE_DATA_REQ_V02*/
@@ -989,14 +965,6 @@ typedef union
         The eventIndId field in the event indication callback is set to
         QMI_LOC_EVENT_LOCATION_SERVER_CONNECTION_REQ_IND_V02. */
 
-   const qmiLocEventNiGeofenceNotificationIndMsgT_v02*
-     pNiGeofenceNotificationEvent;
-   /**< Sent by the engine to notify the client about changes to a
-        network-initiated geofence.
-
-        The eventIndId field in the event indication callback is set to
-        QMI_LOC_EVENT_NI_GEOFENCE_NOTIFICATION_IND_V02. */
-
    const qmiLocEventGeofenceGenAlertIndMsgT_v02* pGeofenceGenAlertEvent;
    /**< Sent by the engine to notify the client about updates that may
         affect a geofence operation.
@@ -1031,12 +999,6 @@ typedef union
         QMI_LOC_EVENT_MOTION_DATA_CONTROL_IND_V02. @newpagetable */
 
    const qmiLocEventInjectWifiApDataReqIndMsgT_v02* pWifiApDataReqEvent;
-   const qmiLocEventLiveBatchedPositionReportIndMsgT_v02* pBatchPositionReportEvent;
-   /**< Sent by the engine to notify the client that live batch location
-        is ready, and the location info.
-
-        The eventIndId field in the event indication callback is set to
-        QMI_LOC_EVENT_LIVE_BATCHED_POSITION_REPORT_IND_V02. */
 
    const qmiLocEventBatchFullIndMsgT_v02* pBatchCount;
    /**< Sent by the engine to notify the client that batch location is
@@ -1044,19 +1006,6 @@ typedef union
 
         The eventIndId field in the event indication callback is set to
         QMI_LOC_EVENT_BATCH_FULL_IND_V02. */
-
-   const qmiLocEventVehicleDataReadyIndMsgT_v02* pVehicleDataReadyEvent;
-   /**< Sent by the engine to recommend how vehicle sensor data is
-        sent to the location engine.
-        The eventIndId field in the event indication callback is set to
-        QMI_LOC_EVENT_VEHICLE_DATA_READY_STATUS_IND_V02. @newpagetable */
-
-   const qmiLocEventGeofenceProximityIndMsgT_v02* pGeofenceProximityEvent;
-   /**< Sent by the engine to notify the client about a geofence proximity
-        event.
-
-        The eventIndId field in the event indication callback is set to
-        QMI_LOC_EVENT_GEOFENCE_PROXIMITY_NOTIFICATION_IND_V02. @newpagetable */
 
    const qmiLocEventGnssSvMeasInfoIndMsgT_v02* pGnssSvRawInfoEvent;
 
@@ -1070,29 +1019,10 @@ typedef union
         The eventIndId field in the event indication callback is set to
         QMI_LOC_EVENT_SV_POLYNOMIAL_REPORT_IND_V02. @newpagetable */
 
-   const qmiLocEventGdtUploadBeginStatusReqIndMsgT_v02* pGdtUploadBeginEvent;
-   /**< Sent by the engine to notify the client about a GDT upload
-        begine event.
-
-       The eventIndId field in the event indication callback is set to
-       QMI_LOC_EVENT_GDT_UPLOAD_BEGIN_STATUS_REQ_IND_V02. @newpagetable */
-
-   const qmiLocEventGdtUploadEndReqIndMsgT_v02* pGdtUploadEndEvent;
-   /**< Sent by the engine to notify the client about a GDT upload
-        end event.
-
-       The eventIndId field in the event indication callback is set to
-       QMI_LOC_EVENT_GDT_UPLOAD_END_REQ_IND_V02. @newpagetable */
-
    const qmiLocEventDbtPositionReportIndMsgT_v02 *pDbtPositionReportEvent;
    /**< Sent by the engine to notify the client of a distance based
         tracking position report.
         QMI_LOC_EVENT_DBT_POSITION_REPORT_IND_V02*/
-
-   const qmiLocEventDbtSessionStatusIndMsgT_v02 *pDbtSessionStatusEvent;
-   /**< Sent by the engine to notify the client of the status of the
-      DBT session.
-      QMI_LOC_EVENT_DBT_SESSION_STATUS_IND_V02*/
 
    const qmiLocEventGeofenceBatchedDwellIndMsgT_v02 *pGeofenceBatchedDwellEvent;
    /**< Sent by the engine to notify the client of the dwell time inside
@@ -1108,30 +1038,6 @@ typedef union
         The eventIndId field in the event indication callback is set to
         QMI_LOC_EVENT_BATCHING_STATUS_IND_V02. */
 
-   const qmiLocEventGdtDownloadBeginReqIndMsgT_v02 *pGdtDownloadBeginReqEvent;
-   /**< Sent by the engine to notify the client about a GDT download
-        begin event.
-        QMI_LOC_EVENT_GDT_DOWNLOAD_BEGIN_REQ_IND_V02. */
-
-   const qmiLocEventGdtReceiveDoneIndMsgT_v02 *pGdtReceiveDoneEvent;
-   /**< Sent by the engine to notify the client about a GDT download
-        receive done event.
-        QMI_LOC_EVENT_GDT_RECEIVE_DONE_IND_V02. */
-
-   const qmiLocEventGdtDownloadEndReqIndMsgT_v02 *pGdtDownloadEndReqEvent;
-   /**< Sent by the engine to notify the client about a GDT download
-        end event.
-        QMI_LOC_EVENT_GDT_DOWNLOAD_END_REQ_IND_V02. */
-
-   const qmiLocEventInjectSrnApDataReqIndMsgT_v02 *pInjectSrnApDataReqEvent;
-   /**< Sent by the engine to notify the client about a SRN Ap data
-        request.
-        QMI_LOC_EVENT_INJECT_SRN_AP_DATA_REQ_IND_V02. */
-
-   const qmiLocEventFdclServiceReqIndMsgT_v02 *pFdclServiceReqEvent;
-  /**< Sent by the engine to request the client for FDCL data
-    QMI_LOC_EVENT_FDCL_SERVICE_REQ_IND_V02. */
-
    const qmiLocGetBlacklistSvIndMsgT_v02 *pGetBlacklistSvEvent;
    /**< Sent by the engine to provide current blackisting SV info.
         QMI_LOC_GET_BLACKLIST_SV_IND_V02. */
@@ -1139,10 +1045,6 @@ typedef union
    const qmiLocGetConstellationConfigIndMsgT_v02 *pGetConstellationConfigEvent;
    /**< Sent by the engine to provide current constellation control info.
         QMI_LOC_GET_CONSTELLATION_CONTROL_IND_V02. */
-
-   const qmiLocEventBsObsDataServiceReqIndMsgT_v02 *pBsObsDataServiceReqEvent;
-  /**< Sent by the engine to notify the client about BS CS data available
-    QMI_LOC_EVENT_BS_OBS_DATA_SERVICE_REQ_IND_V02. */
 
    const qmiLocGpsEphemerisReportIndMsgT_v02 *pGpsEphemerisReportEvent;
   /**< Sent by the engine when GPS ephemeris are available
@@ -1644,21 +1546,6 @@ typedef union
 
     const qmiLocGetSupportedFeatureIndMsgT_v02 *pGetSupportedFeatureInd;
     /*QMI_LOC_GET_SUPPORTED_FEATURE_IND_V02*/
-
-    const qmiLocGtpApStatusIndMsgT_v02 *pGtpApStatusInd;
-    /*QMI_LOC_GTP_AP_STATUS_IND_V02*/
-
-    const qmiLocGdtDownloadBeginStatusIndMsgT_v02 *pGdtDownloadBeginStatusInd;
-    /*QMI_LOC_GDT_DOWNLOAD_BEGIN_STATUS_IND_V02*/
-
-    const qmiLocGdtDownloadReadyStatusIndMsgT_v02 *pGdtDownloadReadyStatusInd;
-    /*QMI_LOC_GDT_DOWNLOAD_READY_STATUS_IND_V02*/
-
-    const qmiLocGdtReceiveDoneStatusIndMsgT_v02 *pGdtReceiveDoneStatusInd;
-    /*QMI_LOC_GDT_RECEIVE_DONE_STATUS_IND_V02*/
-
-    const qmiLocGdtDownloadEndStatusIndMsgT_v02 *pGdtDownloadEndStatusInd;
-    /*QMI_LOC_GDT_DOWNLOAD_END_STATUS_IND_V02*/
 
     const qmiLocDeleteGNSSServiceDataIndMsgT_v02 *pDeleteGNSSServiceDataInd;
     /* QMI_LOC_DELETE_GNSS_SERVICE_DATA_REQ_V02*/

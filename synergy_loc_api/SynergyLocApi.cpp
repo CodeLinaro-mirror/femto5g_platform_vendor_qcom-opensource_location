@@ -114,13 +114,7 @@ typedef const SllInterfaceReq* (*get_sll_if_api_t)
        None.
 */
 void handleSllEngineUp(void *context) {
-
-    if (nullptr != context) {
-        SynergyLocApi *synergyLocApiInstance = (SynergyLocApi*)context;
-        synergyLocApiInstance->reportStatus(LOC_GPS_STATUS_ENGINE_ON);
-    } else {
-        LOC_LOGw ("Context is NULL");
-    }
+   // no impl is needed, as GNSS HAL does not proces the gps status
 }
 
 
@@ -138,12 +132,7 @@ void handleSllEngineUp(void *context) {
 */
 void handleSllEngineDown(void *context) {
 
-    if (nullptr != context) {
-        SynergyLocApi *synergyLocApiInstance = (SynergyLocApi*)context;
-        synergyLocApiInstance->reportStatus(LOC_GPS_STATUS_ENGINE_OFF);
-    } else {
-        LOC_LOGw ("Context is NULL");
-    }
+   // no impl is needed, as GNSS HAL does not proces the gps status
 }
 
 /**
@@ -289,12 +278,7 @@ void handleSllReportSvEphemeris(GnssSvEphemerisReport &svEphemeris, void *contex
 */
 void hanldeSllReportStatus(LocGpsStatusValue status, void *context) {
 
-    if (nullptr != context) {
-        SynergyLocApi *synergyLocApiInstance = (SynergyLocApi*)context;
-        synergyLocApiInstance->reportStatus(status);
-    } else {
-        LOC_LOGw ("Context is NULL");
-    }
+   // no impl is needed, as GNSS HAL does not proces the gps status
 }
 
 /**
@@ -348,34 +332,6 @@ void handleSllReportData(GnssDataNotification& dataNotify, int msInWeek,
 }
 
 /**
-   Report XTRA Server Info, this is received from SLL Hardware.
-   This event indicates XTRA Server URL info.
-
-   @param url1[Input]    XTRA Server URL.
-   @param url2[Input]    XTRA Server URL.
-   @param url3[Input]    XTRA Server URL.
-   @param maxlength[Input]    Max length of URL.
-   @param context[Input]    Context Pointer of Synergy Location API.
-
-   @return
-       None.
-
-   @dependencies
-       None.
-*/
-void hanldeSllReportXtraServer(const char* url1, const char* url2,
-    const char* url3, const int maxlength, void *context) {
-
-    if (nullptr != context) {
-        SynergyLocApi *synergyLocApiInstance = (SynergyLocApi*)context;
-        synergyLocApiInstance->reportXtraServer(url1, url2, url3, maxlength);
-    } else {
-        LOC_LOGw ("Context is NULL");
-    }
-
-}
-
-/**
    Report Location System Info, this is received from SLL Hardware.
    This event indicates LEAP second related Info.
 
@@ -394,29 +350,6 @@ void handleSllReportLocationSystemInfo(const LocationSystemInfo& locationSystemI
     if (nullptr != context) {
         SynergyLocApi *synergyLocApiInstance = (SynergyLocApi*)context;
         synergyLocApiInstance->reportLocationSystemInfo(locationSystemInfo);
-    } else {
-        LOC_LOGw ("Context is NULL");
-    }
-
-}
-
-/**
-   Request for XTRA Server Info, this is received from SLL Hardware.
-   This event is to request to provide XTRA Server URL info.
-
-   @param context[Input]    Context Pointer of Synergy Location API.
-
-   @return
-       None.
-
-   @dependencies
-       None.
-*/
-void handleSllRequestXtraData(void *context) {
-
-    if (nullptr != context) {
-        SynergyLocApi *synergyLocApiInstance = (SynergyLocApi*)context;
-        synergyLocApiInstance->requestXtraData();
     } else {
         LOC_LOGw ("Context is NULL");
     }
@@ -459,13 +392,7 @@ void handleSllRequestTime(void *context) {
        None.
 */
 void handleSllRequestLocation(void *context) {
-
-    if (nullptr != context) {
-        SynergyLocApi *synergyLocApiInstance = (SynergyLocApi*)context;
-        synergyLocApiInstance->requestLocation();
-    } else {
-        LOC_LOGw ("Context is NULL");
-    }
+   // no impl is needed, as GNSS HAL does not proces the gps status
 }
 
 /**
@@ -654,14 +581,6 @@ void handleSllReportGnssSvIdConfig(const GnssSvIdConfig& config, void *context) 
        None.
 */
 void handleSllReportGnssSvTypeConfig(const GnssSvTypeConfig& config, void *context) {
-
-    if (nullptr != context) {
-        SynergyLocApi *synergyLocApiInstance = (SynergyLocApi*)context;
-        synergyLocApiInstance->reportGnssSvTypeConfig(config);
-    } else {
-        LOC_LOGw ("Context is NULL");
-    }
-
 }
 
 /**
@@ -808,9 +727,7 @@ const SllInterfaceEvent sllEventCb = {
     hanldeSllReportStatus,
     hanldeSllReportNmea,
     handleSllReportData,
-    hanldeSllReportXtraServer,
     handleSllReportLocationSystemInfo,
-    handleSllRequestXtraData,
     handleSllRequestTime,
     handleSllRequestLocation,
     handleSllRequestATL,
@@ -898,14 +815,6 @@ enum loc_api_adapter_err defaultSllSetTime(LocGpsUtcTime time, int64_t timeRefer
     to indicate the command is not supported.
 */
 enum loc_api_adapter_err defaultSllSetXtraData(char* data, int length, void *context) {
-    SLL_DEFAULT_IMPL();
-}
-
-/**
-    Default Implantation of Request XTRA Server Command;
-    to indicate the command is not supported.
-*/
-enum loc_api_adapter_err defaultSllRequestXtraServer(void *context) {
     SLL_DEFAULT_IMPL();
 }
 
@@ -1223,7 +1132,6 @@ const SllInterfaceReq sllDefultReq = {
     defaultSllInjectPosition,
     defaultSllSetTime,
     defaultSllSetXtraData,
-    defaultSllRequestXtraServer,
     defaultSllAtlOpenStatus,
     defaultSllAtlCloseStatus,
     defaultSllSetPositionMode,
@@ -2542,33 +2450,6 @@ SynergyLocApi::setConstellationControl(const GnssSvTypeConfig& config,
         }
         if (adapterResponse != NULL) {
             adapterResponse->returnToSender(err);
-        }
-    }));
-}
-
-/**
-   Request get configured Constellation from Hardware.
-
-   @param
-        None.
-
-   @return
-        None.
-
-   @dependencies
-        None.
-*/
-void
-SynergyLocApi::getConstellationControl() {
-
-    sendMsg(new LocApiMsg([this] () {
-        enum loc_api_adapter_err rtv = LOC_API_ADAPTER_ERR_SUCCESS;
-
-        if ((nullptr != sllReqIf) && (nullptr != sllReqIf->sllGetConstellationControl)) {
-            rtv = sllReqIf->sllGetConstellationControl((void *)this);
-            if (LOC_API_ADAPTER_ERR_SUCCESS != rtv) {
-               LOC_LOGe ("Error: %d", rtv);
-            }
         }
     }));
 }

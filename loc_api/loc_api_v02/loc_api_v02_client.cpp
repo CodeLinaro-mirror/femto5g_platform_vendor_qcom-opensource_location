@@ -170,10 +170,6 @@ static const locClientEventIndTableStructT locClientEventIndTable[]= {
   { QMI_LOC_EVENT_ENGINE_STATE_IND_V02,
     sizeof(qmiLocEventEngineStateIndMsgT_v02) },
 
-  //Fix Session State Report Ind
-  { QMI_LOC_EVENT_FIX_SESSION_STATE_IND_V02,
-    sizeof(qmiLocEventFixSessionStateIndMsgT_v02) },
-
   //Wifi Request Indication
   { QMI_LOC_EVENT_WIFI_REQ_IND_V02,
     sizeof(qmiLocEventWifiReqIndMsgT_v02) },
@@ -193,10 +189,6 @@ static const locClientEventIndTableStructT locClientEventIndTable[]= {
   //Location Server Connection Request event
   { QMI_LOC_EVENT_LOCATION_SERVER_CONNECTION_REQ_IND_V02,
     sizeof(qmiLocEventLocationServerConnectionReqIndMsgT_v02) },
-
-  // NI Geofence Event
-  { QMI_LOC_EVENT_NI_GEOFENCE_NOTIFICATION_IND_V02,
-    sizeof(qmiLocEventNiGeofenceNotificationIndMsgT_v02) },
 
   // Geofence General Alert Event
   { QMI_LOC_EVENT_GEOFENCE_GEN_ALERT_IND_V02,
@@ -222,21 +214,9 @@ static const locClientEventIndTableStructT locClientEventIndTable[]= {
   { QMI_LOC_EVENT_INJECT_WIFI_AP_DATA_REQ_IND_V02,
     sizeof(qmiLocEventInjectWifiApDataReqIndMsgT_v02) },
 
-  //Get Batching On Fix Event
-  { QMI_LOC_EVENT_LIVE_BATCHED_POSITION_REPORT_IND_V02,
-    sizeof(qmiLocEventLiveBatchedPositionReportIndMsgT_v02) },
-
   //Get Batching On Full Event
   { QMI_LOC_EVENT_BATCH_FULL_NOTIFICATION_IND_V02,
     sizeof(qmiLocEventBatchFullIndMsgT_v02) },
-
-   //Vehicle Data Readiness event
-   { QMI_LOC_EVENT_VEHICLE_DATA_READY_STATUS_IND_V02,
-     sizeof(qmiLocEventVehicleDataReadyIndMsgT_v02) },
-
-  //Geofence Proximity event
-  { QMI_LOC_EVENT_GEOFENCE_PROXIMITY_NOTIFICATION_IND_V02,
-    sizeof(qmiLocEventGeofenceProximityIndMsgT_v02) },
 
     //GNSS Measurement Indication
    { QMI_LOC_EVENT_GNSS_MEASUREMENT_REPORT_IND_V02,
@@ -245,13 +225,6 @@ static const locClientEventIndTableStructT locClientEventIndTable[]= {
     //GNSS Measurement Indication
    { QMI_LOC_EVENT_SV_POLYNOMIAL_REPORT_IND_V02,
     sizeof(qmiLocEventGnssSvPolyIndMsgT_v02) },
-
-  // for GDT
-  { QMI_LOC_EVENT_GDT_UPLOAD_BEGIN_STATUS_REQ_IND_V02,
-    sizeof(qmiLocEventGdtUploadBeginStatusReqIndMsgT_v02) },
-
-  { QMI_LOC_EVENT_GDT_UPLOAD_END_REQ_IND_V02,
-    sizeof(qmiLocEventGdtUploadEndReqIndMsgT_v02) },
 
   { QMI_LOC_EVENT_DBT_POSITION_REPORT_IND_V02,
     sizeof(qmiLocEventDbtPositionReportIndMsgT_v02) },
@@ -266,29 +239,9 @@ static const locClientEventIndTableStructT locClientEventIndTable[]= {
   { QMI_LOC_EVENT_BATCHING_STATUS_IND_V02,
     sizeof(qmiLocEventBatchingStatusIndMsgT_v02) },
 
-  // TDP download
-  { QMI_LOC_EVENT_GDT_DOWNLOAD_BEGIN_REQ_IND_V02,
-    sizeof(qmiLocEventGdtDownloadBeginReqIndMsgT_v02) },
-
-  { QMI_LOC_EVENT_GDT_RECEIVE_DONE_IND_V02,
-    sizeof(qmiLocEventGdtReceiveDoneIndMsgT_v02) },
-
-  { QMI_LOC_EVENT_GDT_DOWNLOAD_END_REQ_IND_V02,
-    sizeof(qmiLocEventGdtDownloadEndReqIndMsgT_v02) },
-
-  // SRN Ap data inject request
-  { QMI_LOC_EVENT_INJECT_SRN_AP_DATA_REQ_IND_V02,
-    sizeof(qmiLocEventInjectSrnApDataReqIndMsgT_v02) },
-
-  { QMI_LOC_EVENT_FDCL_SERVICE_REQ_IND_V02,
-    sizeof(qmiLocEventFdclServiceReqIndMsgT_v02) },
-
   // unpropagated position report ind
   { QMI_LOC_EVENT_UNPROPAGATED_POSITION_REPORT_IND_V02,
     sizeof(qmiLocEventPositionReportIndMsgT_v02) },
-
-  { QMI_LOC_EVENT_BS_OBS_DATA_SERVICE_REQ_IND_V02,
-    sizeof(qmiLocEventBsObsDataServiceReqIndMsgT_v02) },
 
    //GPS Ephemeris Indication
    { QMI_LOC_EVENT_GPS_EPHEMERIS_REPORT_IND_V02,
@@ -616,9 +569,6 @@ static const locClientRespIndTableStructT locClientRespIndTable[]= {
    { QMI_LOC_GET_BATCH_SIZE_IND_V02,
      sizeof(qmiLocGetBatchSizeIndMsgT_v02)},
 
-   { QMI_LOC_EVENT_LIVE_BATCHED_POSITION_REPORT_IND_V02,
-     sizeof(qmiLocEventLiveBatchedPositionReportIndMsgT_v02)},
-
    { QMI_LOC_EVENT_BATCH_FULL_NOTIFICATION_IND_V02,
      sizeof(qmiLocEventBatchFullIndMsgT_v02)},
 
@@ -647,17 +597,6 @@ static const locClientRespIndTableStructT locClientRespIndTable[]= {
    { QMI_LOC_GET_AVAILABLE_WWAN_POSITION_IND_V02,
      sizeof(qmiLocGetAvailWwanPositionIndMsgT_v02)},
 
-   // for TDP
-   { QMI_LOC_INJECT_GTP_CLIENT_DOWNLOADED_DATA_IND_V02,
-     sizeof(qmiLocInjectGtpClientDownloadedDataIndMsgT_v02) },
-
-   // for GDT
-   { QMI_LOC_GDT_UPLOAD_BEGIN_STATUS_IND_V02,
-     sizeof(qmiLocGdtUploadBeginStatusIndMsgT_v02) },
-
-   { QMI_LOC_GDT_UPLOAD_END_IND_V02,
-     sizeof(qmiLocGdtUploadEndIndMsgT_v02) },
-
    { QMI_LOC_SET_GNSS_CONSTELL_REPORT_CONFIG_IND_V02,
      sizeof(qmiLocSetGNSSConstRepConfigIndMsgT_v02)},
 
@@ -673,23 +612,6 @@ static const locClientRespIndTableStructT locClientRespIndTable[]= {
    { QMI_LOC_QUERY_AON_CONFIG_IND_V02,
      sizeof(qmiLocQueryAonConfigIndMsgT_v02)},
 
-    // for GTP
-   { QMI_LOC_GTP_AP_STATUS_IND_V02,
-     sizeof(qmiLocGtpApStatusIndMsgT_v02) },
-
-    // for GDT
-   { QMI_LOC_GDT_DOWNLOAD_BEGIN_STATUS_IND_V02,
-     sizeof(qmiLocGdtDownloadBeginStatusIndMsgT_v02) },
-
-   { QMI_LOC_GDT_DOWNLOAD_READY_STATUS_IND_V02,
-    sizeof(qmiLocGdtDownloadReadyStatusIndMsgT_v02) },
-
-   { QMI_LOC_GDT_RECEIVE_DONE_STATUS_IND_V02,
-    sizeof(qmiLocGdtReceiveDoneStatusIndMsgT_v02) },
-
-   { QMI_LOC_GDT_DOWNLOAD_END_STATUS_IND_V02,
-     sizeof(qmiLocGdtDownloadEndStatusIndMsgT_v02) },
-
    { QMI_LOC_GET_SUPPORTED_FEATURE_IND_V02,
      sizeof(qmiLocGetSupportedFeatureIndMsgT_v02) },
 
@@ -703,10 +625,6 @@ static const locClientRespIndTableStructT locClientRespIndTable[]= {
 
    { QMI_LOC_INJECT_XTRA_PCID_IND_V02,
      sizeof(qmiLocInjectXtraPcidIndMsgT_v02) },
-
-   // SRN Ap data inject
-   { QMI_LOC_INJECT_SRN_AP_DATA_IND_V02,
-     sizeof(qmiLocInjectSrnApDataIndMsgT_v02) },
 
   // for Fusion CSM
    { QMI_LOC_CROWDSOURCE_MANAGER_CONTROL_IND_V02,
@@ -1653,24 +1571,6 @@ bool validateRequest(
         break;
     }
 
-    case QMI_LOC_INJECT_GTP_CLIENT_DOWNLOADED_DATA_REQ_V02:
-    {
-        *pOutLen = sizeof(qmiLocInjectGtpClientDownloadedDataReqMsgT_v02);
-        break;
-    }
-
-    case QMI_LOC_GDT_UPLOAD_BEGIN_STATUS_REQ_V02:
-    {
-        *pOutLen = sizeof(qmiLocGdtUploadBeginStatusReqMsgT_v02);
-        break;
-    }
-
-    case QMI_LOC_GDT_UPLOAD_END_REQ_V02:
-    {
-        *pOutLen = sizeof(qmiLocGdtUploadEndReqMsgT_v02);
-        break;
-    }
-
     case QMI_LOC_SET_GNSS_CONSTELL_REPORT_CONFIG_V02:
     {
         *pOutLen = sizeof(qmiLocSetGNSSConstRepConfigReqMsgT_v02);
@@ -1698,36 +1598,6 @@ bool validateRequest(
     case QMI_LOC_QUERY_AON_CONFIG_REQ_V02:
     {
         *pOutLen = sizeof(qmiLocQueryAonConfigReqMsgT_v02);
-        break;
-    }
-
-    case QMI_LOC_GTP_AP_STATUS_REQ_V02:
-    {
-        *pOutLen = sizeof(qmiLocGtpApStatusReqMsgT_v02);
-        break;
-    }
-
-    case QMI_LOC_GDT_DOWNLOAD_BEGIN_STATUS_REQ_V02:
-    {
-        *pOutLen = sizeof(qmiLocGdtDownloadBeginStatusReqMsgT_v02);
-        break;
-    }
-
-    case QMI_LOC_GDT_DOWNLOAD_READY_STATUS_REQ_V02:
-    {
-        *pOutLen = sizeof(qmiLocGdtDownloadReadyStatusReqMsgT_v02);
-        break;
-    }
-
-    case QMI_LOC_GDT_RECEIVE_DONE_STATUS_REQ_V02:
-    {
-        *pOutLen = sizeof(qmiLocGdtReceiveDoneStatusReqMsgT_v02);
-        break;
-    }
-
-    case QMI_LOC_GDT_DOWNLOAD_END_STATUS_REQ_V02:
-    {
-        *pOutLen = sizeof(qmiLocGdtDownloadEndStatusReqMsgT_v02);
         break;
     }
 

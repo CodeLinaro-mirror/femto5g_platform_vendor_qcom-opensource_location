@@ -253,13 +253,16 @@ private:
   bool mIsFirstStartFixReq;
   uint64_t mHlosQtimer1, mHlosQtimer2;
   uint32_t mRefFCount;
-  std::string mPackageName[eQMI_LOC_R3_V02+1];
+  std::string mPackageName[eQMI_LOC_NTN_V02+1];
   bool mIsFullTracking;
   qmiLocGnssSignalTypeMaskT_v02 mPreferredSignalType;
   referenceSignalTypeForIsb mReferenceSignalTypeForIsb;
   ModemGnssQesdkFeatureMask mQesdkFeatureMask;
   // GPTP inititialization
   bool mIsGptpInitialized;
+  // Dwell Time Allignment
+  uint8_t mDwellAlignTimeMsValid;
+  uint32_t mDwellAlignTimeMs;
 
   // Below two member variables are for elapsedRealTime calculation
   RealtimeEstimator mMeasElapsedRealTimeCal;
@@ -299,11 +302,6 @@ private:
   /* Convert APN Type mask */
   static qmiLocApnTypeMaskT_v02 convertLocApnTypeMask(LocApnTypeMask mask);
   static LocApnTypeMask convertQmiLocApnTypeMask(qmiLocApnTypeMaskT_v02 mask);
-
-  /* Convert Get Constellation QMI Ind info to GnssSvTypeConfig */
-  static void convertToGnssSvTypeConfig(
-          const qmiLocGetConstellationConfigIndMsgT_v02& ind,
-          GnssSvTypeConfig& config);
 
   /* Convert GnssPowerMode to QMI Loc Power Mode Enum */
   static qmiLocPowerModeEnumT_v02 convertPowerMode(GnssPowerMode powerMode);
@@ -378,11 +376,6 @@ private:
   void reportEngineState (
     const qmiLocEventEngineStateIndMsgT_v02 *engine_state_ptr);
 
-  /* convert fix session report to loc eng format and send the converted
-     report to loc eng */
-  void reportFixSessionState (
-    const qmiLocEventFixSessionStateIndMsgT_v02 *fix_session_state_ptr);
-
   /* convert and report an ATL request to loc engine */
   void reportAtlRequest(
     const qmiLocEventLocationServerConnectionReqIndMsgT_v02
@@ -391,10 +384,6 @@ private:
   /* convert and report NI request to loc eng */
   void reportNiRequest(
     const qmiLocEventNiNotifyVerifyReqIndMsgT_v02 *ni_req_ptr);
-
-  /* report the xtra server info */
-  void reportXtraServerUrl(
-    const qmiLocEventInjectPredictedOrbitsReqIndMsgT_v02* server_request_ptr);
 
   /* convert and report GNSS measurement data to loc eng */
   void reportGnssMeasurementData(
@@ -445,10 +434,6 @@ private:
   /* Convert get blacklist sv info to GnssSvIdConfig */
   void reportGnssSvIdConfig
     (const qmiLocGetBlacklistSvIndMsgT_v02& getBlacklistSvIndMsg);
-
-  /* Convert get constellation info to GnssSvTypeConfig */
-  void reportGnssSvTypeConfig
-    (const qmiLocGetConstellationConfigIndMsgT_v02& getConstellationConfigIndMsg);
 
   /* Inform ODCPI availability to Modem */
   void wifiStatusInformSync();
@@ -642,7 +627,6 @@ public:
   -1 on failure
   */
   virtual int setSvMeasurementConstellation(const locClientEventMaskType mask);
-  virtual LocationError setXtraVersionCheckSync(uint32_t check);
 
   virtual LocPosTechMask convertPosTechMask(qmiLocPosTechMaskT_v02 mask);
   virtual LocNavSolutionMask convertNavSolutionMask(qmiLocNavSolutionMaskT_v02 mask);
@@ -670,7 +654,6 @@ public:
   virtual void getBlacklistSv();
   virtual void setConstellationControl(const GnssSvTypeConfig& config,
                                        LocApiResponse *adapterResponse=nullptr);
-  virtual void getConstellationControl();
   virtual void resetConstellationControl(LocApiResponse *adapterResponse=nullptr);
 
   virtual void configConstellationMultiBand(const GnssSvTypeConfig& secondaryBandConfig,

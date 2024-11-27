@@ -568,7 +568,7 @@ uint32_t parseIDLSignalType (
     if (lcaSignalType & GNSS_SIGNAL_BEIDOU_B2BQ_BIT) {
         gnssSignalTypeMask |= LocIdlAPI::IDLGnssSignalTypeMask::IDL_GNSS_SIGNAL_BEIDOU_B2BQ_BIT;
     }
-    if (lcaSignalType & GNSS_SIGNAL_TYPE_NAVIC_L1) {
+    if (lcaSignalType & GNSS_SIGNAL_NAVIC_L1_BIT) {
         gnssSignalTypeMask |= LocIdlAPI::IDLGnssSignalTypeMask::GSTM_NAVIC_L1_BIT;
     }
     return gnssSignalTypeMask;
@@ -981,8 +981,11 @@ LocIdlAPI::IDLLocationReport LocLcaIdlConverter::parseLocReport(const ::GnssLoca
         idlLocReport.setProtectVertical(lcaLoc.protectVertical);
         locFlags |= LocIdlAPI::IDLLCALocationInfoFlagMask::IDL_LOC_INFO_PROTECT_VERTICAL;
     }
-    idlLocReport.setDgnssStationId(lcaLoc.dgnssStationId);
-    locFlags |= LocIdlAPI::IDLLCALocationInfoFlagMask::IDL_LOC_INFO_DGNSS_STATION_ID;
+
+    if (lcaLoc.gnssInfoFlags & LCA_GNSS_LOCATION_INFO_DGNSS_STATION_ID_BIT) {
+        idlLocReport.setDgnssStationId(lcaLoc.dgnssStationId);
+        locFlags |= LocIdlAPI::IDLLCALocationInfoFlagMask::IDL_LOC_INFO_DGNSS_STATION_ID;
+    }
 
     if (lcaLoc.flags & LOCATION_HAS_GPTP_TIME_BIT) {
         idlLocReport.setElapsedgPTPTime(lcaLoc.elapsedgPTPTime);
@@ -993,13 +996,23 @@ LocIdlAPI::IDLLocationReport LocLcaIdlConverter::parseLocReport(const ::GnssLoca
         gptpGetCurPtpTime(&gptp_time_ns);
         int64_t latency = gptp_time_ns - lcaLoc.elapsedgPTPTime;
     }
-    idlLocReport.setBaseLineLength(0.0);
-    idlLocReport.setAgeMsecOfCorrections(0.0);
-    idlLocReport.setCurrReportingRate(0);
+    if (lcaLoc.gnssInfoFlags & LCA_GNSS_LOCATION_INFO_BASE_LINE_LENGTH_BIT) {
+        idlLocReport.setBaseLineLength(lcaLoc.baseLineLength);
+        locFlags |= LocIdlAPI::IDLLCALocationInfoFlagMask::IDL_LOC_INFO_BASE_LINE_LENGTH_BIT;
+    }
+    if (lcaLoc.gnssInfoFlags & LCA_GNSS_LOCATION_INFO_AGE_OF_CORRECTION_BIT) {
+        idlLocReport.setAgeMsecOfCorrections(lcaLoc.ageMsecOfCorrections);
+        locFlags |= LocIdlAPI::IDLLCALocationInfoFlagMask::IDL_LOC_INFO_AGE_OF_CORRECTION_BIT;
+    }
 
     if (lcaLoc.gnssInfoFlags & LCA_GNSS_LOCATION_INFO_LEAP_SECONDS_UNC_BIT) {
         idlLocReport.setLeapSecondsUnc(lcaLoc.leapSecondsUnc);
         locFlags |= LocIdlAPI::IDLLCALocationInfoFlagMask::LREFM_LEAP_SECONDS_UNC_BIT;
+    }
+
+    if (lcaLoc.gnssInfoFlags & LCA_GNSS_LOCATION_INFO_REPORT_INTERVAL_BIT) {
+        idlLocReport.setCurrReportingRate(lcaLoc.posReportingInterval);
+        locFlags |= LocIdlAPI::IDLLCALocationInfoFlagMask::IDL_LOC_INFO_CURR_REPORT_RATE_BIT;
     }
     idlLocReport.setLocationInfoFlags(locFlags);
     LOC_LOGd("Position report %"PRIu64" ", lcaLoc.timestamp);

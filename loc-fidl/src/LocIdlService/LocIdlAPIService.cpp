@@ -282,7 +282,8 @@ LocIdlAPIService::LocIdlAPIService():
         mGnssReportMask(0),
         numControlRequests(0),
         mMemoryMonitorMsgTask(new MsgTask("LocIDLServiceMem")),
-        serviceRegisterationStatus(false)
+        serviceRegisterationStatus(false),
+        mIsGptpInitialized(false)
 {
     if (mDiagLogIface) {
         mDiagLogIface->initializeDiagIface();
@@ -346,7 +347,10 @@ void LocIdlAPIService::onPowerEvent(IDLPowerStateType powerEvent) {
 
 void LocIdlAPIService::updateSystemStatus(uint32_t totalRss) {
     bool gptpSyncStatus = false;
-    if (gptpInit()) {
+    if (!mIsGptpInitialized && gptpInit()) {
+        mIsGptpInitialized = true;
+    }
+    if (mIsGptpInitialized) {
         gptpSyncStatus = gptpGetSyncStatus();
     }
     if (mDiagLogIface) {

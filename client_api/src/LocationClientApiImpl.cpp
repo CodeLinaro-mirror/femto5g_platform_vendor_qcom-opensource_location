@@ -895,8 +895,23 @@ GnssLocation LocationClientApiImpl::parseLocationInfo(
         flags |= LCA_GNSS_LOCATION_INFO_DGNSS_STATION_ID_BIT;
     }
 
+    if (LDT_GNSS_LOCATION_INFO_BASE_LINE_LENGTH_BIT & halLocationInfo.flags) {
+        flags |= LCA_GNSS_LOCATION_INFO_BASE_LINE_LENGTH_BIT;
+        locationInfo.baseLineLength = halLocationInfo.baseLineLength;
+    }
+
+    if (LDT_GNSS_LOCATION_INFO_AGE_OF_CORRECTION_BIT & halLocationInfo.flags) {
+        flags |= LCA_GNSS_LOCATION_INFO_AGE_OF_CORRECTION_BIT;
+        locationInfo.ageMsecOfCorrections = halLocationInfo.ageMsecOfCorrections;
+    }
+
     if (LDT_GNSS_LOCATION_INFO_LEAP_SECONDS_UNC_BIT & halLocationInfo.flags) {
         flags |= LCA_GNSS_LOCATION_INFO_LEAP_SECONDS_UNC_BIT;
+    }
+
+    if (LDT_GNSS_LOCATION_INFO_REPORT_INTERVAL_BIT & halLocationInfo.flags) {
+        flags |= LCA_GNSS_LOCATION_INFO_REPORT_INTERVAL_BIT;
+        locationInfo.posReportingInterval = halLocationInfo.posReportingInterval;
     }
 
     locationInfo.gnssInfoFlags = flags;
@@ -1274,6 +1289,9 @@ GnssDcReport LocationClientApiImpl::parseDcReport(const::GnssDcReportInfo &halDc
     }
     dcReport.numValidBits = halDcReport.numValidBits;
     dcReport.dcReportData = std::move(halDcReport.dcReportData);
+    dcReport.prnValid = halDcReport.prnValid;
+    dcReport.prn = halDcReport.prn;
+
     return dcReport;
 }
 
