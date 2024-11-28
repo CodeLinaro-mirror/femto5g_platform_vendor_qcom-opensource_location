@@ -1580,9 +1580,11 @@ LocationTypes::GnssDataT LocLcaIdlConverter::parseGnssData
     vector<uint32_t> dataMaskVal;
     vector<double> jammerIndVal;
     vector<double> agcVal;
-    for (uint8_t idx = 0; idx < (LocationTypes::GnssSignalTypeT::\
-            GSTT_MAX_NUMBER_OF_SIGNAL_TYPES - 1); idx++) {
-
+    // For signal type UNKNOWN, Filling in values 0
+    dataMaskVal.push_back(0);
+    jammerIndVal.push_back(0);
+    agcVal.push_back(0);
+    for (uint8_t idx = GNSS_SIGNAL_TYPE_GPS_L1CA; idx < GNSS_MAX_NUMBER_OF_SIGNAL_TYPES; idx++) {
          dataMaskVal.push_back(parseIDLDataMask(gnssData.gnssDataMask[idx]));
          jammerIndVal.push_back(gnssData.jammerInd[idx]);
          agcVal.push_back(gnssData.agc[idx]);
