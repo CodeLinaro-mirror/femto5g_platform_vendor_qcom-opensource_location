@@ -1662,7 +1662,8 @@ string GnssMeasurementsData::toString() const {
     out += FIELDVAL_DEC(fullInterSignalBiasUncertaintyNs);
     out += FIELDVAL_DEC(cycleSlipCount);
     out += FIELDVAL_DEC(basebandCarrierToNoiseDbHz);
-
+    out += FIELDVAL_DEC(measCodeType);
+    out += otherCodeTypeName;
     return out;
 }
 

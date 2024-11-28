@@ -880,6 +880,7 @@ private:
     uint32_t getPBMaskForDrEngineAidingDataMask(const uint32_t &drEngAidDataMask) const;
     // DrSolutionStatusMask to PBDrSolutionStatusMask
     uint32_t getPBMaskForDrSolutionStatusMask(const uint32_t &drSolnStatusMask) const;
+    PBGnssMeasurementsCodeType getPBMeasCodeType(const GnssMeasurementsCodeType &codeType) const;
 
     // **** helper function for enum conversion to protobuf enums
     PBGnssSuplMode getPBEnumForGnssSuplMode(const GnssSuplMode &gnssSuplMode) const;
@@ -964,6 +965,8 @@ private:
     uint32_t getDrEngineAidingDataMaskFromPB(const uint32_t &pbDrEngAidDataMask) const;
     // PBDrSolutionStatusMask to DrSolutionStatusMask
     uint32_t getDrSolutionStatusMaskFromPB(const uint32_t &pbDrSolnStatusMask) const;
+    GnssMeasurementsCodeType getMeasCodeTypeFromPB(
+        const PBGnssMeasurementsCodeType &pbMeasCodeType) const;
 
     // **** helper function for enum conversion from protobuf enums to normal format.
     GnssSuplMode getEnumForPBGnssSuplMode(const PBGnssSuplMode &pbGnssSuplMode) const;
