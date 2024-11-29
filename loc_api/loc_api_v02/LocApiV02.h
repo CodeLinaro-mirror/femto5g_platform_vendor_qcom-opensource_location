@@ -257,6 +257,7 @@ private:
   std::string mPackageName[eQMI_LOC_R3_V02+1];
   bool mIsFullTracking;
   qmiLocGnssSignalTypeMaskT_v02 mPreferredSignalType;
+  GnssSvType mPreferredSvSystemType;
   ModemGnssQesdkFeatureMask mQesdkFeatureMask;
   // GPTP inititialization
   bool mIsGptpInitialized;
@@ -492,6 +493,7 @@ private:
             const qmiLocGnssBandsSupportedIndMsgT_v02* pGnssBandsSupportedIndMsg);
 
   GnssMeasurementsCodeType getCodeType(qmiLocGnssSignalTypeMaskT_v02 gnssSignalType);
+  GnssSvType getSvTypeFromSignalType(qmiLocGnssSignalTypeMaskT_v02 gnssSignalType);
   void updateGnssCapabNotification(GnssCapabNotification& gnssCapabNotification,
                                    qmiLocGnssSignalTypeMaskT_v02 gnssSignalType);
 
