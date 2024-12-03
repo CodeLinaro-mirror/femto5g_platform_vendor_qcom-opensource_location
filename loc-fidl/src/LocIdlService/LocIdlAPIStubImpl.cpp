@@ -74,7 +74,8 @@ void LocIdlAPIStubImpl::StartPositionSessionEngineSpecificLocation(
     LOC_LOGe("==== Start Engine Specific Session intervalInMs %d locReqEngMask %d",
             intervalInMs, locReqEngMask);
     if (mApiService) {
-        mApiService->startPositionSession(client, intervalInMs, engReportCallbackMask, reply);
+        mApiService->startPositionSession(client, intervalInMs, locReqEngMask,
+                engReportCallbackMask, reply);
     }
 }
 
