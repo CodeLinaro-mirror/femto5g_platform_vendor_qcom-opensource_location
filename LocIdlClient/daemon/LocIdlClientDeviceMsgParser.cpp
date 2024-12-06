@@ -1298,6 +1298,9 @@ void LocIdlClientDevice::getMeasurementSet(const LocationTypes::GnssMeasurements
                                     GnssMeasurements &svMeasurementSet,
                                     locIdlClientDiagGnssMeasPacket &gnssMeasDiag)
 {
+    /* Each index represents the corresponding SV type */
+    GnssMeasurementsAgc measAgc[GNSS_SV_TYPE_NAVIC + 1];
+    memset(&measAgc, 0x00, sizeof(measAgc));
     memset(&svMeasurementSet, 0x00, sizeof(GnssMeasurements));
     svMeasurementSet.size = sizeof(GnssMeasurements);
     memset(&gnssMeasDiag, 0x00, sizeof(locIdlClientDiagGnssMeasPacket));
@@ -1317,6 +1320,7 @@ void LocIdlClientDevice::getMeasurementSet(const LocationTypes::GnssMeasurements
     gnssMeasDiag.reportingLatency = gnssMeasurement.getReportingLatency();
 
     for (uint16_t idx = 0; idx < measData.size() && idx < GNSS_MEASUREMENTS_MAX; idx++) {
+        GnssMeasurementsAgc tempAgc = {0.0, (GnssSvType)0, 0.0};
         svMeasurementSet.gnssMeasNotification.measurements[idx].size = sizeof(GnssMeasurementsData);
 
         unsigned int flags = measData[idx].getFlags();
@@ -1337,7 +1341,7 @@ void LocIdlClientDevice::getMeasurementSet(const LocationTypes::GnssMeasurements
                                                             GNSS_MEASUREMENTS_DATA_SV_TYPE_BIT;
             uint32_t stype = parseSvType(measData[idx].getSvType());
             svMeasurementSet.gnssMeasNotification.measurements[idx].svType = (GnssSvType)stype;
-
+            tempAgc.svType = (GnssSvType)stype;
             gnssMeasDiag.measurements[idx].flags |=
                         LOC_IDL_CLIENT_DIAG_GNSS_MEASUREMENTS_DATA_SV_TYPE_BIT;
             gnssMeasDiag.measurements[idx].svType = (locIdlClientDiagGnssSvType)stype;
@@ -1452,6 +1456,7 @@ void LocIdlClientDevice::getMeasurementSet(const LocationTypes::GnssMeasurements
                                                 GNSS_MEASUREMENTS_DATA_CARRIER_FREQUENCY_BIT;
             svMeasurementSet.gnssMeasNotification.measurements[idx].carrierFrequencyHz =
                                                 measData[idx].getCarrierFrequencyHz();
+            tempAgc.carrierFrequencyHz = measData[idx].getCarrierFrequencyHz();
 
             gnssMeasDiag.measurements[idx].flags |=
                             LOC_IDL_CLIENT_DIAG_GNSS_MEASUREMENTS_DATA_CARRIER_FREQUENCY_BIT;
@@ -1523,6 +1528,7 @@ void LocIdlClientDevice::getMeasurementSet(const LocationTypes::GnssMeasurements
                                     GNSS_MEASUREMENTS_DATA_AUTOMATIC_GAIN_CONTROL_BIT;
             svMeasurementSet.gnssMeasNotification.measurements[idx].agcLevelDb =
                                                     measData[idx].getAgcLevelDb();
+            tempAgc.agcLevelDb = measData[idx].getAgcLevelDb();
 
             gnssMeasDiag.measurements[idx].flags |=
                         LOC_IDL_CLIENT_DIAG_GNSS_MEASUREMENTS_DATA_AUTOMATIC_GAIN_CONTROL_BIT;
@@ -1581,6 +1587,25 @@ void LocIdlClientDevice::getMeasurementSet(const LocationTypes::GnssMeasurements
                             LOC_IDL_CLIENT_DIAG_GNSS_MEASUREMENTS_DATA_FULL_ISB_UNCERTAINTY_BIT;
             gnssMeasDiag.measurements[idx].basebandCarrierToNoiseDbHz =
                                     measData[idx].getBasebandCarrierToNoiseDbHz();
+        }
+
+        if (tempAgc.svType && tempAgc.agcLevelDb && tempAgc.carrierFrequencyHz) {
+            if (measAgc[tempAgc.svType].agcLevelDb < tempAgc.agcLevelDb) {
+                measAgc[tempAgc.svType].agcLevelDb = tempAgc.agcLevelDb;
+                measAgc[tempAgc.svType].carrierFrequencyHz = tempAgc.carrierFrequencyHz;
+            }
+        }
+    }
+    svMeasurementSet.gnssMeasNotification.agcCount = 0;
+    for (uint32_t i = 1; i < (GNSS_SV_TYPE_NAVIC + 1); i++) {
+        if (measAgc[i].agcLevelDb && measAgc[i].carrierFrequencyHz) {
+            uint32_t count = svMeasurementSet.gnssMeasNotification.agcCount;
+            svMeasurementSet.gnssMeasNotification.gnssAgc[count].agcLevelDb =
+                                                        measAgc[i].agcLevelDb;
+            svMeasurementSet.gnssMeasNotification.gnssAgc[count].svType = (GnssSvType)i;
+            svMeasurementSet.gnssMeasNotification.gnssAgc[count].carrierFrequencyHz =
+                                                        measAgc[i].carrierFrequencyHz;
+            svMeasurementSet.gnssMeasNotification.agcCount += 1;
         }
     }
 

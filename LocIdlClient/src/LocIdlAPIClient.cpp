@@ -571,6 +571,50 @@ void mmfComputation()
     return;
 }
 
+string navTechMaskToString(unsigned int techmask)
+{
+    string s1("");
+
+    if (techmask & LocationTypes::LocationTechnologyMaskT::LTMT_GNSS_BIT) {
+        s1.append("SATELLITE");
+    }
+    if (techmask & LocationTypes::LocationTechnologyMaskT::LTMT_CELL_BIT) {
+        s1.append("|CELLID");
+    }
+    if (techmask & LocationTypes::LocationTechnologyMaskT::LTMT_WIFI_BIT) {
+        s1.append("|WIFI");
+    }
+    if (techmask & LocationTypes::LocationTechnologyMaskT::LTMT_SENSORS_BIT) {
+        s1.append("|SENSORS");
+    }
+    if (techmask & LocationTypes::LocationTechnologyMaskT::LTMT_REF_LOC_BIT) {
+        s1.append("|REFERENCE_LOCATION");
+    }
+    if (techmask & LocationTypes::LocationTechnologyMaskT::LTMT_INJECTED_COARSE_POS_BIT) {
+        s1.append("|INJECTED_COARSE_POSITION");
+    }
+    if (techmask & LocationTypes::LocationTechnologyMaskT::LTMT_AFLT_BIT) {
+        s1.append("|AFLT");
+    }
+    if (techmask & LocationTypes::LocationTechnologyMaskT::LTMT_HYBRID_BIT) {
+        s1.append("|HYBRID");
+    }
+    if (techmask & LocationTypes::LocationTechnologyMaskT::LTMT_PPE_BIT) {
+        s1.append("|PPE");
+    }
+    if (techmask & LocationTypes::LocationTechnologyMaskT::LTMT_VEH_BIT) {
+        s1.append("|VEH");
+    }
+    if (techmask & LocationTypes::LocationTechnologyMaskT::LTMT_VIS_BIT) {
+        s1.append("|VIS");
+    }
+    if (techmask & LocationTypes::LocationTechnologyMaskT::LTMT_PROPAGATED_BIT) {
+        s1.append("|PROPAGATED");
+    }
+
+    return s1;
+}
+
 void printPosResport(const LocationTypes::LocationReportT &_locationReport)
 {
     const LocationTypes::LocationT &location = _locationReport.getLocInfo();
@@ -581,8 +625,9 @@ void printPosResport(const LocationTypes::LocationReportT &_locationReport)
     static bool printPvtHeader = true;
 
     if (printPvtHeader) {
-        cout << "Type, UTCTimestamp(ms), Latitude, Longitude, "
-                        "RxTimeStampPTP(ns), TxTimestampPTP(ns), Latency(ms)" << endl;
+        cout << "Type, UTCTimestamp(ms), Latitude, Longitude, RxTimeStampPTP(ns),"
+                "TxTimestampPTP(ns), Latency(ms), Latency@Source(ms), LocationTechMask, "
+                "NavSolutionMask" << endl;
         printPvtHeader = false;
     }
 
@@ -639,7 +684,10 @@ void printPosResport(const LocationTypes::LocationReportT &_locationReport)
                 "" << _locationReport.getElapsedgPtpTime()<<", "
                 "" << fixed << setprecision(3) << ""
                 "" <<(float)(gptp_time_ns -
-                            _locationReport.getElapsedgPtpTime()) / (float)1000000 <<""
+                            _locationReport.getElapsedgPtpTime()) / (float)1000000 <<", "
+                "" << _locationReport.getReportingLatency()<<","
+                "" << navTechMaskToString(location.getTechMask())  <<","
+                "" << (_locationReport.getNavSolutionMask()) <<","
                 ""  << endl;
         } else {
             cout <<"PVT, "
@@ -648,7 +696,10 @@ void printPosResport(const LocationTypes::LocationReportT &_locationReport)
                 "" << "NA" << ", "
                 "" << _locationReport.getElapsedgPtpTime() <<", "
                 "" << fixed << setprecision(3) << ""
-                "" <<"NA" <<""
+                "" <<"NA" <<", "
+                "" << _locationReport.getReportingLatency()<<","
+                "" << navTechMaskToString(location.getTechMask())  <<","
+                "" << (_locationReport.getNavSolutionMask())<<","
                 ""  << endl;
         }
     } else {
@@ -658,7 +709,10 @@ void printPosResport(const LocationTypes::LocationReportT &_locationReport)
                 "" << "NA" << ", "
                 "" << "NA" <<", "
                 "" << fixed << setprecision(3) << ""
-                "" <<"NA" <<""
+                "" <<"NA" <<","
+                "" <<"NA" <<","
+                "" << navTechMaskToString(location.getTechMask())  <<","
+                "" << (_locationReport.getNavSolutionMask()) <<","
                 ""  << endl;
     }
 
