@@ -37,7 +37,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <CommonAPI/CommonAPI.hpp>
 #include "LocIdlAPIStubImpl.hpp"
-#include <v0/com/qualcomm/qti/location/LocIdlAPIStub.hpp>
+#include <v1/com/qualcomm/qti/location/LocationStub.hpp>
 #include "LocationClientApi.h"
 #include "MsgTask.h"
 #include "log_util.h"
@@ -50,7 +50,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #endif
 
 using namespace location_client;
-using namespace v0::com::qualcomm::qti::location;
+using namespace v1::com::qualcomm::qti::location;
 using namespace std;
 using namespace loc_util;
 using namespace location_integration;
@@ -88,8 +88,8 @@ public:
     void startPositionSession
     (
         const std::shared_ptr<CommonAPI::ClientId> client,
-        uint32_t _intervalInMs, uint32_t gnssReportCallbackMask,
-        LocIdlAPIStub::startPositionSessionReply_t reply
+        uint32_t intervalInMs, uint32_t gnssReportCallbackMask,
+        LocationStub::StartPositionSessionLocationReportReply_t reply
     ) const;
 
     /* Process Engine specific Position request */
@@ -97,50 +97,50 @@ public:
     (
         const std::shared_ptr<CommonAPI::ClientId> client,
         uint32_t intervalInMs, uint32_t locReqEngMask, uint32_t engReportCallbackMask,
-        LocIdlAPIStub::startPositionSession1Reply_t reply
+        LocationStub::StartPositionSessionEngineSpecificLocationReply_t reply
     ) const;
     void stopPositionSession
     (
         const std::shared_ptr<CommonAPI::ClientId> client,
-        LocIdlAPIStub::stopPositionSessionReply_t reply
+        LocationStub::StopPositionSessionReply_t reply
     ) const;
 
-    void LIAdeleteAidingData
+    void deleteAidingDataRequest
     (
         const std::shared_ptr<CommonAPI::ClientId> client,
-        uint32_t aidingDataMask,
-        LocIdlAPIStub::deleteAidingDataReply_t reply
+        uint32_t deleteMask, LocationStub::DeleteAidingDataReply_t reply
     ) const;
 
     /// This is the method that will be called on remote calls on the method configConstellations.
-    void LIAconfigConstellations
+    void configConstellationsRequest
     (
         const std::shared_ptr<CommonAPI::ClientId> client,
-        std::vector< LocIdlAPI::IDLGnssSvIdInfo > svList,
-        LocIdlAPIStub::configConstellationsReply_t reply
+        std::vector<LocationTypes::GnssSvIdInfoT > svList,
+        LocationStub::ConfigConstellationsReply_t reply
     ) const;
 
-    LocIdlAPI::IDLLocationReport parseLocationReport
+    /** Utility functions to support Location reports */
+    LocationTypes::LocationReportT parseLocationReport
     (
         const ::GnssLocation &lcaLoc
     ) const;
 
-    LocIdlAPI::IDLGnssSv parseGnssSvReport
+    LocationTypes::GnssSvDataT parseGnssSvReport
     (
         const location_client::GnssSv& gnssSvs
     ) const;
 
-    LocIdlAPI::IDLGnssMeasurements parseGnssMeasurements
+    LocationTypes::GnssMeasurementsT parseGnssMeasurements
     (
         const location_client::GnssMeasurements& gnssMeasurements
     ) const;
 
-    LocIdlAPI::IDLGnssData parseGnssDataReport
+    LocationTypes::GnssDataT parseGnssDataReport
     (
         const location_client::GnssData& gnssData
     ) const;
 
-    LocIdlAPI::IDLLocationResponse parseIDLResponse
+    LocationTypes::LocationStatusT parseIDLResponse
     (
         const location_client::LocationResponse lcaResponse
     ) const;
@@ -149,10 +149,13 @@ public:
     void injectMapMatchedFeedbackData
     (
         const std::shared_ptr<CommonAPI::ClientId> client,
-        LocIdlAPI::MapMatchingFeedbackData& mapData,
-        LocIdlAPIStub::injectMapMatchedFeedbackDataReply_t reply
+        LocationTypes::MapMatchingFeedbackDataT mapData
     ) const;
 
+    uint16_t parseDeleteAidingDataMask
+    (
+        uint32_t deleteMask
+    ) const;
 
     /** To start a new thread to monito memory
      *  usahe every 2second  by LocIDlService  */
@@ -160,11 +163,21 @@ public:
     /** To pass the system health status to Diag structure */
     void updateSystemStatus(uint32_t totalRss);
 
+    inline uint32_t getLocationCapabilitiesMask() const {
+        return mGnssCapabilites;
+    }
+
+    void checkMinIntervalForUpdate(uint32_t clientRequestedTbf) const;
+
 #ifdef POWER_DAEMON_MGR_ENABLED
     LocIdlPowerEvtHandler* mPowerEventObserver;
 #endif
     LocIdlServiceLog* mDiagLogIface;
     LocLcaIdlConverter* mLcaIdlConverter;
+    bool mIsGptpInitialized;
+
+    /**Keeps track of latest caps recieved */
+    uint32_t mGnssCapabilites;
 
 private:
     static LocIdlAPIService *mInstance;
@@ -172,12 +185,17 @@ private:
     MsgTask* mMsgTask;
     MsgTask* mMemoryMonitorMsgTask;
     LocationIntegrationApi* mLIAInstance;
+    /** To store superset mask for all IDL service clients */
     mutable uint32_t mGnssReportMask;
     /** Keep cont of number of start session requests, this variable
      *  shall be incremented on each startSession and decremented on
      *  every stop Session, Stop session request shall be sent to LCA
      *  only if this variable is 0 */
     mutable uint32_t numControlRequests;
+
+    /** To configure minInterval for all IDL clients. IDL service will
+     *  operate at minimum tbf value */
+    mutable uint32_t mTimeBetweenFixes;
 
     /** Keeps track if service is registered or not
      *  True: Service registered Successfully
