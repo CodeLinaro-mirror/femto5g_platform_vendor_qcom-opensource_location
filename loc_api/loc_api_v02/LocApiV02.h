@@ -248,6 +248,9 @@ private:
   bool mIsFullTracking;
   // GPTP inititialization
   bool mIsGptpInitialized;
+  // Dwell Time Allignment
+  uint8_t mDwellAlignTimeMsValid;
+  uint32_t mDwellAlignTimeMs;
 
   // Below two member variables are for elapsedRealTime calculation
   RealtimeEstimator mMeasElapsedRealTimeCal;
