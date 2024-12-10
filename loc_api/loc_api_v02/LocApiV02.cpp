@@ -5824,9 +5824,6 @@ void LocApiV02::reportGnssMeasurementData(
                             GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_GPTP_TIME_BIT;
                     mGnssMeasurements->gnssMeasNotification.clock.elapsedgPTPTime =
                             elapsedgPTPTime;
-                    mGnssMeasurements->gnssMeasNotification.clock.elapsedgPTPTimeUnc = unc;
-                    mGnssMeasurements->gnssMeasNotification.clock.flags |=
-                            GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_GPTP_TIME_UNC_BIT;
                 }
             }
 #endif
