@@ -130,7 +130,8 @@ typedef uint64_t GpsSvMeasHeaderFlags;
 
 #define BIAS_GLOG1_VALID                0x10000000
 #define BIAS_GLOG1_UNC_VALID            0x20000000
-
+#define BIAS_NAVICL5_NAVICL1_VALID      0x40000000
+#define BIAS_NAVICL5_NAVICL1_UNC_VALID  0x80000000
 
 typedef struct {
     uint64_t flags;
@@ -168,6 +169,8 @@ typedef struct {
     float bdsB1_bdsB2biUnc;
     float gloG1;
     float gloG1Unc;
+    float navicL5_navicL1;
+    float navicL5_navicL1Unc;
 } timeBiases;
 
 typedef struct {
