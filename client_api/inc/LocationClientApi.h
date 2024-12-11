@@ -765,7 +765,8 @@ typedef uint64_t LCAGnssLocationInfoFlagMask;
 #define LCA_GNSS_LOCATION_INFO_AGE_OF_CORRECTION_BIT                        (1ULL<<41)
     /** GnssLocation has valid GnssLocation::leapSecondsUnc. <br/> */
 #define LCA_GNSS_LOCATION_INFO_LEAP_SECONDS_UNC_BIT                         (1ULL<<42)
-
+    /** GnssLocation has valid GnssLocation::posReportingInterval. <br/> */
+#define LCA_GNSS_LOCATION_INFO_REPORT_INTERVAL_BIT                          (1ULL<<43)
 
 /** Specify the reliability level of
  *  GnssLocation::horReliability and
@@ -1525,6 +1526,11 @@ struct GnssLocation : public Location {
      *  Units -- Seconds */
     uint8_t leapSecondsUnc;
 
+    /** Current GNSS engine reporting interval
+     *  Time interval at which GNSS engine is delivering position reports
+     *  and does not denote client requested interval.
+     *  Units -- milli-seconds */
+    uint32_t posReportingInterval;
 
     /* Default constructor to initalize GnssLocation structure */
     inline GnssLocation() :
@@ -1553,7 +1559,9 @@ struct GnssLocation : public Location {
             drSolutionStatusMask((DrSolutionStatusMask)0),
             altitudeAssumed(false),
             integrityRiskUsed(0), protectAlongTrack(0.0f),
-            protectCrossTrack(0.0f), protectVertical(0.0f) {
+            protectCrossTrack(0.0f), protectVertical(0.0f),
+            baseLineLength(0), ageMsecOfCorrections(0),
+            leapSecondsUnc(0), posReportingInterval(0) {
     }
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
@@ -1756,6 +1764,10 @@ struct GnssDcReport {
     uint32_t             numValidBits;
     /** dc report data, packed into uint8_t. <br/>  */
     std::vector<uint8_t> dcReportData;
+    /** SV's Pseudo-Random Number validity */
+    bool                 prnValid;
+    /** SV's Pseudo-Random Number. */
+    uint8_t              prn;
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
     string toString() const;
@@ -2981,6 +2993,16 @@ typedef std::function<void(
     const GnssEphemeris& ephInfo
 )> GnssEphReportCb;
 
+/** @brief
+    GNSSExtendedDataInfoCb is for receiving gnss extended Data
+    <br/>
+    @param payload: vectory of binary data
+           <br/>
+*/
+typedef std::function<void(
+    const std::vector<uint8_t>& payload
+)> GNSSExtendedDataInfoCb;
+
 /** Specify the set of callbacks to receive the reports when
  *  invoking startPositionSession(uint32_t,
  *  LocReqEngineTypeMask, const GnssReportCbs&, ResponseCb) with
@@ -3096,6 +3118,9 @@ struct EngineReportCbs {
      * gnssNmeaCb and/or EngineNmeaCb is subscribed or not.
      * Recommend to use NmeaSentencesCb. <br/> */
     NmeaSentencesCb nmeaSentencesCallback;
+    /** Callback to receive GNSS Extended Data from modem GNSS
+     *  engine. <br/> */
+    GNSSExtendedDataInfoCb gnssExtendedDataInfoCallback;
 };
 
 /**
