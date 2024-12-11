@@ -11238,6 +11238,42 @@ void LocApiV02::setNtnConfigSignalMask(GnssSignalTypeMask gpsSignalTypeConfigMas
     }));
 }
 
+void LocApiV02::injectSuplCert(int32_t suplCertId, const std::vector<uint8_t>& suplCertData,
+            LocApiResponse* adapterResponse) {
+    sendMsg(new LocApiMsg([this, suplCertId, suplCertData, adapterResponse] () {
+    LOC_LOGd("suplCertId: %d, suplCert size: %zu", suplCertId, suplCertData.size())
+    LocationError err = LOCATION_ERROR_SUCCESS;
+    locClientStatusEnumType status = eLOC_CLIENT_FAILURE_GENERAL;
+    locClientReqUnionType req_union = {};
+    qmiLocInjectSuplCertificateReqMsgT_v02 certReq;
+    qmiLocInjectSuplCertificateIndMsgT_v02 certInd;
+
+    memset(&certReq, 0, sizeof(certReq));
+    memset(&certInd, 0, sizeof(certInd));
+
+    certReq.suplCertId = suplCertId;
+    certReq.suplCertData_len = suplCertData.size();
+    //qmiLocInjectSuplCertificateReqMsgT_v02 supports 2000 bytes cert at most
+    memcpy(certReq.suplCertData, suplCertData.data(), std::min((int)suplCertData.size(), 2000));
+    req_union.pInjectSuplCertificateReq = &certReq;
+
+    status = locSyncSendReq(QMI_LOC_INJECT_SUPL_CERTIFICATE_REQ_V02,
+                            req_union, 5000,
+                            QMI_LOC_INJECT_SUPL_CERTIFICATE_IND_V02,
+                            &certInd);
+
+    if (status == eLOC_CLIENT_SUCCESS) {
+        err = LOCATION_ERROR_SUCCESS;
+        LOC_LOGd("successful cert injection")
+    } else {
+        err = LOCATION_ERROR_GENERAL_FAILURE;
+    }
+    if (adapterResponse != NULL) {
+        adapterResponse->returnToSender(err);
+    }
+    }));
+}
+
 void LocApiV02::convertQmiSecondaryConfigToGnssConfig(
         qmiLocGNSSConstellEnumT_v02 qmiSecondaryBandConfig,
         GnssSvTypeConfig& secondaryBandConfig) {
