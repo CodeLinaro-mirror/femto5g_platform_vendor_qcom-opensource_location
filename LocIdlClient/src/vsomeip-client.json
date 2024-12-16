@@ -2,7 +2,7 @@
     "unicast" : "192.168.114.2",
     "device"  : "emac0.1500",
     "netmask" : "255.255.255.0",
-    "logging" : 
+    "logging" :
     {
         "level" : "verbose",
         "console" : "true",
@@ -26,7 +26,35 @@
             "service" : "0xEE00",
             "instance" : "0x01",
             "unreliable":
-            {    "port" : "30491"    }
+            {    "port" : "30701"    }
+        },
+        {
+            "service": "0xed80",
+            "instance": "0x1",
+            "unreliable": [
+            "30701"
+            ]
+        },
+        {
+            "service": "0xed81",
+            "instance": "0x1",
+            "unreliable": [
+            "30701"
+            ]
+        },
+        {
+            "service": "0xed82",
+            "instance": "0x1",
+            "unreliable": [
+            "30701"
+            ]
+        },
+        {
+            "service": "0xed83",
+            "instance": "0x1",
+            "unreliable": [
+            "30701"
+            ]
         }
     ],
     "routing" : "location-fidl-client",
