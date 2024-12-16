@@ -179,6 +179,12 @@ GnssMeasurementsDataFlagsMask LocationClientApiImpl::parseMeasurementsDataMask(
     if (::GNSS_MEASUREMENTS_DATA_GNSS_SIGNAL_TYPE_BIT & in) {
         out |= GNSS_MEASUREMENTS_DATA_GNSS_SIGNAL_TYPE_BIT;
     }
+    if (::GNSS_MEASUREMENTS_DATA_MEAS_CODE_TYPE_BIT & in) {
+        out |= GNSS_MEASUREMENTS_DATA_MEAS_CODE_TYPE_BIT;
+    }
+    if (::GNSS_MEASUREMENTS_DATA_OTHER_MEAS_CODE_TYPE_BIT & in) {
+        out |= GNSS_MEASUREMENTS_DATA_OTHER_MEAS_CODE_TYPE_BIT;
+    }
     LOC_LOGd("LCA GnssMeasurementsDataFlagsMask =0x%x ", out);
     return static_cast<GnssMeasurementsDataFlagsMask>(out);
 }
@@ -1107,6 +1113,68 @@ GnssData LocationClientApiImpl::parseGnssData(const ::GnssDataNotification &halG
     return gnssData;
 }
 
+GnssMeasCodeType LocationClientApiImpl::parseGnssMeasCodeType(
+            const ::GnssMeasurementsCodeType &halGnssMeasCodeType) {
+
+    GnssMeasCodeType measCodeType = GNSS_MEAS_CODE_TYPE_UNKNOWN;
+    switch (halGnssMeasCodeType) {
+        case GNSS_MEASUREMENTS_CODE_TYPE_A:
+            measCodeType = GNSS_MEAS_CODE_TYPE_A;
+            break;
+        case GNSS_MEASUREMENTS_CODE_TYPE_B:
+            measCodeType = GNSS_MEAS_CODE_TYPE_B;
+            break;
+        case GNSS_MEASUREMENTS_CODE_TYPE_C:
+            measCodeType = GNSS_MEAS_CODE_TYPE_C;
+            break;
+        case GNSS_MEASUREMENTS_CODE_TYPE_I:
+            measCodeType = GNSS_MEAS_CODE_TYPE_I;
+            break;
+        case GNSS_MEASUREMENTS_CODE_TYPE_L:
+            measCodeType = GNSS_MEAS_CODE_TYPE_L;
+            break;
+        case GNSS_MEASUREMENTS_CODE_TYPE_M:
+            measCodeType = GNSS_MEAS_CODE_TYPE_M;
+            break;
+        case GNSS_MEASUREMENTS_CODE_TYPE_P:
+            measCodeType = GNSS_MEAS_CODE_TYPE_P;
+            break;
+        case GNSS_MEASUREMENTS_CODE_TYPE_Q:
+            measCodeType = GNSS_MEAS_CODE_TYPE_Q;
+            break;
+        case GNSS_MEASUREMENTS_CODE_TYPE_S:
+            measCodeType = GNSS_MEAS_CODE_TYPE_S;
+            break;
+        case GNSS_MEASUREMENTS_CODE_TYPE_W:
+            measCodeType = GNSS_MEAS_CODE_TYPE_W;
+            break;
+        case GNSS_MEASUREMENTS_CODE_TYPE_X:
+            measCodeType = GNSS_MEAS_CODE_TYPE_X;
+            break;
+        case GNSS_MEASUREMENTS_CODE_TYPE_Y:
+            measCodeType = GNSS_MEAS_CODE_TYPE_Y;
+            break;
+        case GNSS_MEASUREMENTS_CODE_TYPE_Z:
+            measCodeType = GNSS_MEAS_CODE_TYPE_Z;
+            break;
+        case GNSS_MEASUREMENTS_CODE_TYPE_N:
+            measCodeType = GNSS_MEAS_CODE_TYPE_N;
+            break;
+        case GNSS_MEASUREMENTS_CODE_TYPE_D:
+            measCodeType = GNSS_MEAS_CODE_TYPE_D;
+            break;
+        case GNSS_MEASUREMENTS_CODE_TYPE_E:
+            measCodeType = GNSS_MEAS_CODE_TYPE_E;
+            break;
+        case GNSS_MEASUREMENTS_CODE_TYPE_OTHER:
+            measCodeType = GNSS_MEAS_CODE_TYPE_OTHER;
+            break;
+        default:
+            break;
+    }
+    return measCodeType;
+}
+
 GnssMeasurements LocationClientApiImpl::parseGnssMeasurements(
         const ::GnssMeasurementsNotification &halGnssMeasurements) {
     GnssMeasurements gnssMeasurements = {};
@@ -1169,6 +1237,9 @@ GnssMeasurements LocationClientApiImpl::parseGnssMeasurements(
                halGnssMeasurements.measurements[meas].fullInterSignalBiasNs;
         measurement.fullInterSignalBiasUncertaintyNs =
                halGnssMeasurements.measurements[meas].fullInterSignalBiasUncertaintyNs;
+        measurement.measCodeType = parseGnssMeasCodeType(
+               halGnssMeasurements.measurements[meas].codeType);
+        measurement.otherCodeTypeName = halGnssMeasurements.measurements[meas].otherCodeTypeName;
 
         gnssMeasurements.measurements.push_back(measurement);
     }
