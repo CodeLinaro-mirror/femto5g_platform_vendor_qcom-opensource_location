@@ -2232,15 +2232,17 @@ locClientStatusEnumType locClientOpen (
   locClientHandleType*           pLocClientHandle,
   const void*                    pClientCookie)
 {
-  int instanceId;
-  locClientStatusEnumType status;
+  int instanceId = -1;
+  locClientStatusEnumType status = eLOC_CLIENT_FAILURE_GENERAL;
   int tries = 1;
+
+  uint32_t targetGnssType = getTargetGnssType(loc_get_target());
 
   if (getEmulatorCfg()) {
       instanceId = eLOC_CLIENT_INSTANCE_ID_MODEM_EMULATOR;
   } else {
     #ifdef _ANDROID_
-      switch (getTargetGnssType(loc_get_target()))
+      switch (targetGnssType)
       {
       case GNSS_GSS:
         instanceId = eLOC_CLIENT_INSTANCE_ID_GSS;
@@ -2263,18 +2265,22 @@ locClientStatusEnumType locClientOpen (
     #endif
   }
 
-  LOC_LOGi("Service instance id is %d", instanceId);
+  LOC_LOGi("Target GNSS Type %d, Service instance ID %d", targetGnssType, instanceId);
 
-  while ((status = locClientOpenInstance(eventRegMask, instanceId, pLocClientCallbacks,
-          pLocClientHandle, pClientCookie)) != eLOC_CLIENT_SUCCESS) {
-    if (tries <= LOC_CLIENT_MAX_OPEN_RETRIES) {
-      LOC_LOGe("locClientOpenInstance: failed with status=%d on try %d", status, tries);
-      tries++;
-      sleep(LOC_CLIENT_TIME_BETWEEN_OPEN_RETRIES);
-    } else {
-      LOC_LOGe("locClientOpenInstance: failed with status=%d Aborting...", status);
-      break;
+  if (targetGnssType != GNSS_NONE) {
+    while ((status = locClientOpenInstance(eventRegMask, instanceId, pLocClientCallbacks,
+            pLocClientHandle, pClientCookie)) != eLOC_CLIENT_SUCCESS) {
+      if (tries <= LOC_CLIENT_MAX_OPEN_RETRIES) {
+        LOC_LOGe("locClientOpenInstance: failed with status=%d on try %d", status, tries);
+        tries++;
+        sleep(LOC_CLIENT_TIME_BETWEEN_OPEN_RETRIES);
+      } else {
+        LOC_LOGe("locClientOpenInstance: failed with status=%d Aborting...", status);
+        break;
+      }
     }
+  } else {
+    LOC_LOGi("Not connecting with GNSS QMI service, NO_GNSS target.");
   }
 
   return status;
