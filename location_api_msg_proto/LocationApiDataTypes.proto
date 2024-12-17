@@ -79,8 +79,8 @@ enum LocationApiDataTypesVersion {
     LOCAPI_DATA_TYPES_VER_MAJOR = 1;
     // Minor - New features / API addition, new message/elemtent addition.
     // Bump the last byte of version i.e. x.2 to x.3
-    // Minor version 48: Support GPS SV blacklisting- BDS pref mode
-    LOCAPI_DATA_TYPES_VER_MINOR = 48;
+    // Minor version 51: Support Measurement Code Types
+    LOCAPI_DATA_TYPES_VER_MINOR = 51;
 }
 
 // ============================================================================
@@ -537,6 +537,8 @@ enum PBGnssMeasurementsDataFlagsMask {
     PB_GNSS_MEASUREMENTS_DATA_CYCLE_SLIP_COUNT_BIT             = 0x00100000;
     PB_GNSS_MEASUREMENTS_DATA_GNSS_SIGNAL_TYPE_BIT             = 0x00200000;
     PB_GNSS_MEASUREMENTS_DATA_BASEBAND_CARRIER_TO_NOISE_BIT    = 0x00400000;
+    PB_GNSS_MEASUREMENTS_DATA_MEAS_CODE_TYPE_BIT               = 0x00800000;
+    PB_GNSS_MEASUREMENTS_DATA_OTHER_MEAS_CODE_TYPE_BIT         = 0x01000000;
 }
 
 enum PBGnssMeasurementsStateMask {
@@ -986,6 +988,26 @@ message PBGnssMeasurementsClock {
     uint64 elapsedgPTPTimeUnc = 14;
 }
 
+enum PBGnssMeasurementsCodeType {
+    PB_GNSS_MEASUREMENTS_CODE_TYPE_A       = 0;
+    PB_GNSS_MEASUREMENTS_CODE_TYPE_B       = 1;
+    PB_GNSS_MEASUREMENTS_CODE_TYPE_C       = 2;
+    PB_GNSS_MEASUREMENTS_CODE_TYPE_I       = 3;
+    PB_GNSS_MEASUREMENTS_CODE_TYPE_L       = 4;
+    PB_GNSS_MEASUREMENTS_CODE_TYPE_M       = 5;
+    PB_GNSS_MEASUREMENTS_CODE_TYPE_P       = 6;
+    PB_GNSS_MEASUREMENTS_CODE_TYPE_Q       = 7;
+    PB_GNSS_MEASUREMENTS_CODE_TYPE_S       = 8;
+    PB_GNSS_MEASUREMENTS_CODE_TYPE_W       = 9;
+    PB_GNSS_MEASUREMENTS_CODE_TYPE_X       = 10;
+    PB_GNSS_MEASUREMENTS_CODE_TYPE_Y       = 11;
+    PB_GNSS_MEASUREMENTS_CODE_TYPE_Z       = 12;
+    PB_GNSS_MEASUREMENTS_CODE_TYPE_N       = 13;
+    PB_GNSS_MEASUREMENTS_CODE_TYPE_D       = 14;
+    PB_GNSS_MEASUREMENTS_CODE_TYPE_E       = 15;
+    PB_GNSS_MEASUREMENTS_CODE_TYPE_OTHER   = 255;
+}
+
 message PBGnssMeasurementsData {
     // bitwise OR of PBGnssMeasurementsDataFlagsMask
     uint32 flags = 1;
@@ -1021,6 +1043,8 @@ message PBGnssMeasurementsData {
     double fullInterSignalBiasUncertaintyNs = 24;
     uint32 cycleSlipCount = 25;
     float receivedSvTimeSubNs = 26;
+    PBGnssMeasurementsCodeType codeType = 27;
+    string otherCodeTypeName = 28;
 }
 
 message PBLocApiGnssLocationPositionDynamics {
@@ -1696,6 +1720,8 @@ message PBXtraStatus {
     // XTRA_DATA_STATUS_VALID.
     // For all other XtraDataStatus, this field will be set to 0.
     uint32 xtraValidForHours = 3;
+    // End user consent status for xtra assistance data usage
+    bool userConsentStatus = 4;
 };
 
 message PBTimespec {
@@ -1946,6 +1972,110 @@ message PBGnssEphCommon {
 
 }
 
+enum PBGpsExtendedEphValidityMask {
+    PB_GNSS_EXT_EPH_INVALID = 0x00000000;
+    PB_GNSS_EXT_EPH_ISC_L1CA_VALID = 0x00000001;
+    PB_GNSS_EXT_EPH_ISC_L2C_VALID  = 0x00000002;
+    PB_GNSS_EXT_EPH_ISC_L5I5_VALID = 0x00000004;
+    PB_GNSS_EXT_EPH_ISC_L5Q5_VALID = 0x00000008;
+    PB_GNSS_EXT_EPH_ALERT_VALID = 0x00000010;
+    PB_GNSS_EXT_EPH_URANED0_VALID = 0x00000020;
+    PB_GNSS_EXT_EPH_URANED1_VALID = 0x00000040;
+    PB_GNSS_EXT_EPH_URANED2_VALID = 0x00000080;
+    PB_GNSS_EXT_EPH_TOP_VALID = 0x00000100;
+    PB_GNSS_EXT_EPH_TOP_CLOCK_VALID = 0x00000200;
+    PB_GNSS_EXT_EPH_VALIDITY_PERIOD_VALID = 0x00000400;
+    PB_GNSS_EXT_EPH_DELTA_NDOT_VALID = 0x00000800;
+    PB_GNSS_EXT_EPH_DELTAA_VALID = 0x00001000;
+    PB_GNSS_EXT_EPH_ADOT_VALID = 0x00002000;
+}
+
+/* GPS Extended Ephemeris struct */
+message PBGpsExtendedEphemeris {
+    uint32 gnssSvId = 1;
+    /**<   GNSS SV ID. \n
+       Range:\n
+       - GPS --     1 to 32 \n
+       - QZSS --    193 to 197 \n
+       - BDS --     201 to 263 \n
+       - Galileo -- 301 to 336 \n
+       - NavIC --   401 to 420 \n
+    */
+
+    uint32 validityMask = 2;
+    /**<   Specifies validity of all the fields.  \n
+        - iscL1ca -- 0x0001 \n
+        - iscL2c  -- 0x0002 \n
+        - iscL5I5  -- 0x0004  \n
+        - iscL5Q5 --  0x0008  \n
+        - alert   -- 0x0010 \n
+        - uraNed0  -- 0x0020 \n
+        - uraNed1  -- 0x0040  \n
+        - uraNed2 --  0x0080  \n
+        - top     -- 0x0100 \n
+        - topClock  -- 0x0200 \n
+        - validityPeriod  -- 0x0400  \n
+        - deltaNdot --  0x0800  \n
+        - deltaA    --  0x1000  \n
+        - adot      --  0x2000  \n
+    */
+
+    float iscL1ca = 3;
+    /**<   InterSignal Correction between L1ca Data and Pilot channels in milliseconds,
+           always zero for QZSS.
+       - Units -- milliseconds */
+
+    float iscL2c = 4;
+    /**<   InterSignal Correction between L2c Data and Pilot channels in milliseconds.
+       - Units -- milliseconds */
+
+    float iscL5I5 = 5;
+    /**<   InterSignal Correction between L5I5 Data and Pilot channels in milliseconds.
+       - Units -- milliseconds */
+
+    float iscL5Q5 = 6;
+    /**<   InterSignal Correction between L5Q5 Data and Pilot channels in milliseconds.
+       - Units -- milliseconds    */
+
+    uint32 alert = 7;
+    /**<   Alert Bit Info (unitless). */
+
+    uint32 uraNed0 = 8;
+    /**<   NED accuracy index (5 bits, unitless). */
+
+    uint32 uraNed1 = 9;
+    /**< NED accuracy change index (3 bits), UraNed1 = 1/2^N (m/s),
+         N=14 + UraNed1 index (unitless). */
+
+    uint32 uraNed2 = 10;
+    /**< NED accuracy change rate index (3 bits), UraNed2 = 1/2^N (m/s^2),
+         N=28 + UraNed2 index (unitless). */
+
+    double top = 11;
+    /**<   Data predict time of week, 0-604500 sec.
+       - Units -- Seconds */
+
+    uint32 topClock = 12;
+    /**<   Data predict time of week (clock) , scale 300 seconds.
+       - Units -- Seconds */
+
+    uint32 validityPeriod = 13;
+    /**<   Validity Period in seconds.
+       - Units -- Seconds */
+
+    double deltaNdot = 14;
+    /**<   Rate of Mean motion difference from computed value [semi-circle/sec^2] (unitless).
+       */
+
+    double deltaA = 15;
+    /**<   Semi-Major Axis Difference At Reference Time [m].
+       - Units -- Meters */
+
+    double adot =16;
+    /**<   Change Rate In Semi-Major Axis [m/sec].
+       - Units -- Meters/seconds */
+}
+
 /* GPS Navigation Model Info */
 message PBGpsEphemeris {
     PBGnssEphCommon commonEphemerisData = 1;
@@ -2105,6 +2235,93 @@ message PBGlonassEphemeris {
        - Units: Days */
 }
 
+enum PBBdsExtendedEphValidityMask {
+    PB_GNSS_BDS_EXT_EPH_INVALID = 0x00000000;
+    PB_GNSS_BDS_EXT_EPH_ISC_B2A_VALID = 0x00000001;
+    PB_GNSS_BDS_EXT_EPH_ISC_B1C_VALID = 0x00000002;
+    PB_GNSS_BDS_EXT_EPH_TGD_B2A_VALID = 0x00000004;
+    PB_GNSS_BDS_EXT_EPH_TGD_B1C_VALID = 0x00000008;
+    PB_GNSS_BDS_EXT_EPH_SV_TYPE_VALID = 0x00000010;
+    PB_GNSS_BDS_EXT_EPH_VALIDITY_PERIOD = 0x00000020;
+    PB_GNSS_BDS_EXT_EPH_INTEGRITY_FLAGS = 0x00000040;
+    PB_GNSS_BDS_EXT_EPH_DELTA_NDOT_VALID = 0x00000080;
+    PB_GNSS_BDS_EXT_EPH_DELTAA_VALID = 0x00000100;
+    PB_GNSS_BDS_EXT_EPH_ADOT_VALID = 0x00000200;
+}
+
+/** BDS Extended ephemeris struct */
+message PBBdsExtendedEphemeris {
+    uint32 gnssSvId = 1;
+    /**<   GNSS SV ID. \n
+       Range:\n
+       - GPS --     1 to 32 \n
+       - QZSS --    193 to 197 \n
+       - BDS --     201 to 263 \n
+       - Galileo -- 301 to 336 \n
+       - NavIC --   401 to 420 \n
+    */
+
+    uint32 validityMask = 2;
+    /**<   Specifies validity of all the fields.  \n
+        - iscB2a -- 0x0001   \n
+        - iscB1c -- 0x0002  \n
+        - tgdB2a -- 0x0004   \n
+        - tgdB1c -- 0x0008  \n
+        - svType -- 0x0010   \n
+        - validityPeriod  -- 0x0020  \n
+        - integrityFlags -- 0x0040   \n
+        - deltaNdot  -- 0x0080  \n
+        - deltaA -- 0x0100   \n
+        - adot  -- 0x0200  \n
+    */
+
+    float tgdB2a = 3;
+    /**<   Time of Group Delay For B2a in milliseconds.
+       - Units -- milliseconds */
+
+    float iscB2a = 4;
+    /**<   InterSignal Correction between B2a Data and Pilot channels in milliseconds.
+       - Units -- milliseconds */
+
+    float tgdB1c = 5;
+    /**<   Time of Group Delay For B1C in milliseconds.
+       - Units -- milliseconds */
+
+    float iscB1c = 6;
+    /**<   InterSignal Correction between B1c Data and Pilot channels in milliseconds. \n
+       - Units -- milliseconds */
+
+    uint32 svType = 7;
+    /**<   Sv Type “ GEO / MEO / IGSO (Unitless). */
+
+    uint32 validityPeriod = 8;
+    /**   Validity Period in seconds.
+       - Units -- Seconds */
+
+    uint32 integrityFlags = 9;
+    /** Satellite Integrity Flags consists data integrity Flag(DIF),
+     *  Signal Integrity Flag(SIF), Accuracy Integrity Flag (AIF).
+     *  Values:
+     *  - b0 - AIF, The signal is Valid(0) or Invalid (1).
+     *  - b1 - SIF, The signal is Normal(0) or Abnormal (1).
+     *  - b2 - DIF, The error of message parameters in this signal does not
+     *  exceeds the prediction accuracy (0)/ Exceeds the prediction accuracy (1).
+     *  - b3 - B1I, ephemeris health (unitless).
+     */
+
+    double deltaNdot = 10;
+    /**<   Rate of Mean motion difference from computed value [semi-circle/sec^2] (unitless).
+     */
+
+    double deltaA = 11;
+    /**<   Semi-Major Axis Difference At Reference Time [m]. \n
+       - Units -- Meters */
+
+    double adot = 12;
+    /**<   Change Rate In Semi-Major Axis [m/sec]. \n
+       - Units -- Meters/seconds */
+}
+
 /* BDS Navigation Model Info */
 message PBBdsEphemeris {
 
@@ -2211,6 +2428,15 @@ message PBNavicEphemeris {
 /** GPS Navigation model for each SV */
 message PBGpsEphemerisResponse {
     repeated PBGpsEphemeris gpsEphemerisData = 1;
+
+    /**  Ephemeris Signal Source Type (Unitless). */
+    bool validDataSourceSignal = 2;
+    uint32 dataSourceSignal = 3;
+
+    uint32 numOfExtendedEphemeris = 4;
+    /** Extended Ephemeris data */
+    bool validExtendedEphData = 5;
+    repeated PBGpsExtendedEphemeris gpsExtEphemerisData = 6;
 }
 
 /** GLONASS Navigation model for each SV */
@@ -2221,6 +2447,15 @@ message PBGlonassEphemerisResponse {
 /** BDS Navigation model for each SV */
 message PBBdsEphemerisResponse {
     repeated PBBdsEphemeris bdsEphemerisData = 1;
+
+    /**  Ephemeris Signal Source Type (Unitless). */
+    bool validDataSourceSignal = 2;
+    uint32 dataSourceSignal = 3;
+
+    uint32 numOfExtendedEphemeris = 4;
+    /** Extended Ephemeris data */
+    bool validExtendedEphData = 5;
+    repeated PBBdsExtendedEphemeris bdsExtEphemerisData = 6;
 }
 
 /** GALILEO Navigation model for each SV */
@@ -2231,6 +2466,15 @@ message PBGalileoEphemerisResponse {
 /** QZSS Navigation model for each SV */
 message PBQzssEphemerisResponse {
     repeated PBGpsEphemeris qzssEphemerisData = 1;
+
+    /**  Ephemeris Signal Source Type (Unitless). */
+    bool validDataSourceSignal = 2;
+    uint32 dataSourceSignal = 3;
+
+    uint32 numOfExtendedEphemeris = 4;
+    /** Extended Ephemeris data */
+    bool validExtendedEphData = 5;
+    repeated PBGpsExtendedEphemeris qzssExtEphemerisData = 6;
 };
 
 /** NAVIC Navigation model for each SV */
@@ -2334,4 +2578,26 @@ message PBGnssMapMatchedData {
      *  Unit: Degrees
      *  Range [0, 360) */
     float  bearingAccuracy = 10;
+}
+
+/* ODCPI callback priorities*/
+enum PBOdcpiPriority {
+    PB_ODCPI_HANDLER_PRIORITY_INVALID = 0;
+    PB_ODCPI_HANDLER_PRIORITY_LOW = 1;
+    PB_ODCPI_HANDLER_PRIORITY_HIGH = 2;
+    PB_ODCPI_HANDLER_PRIORITY_MEDIUM = 3;
+}
+
+/* ODCPI Request Info */
+enum PBOdcpiRequestType {
+    PB_ODCPI_REQUEST_TYPE_INVALID = 0;
+    PB_ODCPI_REQUEST_TYPE_START = 1;
+    PB_ODCPI_REQUEST_TYPE_STOP = 2;
+}
+
+message PBOdcpiRequestInfo {
+    uint32 size = 1;
+    PBOdcpiRequestType type = 2;
+    uint32 tbfMillis = 3;
+    bool isEmergencyMode = 4;
 }
