@@ -363,9 +363,36 @@ void LocationClientApi::addGeofences(std::vector<Geofence>& geofences,
     // callback masks
     LocationCallbacks callbacksOption = {0};
     callbacksOption.responseCb = [](LocationError err, uint32_t id) {};
-    callbacksOption.collectiveResponseCb = [](size_t, LocationError*, uint32_t*) {};
+    if (responseCallback) {
+        callbacksOption.collectiveResponseCb = [this, responseCallback](size_t count,
+                LocationError* errs, uint32_t* ids) {
+                std::vector<pair<Geofence, LocationResponse>> responses;
+                LOC_LOGd("CollectiveRes Pload count: %zu", count);
+                if (errs != nullptr && ids != nullptr) {
+                    for (int i=0; i < count; i++) {
+                        responses.push_back(make_pair(
+                                    mApiImpl->getMappedGeofence(ids[i]),
+                                    LocationClientApiImpl::parseLocationError(errs[i])));
+                    }
+                    responseCallback(responses);
+                }
+        };
+    }
+
     callbacksOption.geofenceBreachCb =
-            [](GeofenceBreachNotification geofenceBreachNotification) {};
+            [this, gfBreachCb](const GeofenceBreachNotification& geofenceBreachNotification) {
+        std::vector<Geofence> geofences;
+        int gfBreachCnt = geofenceBreachNotification.count;
+        for (int i=0; i < gfBreachCnt; i++) {
+            geofences.push_back(mApiImpl->getMappedGeofence(
+                                    geofenceBreachNotification.ids[i]));
+        }
+
+        gfBreachCb(geofences,
+                LocationClientApiImpl::parseLocation(geofenceBreachNotification.location),
+                LocationClientApiImpl::parseGeofenceBreachType(geofenceBreachNotification.type),
+                geofenceBreachNotification.timestamp);
+    };
 
     std::vector<Geofence> geofencesToAdd;
     for (int i = 0; i < geofences.size(); ++i) {
@@ -390,6 +417,11 @@ void LocationClientApi::removeGeofences(std::vector<Geofence>& geofences) {
     size_t count = geofences.size();
     if (count > 0) {
         uint32_t* gfIds = (uint32_t*)malloc(sizeof(uint32_t) * count);
+        if (nullptr == gfIds) {
+            LOC_LOGe("Failed to allocate memory for Geofence Id's");
+            return;
+        }
+
         for (int i=0; i<count; ++i) {
             if (!geofences[i].mGeofenceImpl) {
                 LOC_LOGe ("Geofence not added yet");
@@ -410,7 +442,18 @@ void LocationClientApi::modifyGeofences(std::vector<Geofence>& geofences) {
     size_t count = geofences.size();
     if (count > 0) {
         GeofenceOption* gfOptions = (GeofenceOption*)malloc(sizeof(GeofenceOption) * count);
+        if (nullptr == gfOptions) {
+            LOC_LOGe("Failed to allocate memory for Geofence Options");
+            return;
+        }
+
         uint32_t* gfIds = (uint32_t*)malloc(sizeof(uint32_t) * count);
+        if (nullptr == gfIds) {
+            LOC_LOGe("Failed to allocate memory for Geofence Id's");
+            free(gfOptions);
+            return;
+        }
+
         for (int i=0; i<count; ++i) {
             gfOptions[i].breachTypeMask = geofences[i].getBreachType();
             gfOptions[i].responsiveness = geofences[i].getResponsiveness();
@@ -439,6 +482,11 @@ void LocationClientApi::pauseGeofences(std::vector<Geofence>& geofences) {
     size_t count = geofences.size();
     if (count > 0) {
         uint32_t* gfIds = (uint32_t*)malloc(sizeof(uint32_t) * count);
+        if (nullptr == gfIds) {
+            LOC_LOGe("Failed to allocate memory for Geofence Id's");
+            return;
+        }
+
         for (int i=0; i<count; ++i) {
             if (!geofences[i].mGeofenceImpl) {
                 LOC_LOGe ("Geofence not added yet");
@@ -460,6 +508,11 @@ void LocationClientApi::resumeGeofences(std::vector<Geofence>& geofences) {
     size_t count = geofences.size();
     if (count > 0) {
         uint32_t* gfIds = (uint32_t*)malloc(sizeof(uint32_t) * count);
+        if (nullptr == gfIds) {
+            LOC_LOGe("Failed to allocate memory for Geofence Id's");
+            return;
+        }
+
         for (int i=0; i<count; ++i) {
             if (!geofences[i].mGeofenceImpl) {
                 LOC_LOGe ("Geofence not added yet");

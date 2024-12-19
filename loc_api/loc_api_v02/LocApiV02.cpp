@@ -767,7 +767,9 @@ void LocApiV02 :: startFix(const LocPosMode& fixCriteria, LocApiResponse *adapte
   memset (&set_mode_msg, 0, sizeof(set_mode_msg));
   memset (&set_mode_ind, 0, sizeof(set_mode_ind));
 
-  LOC_LOGV("%s:%d]: start \n", __func__, __LINE__);
+  LOC_LOGi("start interval tbf %d", fixCriteria.min_interval);
+  // BOOT KPI marker, print only once for a session
+
   // BOOT KPI marker, print only once for a session
   if (false == mInSession) {
       loc_boot_kpi_marker("L - LocApiV02 startFix, tbf %d", fixCriteria.min_interval);
@@ -825,6 +827,13 @@ void LocApiV02 :: startFix(const LocPosMode& fixCriteria, LocApiResponse *adapte
       }
       start_msg.minInterval_valid = 1;
       start_msg.minInterval = fixCriteria.min_interval;
+#ifdef __ANDROID__
+  // We will do 1Hz if interval is 500 msec
+      if (500 == start_msg.minInterval) {
+          start_msg.minInterval = 1000;
+          LOC_LOGi("start interval tbf %d", start_msg.minInterval);
+      }
+#endif
       mMinInterval = start_msg.minInterval;
 
       start_msg.horizontalAccuracyLevel_valid = 1;
@@ -9808,6 +9817,13 @@ LocApiV02::startTimeBasedTracking(const TrackingOptions& options, LocApiResponse
 
     // interval
     uint32_t minInterval = options.minInterval;
+#ifdef __ANDROID__
+  // We will do 1Hz if interval is 500 msec
+    if (500 == minInterval) {
+        minInterval = 1000;
+        LOC_LOGi("start interval tbf %d", minInterval);
+    }
+#endif
     mMinInterval = minInterval;
 
     /*set interval for intermediate fixes*/
