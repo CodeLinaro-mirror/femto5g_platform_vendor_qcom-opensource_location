@@ -29,6 +29,13 @@
             {    "port" : "30701"    }
         },
         {
+            "service": "0xEE01",
+            "instance": "0x1",
+            "unreliable": [
+            "30701"
+            ]
+        },
+        {
             "service": "0xed80",
             "instance": "0x1",
             "unreliable": [
