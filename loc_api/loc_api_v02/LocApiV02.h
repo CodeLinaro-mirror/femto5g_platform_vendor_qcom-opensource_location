@@ -268,7 +268,6 @@ private:
   uint32_t mDwellAlignTimeMs;
 
   // Below two member variables are for elapsedRealTime calculation
-  RealtimeEstimator mMeasElapsedRealTimeCal;
   GnssMeasurementsNotification m1HzMeasurementsNotify;
   GnssBasicMeasurementsInfo m1HzMeasurementsInfo;
 
