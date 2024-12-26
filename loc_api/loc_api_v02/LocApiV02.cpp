@@ -2467,6 +2467,9 @@ qmiLocClientsMaskT_v02 LocApiV02::convertGpsLock(GnssConfigGpsLock lock) {
     if (lock & GNSS_CONFIG_GPS_LOCK_NFW_NTN) {
         nfwControlBits |= QMI_LOC_MASK_UTH_CLIENT_NTN_V02;
     }
+    if (lock & GNSS_CONFIG_GPS_LOCK_NFW_ECALL) {
+        nfwControlBits |= QMI_LOC_MASK_UTH_CLIENT_ECALL_V02;
+    }
     return nfwControlBits;
 }
 
@@ -5119,13 +5122,13 @@ void LocApiV02::reportLocationRequestNotification(
                                     "NFW_CLIENT_SIM", "NFW_CLIENT_MDT", "NFW_CLIENT_TLOC",
                                     "NFW_CLIENT_OTHER", "NFW_CLIENT_RLOC", "NFW_CLIENT_V2X",
                                     "NFW_CLIENT_R1", "NFW_CLIENT_R2", "NFW_CLIENT_R3",
-                                    "NFW_CLIENT_NTN" };
+                                    "NFW_CLIENT_NTN", "NFW_CLIENT_ECALL" };
         char packageName[LOC_MAX_PARAM_STRING];
 
         // proxyAppPackageName is "" for emergency
         if (ContextBase::isFeatureSupported(LOC_SUPPORTED_FEATURE_MULTIPLE_ATTRIBUTION_APPS) &&
             loc_req_notif->protocolStack >= eQMI_LOC_CTRL_PLANE_V02 &&
-            loc_req_notif->protocolStack <= eQMI_LOC_NTN_V02 &&
+            loc_req_notif->protocolStack <= eQMI_LOC_ECALL_V02 &&
             eQMI_LOC_OTHER_V02 != loc_req_notif->protocolStack) {
 
             if (mPackageName[loc_req_notif->protocolStack].empty()) {
