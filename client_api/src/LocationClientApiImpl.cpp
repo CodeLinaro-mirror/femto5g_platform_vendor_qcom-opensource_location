@@ -179,6 +179,12 @@ GnssMeasurementsDataFlagsMask LocationClientApiImpl::parseMeasurementsDataMask(
     if (::GNSS_MEASUREMENTS_DATA_GNSS_SIGNAL_TYPE_BIT & in) {
         out |= GNSS_MEASUREMENTS_DATA_GNSS_SIGNAL_TYPE_BIT;
     }
+    if (::GNSS_MEASUREMENTS_DATA_MEAS_CODE_TYPE_BIT & in) {
+        out |= GNSS_MEASUREMENTS_DATA_MEAS_CODE_TYPE_BIT;
+    }
+    if (::GNSS_MEASUREMENTS_DATA_OTHER_MEAS_CODE_TYPE_BIT & in) {
+        out |= GNSS_MEASUREMENTS_DATA_OTHER_MEAS_CODE_TYPE_BIT;
+    }
     LOC_LOGd("LCA GnssMeasurementsDataFlagsMask =0x%x ", out);
     return static_cast<GnssMeasurementsDataFlagsMask>(out);
 }
@@ -1107,6 +1113,68 @@ GnssData LocationClientApiImpl::parseGnssData(const ::GnssDataNotification &halG
     return gnssData;
 }
 
+GnssMeasCodeType LocationClientApiImpl::parseGnssMeasCodeType(
+            const ::GnssMeasurementsCodeType &halGnssMeasCodeType) {
+
+    GnssMeasCodeType measCodeType = GNSS_MEAS_CODE_TYPE_UNKNOWN;
+    switch (halGnssMeasCodeType) {
+        case GNSS_MEASUREMENTS_CODE_TYPE_A:
+            measCodeType = GNSS_MEAS_CODE_TYPE_A;
+            break;
+        case GNSS_MEASUREMENTS_CODE_TYPE_B:
+            measCodeType = GNSS_MEAS_CODE_TYPE_B;
+            break;
+        case GNSS_MEASUREMENTS_CODE_TYPE_C:
+            measCodeType = GNSS_MEAS_CODE_TYPE_C;
+            break;
+        case GNSS_MEASUREMENTS_CODE_TYPE_I:
+            measCodeType = GNSS_MEAS_CODE_TYPE_I;
+            break;
+        case GNSS_MEASUREMENTS_CODE_TYPE_L:
+            measCodeType = GNSS_MEAS_CODE_TYPE_L;
+            break;
+        case GNSS_MEASUREMENTS_CODE_TYPE_M:
+            measCodeType = GNSS_MEAS_CODE_TYPE_M;
+            break;
+        case GNSS_MEASUREMENTS_CODE_TYPE_P:
+            measCodeType = GNSS_MEAS_CODE_TYPE_P;
+            break;
+        case GNSS_MEASUREMENTS_CODE_TYPE_Q:
+            measCodeType = GNSS_MEAS_CODE_TYPE_Q;
+            break;
+        case GNSS_MEASUREMENTS_CODE_TYPE_S:
+            measCodeType = GNSS_MEAS_CODE_TYPE_S;
+            break;
+        case GNSS_MEASUREMENTS_CODE_TYPE_W:
+            measCodeType = GNSS_MEAS_CODE_TYPE_W;
+            break;
+        case GNSS_MEASUREMENTS_CODE_TYPE_X:
+            measCodeType = GNSS_MEAS_CODE_TYPE_X;
+            break;
+        case GNSS_MEASUREMENTS_CODE_TYPE_Y:
+            measCodeType = GNSS_MEAS_CODE_TYPE_Y;
+            break;
+        case GNSS_MEASUREMENTS_CODE_TYPE_Z:
+            measCodeType = GNSS_MEAS_CODE_TYPE_Z;
+            break;
+        case GNSS_MEASUREMENTS_CODE_TYPE_N:
+            measCodeType = GNSS_MEAS_CODE_TYPE_N;
+            break;
+        case GNSS_MEASUREMENTS_CODE_TYPE_D:
+            measCodeType = GNSS_MEAS_CODE_TYPE_D;
+            break;
+        case GNSS_MEASUREMENTS_CODE_TYPE_E:
+            measCodeType = GNSS_MEAS_CODE_TYPE_E;
+            break;
+        case GNSS_MEASUREMENTS_CODE_TYPE_OTHER:
+            measCodeType = GNSS_MEAS_CODE_TYPE_OTHER;
+            break;
+        default:
+            break;
+    }
+    return measCodeType;
+}
+
 GnssMeasurements LocationClientApiImpl::parseGnssMeasurements(
         const ::GnssMeasurementsNotification &halGnssMeasurements) {
     GnssMeasurements gnssMeasurements = {};
@@ -1169,6 +1237,9 @@ GnssMeasurements LocationClientApiImpl::parseGnssMeasurements(
                halGnssMeasurements.measurements[meas].fullInterSignalBiasNs;
         measurement.fullInterSignalBiasUncertaintyNs =
                halGnssMeasurements.measurements[meas].fullInterSignalBiasUncertaintyNs;
+        measurement.measCodeType = parseGnssMeasCodeType(
+               halGnssMeasurements.measurements[meas].codeType);
+        measurement.otherCodeTypeName = halGnssMeasurements.measurements[meas].otherCodeTypeName;
 
         gnssMeasurements.measurements.push_back(measurement);
     }
@@ -1451,18 +1522,40 @@ void LocationClientApiImpl::parseCommanGnssEphemeris(const ::GnssEphCommon& halC
 void LocationClientApiImpl::parseGpsEphemeris(const GpsEphemerisResponse& halEph,
             std::vector<GpsQzssEphemeris>& lcaEphInfo) {
 
-    for (int idx = 0; idx < halEph.numOfEphemeris; idx++) {
+    for (int idx = 0; idx < max(halEph.numOfEphemeris, halEph.numOfExtendedEphemeris); idx++) {
         GpsQzssEphemeris lcaEph = {};
-        parseCommanGnssEphemeris(halEph.gpsEphemerisData[idx].commonEphemerisData,
-                lcaEph.commonEphemerisData);
-
-        lcaEph.signalHealth  = halEph.gpsEphemerisData[idx].signalHealth;
-        lcaEph.URAI          = halEph.gpsEphemerisData[idx].URAI;
-        lcaEph.codeL2        = halEph.gpsEphemerisData[idx].codeL2;
-        lcaEph.dataFlagL2P   = halEph.gpsEphemerisData[idx].dataFlagL2P;
-        lcaEph.fitInterval   = halEph.gpsEphemerisData[idx].fitInterval;
-        lcaEph.IODC          = halEph.gpsEphemerisData[idx].IODC;
-        lcaEph.tgd           = halEph.gpsEphemerisData[idx].tgd;
+        if (idx < halEph.numOfEphemeris) {
+            parseCommanGnssEphemeris(halEph.gpsEphemerisData[idx].commonEphemerisData,
+                    lcaEph.commonEphemerisData);
+            lcaEph.signalHealth  = halEph.gpsEphemerisData[idx].signalHealth;
+            lcaEph.URAI          = halEph.gpsEphemerisData[idx].URAI;
+            lcaEph.codeL2        = halEph.gpsEphemerisData[idx].codeL2;
+            lcaEph.dataFlagL2P   = halEph.gpsEphemerisData[idx].dataFlagL2P;
+            lcaEph.fitInterval   = halEph.gpsEphemerisData[idx].fitInterval;
+            lcaEph.IODC          = halEph.gpsEphemerisData[idx].IODC;
+            lcaEph.tgd           = halEph.gpsEphemerisData[idx].tgd;
+        }
+        lcaEph.extendedEphDataValidity = halEph.validExtendedEphData;
+        if (halEph.validExtendedEphData && idx < halEph.numOfExtendedEphemeris) {
+            lcaEph.gpsQzssExtEphData.gnssSvId = halEph.gpsExtEphemerisData[idx].gnssSvId;
+            lcaEph.gpsQzssExtEphData.validityMask =
+                    (GpsQzssExtEphValidity)halEph.gpsExtEphemerisData[idx].validityMask;
+            lcaEph.gpsQzssExtEphData.iscL1ca = halEph.gpsExtEphemerisData[idx].iscL1ca;
+            lcaEph.gpsQzssExtEphData.iscL2c = halEph.gpsExtEphemerisData[idx].iscL2c;
+            lcaEph.gpsQzssExtEphData.iscL5I5 = halEph.gpsExtEphemerisData[idx].iscL5I5;
+            lcaEph.gpsQzssExtEphData.iscL5Q5 = halEph.gpsExtEphemerisData[idx].iscL5Q5;
+            lcaEph.gpsQzssExtEphData.alert = halEph.gpsExtEphemerisData[idx].alert;
+            lcaEph.gpsQzssExtEphData.uraNed0 = halEph.gpsExtEphemerisData[idx].uraNed0;
+            lcaEph.gpsQzssExtEphData.uraNed1 = halEph.gpsExtEphemerisData[idx].uraNed1;
+            lcaEph.gpsQzssExtEphData.uraNed2 = halEph.gpsExtEphemerisData[idx].uraNed2;
+            lcaEph.gpsQzssExtEphData.top = halEph.gpsExtEphemerisData[idx].top;
+            lcaEph.gpsQzssExtEphData.topClock = halEph.gpsExtEphemerisData[idx].topClock;
+            lcaEph.gpsQzssExtEphData.validityPeriod =
+                    halEph.gpsExtEphemerisData[idx].validityPeriod;
+            lcaEph.gpsQzssExtEphData.deltaNdot= halEph.gpsExtEphemerisData[idx].deltaNdot;
+            lcaEph.gpsQzssExtEphData.deltaA = halEph.gpsExtEphemerisData[idx].deltaA;
+            lcaEph.gpsQzssExtEphData.adot = halEph.gpsExtEphemerisData[idx].adot;
+        }
         lcaEphInfo.push_back(std::move(lcaEph));
     }
 }
@@ -1524,16 +1617,36 @@ void LocationClientApiImpl::parseGloEphemeris(const GlonassEphemerisResponse& ha
 void LocationClientApiImpl::parseBdsEphemeris(const BdsEphemerisResponse& halEph,
             std::vector<BdsEphemeris>& lcaEphInfo) {
 
-    for (int idx = 0; idx < halEph.numOfEphemeris; idx++) {
+    for (int idx = 0; idx < max(halEph.numOfEphemeris, halEph.numOfExtendedEphemeris); idx++) {
         BdsEphemeris lcaEph = {};
-        parseCommanGnssEphemeris(halEph.bdsEphemerisData[idx].commonEphemerisData,
-                lcaEph.commonEphemerisData);
+        if (idx < halEph.numOfEphemeris) {
+            parseCommanGnssEphemeris(halEph.bdsEphemerisData[idx].commonEphemerisData,
+                    lcaEph.commonEphemerisData);
 
-        lcaEph.svHealth = halEph.bdsEphemerisData[idx].svHealth;
-        lcaEph.AODC     = halEph.bdsEphemerisData[idx].AODC;
-        lcaEph.tgd1     = halEph.bdsEphemerisData[idx].tgd1;
-        lcaEph.tgd2     = halEph.bdsEphemerisData[idx].tgd2;
-        lcaEph.URAI     = halEph.bdsEphemerisData[idx].URAI;
+            lcaEph.svHealth = halEph.bdsEphemerisData[idx].svHealth;
+            lcaEph.AODC     = halEph.bdsEphemerisData[idx].AODC;
+            lcaEph.tgd1     = halEph.bdsEphemerisData[idx].tgd1;
+            lcaEph.tgd2     = halEph.bdsEphemerisData[idx].tgd2;
+            lcaEph.URAI     = halEph.bdsEphemerisData[idx].URAI;
+        }
+        lcaEph.extendedEphDataValidity = halEph.validExtendedEphData;
+        if (halEph.validExtendedEphData && idx < halEph.numOfExtendedEphemeris) {
+            lcaEph.bdsExtEphData.gnssSvId = halEph.bdsExtEphemerisData[idx].gnssSvId;
+            lcaEph.bdsExtEphData.validityMask =
+                    (BdsExtEphValidity)halEph.bdsExtEphemerisData[idx].validityMask;
+            lcaEph.bdsExtEphData.svType = halEph.bdsExtEphemerisData[idx].svType;
+            lcaEph.bdsExtEphData.tgdB1c = halEph.bdsExtEphemerisData[idx].tgdB1c;
+            lcaEph.bdsExtEphData.iscB1c = halEph.bdsExtEphemerisData[idx].iscB1c;
+            lcaEph.bdsExtEphData.tgdB2a = halEph.bdsExtEphemerisData[idx].tgdB2a;
+            lcaEph.bdsExtEphData.iscB2a = halEph.bdsExtEphemerisData[idx].iscB2a;
+            lcaEph.bdsExtEphData.validityPeriod =
+                    halEph.bdsExtEphemerisData[idx].validityPeriod;
+            lcaEph.bdsExtEphData.integrityFlags =
+                    halEph.bdsExtEphemerisData[idx].integrityFlags;
+            lcaEph.bdsExtEphData.deltaNdot= halEph.bdsExtEphemerisData[idx].deltaNdot;
+            lcaEph.bdsExtEphData.deltaA = halEph.bdsExtEphemerisData[idx].deltaA;
+            lcaEph.bdsExtEphData.adot = halEph.bdsExtEphemerisData[idx].adot;
+        }
         lcaEphInfo.push_back(std::move(lcaEph));
     }
 }
@@ -1553,6 +1666,42 @@ void LocationClientApiImpl::parseQzssEphemeris(const QzssEphemerisResponse& halE
         lcaEph.qzssEphData.fitInterval   = halEph.qzssEphemerisData[idx].fitInterval;
         lcaEph.qzssEphData.IODC          = halEph.qzssEphemerisData[idx].IODC;
         lcaEph.qzssEphData.tgd           = halEph.qzssEphemerisData[idx].tgd;
+
+        lcaEph.qzssEphData.extendedEphDataValidity = halEph.validExtendedEphData;
+        if (halEph.validExtendedEphData && idx < halEph.numOfExtendedEphemeris) {
+            lcaEph.qzssEphData.gpsQzssExtEphData.gnssSvId =
+                    halEph.qzssExtEphemerisData[idx].gnssSvId;
+            lcaEph.qzssEphData.gpsQzssExtEphData.validityMask =
+                    (GpsQzssExtEphValidity)halEph.qzssExtEphemerisData[idx].validityMask;
+            lcaEph.qzssEphData.gpsQzssExtEphData.iscL1ca =
+                    halEph.qzssExtEphemerisData[idx].iscL1ca;
+            lcaEph.qzssEphData.gpsQzssExtEphData.iscL2c =
+                    halEph.qzssExtEphemerisData[idx].iscL2c;
+            lcaEph.qzssEphData.gpsQzssExtEphData.iscL5I5 =
+                    halEph.qzssExtEphemerisData[idx].iscL5I5;
+            lcaEph.qzssEphData.gpsQzssExtEphData.iscL5Q5 =
+                    halEph.qzssExtEphemerisData[idx].iscL5Q5;
+            lcaEph.qzssEphData.gpsQzssExtEphData.alert =
+                    halEph.qzssExtEphemerisData[idx].alert;
+            lcaEph.qzssEphData.gpsQzssExtEphData.uraNed0 =
+                    halEph.qzssExtEphemerisData[idx].uraNed0;
+            lcaEph.qzssEphData.gpsQzssExtEphData.uraNed1 =
+                    halEph.qzssExtEphemerisData[idx].uraNed1;
+            lcaEph.qzssEphData.gpsQzssExtEphData.uraNed2 =
+                    halEph.qzssExtEphemerisData[idx].uraNed2;
+            lcaEph.qzssEphData.gpsQzssExtEphData.top =
+                    halEph.qzssExtEphemerisData[idx].top;
+            lcaEph.qzssEphData.gpsQzssExtEphData.topClock =
+                    halEph.qzssExtEphemerisData[idx].topClock;
+            lcaEph.qzssEphData.gpsQzssExtEphData.validityPeriod =
+                    halEph.qzssExtEphemerisData[idx].validityPeriod;
+            lcaEph.qzssEphData.gpsQzssExtEphData.deltaNdot=
+                    halEph.qzssExtEphemerisData[idx].deltaNdot;
+            lcaEph.qzssEphData.gpsQzssExtEphData.deltaA =
+                    halEph.qzssExtEphemerisData[idx].deltaA;
+            lcaEph.qzssEphData.gpsQzssExtEphData.adot =
+                    halEph.qzssExtEphemerisData[idx].adot;
+        }
         lcaEphInfo.push_back(std::move(lcaEph));
     }
 }
@@ -1582,6 +1731,14 @@ GnssEphemeris LocationClientApiImpl::parseGnssEphemerisInfo(
     switch (halGnssEphemeris.gnssConstellation) {
         case GNSS_LOC_SV_SYSTEM_GPS:
             gnssEphInfo.gnssConstellation = GNSS_LOC_SV_SYSTEM_GPS;
+            if (halGnssEphemeris.ephInfo.gpsEphemeris.validDataSourceSignal) {
+                gnssEphInfo.validDataSourceSignal = true;
+                gnssEphInfo.dataSourceSignal =
+                        (GnssSignalTypes)halGnssEphemeris.ephInfo.gpsEphemeris.dataSourceSignal;
+            } else {
+                gnssEphInfo.validDataSourceSignal = false;
+                gnssEphInfo.dataSourceSignal = GNSS_INVALID_SIGNAL_TYPE;
+            }
             parseGpsEphemeris(halGnssEphemeris.ephInfo.gpsEphemeris,
                     gnssEphInfo.gpsEphemerisData);
             break;
@@ -1597,11 +1754,27 @@ GnssEphemeris LocationClientApiImpl::parseGnssEphemerisInfo(
             break;
         case GNSS_LOC_SV_SYSTEM_BDS:
             gnssEphInfo.gnssConstellation = GNSS_LOC_SV_SYSTEM_BDS;
+            if (halGnssEphemeris.ephInfo.bdsEphemeris.validDataSourceSignal) {
+                gnssEphInfo.validDataSourceSignal = true;
+                gnssEphInfo.dataSourceSignal =
+                        (GnssSignalTypes)halGnssEphemeris.ephInfo.bdsEphemeris.dataSourceSignal;
+            } else {
+                gnssEphInfo.validDataSourceSignal = false;
+                gnssEphInfo.dataSourceSignal = GNSS_INVALID_SIGNAL_TYPE;
+            }
             parseBdsEphemeris(halGnssEphemeris.ephInfo.bdsEphemeris,
                     gnssEphInfo.bdsEphemerisData);
             break;
         case GNSS_LOC_SV_SYSTEM_QZSS:
             gnssEphInfo.gnssConstellation = GNSS_LOC_SV_SYSTEM_QZSS;
+            if (halGnssEphemeris.ephInfo.qzssEphemeris.validDataSourceSignal) {
+                gnssEphInfo.validDataSourceSignal = true;
+                gnssEphInfo.dataSourceSignal =
+                        (GnssSignalTypes)halGnssEphemeris.ephInfo.qzssEphemeris.dataSourceSignal;
+            } else {
+                gnssEphInfo.validDataSourceSignal = false;
+                gnssEphInfo.dataSourceSignal = GNSS_INVALID_SIGNAL_TYPE;
+            }
             parseQzssEphemeris(halGnssEphemeris.ephInfo.qzssEphemeris,
                     gnssEphInfo.qzssEphemerisData);
             break;
