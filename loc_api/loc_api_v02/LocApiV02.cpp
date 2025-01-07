@@ -5643,8 +5643,10 @@ void LocApiV02::reportGnssMeasurementData(
     // meas for primary constellation always come first, also, in case there
     // are more than 24 SVs in the preferred signal type, we only need to
     // process the first sub sequence
+    // Older targets may not have subSeqNum field, in that case subSeqNum field value be zero
+    // so having (subSeqNum <= 1) check, to support both older and new targets.
     if ((mPreferredSignalType == gnss_measurement_report_ptr.gnssSignalType) &&
-            (subSeqNum == 1)) {
+            (subSeqNum <= 1)) {
         // the clock time reading from preferred signal type
         convertGnssClock(mGnssMeasurements->gnssMeasNotification.clock,
                 gnss_measurement_report_ptr);
@@ -5653,7 +5655,9 @@ void LocApiV02::reportGnssMeasurementData(
     // In BDS preferred case, gpsL1 and unc will first be retrieved from
     // convertGnssClock info from BDS meas block, but we want the gpsL1 ad unc
     // gets overwritten subsequently from GPS meas block
-    if (subSeqNum == 1) {
+    // Older targets may not have subSeqNum field, in that case subSeqNum field value be zero
+    // so having (subSeqNum <= 1) check, to support both older and new targets.
+    if (subSeqNum <= 1) {
         convertGnssMeasurementsHeader(locSvSystemType, gnss_measurement_report_ptr);
     }
 
