@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2024, 2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -5141,6 +5141,8 @@ void LocApiV02 :: reportEngineState (
 
 }
 
+#define ATL_OPEN_WAIT_DEFAULT_TIMEOUT_MSEC 15000
+#define ATL_CLOSE_WAIT_DEFAULT_TIMEOUT_MSEC 5000
 /* convert and report an ATL request to loc engine */
 void LocApiV02 :: reportAtlRequest(
   const qmiLocEventLocationServerConnectionReqIndMsgT_v02 * server_request_ptr)
@@ -5192,12 +5194,16 @@ void LocApiV02 :: reportAtlRequest(
         }
     }
     LOC_LOGd("agpsSubId=%d", agpsSubId);
-    requestATL(connHandle, agpsType, apnTypeMask, agpsSubId);
+    requestATL(connHandle, agpsType, apnTypeMask, agpsSubId, ATL_OPEN_WAIT_DEFAULT_TIMEOUT_MSEC);
   }
   // service the ATL close request
   else if (server_request_ptr->requestType == eQMI_LOC_SERVER_REQUEST_CLOSE_V02)
   {
-    releaseATL(connHandle);
+    uint32_t atlClosetimeOutMsec = ATL_CLOSE_WAIT_DEFAULT_TIMEOUT_MSEC;
+    if (server_request_ptr->connectionRequestTimeout_valid) {
+        atlClosetimeOutMsec = server_request_ptr->connectionRequestTimeout;
+    }
+    releaseATL(connHandle, atlClosetimeOutMsec);
   }
 }
 
