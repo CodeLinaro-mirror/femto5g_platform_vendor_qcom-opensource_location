@@ -168,6 +168,9 @@ static LocConfigTypeEnum getLocConfigTypeFromMsgId(ELocMsgID  msgId) {
     case E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_RESP_MSG_ID:
         configType = REGISTER_SIGNAL_TYPES_UPDATE;
         break;
+    case E_INTAPI_CONFIG_XTRA_USER_CONSENT_MSG_ID:
+        configType = CONFIG_XTRA_USER_CONSENT;
+        break;
     default:
         break;
     }
@@ -1867,9 +1870,10 @@ void LocationIntegrationApiImpl::processGetXtraStatusRespCb(
             xtraStatus.xtraValidForHours = pRespMsg->mXtraStatus.xtraValidForHours;
         }
     }
-
-    LOC_LOGd("send out xtra status: %d %d %d %d", updateTrigger, xtraStatus.featureEnabled,
-             xtraStatus.xtraDataStatus, xtraStatus.xtraValidForHours);
+    xtraStatus.userConsent = pRespMsg->mXtraStatus.userConsentStatus;
+    LOC_LOGd("send out xtra status: %d %d %d %d UserConsentStatus: %d", updateTrigger,
+             xtraStatus.featureEnabled, xtraStatus.xtraDataStatus,
+             xtraStatus.xtraValidForHours, xtraStatus.userConsent);
     mIntegrationCbs.getXtraStatusCb(updateTrigger, xtraStatus);
 }
 
@@ -1973,7 +1977,7 @@ uint32_t LocationIntegrationApiImpl::gnssInjectMmfData(const GnssMapMatchedData&
             if (msg.serializeToProtobuf(pbStr)) {
                 mApiImpl->sendConfigMsgToHalDaemon(CONFIG_MAP_MATCHED_FEEDBACK, pbStr);
             } else {
-                LOC_LOGe("LocConfigAidingDataDeletionReqMsg serializeToProtobuf failed");
+                LOC_LOGe("LocInjectMmfDataReqMsg serializeToProtobuf failed");
             }
         }
         LocationIntegrationApiImpl* mApiImpl;
@@ -1981,6 +1985,30 @@ uint32_t LocationIntegrationApiImpl::gnssInjectMmfData(const GnssMapMatchedData&
     };
     mMsgTask.sendMsg(new (nothrow) InjectMmfDataReq(this, mmfData));
 
+    return 0;
+}
+
+uint32_t LocationIntegrationApiImpl::configureUserConsentForXtra(const bool userConsent) {
+    struct InjectXtraUserConsent : public LocMsg {
+        InjectXtraUserConsent(LocationIntegrationApiImpl* apiImpl, bool userConsent):
+            mApiImpl(apiImpl),
+            mUserConsent(userConsent) {}
+        virtual ~InjectXtraUserConsent() {}
+        void proc() const {
+            string pbStr;
+            LocInjectXtraUserConsentMsg msg(mApiImpl->mSocketName,
+                    mUserConsent,
+                    &mApiImpl->mPbufMsgConv);
+            if (msg.serializeToProtobuf(pbStr)) {
+                mApiImpl->sendConfigMsgToHalDaemon(CONFIG_XTRA_USER_CONSENT, pbStr);
+            } else {
+                LOC_LOGe("LocInjectXtraUserConsentMsg serializeToProtobuf failed");
+            }
+        }
+        LocationIntegrationApiImpl* mApiImpl;
+        const bool mUserConsent;
+    };
+    mMsgTask.sendMsg(new (nothrow) InjectXtraUserConsent(this, userConsent));
     return 0;
 }
 
