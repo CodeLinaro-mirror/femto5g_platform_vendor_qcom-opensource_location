@@ -60,6 +60,8 @@ typedef CommonAPI::SomeIP::EnumerationDeployment<uint8_t> GnssMeasurementsMultip
 
 typedef CommonAPI::SomeIP::EnumerationDeployment<uint8_t> GnssSignalTypeTDeployment_t;
 
+typedef CommonAPI::SomeIP::EnumerationDeployment<uint8_t> GnssMeasCodeTypeTDeployment_t;
+
 typedef CommonAPI::SomeIP::EnumerationDeployment<uint8_t> LocationFlagsMaskTDeployment_t;
 
 typedef CommonAPI::SomeIP::EnumerationDeployment<uint8_t> LocationTechnologyMaskTDeployment_t;
@@ -108,41 +110,9 @@ typedef CommonAPI::SomeIP::StructDeployment<
 > MapMatchingFeedbackDataTDeployment_t;
 
 typedef CommonAPI::SomeIP::StructDeployment<
-    CommonAPI::SomeIP::IntegerDeployment<uint32_t>,
-    CommonAPI::SomeIP::IntegerDeployment<uint32_t>
-> LocationReportRequestDeployment_t;
-
-typedef CommonAPI::SomeIP::StructDeployment<
-    ::v1::com::qualcomm::qti::location::LocationTypes_::LocationStatusTDeployment_t
-> LocationResponseDeployment_t;
-
-typedef CommonAPI::SomeIP::StructDeployment<
-    CommonAPI::SomeIP::IntegerDeployment<uint32_t>,
-    CommonAPI::SomeIP::IntegerDeployment<uint32_t>,
-    CommonAPI::SomeIP::IntegerDeployment<uint32_t>
-> EngineSpecificLocationRequestDeployment_t;
-
-typedef CommonAPI::SomeIP::StructDeployment<
-    CommonAPI::SomeIP::IntegerDeployment<uint32_t>
-> LocationAidingDataDeletionMaskDeployment_t;
-
-typedef CommonAPI::SomeIP::StructDeployment<
     ::v1::com::qualcomm::qti::location::LocationTypes_::GnssConstellationTypeTDeployment_t,
     CommonAPI::SomeIP::IntegerDeployment<uint32_t>
 > GnssSvIdInfoTDeployment_t;
-
-typedef CommonAPI::SomeIP::StructDeployment<
-    CommonAPI::SomeIP::ArrayDeployment<
-        CommonAPI::SomeIP::StructDeployment<
-            ::v1::com::qualcomm::qti::location::LocationTypes_::GnssConstellationTypeTDeployment_t,
-            CommonAPI::SomeIP::IntegerDeployment<uint32_t>
-        >
-    >
-> LocationGnssSvIdInfoDeployment_t;
-
-typedef CommonAPI::SomeIP::StructDeployment<
-    CommonAPI::SomeIP::IntegerDeployment<uint32_t>
-> LocationCapabilitiesDeployment_t;
 
 typedef CommonAPI::SomeIP::StructDeployment<
     CommonAPI::SomeIP::IntegerDeployment<uint32_t>,
@@ -187,7 +157,9 @@ typedef CommonAPI::SomeIP::StructDeployment<
     ::v1::com::qualcomm::qti::location::LocationTypes_::GnssSignalTypeTDeployment_t,
     CommonAPI::EmptyDeployment,
     CommonAPI::EmptyDeployment,
-    CommonAPI::SomeIP::IntegerDeployment<uint32_t>
+    CommonAPI::SomeIP::IntegerDeployment<uint32_t>,
+    ::v1::com::qualcomm::qti::location::LocationTypes_::GnssMeasCodeTypeTDeployment_t,
+    CommonAPI::SomeIP::StringDeployment
 > GnssMeasurementsDataTDeployment_t;
 
 typedef CommonAPI::SomeIP::StructDeployment<
@@ -234,7 +206,9 @@ typedef CommonAPI::SomeIP::StructDeployment<
             ::v1::com::qualcomm::qti::location::LocationTypes_::GnssSignalTypeTDeployment_t,
             CommonAPI::EmptyDeployment,
             CommonAPI::EmptyDeployment,
-            CommonAPI::SomeIP::IntegerDeployment<uint32_t>
+            CommonAPI::SomeIP::IntegerDeployment<uint32_t>,
+            ::v1::com::qualcomm::qti::location::LocationTypes_::GnssMeasCodeTypeTDeployment_t,
+            CommonAPI::SomeIP::StringDeployment
         >
     >,
     CommonAPI::EmptyDeployment,

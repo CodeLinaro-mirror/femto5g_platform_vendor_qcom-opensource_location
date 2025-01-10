@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2024- 2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -1491,6 +1491,67 @@ uint32_t parseIDLMultiPathIndicator(
     return idlMultiPathInd;
 }
 
+LocationTypes::GnssMeasCodeTypeT parseIDLMeasCodeType(::GnssMeasCodeType measCode) {
+    LocationTypes::GnssMeasCodeTypeT measCodeType =
+            LocationTypes::GnssMeasCodeTypeT::GNSS_MEAS_CODE_TYPE_UNKNOWN;
+    switch (measCode) {
+        case GNSS_MEAS_CODE_TYPE_A:
+            measCodeType = LocationTypes::GnssMeasCodeTypeT::GNSS_MEAS_CODE_TYPE_A;
+            break;
+        case GNSS_MEAS_CODE_TYPE_B:
+            measCodeType = LocationTypes::GnssMeasCodeTypeT::GNSS_MEAS_CODE_TYPE_B;
+            break;
+        case GNSS_MEAS_CODE_TYPE_C:
+            measCodeType = LocationTypes::GnssMeasCodeTypeT::GNSS_MEAS_CODE_TYPE_C;
+            break;
+        case GNSS_MEAS_CODE_TYPE_I:
+            measCodeType = LocationTypes::GnssMeasCodeTypeT::GNSS_MEAS_CODE_TYPE_I;
+            break;
+        case GNSS_MEAS_CODE_TYPE_L:
+            measCodeType = LocationTypes::GnssMeasCodeTypeT::GNSS_MEAS_CODE_TYPE_L;
+            break;
+        case GNSS_MEAS_CODE_TYPE_M:
+            measCodeType = LocationTypes::GnssMeasCodeTypeT::GNSS_MEAS_CODE_TYPE_M;
+            break;
+        case GNSS_MEAS_CODE_TYPE_P:
+            measCodeType = LocationTypes::GnssMeasCodeTypeT::GNSS_MEAS_CODE_TYPE_P;
+            break;
+        case GNSS_MEAS_CODE_TYPE_Q:
+            measCodeType = LocationTypes::GnssMeasCodeTypeT::GNSS_MEAS_CODE_TYPE_Q;
+            break;
+        case GNSS_MEAS_CODE_TYPE_S:
+            measCodeType = LocationTypes::GnssMeasCodeTypeT::GNSS_MEAS_CODE_TYPE_S;
+            break;
+        case GNSS_MEAS_CODE_TYPE_W:
+            measCodeType = LocationTypes::GnssMeasCodeTypeT::GNSS_MEAS_CODE_TYPE_W;
+            break;
+        case GNSS_MEAS_CODE_TYPE_X:
+            measCodeType = LocationTypes::GnssMeasCodeTypeT::GNSS_MEAS_CODE_TYPE_X;
+            break;
+        case GNSS_MEAS_CODE_TYPE_Y:
+            measCodeType = LocationTypes::GnssMeasCodeTypeT::GNSS_MEAS_CODE_TYPE_Y;
+            break;
+        case GNSS_MEAS_CODE_TYPE_Z:
+            measCodeType = LocationTypes::GnssMeasCodeTypeT::GNSS_MEAS_CODE_TYPE_Z;
+            break;
+        case GNSS_MEAS_CODE_TYPE_N:
+            measCodeType = LocationTypes::GnssMeasCodeTypeT::GNSS_MEAS_CODE_TYPE_N;
+            break;
+        case GNSS_MEAS_CODE_TYPE_D:
+            measCodeType = LocationTypes::GnssMeasCodeTypeT::GNSS_MEAS_CODE_TYPE_D;
+            break;
+        case GNSS_MEAS_CODE_TYPE_E:
+            measCodeType = LocationTypes::GnssMeasCodeTypeT::GNSS_MEAS_CODE_TYPE_E;
+            break;
+        case GNSS_MEAS_CODE_TYPE_OTHER:
+            measCodeType = LocationTypes::GnssMeasCodeTypeT::GNSS_MEAS_CODE_TYPE_OTHER;
+            break;
+        default:
+            break;
+    }
+    return measCodeType;
+}
+
 vector<LocationTypes::GnssMeasurementsDataT > parseIDLMeasData
 (
     const vector<::GnssMeasurementsData>& gnssMeasData
@@ -1529,6 +1590,10 @@ vector<LocationTypes::GnssMeasurementsDataT > parseIDLMeasData
         idlMeas.setFullInterSignalBiasUncertaintyNs(
                 gnssMeasData[idx].fullInterSignalBiasUncertaintyNs);
         idlMeas.setCycleSlipCount(gnssMeasData[idx].cycleSlipCount);
+        idlMeas.setMeasCodeType(::parseIDLMeasCodeType(gnssMeasData[idx].measCodeType));
+        if (gnssMeasData[idx].otherCodeTypeName.length()) {
+            idlMeas.setOtherCodeTypeName(gnssMeasData[idx].otherCodeTypeName);
+        }
 
         idlMeasData.push_back(idlMeas);
     }
