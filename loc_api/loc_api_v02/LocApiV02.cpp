@@ -371,7 +371,6 @@ LocApiV02 :: LocApiV02(LOC_API_ADAPTER_EVENT_MASK_T exMask,
     mGnssMeasurements(nullptr),
     mBatchSize(0), mDesiredBatchSize(0),
     mTripBatchSize(0), mDesiredTripBatchSize(0),
-    mUseBatching1_0(1),
     mIsFirstFinalFixReported(false),
     mIsFirstStartFixReq(false),
     mHlosQtimer1(0),
@@ -394,12 +393,6 @@ LocApiV02 :: LocApiV02(LOC_API_ADAPTER_EVENT_MASK_T exMask,
   mCurrentCycleSlipCountMapNHz.clear();
 
   UTIL_READ_CONF(LOC_PATH_GPS_CONF, gps_conf_param_table);
-
-  loc_param_s_type flp_conf_param_table[] =
-  {
-      {"USE_LB_1_0", &mUseBatching1_0, NULL, 'n'}
-  };
-  UTIL_READ_CONF(LOC_PATH_BATCHING_CONF, flp_conf_param_table);
 }
 
 /* Destructor for LocApiV02 */
@@ -11598,10 +11591,6 @@ LocApiV02::startBatching(uint32_t sessionId,
     } else {
         startBatchReq.minInterval = FLP_BATCHING_MINIMUN_INTERVAL; // 1 second
     }
-
-    // distance
-    startBatchReq.minDistance_valid = mUseBatching1_0 ? 0 : 1;
-    startBatchReq.minDistance = options.minDistance;
 
     // accuracy
     startBatchReq.horizontalAccuracyLevel_valid = 1;
