@@ -130,7 +130,8 @@ typedef uint64_t GpsSvMeasHeaderFlags;
 
 #define BIAS_GLOG1_VALID                0x10000000
 #define BIAS_GLOG1_UNC_VALID            0x20000000
-
+#define BIAS_NAVICL5_NAVICL1_VALID      0x40000000
+#define BIAS_NAVICL5_NAVICL1_UNC_VALID  0x80000000
 
 typedef struct {
     uint64_t flags;
@@ -168,6 +169,8 @@ typedef struct {
     float bdsB1_bdsB2biUnc;
     float gloG1;
     float gloG1Unc;
+    float navicL5_navicL1;
+    float navicL5_navicL1Unc;
 } timeBiases;
 
 typedef struct {
@@ -320,6 +323,9 @@ private:
 
   static GnssSignalTypeMask convertQmiGnssSignalType(
         qmiLocGnssSignalTypeMaskT_v02 qmiGnssSignalType);
+
+  static Gnss_LocSignalEnumType convertQmiGnssSignalEnumType(
+        qmiLocGnssSignalTypeEnumT_v02 qmiGnssSignalType);
 
   void convertOsnmaTreeNode(qmiLocOsnmaTreeNodeT_v02& out, mgpOsnmaTreeNodeT& in);
   void convertPublicKeyAndMerkleTreeStruct(qmiLocOsnmaPublicKeyMerkleTreeReqMsgT_v02& qmiOut,
@@ -647,6 +653,8 @@ public:
 
   virtual void configPrecisePositioning(uint32_t featureId, bool enable,
           const std::string& appHash, LocApiResponse* adapterResponse=nullptr);
+  virtual void configPrecisePositioning(PreciseType preciseType, bool enable,
+          LocApiResponse* adapterResponse=nullptr);
   /* Requests for SV/Constellation Control */
   virtual LocationError setBlacklistSvSync(const GnssSvIdConfig& config);
   virtual void setBlacklistSv(const GnssSvIdConfig& config,
@@ -670,6 +678,9 @@ public:
 
   virtual void getConstellationMultiBandConfig(uint32_t sessionId,
                                       LocApiResponse* adapterResponse=nullptr);
+
+  virtual void injectSuplCert(int32_t suplCertId, const std::vector<uint8_t>& suplCertData,
+            LocApiResponse* adapterResponse=nullptr);
 
   locClientStatusEnumType locSyncSendReq(uint32_t req_id, locClientReqUnionType req_payload,
           uint32_t timeout_msec, uint32_t ind_id, void* ind_payload_ptr);
