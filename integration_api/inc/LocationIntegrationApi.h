@@ -157,6 +157,10 @@ enum LocConfigTypeEnum{
     /** Register the callback to get update on GNSS signal type
      *  capabilities. <br/> */
     REGISTER_SIGNAL_TYPES_UPDATE = 106,
+    /** Send out User Consent for XTRA service
+     *  status. <br/> */
+    CONFIG_XTRA_USER_CONSENT = 107,
+
 } ;
 
 /**
@@ -631,6 +635,11 @@ struct XtraStatus {
      *  For all other XtraDataStatus, this field will be set to
      *  0. <br/> */
     uint32_t xtraValidForHours;
+    /** Status field to reflect end user Intent to avail
+     *  XTRA Assistance service.
+     *  If the end user hasn’t called setUserConsentForXtra(),
+     *  the default status is Opt-In/true */
+    bool userConsent;
 };
 
 /**
@@ -2026,6 +2035,31 @@ public:
                 further processing. <br/>
     */
     bool injectMapMatchedData (const mapMatchedFeedbackData& mapData);
+
+    /** @brief
+        This API allows customers to indicate the end user intent
+        (Opt-In or Opt-Out) to allow use of XTRA assistance service. <br/>
+
+        When the client sets the end user intent to false (Opted-Out),
+        the XTRA assistance service will be disabled. <br/>
+
+        The status of the intent will remain effective across power cycles, until
+        this API is called with a different value.  <br/>
+
+        @param
+        true: client indicates that End User Opted-In to use of XTRA assistance service.
+        false: client indicates that End User Opted-Out of use of XTRA assistance service.
+
+        @return true, if client intent has been accepted for further processing.
+                When returning true, LocConfigCb() will be invoked to deliver
+                asynchronous processing status. <br/>
+
+        @return false, if client intent  has not been accepted for further
+                processing. When returning false, no further processing
+                will be performed and LocConfigCb() will not be invoked.
+                <br/>
+    */
+    bool setUserConsentForXtra(bool userConsent);
 
     /** @example example1:testGetConfigApi
     * <pre>
