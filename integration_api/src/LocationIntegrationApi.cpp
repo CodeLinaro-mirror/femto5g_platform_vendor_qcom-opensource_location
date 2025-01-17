@@ -695,6 +695,16 @@ bool LocationIntegrationApi::configEngineIntegrityRisk(
     }
 }
 
+bool LocationIntegrationApi::setUserConsentForXtra(bool userConsent) {
+
+    if (mApiImpl) {
+        return (mApiImpl->configureUserConsentForXtra(userConsent) == 0);
+    } else {
+        LOC_LOGe ("NULL mApiImpl");
+        return false;
+    }
+}
+
 // Convert LCA basic loation report to HAL location defined in
 // LocationDataType.h
 static void convertLocation(const location_client::Location& location,
