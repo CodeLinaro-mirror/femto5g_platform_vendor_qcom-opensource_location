@@ -376,7 +376,6 @@ LocApiV02 :: LocApiV02(LOC_API_ADAPTER_EVENT_MASK_T exMask,
     mHlosQtimer1(0),
     mHlosQtimer2(0),
     mRefFCount(0),
-    mMeasElapsedRealTimeCal(600000000),
     mTimeBiases{},
     mPlatformPowerState(eQMI_LOC_POWER_STATE_UNKNOWN_V02),
     mIsFullTracking(true),
@@ -5675,62 +5674,7 @@ void LocApiV02::reportGnssMeasurementData(
     }
     if (gnss_measurement_report_ptr.maxMessageNum == gnss_measurement_report_ptr.seqNum &&
         maxSubSeqNum == subSeqNum) {
-        int64_t elapsedRealTime = -1;
-        int64_t unc;
-        if (gnss_measurement_report_ptr.refCountTicks_valid &&
-            gnss_measurement_report_ptr.refCountTicksUnc_valid) {
-            /* deal with Qtimer for ElapsedRealTimeNanos */
-            elapsedRealTime = RealtimeEstimator::getElapsedRealtimeQtimer(
-                    gnss_measurement_report_ptr.refCountTicks);
 
-            /* Uncertainty on HLOS time is 0, so the uncertainty of the difference
-            is the uncertainty of the Qtimer in the modem
-            Note that gnss_measurement_report_ptr.refCountTicksUncis in msec */
-            unc = gnss_measurement_report_ptr.refCountTicksUnc * 1000000;
-#ifdef PTP_SUPPORTED
-            uint64_t elapsedgPTPTime = 0;
-            /* deal with gPTP time */
-            /* Fill PTP time corresponding to Time of generation of meas packet */
-            if (!mIsGptpInitialized && gptpInit()) {
-                mIsGptpInitialized = true;
-            }
-
-            if (mIsGptpInitialized) {
-                bool gotMPQTickPtpTime = gptpGetPtpTimeFromQTimeTickCount(&elapsedgPTPTime,
-                        gnss_measurement_report_ptr.refCountTicks);
-                if (gotMPQTickPtpTime) {
-                    measData.clock.flags |= GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_GPTP_TIME_BIT;
-                    measData.clock.elapsedgPTPTime = elapsedgPTPTime;
-                    measData.clock.elapsedgPTPTimeUnc = unc;
-                    measData.clock.flags |= GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_GPTP_TIME_UNC_BIT;
-                }
-            }
-#endif
-        } else {
-            //If Qtimer isn't valid, estimate the elapsedRealTime
-            GnssMeasurementsNotification& in = mGnssMeasurements->gnssMeasNotification;
-            const uint32_t UTC_TO_GPS_SECONDS = 315964800;
-            int64_t measTimeNanos = (int64_t)in.clock.timeNs - (int64_t)in.clock.fullBiasNs
-                    - (int64_t)in.clock.biasNs - (int64_t)in.clock.leapSecond * 1000000000
-                    + (int64_t)UTC_TO_GPS_SECONDS * 1000000000;
-            bool isCurDataTimeTrustable =
-                    in.clock.flags & GNSS_MEASUREMENTS_CLOCK_FLAGS_LEAP_SECOND_BIT &&
-                    in.clock.flags & GNSS_MEASUREMENTS_CLOCK_FLAGS_FULL_BIAS_BIT &&
-                    in.clock.flags & GNSS_MEASUREMENTS_CLOCK_FLAGS_BIAS_BIT &&
-                    in.clock.flags & GNSS_MEASUREMENTS_CLOCK_FLAGS_BIAS_UNCERTAINTY_BIT;
-            elapsedRealTime = mMeasElapsedRealTimeCal.
-                    getElapsedRealtimeEstimateNanos(measTimeNanos, isCurDataTimeTrustable, 0);
-            unc = mMeasElapsedRealTimeCal.getElapsedRealtimeUncNanos();
-        }
-
-        if (-1 == elapsedRealTime) {
-            elapsedRealTime = getBootTimeMilliSec() * 1000000;
-            unc = mMeasElapsedRealTimeCal.getElapsedRealtimeUncNanos();
-        }
-        measData.clock.flags |= GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_BIT;
-        measData.clock.elapsedRealTime = elapsedRealTime;
-        measData.clock.flags |= GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_UNC_BIT;
-        measData.clock.elapsedRealTimeUnc = unc;
         measData.isFullTracking = mIsFullTracking;
 
         //AGC Status
@@ -10834,10 +10778,6 @@ LocApiV02::startTimeBasedTracking(const TrackingOptions& options, LocApiResponse
     LOC_LOGI("startTimeBasedTracking: minInterval %u, mode %u",
              options.minInterval, options.mode);
     LocationError err = LOCATION_ERROR_SUCCESS;
-
-    if (!mInSession) {
-        mMeasElapsedRealTimeCal.reset();
-    }
 
     // BOOT KPI marker, print only once for a session
     if (false == mInSession) {
