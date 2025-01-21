@@ -335,6 +335,9 @@ ELocMsgID LocationApiPbMsgConv::getEnumForPBELocMsgID(const PBELocMsgID &pbLocMs
         case PB_E_INTAPI_CONFIG_MAP_MATCHED_FEEDBACK_MSG_ID:
             eLocMsgId = E_INTAPI_CONFIG_MAP_MATCHED_FEEDBACK_MSG_ID;
             break;
+        case PB_E_INTAPI_CONFIG_XTRA_USER_CONSENT_MSG_ID:
+            eLocMsgId = E_INTAPI_CONFIG_XTRA_USER_CONSENT_MSG_ID;
+            break;
         default:
             break;
     }
@@ -1138,6 +1141,10 @@ PBELocMsgID LocationApiPbMsgConv::getPBEnumForELocMsgID(const ELocMsgID &eLocMsg
         case E_INTAPI_CONFIG_MAP_MATCHED_FEEDBACK_MSG_ID:
             pbLocMsgId = PB_E_INTAPI_CONFIG_MAP_MATCHED_FEEDBACK_MSG_ID;
             break;
+        case E_INTAPI_CONFIG_XTRA_USER_CONSENT_MSG_ID:
+            pbLocMsgId = PB_E_INTAPI_CONFIG_XTRA_USER_CONSENT_MSG_ID;
+            break;
+
         default:
             break;
     }
@@ -4022,9 +4029,11 @@ int LocationApiPbMsgConv::convertXtraStatusToPB(
     if (xtraStatus.featureEnabled == true) {
         pbXtraStatus->set_xtradatastatus(getPBEnumForXtraDataStatus(xtraStatus.xtraDataStatus));
         pbXtraStatus->set_xtravalidforhours(xtraStatus.xtraValidForHours);
+        pbXtraStatus->set_userconsentstatus(xtraStatus.userConsentStatus);
     }
-    LOC_LOGv("pb xtra status %d %d %d", pbXtraStatus->featureenabled(),
-             pbXtraStatus->xtradatastatus(), pbXtraStatus->xtravalidforhours());
+    LOC_LOGv("pb xtra status %d %d %d %d", pbXtraStatus->featureenabled(),
+            pbXtraStatus->xtradatastatus(), pbXtraStatus->xtravalidforhours(),
+            pbXtraStatus->userconsentstatus());
     return 0;
 }
 
@@ -4033,6 +4042,7 @@ int LocationApiPbMsgConv::pbConvertToXtraStatus(
     xtraStatus.featureEnabled = pbXtraStatus.featureenabled();
     xtraStatus.xtraDataStatus = getXtraDataStatusFromPB(pbXtraStatus.xtradatastatus());
     xtraStatus.xtraValidForHours = pbXtraStatus.xtravalidforhours();
+    xtraStatus.userConsentStatus = pbXtraStatus.userconsentstatus();
     return 0;
 }
 
