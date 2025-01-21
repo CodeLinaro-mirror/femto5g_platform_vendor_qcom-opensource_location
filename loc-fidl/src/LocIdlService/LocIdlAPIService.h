@@ -120,22 +120,27 @@ public:
     ) const;
 
     /** Utility functions to support Location reports */
-    LocationTypes::LocationReportT parseLocationReport
+    void handleGnssLocationReport
     (
         const ::GnssLocation &lcaLoc
     ) const;
 
-    LocationTypes::GnssSvDataT parseGnssSvReport
+    void handleEngineLocationReport
     (
-        const location_client::GnssSv& gnssSvs
+        const std::vector<::GnssLocation> engLocations
     ) const;
 
-    LocationTypes::GnssMeasurementsT parseGnssMeasurements
+    void handleGnssSvReport
+    (
+        const std::vector<::GnssSv>& gnssSvs
+    ) const;
+
+    void handleGnssMeasurements
     (
         const location_client::GnssMeasurements& gnssMeasurements
     ) const;
 
-    LocationTypes::GnssDataT parseGnssDataReport
+    void handleGnssDataReport
     (
         const location_client::GnssData& gnssData
     ) const;
@@ -144,6 +149,11 @@ public:
     (
         const location_client::LocationResponse lcaResponse
     ) const;
+
+    void handleGnssNmeaReport(uint64_t timestamp, string nmea) const;
+
+    void handleEngineNmeaReport(::LocOutputEngineType engType,
+        uint64_t timestamp, string nmea) const;
 
     void onPowerEvent(IDLPowerStateType powerEvent);
     void injectMapMatchedFeedbackData
