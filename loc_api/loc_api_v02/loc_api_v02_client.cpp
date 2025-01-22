@@ -29,7 +29,7 @@
  /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -281,10 +281,6 @@ static const locClientEventIndTableStructT locClientEventIndTable[]= {
   // XTRA config query request
   { QMI_LOC_EVENT_QUERY_XTRA_INFO_REQ_IND_V02,
     sizeof(qmiLocEventQueryXtraInfoReqIndMsgT_v02)},
-
-  // Latency information ind
-  { QMI_LOC_LATENCY_INFORMATION_IND_V02,
-    sizeof(qmiLocLatencyInformationIndMsgT_v02)},
 
   // platform power state event ind
   { QMI_LOC_EVENT_PLATFORM_POWER_STATE_CHANGED_IND_V02,
