@@ -137,6 +137,7 @@ public:
     uint32_t parseSignalType (uint32_t idlSignalType);
     uint32_t parseDrSolutionStatusMask(uint32_t idlDrSolMask);
     uint32_t parseEngMask(uint32_t idlEngMask);
+    GnssMeasurementsCodeType parseMeasCodeType(uint32_t idlMeasCodeType);
 private:
    static LocIdlClientDevice* mInstance;
 };

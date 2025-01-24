@@ -426,6 +426,65 @@ uint32_t LocIdlClientDevice::parseEngMask(uint32_t idlEngMask) {
     return engMask;
 }
 
+GnssMeasurementsCodeType LocIdlClientDevice::parseMeasCodeType(uint32_t idlMeasCodeType) {
+    GnssMeasurementsCodeType measCodeType = GNSS_MEASUREMENTS_CODE_TYPE_A;
+
+    switch(idlMeasCodeType) {
+       case LocationTypes::GnssMeasCodeTypeT::GNSS_MEAS_CODE_TYPE_A:
+           measCodeType = GNSS_MEASUREMENTS_CODE_TYPE_A;
+       break;
+
+       case LocationTypes::GnssMeasCodeTypeT::GNSS_MEAS_CODE_TYPE_B:
+           measCodeType = GNSS_MEASUREMENTS_CODE_TYPE_B;
+       break;
+
+       case LocationTypes::GnssMeasCodeTypeT::GNSS_MEAS_CODE_TYPE_I:
+           measCodeType = GNSS_MEASUREMENTS_CODE_TYPE_I;
+       break;
+
+       case LocationTypes::GnssMeasCodeTypeT::GNSS_MEAS_CODE_TYPE_L:
+           measCodeType = GNSS_MEASUREMENTS_CODE_TYPE_L;
+       break;
+
+       case LocationTypes::GnssMeasCodeTypeT::GNSS_MEAS_CODE_TYPE_M:
+           measCodeType = GNSS_MEASUREMENTS_CODE_TYPE_M;
+       break;
+
+       case LocationTypes::GnssMeasCodeTypeT::GNSS_MEAS_CODE_TYPE_P:
+           measCodeType = GNSS_MEASUREMENTS_CODE_TYPE_P;
+       break;
+
+       case LocationTypes::GnssMeasCodeTypeT::GNSS_MEAS_CODE_TYPE_Q:
+           measCodeType = GNSS_MEASUREMENTS_CODE_TYPE_Q;
+       break;
+
+       case LocationTypes::GnssMeasCodeTypeT::GNSS_MEAS_CODE_TYPE_S:
+           measCodeType = GNSS_MEASUREMENTS_CODE_TYPE_S;
+       break;
+
+       case LocationTypes::GnssMeasCodeTypeT::GNSS_MEAS_CODE_TYPE_W:
+          measCodeType = GNSS_MEASUREMENTS_CODE_TYPE_W;
+       break;
+
+       case LocationTypes::GnssMeasCodeTypeT::GNSS_MEAS_CODE_TYPE_X:
+           measCodeType = GNSS_MEASUREMENTS_CODE_TYPE_X;
+       break;
+
+       case LocationTypes::GnssMeasCodeTypeT::GNSS_MEAS_CODE_TYPE_Y:
+           measCodeType = GNSS_MEASUREMENTS_CODE_TYPE_Y;
+       break;
+
+       case LocationTypes::GnssMeasCodeTypeT::GNSS_MEAS_CODE_TYPE_Z:
+           measCodeType = GNSS_MEASUREMENTS_CODE_TYPE_Z;
+       break;
+
+       case LocationTypes::GnssMeasCodeTypeT::GNSS_MEAS_CODE_TYPE_OTHER:
+           measCodeType = GNSS_MEASUREMENTS_CODE_TYPE_OTHER;
+       break;
+    }
+
+    return measCodeType;
+}
 
 void LocIdlClientDevice::getLocationRpt(
                             const LocationTypes::LocationReportT &_locationReport,
@@ -1586,6 +1645,22 @@ void LocIdlClientDevice::getMeasurementSet(const LocationTypes::GnssMeasurements
                             LOC_IDL_CLIENT_DIAG_GNSS_MEASUREMENTS_DATA_FULL_ISB_UNCERTAINTY_BIT;
             gnssMeasDiag.measurements[idx].basebandCarrierToNoiseDbHz =
                                     measData[idx].getBasebandCarrierToNoiseDbHz();
+        }
+
+        if (flags &
+            LocationTypes::GnssMeasurementsDataFlagsMaskT::
+                GMDFMT_CODE_TYPE_BIT) {
+            svMeasurementSet.gnssMeasNotification.measurements[idx].codeType =
+                                        parseMeasCodeType(measData[idx].getMeasCodeType());
+        }
+
+        if (flags &
+            LocationTypes::GnssMeasurementsDataFlagsMaskT::
+                GMDFMT_OTHER_MEAS_CODE_TYPE_BIT) {
+            uint32_t sizeInBuff =
+                sizeof(svMeasurementSet.gnssMeasNotification.measurements[idx].otherCodeTypeName);
+            strlcpy(svMeasurementSet.gnssMeasNotification.measurements[idx].otherCodeTypeName,
+                                        measData[idx].getOtherCodeTypeName().c_str(), sizeInBuff);
         }
 
         if (tempAgc.svType && tempAgc.agcLevelDb && tempAgc.carrierFrequencyHz) {
