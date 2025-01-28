@@ -392,7 +392,7 @@ static void regSigHandler()
 int main()
 {
     LOC_LOGD("%s] --> ", __func__);
-    setenv("VSOMEIP_CONFIGURATION", "/vendor/etc/vsomeip-client.json", 1);
+    setenv("VSOMEIP_CONFIGURATION", "/vendor/etc/vsomeip_vlan1500.json", 1);
     setenv("COMMONAPI_CONFIG", "/vendor/etc/commonapi4someip.ini" ,1);
     LocIdlClientDevice *pInstance = NULL;
     pInstance = LocIdlClientDevice::getInstance();
