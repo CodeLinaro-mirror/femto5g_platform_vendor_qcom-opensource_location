@@ -403,7 +403,6 @@ uint32_t LocIdlClientDevice::parseSignalType (uint32_t idlSignalType)
             gnssSignalType = GNSS_SIGNAL_BEIDOU_B2BQ;
             break;
     }
-    LOC_LOGE("idlSignalType %u gnssSignalType %u", idlSignalType, gnssSignalType);
     return gnssSignalType;
 }
 
