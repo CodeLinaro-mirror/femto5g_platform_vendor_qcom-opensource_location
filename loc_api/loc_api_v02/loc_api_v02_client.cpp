@@ -1763,12 +1763,6 @@ bool validateRequest(
         break;
     }
 
-    case QMI_LOC_INJECT_RAW_DATA_REQ_V02:
-    {
-        *pOutLen = sizeof(qmiLocInjectRawDataReqMsgT_v02);
-        break;
-    }
-
     case QMI_LOC_SET_TRIBAND_STATE_REQ_V02:
     {
         *pOutLen = sizeof(qmiLocSetTribandStateReqMsgT_v02);

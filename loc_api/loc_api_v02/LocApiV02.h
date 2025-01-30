@@ -244,14 +244,12 @@ private:
   CycleSlipCountMap mCurrentCycleSlipCountMapNHz;
 
   GnssMeasurements*  mGnssMeasurements;
-  bool mPreferredSignalTypeReceived;
   timeBiases mTimeBiases;
   std::unordered_map<uint16_t, GnssSvPolynomial> mSvPolynomialMap;
   qmiLocPlatformPowerStateEnumT_v02 mPlatformPowerState;
 
   size_t mBatchSize, mDesiredBatchSize;
   size_t mTripBatchSize, mDesiredTripBatchSize;
-  int mUseBatching1_0;
   bool mIsFirstFinalFixReported;
   bool mIsFirstStartFixReq;
   uint64_t mHlosQtimer1, mHlosQtimer2;
@@ -259,7 +257,7 @@ private:
   std::string mPackageName[eQMI_LOC_NTN_V02+1];
   bool mIsFullTracking;
   qmiLocGnssSignalTypeMaskT_v02 mPreferredSignalType;
-  referenceSignalTypeForIsb mReferenceSignalTypeForIsb;
+  GnssSvType mPreferredSvSystemType;
   ModemGnssQesdkFeatureMask mQesdkFeatureMask;
   // GPTP inititialization
   bool mIsGptpInitialized;
@@ -277,6 +275,9 @@ private:
 
   /* Convert GPS LOCK from LocationAPI format to QMI format */
   static qmiLocLockEnumT_v02 convertGpsLockFromAPItoQMI(GnssConfigGpsLock lock);
+
+  /* Convert GPS LOCK to QMI Client Config Mask */
+  static qmiLocClientsMaskT_v02 convertGpsLock(GnssConfigGpsLock lock);
 
   /* Convert Engine Lock State from QMI format to LocationAPI format */
   static EngineLockState convertEngineLockState(qmiLocEngineLockStateEnumT_v02 LockState);
@@ -407,7 +408,6 @@ private:
               sizeof(GnssSvMeasurementHeader);
       }
       memset(&mTimeBiases, 0, sizeof(mTimeBiases));
-      mPreferredSignalTypeReceived = false;
   }
 
   void convertJammerIndicator(
@@ -421,8 +421,6 @@ private:
         GnssSvType& svType);
 
   void setGnssBiasesForL1CA();
-  void setGnssBiasesForB1I();
-  void setGnssBiases();
 
   /* convert and report ODCPI request */
   void requestOdcpi(
@@ -480,6 +478,7 @@ private:
             const qmiLocGnssBandsSupportedIndMsgT_v02* pGnssBandsSupportedIndMsg);
 
   GnssMeasurementsCodeType getCodeType(qmiLocGnssSignalTypeMaskT_v02 gnssSignalType);
+  GnssSvType getSvTypeFromSignalType(qmiLocGnssSignalTypeMaskT_v02 gnssSignalType);
   void updateGnssCapabNotification(GnssCapabNotification& gnssCapabNotification,
                                    qmiLocGnssSignalTypeMaskT_v02 gnssSignalType);
 
