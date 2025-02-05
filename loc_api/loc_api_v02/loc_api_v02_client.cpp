@@ -450,9 +450,6 @@ static const locClientRespIndTableStructT locClientRespIndTable[]= {
    { QMI_LOC_SET_PREMIUM_SERVICES_CONFIG_IND_V02,
      sizeof(qmiLocSetPremiumServicesCfgIndMsgT_v02)},
 
-   { QMI_LOC_GET_AVAILABLE_WWAN_POSITION_IND_V02,
-     sizeof(qmiLocGetAvailWwanPositionIndMsgT_v02)},
-
    { QMI_LOC_SET_GNSS_CONSTELL_REPORT_CONFIG_IND_V02,
      sizeof(qmiLocSetGNSSConstRepConfigIndMsgT_v02)},
 
@@ -1280,12 +1277,6 @@ bool validateRequest(
     case QMI_LOC_SET_PREMIUM_SERVICES_CONFIG_REQ_V02:
     {
         *pOutLen = sizeof(qmiLocSetPremiumServicesCfgReqMsgT_v02);
-        break;
-    }
-
-    case QMI_LOC_GET_AVAILABLE_WWAN_POSITION_REQ_V02:
-    {
-        *pOutLen = sizeof(qmiLocGetAvailWwanPositionReqMsgT_v02);
         break;
     }
 

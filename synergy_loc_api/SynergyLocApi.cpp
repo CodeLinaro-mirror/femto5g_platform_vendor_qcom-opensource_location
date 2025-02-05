@@ -61,6 +61,13 @@ IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+
+/*
+Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
+Copyright (c) 2025 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
+
 #define LOG_NDEBUG 0
 #define LOG_TAG "SynergyLoc_Api"
 
@@ -508,13 +515,7 @@ void handleSllReportGnssMeasurementData(GnssMeasurements &measurements,
        None.
 */
 void handleSllReportWwanZppFix(LocGpsLocation &zppLoc, void *context) {
-
-    if (nullptr != context) {
-        SynergyLocApi *synergyLocApiInstance = (SynergyLocApi*)context;
-        synergyLocApiInstance->reportWwanZppFix(zppLoc);
-    } else {
-        LOC_LOGw ("Context is NULL");
-    }
+   LOC_LOGw ("Default Implementation");
 }
 
 /**
@@ -1995,37 +1996,6 @@ SynergyLocApi::setLPPeProtocolUpSync(GnssConfigLppeUserPlaneMask lppeUP) {
 
 }
 
-
-/**
-   Request for WWAN ZPP Fix- Position reprot.
-
-   @param
-        None
-
-   @return
-        None
-
-   @dependencies
-       None.
-*/
-void SynergyLocApi::getWwanZppFix() {
-
-    sendMsg(new LocApiMsg([this] () {
-        enum loc_api_adapter_err rtv = LOC_API_ADAPTER_ERR_SUCCESS;
-
-        if ((nullptr != sllReqIf) && (nullptr != sllReqIf->sllGetWwanZppFix)) {
-            rtv= sllReqIf->sllGetWwanZppFix((void *)this);
-            if (LOC_API_ADAPTER_ERR_SUCCESS != rtv) {
-                 LOC_LOGe("Error: %d", rtv);
-            }
-        } else {
-            rtv = LOC_API_ADAPTER_ERR_UNSUPPORTED;
-        }
-        LOC_LOGd("Status: %d", rtv);
-    }));
-
-}
-
 /**
    Request for Best Available ZPP Fix- Position reprot.
 
@@ -2055,7 +2025,6 @@ void SynergyLocApi::getBestAvailableZppFix() {
     }));
 
 }
-
 
 /**
    Set GPS Lock.

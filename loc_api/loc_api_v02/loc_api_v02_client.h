@@ -529,10 +529,6 @@ typedef union
     /* QMI_LOC_RELEASE_BATCHING_REQ_V02 */
     const qmiLocSetPremiumServicesCfgReqMsgT_v02 *pSetPremiumServicesCfgReq;
     /*QMI_LOC_SET_PREMIUM_SERVICES_CONFIG_REQ_V02*/
-
-    const qmiLocGetAvailWwanPositionReqMsgT_v02 *pGetAvailWwanPositionReq;
-    /*QMI_LOC_GET_AVAILABLE_WWAN_POSITION_REQ_V02*/
-
     const qmiLocSetXtraVersionCheckReqMsgT_v02 *pSetXtraVersionCheckReq;
     /*  QMI_LOC_SET_XTRA_VERSION_CHECK_REQ_V02 */
     const qmiLocSetGNSSConstRepConfigReqMsgT_v02 *pSetGNSSConstRepConfigReq;
@@ -1086,9 +1082,6 @@ typedef union
     /* QMI_LOC_NOTIFY_WIFI_ATTACHMENT_STATUS_REQ_V02 */
     const qmiLocNotifyWifiEnabledStatusIndMsgT_v02 *pNotifyWifiEnabledStatusInd;
     /* QMI_LOC_NOTIFY_WIFI_ENABLED_STATUS_REQ_V02 */
-
-    const qmiLocGetAvailWwanPositionIndMsgT_v02 *pGetAvailWwanPositionInd;
-    /*QMI_LOC_GET_AVAILABLE_WWAN_POSITION_IND_V02*/
 
     const qmiLocSetXtraVersionCheckIndMsgT_v02 *pSetXtraVersionCheckInd;
     /*QMI_LOC_SET_XTRA_VERSION_CHECK_IND_V02*/
