@@ -278,6 +278,23 @@ void LocIdlClientDevice::sendPosRespEvent(
     getLocationRpt(_locationReport, ulpLoc, gnssPosDiag);
     getLocationExtendedRpt(_locationReport, gpsLocExt, gnssPosDiag);
 
+    if (GPS_LOCATION_EXTENDED_HAS_LLA_VRP_BASED ==
+       (gpsLocExt.flags & GPS_LOCATION_EXTENDED_HAS_LLA_VRP_BASED)) {
+        ulpLoc.gpsLocation.flags |= LOC_GPS_LOCATION_HAS_LAT_LONG;
+        ulpLoc.gpsLocation.latitude  = gpsLocExt.llaVRPBased.latitude;
+        ulpLoc.gpsLocation.longitude = gpsLocExt.llaVRPBased.longitude;
+        ulpLoc.gpsLocation.altitude  = gpsLocExt.llaVRPBased.altitude;
+
+        if (LOC_IDL_CLIENT_DIAG_GNSS_LOCATION_INFO_LLA_VRP_BASED_BIT ==
+           (gnssPosDiag.gnssInfoFlags &
+            LOC_IDL_CLIENT_DIAG_GNSS_LOCATION_INFO_LLA_VRP_BASED_BIT)) {
+            gnssPosDiag.flags |=  LOC_IDL_CLIENT_DIAG_LOCATION_HAS_LAT_LONG_BIT;
+            gnssPosDiag.latitude  = gnssPosDiag.llaVRPBased.latitude;
+            gnssPosDiag.longitude = gnssPosDiag.llaVRPBased.longitude;
+            gnssPosDiag.altitude  = gnssPosDiag.llaVRPBased.altitude;
+        }
+    }
+
     msg->posRpt.loc_technology_mask = ulpLoc.tech_mask;
     msg->posRpt.msInWeek = gpsLocExt.gpsTime.gpsWeek;
     msg->posRpt.status = status;
