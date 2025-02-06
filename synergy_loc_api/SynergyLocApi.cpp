@@ -534,14 +534,7 @@ void handleSllReportWwanZppFix(LocGpsLocation &zppLoc, void *context) {
 void handleSllReportZppBestAvailableFix(LocGpsLocation &zppLoc,
     GpsLocationExtended &location_extended, LocPosTechMask tech_mask, void *context) {
 
-    if (nullptr != context) {
-        SynergyLocApi *synergyLocApiInstance = (SynergyLocApi*)context;
-        synergyLocApiInstance->reportZppBestAvailableFix(zppLoc,
-                    location_extended, tech_mask);
-    } else {
-        LOC_LOGw ("Context is NULL");
-    }
-
+   LOC_LOGw ("Default Implementation");
 }
 
 /**
@@ -1993,36 +1986,6 @@ SynergyLocApi::setLPPeProtocolUpSync(GnssConfigLppeUserPlaneMask lppeUP) {
     }
 
     return err;
-
-}
-
-/**
-   Request for Best Available ZPP Fix- Position reprot.
-
-   @param
-        None
-
-   @return
-        None
-
-   @dependencies
-       None.
-*/
-void SynergyLocApi::getBestAvailableZppFix() {
-
-    sendMsg(new LocApiMsg([this] () {
-        enum loc_api_adapter_err rtv = LOC_API_ADAPTER_ERR_SUCCESS;
-
-        if ((nullptr != sllReqIf) && (nullptr != sllReqIf->sllGetWwanZppFix)) {
-            rtv= sllReqIf->sllGetWwanZppFix((void *)this);
-            if (LOC_API_ADAPTER_ERR_SUCCESS != rtv) {
-                 LOC_LOGe("Error: %d", rtv);
-            }
-        } else {
-            rtv = LOC_API_ADAPTER_ERR_UNSUPPORTED;
-        }
-        LOC_LOGd("Status: %d", rtv);
-    }));
 
 }
 

@@ -593,9 +593,6 @@ public:
       setAGLONASSProtocolSync(GnssConfigAGlonassPositionProtocolMask aGlonassProtocol);
   virtual LocationError setLPPeProtocolCpSync(GnssConfigLppeControlPlaneMask lppeCP);
   virtual LocationError setLPPeProtocolUpSync(GnssConfigLppeUserPlaneMask lppeUP);
-  virtual void
-      handleZppBestAvailableFixIndication(const qmiLocGetBestAvailablePositionIndMsgT_v02 &zpp_ind);
-  virtual void getBestAvailableZppFix();
   virtual bool getBestAvailableZppFixSync(LocGpsLocation &zppLoc,
           LocPosTechMask &tech_mask);
   virtual LocationError setGpsLockSync(GnssConfigGpsLock lock);

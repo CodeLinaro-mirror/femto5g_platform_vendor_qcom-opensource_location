@@ -183,7 +183,6 @@ public:
         setAGLONASSProtocolSync(GnssConfigAGlonassPositionProtocolMask aGlonassProtocol);
     virtual LocationError setLPPeProtocolCpSync(GnssConfigLppeControlPlaneMask lppeCP);
     virtual LocationError setLPPeProtocolUpSync(GnssConfigLppeUserPlaneMask lppeUP);
-    virtual void getBestAvailableZppFix();
     virtual LocationError setGpsLockSync(GnssConfigGpsLock lock);
     virtual void setConstrainedTuncMode(bool enabled,
                                         float tuncConstraint,
