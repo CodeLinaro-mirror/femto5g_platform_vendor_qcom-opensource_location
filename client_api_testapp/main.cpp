@@ -185,6 +185,8 @@ enum TrackingSessionType {
 #define RESUME_GEOFENCES            "resumeGeofences"
 #define MODIFY_GEOFENCES            "modifyGeofences"
 #define REMOVE_GEOFENCES            "removeGeofences"
+#define SET_XTRA_END_USER_CONSENT   "setXtraEndUserConsent"
+
 
 static bool openPort(void)
 {
@@ -609,9 +611,10 @@ static void onGetGnssEnergyConsumedCb(const GnssEnergyConsumedInfo& gnssEneryCon
 }
 
 static void onGetXtraStatusCb(XtraStatusUpdateTrigger updateTrigger, const XtraStatus& xtraStatus) {
-    printf("<<< onXtraStatusCb, update trigger %d, enable %d, status %d, valid hours %d\n",
+    printf("<<< onXtraStatusCb, update trigger %d, enable %d, status %d, valid hours %d, "
+           " UserConsent %d \n",
            updateTrigger, xtraStatus.featureEnabled, xtraStatus.xtraDataStatus,
-           xtraStatus.xtraValidForHours);
+           xtraStatus.xtraValidForHours, xtraStatus.userConsent);
 }
 
 static void onGnssSignalTypesCb(GnssSignalTypeMask signalType) {
@@ -684,6 +687,7 @@ static void printHelp() {
     printf("%s: modify geofences with index/breachtype/responsiveness/dwelltime\n",
             MODIFY_GEOFENCES );
     printf("%s: remove geofences with indexes\n", REMOVE_GEOFENCES );
+    printf("%s: Set xtra end user consent \n", SET_XTRA_END_USER_CONSENT);
 }
 
 void setRequiredPermToRunAsLocClient() {
@@ -2123,6 +2127,7 @@ int main(int argc, char *argv[]) {
     while (1) {
         bool retVal = true;
         char buf[1500];
+        std::string strBuf(buf);
         memset (buf, 0, sizeof(buf));
         fgets(buf, sizeof(buf), stdin);
 
@@ -2550,6 +2555,19 @@ int main(int argc, char *argv[]) {
             }
             if (pLcaClient) {
                 modifyGeofences(buf);
+            }
+        } else if (strBuf.compare(0, strlen(SET_XTRA_END_USER_CONSENT),
+                SET_XTRA_END_USER_CONSENT) == 0) {
+            static char *save = nullptr;
+            bool xtraUserConsent = false;
+            char* token = strtok_r(buf, " ", &save);
+            token = strtok_r(NULL, " ", &save);
+            if (token != NULL) {
+                xtraUserConsent = (atoi(token) != 0);
+            }
+            printf("xtrauserConsent %d\n", xtraUserConsent);
+            if (pIntClient) {
+                pIntClient->setUserConsentForXtra(xtraUserConsent);
             }
         } else {
             int command = buf[0];

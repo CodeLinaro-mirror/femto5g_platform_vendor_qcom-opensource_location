@@ -815,6 +815,18 @@ void LocationApiService::processClientMsg(const char* data, uint32_t length) {
             break;
         }
 
+        case E_INTAPI_CONFIG_XTRA_USER_CONSENT_MSG_ID: {
+            PBLocInjectXtraUserConsentMsg pbLocXtraUserConsentMsg;
+            if (0 == pbLocXtraUserConsentMsg.ParseFromString(pbLocApiMsg.payload())) {
+                LOC_LOGe("Failed to parse pbLocXtraUserConsentMsg from payload!!");
+                return;
+            }
+            LocInjectXtraUserConsentMsg msg(sockName.c_str(), pbLocXtraUserConsentMsg,
+                    &mPbufMsgConv);
+            configXtraUserConsent(reinterpret_cast<LocInjectXtraUserConsentMsg*>(&msg));
+            break;
+        }
+
         default: {
             LOC_LOGe("Unknown message with id: %d ", eLocMsgid);
             break;
@@ -1662,6 +1674,20 @@ void LocationApiService::configMmfData(const LocInjectMmfDataReqMsg* pMsg) {
              pMsg->mSocketName);
 
     uint32_t sessionId = mLocationControlApi->gnssInjectMmfData(pMsg->gnssMapData);
+    addConfigRequestToMap(sessionId, pMsg);
+}
+
+void LocationApiService::configXtraUserConsent(const LocInjectXtraUserConsentMsg* pMsg) {
+
+    if (!pMsg) {
+        return;
+    }
+    std::lock_guard<std::recursive_mutex> lock(mMutex);
+
+    LOC_LOGi(">-- client %s, XtraUser Consent Data ",
+             pMsg->mSocketName);
+
+    uint32_t sessionId = mLocationControlApi->configureUserConsentForXtra(pMsg->xtraUserConsent);
     addConfigRequestToMap(sessionId, pMsg);
 }
 

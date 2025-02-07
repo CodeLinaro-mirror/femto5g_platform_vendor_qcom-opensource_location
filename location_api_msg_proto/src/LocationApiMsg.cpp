@@ -3596,6 +3596,56 @@ int LocInjectMmfDataReqMsg ::serializeToProtobuf(string& protoStr) {
     return protoStr.size();
 }
 
+// Decode PBLocInjectXtraUserConsentMsg -> LocInjectXtraUserConsentMsg
+LocInjectXtraUserConsentMsg::LocInjectXtraUserConsentMsg(const char* name,
+            const PBLocInjectXtraUserConsentMsg &pbLocApiXtraUserConsent,
+            const LocationApiPbMsgConv *pbMsgConv):
+        LocAPIMsgHeader(name, E_INTAPI_CONFIG_XTRA_USER_CONSENT_MSG_ID, pbMsgConv) {
+    if (nullptr == pLocApiPbMsgConv) {
+        LOC_LOGe("pLocApiPbMsgConv is null!");
+        return;
+    }
+    // >>>> PBLocInjectXtraUserConsentMsg conversion
+    // bool userConsent = 1;
+    xtraUserConsent = pbLocApiXtraUserConsent.userconsent();
+}
+
+// Decode LocInjectXtraUserConsentMsg -> PBLocInjectXtraUserConsentMsg
+int LocInjectXtraUserConsentMsg ::serializeToProtobuf(string& protoStr) {
+    PBLocAPIMsgHeader pLocApiMsgHdr;
+    PBLocInjectXtraUserConsentMsg pbLocApiXtraUserConsent;
+
+    if (nullptr == pLocApiPbMsgConv) {
+        LOC_LOGe("pLocApiPbMsgConv is null!");
+        return 0;
+    }
+    // string      mSocketName = 1;
+    pLocApiMsgHdr.set_msocketname(mSocketName);
+    // PBELocMsgID  msgId = 2;
+    pLocApiMsgHdr.set_msgid(pLocApiPbMsgConv->getPBEnumForELocMsgID(msgId));
+    // uint32   msgVersion = 3;
+    pLocApiMsgHdr.set_msgversion(msgVersion);
+
+    // bool userConsent = 1;
+    pbLocApiXtraUserConsent.set_userconsent(xtraUserConsent);
+    string pbStr;
+    if (!pbLocApiXtraUserConsent.SerializeToString(&pbStr)) {
+        LOC_LOGe("SerializeToString on pbLocApiEphInd failed!");
+        return 0;
+    }
+    // bytes       payload = 4;
+    pLocApiMsgHdr.set_payload(pbStr);
+
+    // uint32   payloadSize = 5;
+    pLocApiMsgHdr.set_payloadsize(sizeof(LocInjectXtraUserConsentMsg));
+
+    if (!pLocApiMsgHdr.SerializeToString(&protoStr)) {
+        LOC_LOGe("SerializeToString on pLocApiMsgHdr failed!");
+        return 0;
+    }
+    return protoStr.size();
+}
+
 // SERIALIZE PROTOBUF TO RIGID FORMAT
 // **********************************
 // Convert protobuf msg received to LocApiMsgHeader rigid structures. Protobuf msg received is
