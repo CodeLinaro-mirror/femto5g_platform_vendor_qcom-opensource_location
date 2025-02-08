@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2024- 2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -77,35 +77,8 @@ class LocationTrackingSessCbHandler {
                     mCallbackOptions.gnssLocationCallback =
                             [pClientApiService] (const ::GnssLocation n) {
                         //Convert Location report from LCA to FIDL format
-                        if (pClientApiService->mLcaIdlConverter) {
-                            LocationTypes::LocationReportT idlLocRpt =
-                                    pClientApiService->parseLocationReport(n);
-                            posCount++;
-                            struct timespec curBootTime = {};
-                            clock_gettime(CLOCK_BOOTTIME, &curBootTime);
-                            int64_t curBootTimeNs = ((int64_t)curBootTime.tv_sec * 1000000000) +
-                                    (int64_t)curBootTime.tv_nsec;
-                            int16_t latencyMs = 0;
-                            if (LOCATION_HAS_ELAPSED_REAL_TIME_BIT  & n.flags) {
-                                latencyMs = (int16_t)((curBootTimeNs -
-                                        n.elapsedRealTimeNs)/1000000);
-                            }
-                            if (latencyMs > MAX_POSITION_LATENCY) {
-                                  latentPosCount++;
-                            }
-                            if (posCount % 600 == 0) {
-                                LOC_LOGe("%"PRId64" out of %"PRId64" Position samples are"
-                                         " latent by 20 msec",
-                                        latentPosCount, posCount);
-                            }
-                            idlLocRpt.setReportingLatency(latencyMs);
-                            if (pClientApiService->mDiagLogIface) {
-                                pClientApiService->mDiagLogIface->diagLogGnssReportInfo(
-                                    OUTPUT_PVT_REPORT, latencyMs, latentPosCount);
-                            }
-                            if (pClientApiService->mService) {
-                                pClientApiService->mService->fireGnssLocationReportEvent(idlLocRpt);
-                            }
+                        if (pClientApiService) {
+                                    pClientApiService->handleGnssLocationReport(n);
                         }
                     };
                 }
@@ -113,19 +86,9 @@ class LocationTrackingSessCbHandler {
                         LocationTypes::GnssReportCbInfoMaskT::GRCIMT_SV_CB_INFO_BIT) {
                     mCallbackOptions.gnssSvCallback =
                             [pClientApiService](const std::vector<::GnssSv>& gnssSvs) {
-                        std::vector<LocationTypes::GnssSvDataT> idlSVReportVector;
                         LOC_LOGd("Number of SV's recevived -- %d", gnssSvs.size());
-                        if (pClientApiService->mLcaIdlConverter) {
-                            for (auto GnssSv : gnssSvs) {
-                                //Convert Location report from LCA to FIDL format
-                                LocationTypes::GnssSvDataT idlSVRpt =
-                                    pClientApiService->parseGnssSvReport(GnssSv);
-                                idlSVReportVector.push_back(idlSVRpt);
-                            }
-                            if (pClientApiService->mService) {
-                                pClientApiService->mService->fireGnssSvReportEvent(
-                                        idlSVReportVector);
-                            }
+                        if (pClientApiService) {
+                            pClientApiService->handleGnssSvReport(gnssSvs);
                         }
                     };
                 }
@@ -134,8 +97,8 @@ class LocationTrackingSessCbHandler {
                     mCallbackOptions.nmeaSentencesCallback =
                             [pClientApiService](::LocOutputEngineType engType,
                                     uint64_t timestamp, const std::string nmea) {
-                        if (pClientApiService->mService) {
-                            pClientApiService->mService->fireGnssNmeaEvent(timestamp, nmea);
+                        if (pClientApiService) {
+                            pClientApiService->handleGnssNmeaReport(timestamp, nmea);
                         }
                     };
                 }
@@ -143,25 +106,8 @@ class LocationTrackingSessCbHandler {
                         LocationTypes::GnssReportCbInfoMaskT::GRCIMT_MEAS_CB_INFO_BIT) {
                     mCallbackOptions.gnssMeasurementsCallback =
                             [pClientApiService](const ::GnssMeasurements gnssMeasurements) {
-                        if (pClientApiService->mLcaIdlConverter) {
-                            LocationTypes::GnssMeasurementsT idlGnssMeasurement =
-                                    pClientApiService->parseGnssMeasurements(gnssMeasurements);
-                            struct timespec curBootTime = {};
-                            clock_gettime(CLOCK_BOOTTIME, &curBootTime);
-                            int64_t curBootTimeNs = ((int64_t)curBootTime.tv_sec * 1000000000) +
-                                    (int64_t)curBootTime.tv_nsec;
-                            int16_t latencyMs = 0;
-                            latencyMs = (int16_t)((curBootTimeNs -
-                                    gnssMeasurements.clock.elapsedRealTime)/1000000);
-                            idlGnssMeasurement.setReportingLatency(latencyMs);
-                            if (pClientApiService->mDiagLogIface) {
-                                pClientApiService->mDiagLogIface->diagLogGnssReportInfo(
-                                        OUTPUT_MEAS_REPORT, latencyMs, 0);
-                            }
-                            if (pClientApiService->mService) {
-                                pClientApiService->mService->fireGnssMeasurementReportEvent(
-                                        idlGnssMeasurement);
-                            }
+                        if (pClientApiService) {
+                                    pClientApiService->handleGnssMeasurements(gnssMeasurements);
                         }
                     };
                 }
@@ -171,12 +117,8 @@ class LocationTrackingSessCbHandler {
                     mCallbackOptions.gnssDataCallback =
                             [pClientApiService] (const ::GnssData n) {
                         //Convert GnssData report from LCA to FIDL format
-                        if (pClientApiService->mLcaIdlConverter) {
-                            LocationTypes::GnssDataT idlGnssDataRpt =
-                                    pClientApiService->parseGnssDataReport(n);
-                            if (pClientApiService->mService) {
-                                pClientApiService->mService->fireGnssDataReportEvent(idlGnssDataRpt);
-                            }
+                        if (pClientApiService) {
+                            pClientApiService->handleGnssDataReport(n);
                         }
                     };
                 }
@@ -192,52 +134,19 @@ class LocationTrackingSessCbHandler {
                     LocationTypes::EngineReportCbMaskT::ERCMT_LOCATION_CB_INFO_BIT) {
                     mEngineCallbackOptions.engLocationsCallback =
                             [pClientApiService] (const std::vector<::GnssLocation> &engLocations) {
-                        if (pClientApiService->mLcaIdlConverter) {
-                            std::vector<LocationTypes::LocationReportT> idlEngLocVector;
-                            for (auto gnssLocation : engLocations) {
-                                LocationTypes::LocationReportT idlLocRpt =
-                                        pClientApiService->parseLocationReport(gnssLocation);
-                                struct timespec curBootTime = {};
-                                clock_gettime(CLOCK_BOOTTIME, &curBootTime);
-                                int64_t curBootTimeNs = (
-                                        (int64_t)curBootTime.tv_sec * 1000000000) +
-                                        (int64_t)curBootTime.tv_nsec;
-                                int16_t latencyMs = 0;
-                                if (LOCATION_HAS_ELAPSED_REAL_TIME_BIT  & gnssLocation.flags) {
-                                    latencyMs = (int16_t)((curBootTimeNs -
-                                            gnssLocation.elapsedRealTimeNs)/1000000);
-                                }
-                                idlLocRpt.setReportingLatency(latencyMs);
-                                if (pClientApiService->mDiagLogIface) {
-                                    pClientApiService->mDiagLogIface->diagLogGnssReportInfo(
-                                            OUTPUT_PVT_REPORT, latencyMs, latentPosCount);
-                                }
-                                idlEngLocVector.push_back(idlLocRpt);
-                            }
-                            if (pClientApiService->mService) {
-                                pClientApiService->mService->fireGnssEngineLocationsReportEvent(
-                                        idlEngLocVector);
-                            }
+                        if (pClientApiService) {
+                            pClientApiService->handleEngineLocationReport(engLocations);
                         }
                     };
                 }
-            if (engReportCallbackMask &
+                if (engReportCallbackMask &
                         LocationTypes::EngineReportCbMaskT::ERCMT_SV_CB_INFO_BIT) {
                     mEngineCallbackOptions.gnssSvCallback =
                             [pClientApiService](const std::vector<::GnssSv>& gnssSvs) {
                         std::vector<LocationTypes::GnssSvDataT> idlSVReportVector;
                         LOC_LOGd("Number of SV's recevived -- %d", gnssSvs.size());
-                        if (pClientApiService->mLcaIdlConverter) {
-                            for (auto GnssSv : gnssSvs) {
-                                //Convert Location report from LCA to FIDL format
-                                LocationTypes::GnssSvDataT idlSVRpt =
-                                    pClientApiService->parseGnssSvReport(GnssSv);
-                                idlSVReportVector.push_back(idlSVRpt);
-                            }
-                            if (pClientApiService->mService) {
-                                pClientApiService->mService->fireGnssSvReportEvent(
-                                        idlSVReportVector);
-                            }
+                        if (pClientApiService) {
+                            pClientApiService->handleGnssSvReport(gnssSvs);
                         }
                     };
                 }
@@ -246,8 +155,8 @@ class LocationTrackingSessCbHandler {
                     mEngineCallbackOptions.nmeaSentencesCallback =
                             [pClientApiService](::LocOutputEngineType engType,
                                     uint64_t timestamp, const std::string nmea) {
-                        if (pClientApiService->mService) {
-                            pClientApiService->mService->fireGnssNmeaEvent(timestamp, nmea);
+                        if (pClientApiService) {
+                            pClientApiService->handleGnssNmeaReport(timestamp, nmea);
                         }
                     };
                 }
@@ -256,30 +165,8 @@ class LocationTrackingSessCbHandler {
                     mEngineCallbackOptions.nmeaSentencesCallback =
                             [pClientApiService](::LocOutputEngineType engType,
                                     uint64_t timestamp, const std::string nmea) {
-                        LocationTypes::LocOutputEngineTypeT idlEngType =
-                                LocationTypes::LocOutputEngineTypeT::LOETT_COUNT;
-                        switch (engType)  {
-                            case LOC_OUTPUT_ENGINE_FUSED:
-                                idlEngType =
-                                    LocationTypes::LocOutputEngineTypeT::LOETT_FUSED;
-                                break;
-                            case LOC_OUTPUT_ENGINE_SPE:
-                                idlEngType = LocationTypes::LocOutputEngineTypeT::LOETT_SPE;
-                                break;
-                            case LOC_OUTPUT_ENGINE_PPE:
-                                idlEngType = LocationTypes::LocOutputEngineTypeT::LOETT_PPE;
-                                break;
-                            case LOC_OUTPUT_ENGINE_VPE:
-                                idlEngType = LocationTypes::LocOutputEngineTypeT::LOETT_VPE;
-                                break;
-                            default:
-                                idlEngType =
-                                    LocationTypes::LocOutputEngineTypeT::LOETT_COUNT;
-                            break;
-                        }
-                        if (pClientApiService->mService) {
-                            pClientApiService->mService->fireEngineNmeaEvent(
-                                    idlEngType, timestamp, nmea);
+                            if (pClientApiService) {
+                            pClientApiService->handleEngineNmeaReport(engType, timestamp, nmea);
                         }
                     };
                 }
@@ -287,25 +174,8 @@ class LocationTrackingSessCbHandler {
                         LocationTypes::EngineReportCbMaskT::ERCMT_MEAS_CB_INFO_BIT) {
                     mEngineCallbackOptions.gnssMeasurementsCallback =
                             [pClientApiService](const ::GnssMeasurements gnssMeasurements) {
-                        if (pClientApiService->mLcaIdlConverter) {
-                            LocationTypes::GnssMeasurementsT idlGnssMeasurement =
-                                    pClientApiService->parseGnssMeasurements(gnssMeasurements);
-                            struct timespec curBootTime = {};
-                            clock_gettime(CLOCK_BOOTTIME, &curBootTime);
-                            int64_t curBootTimeNs = ((int64_t)curBootTime.tv_sec * 1000000000) +
-                                    (int64_t)curBootTime.tv_nsec;
-                            int16_t latencyMs = 0;
-                            latencyMs = (int16_t)((curBootTimeNs -
-                                    gnssMeasurements.clock.elapsedRealTime)/1000000);
-                            idlGnssMeasurement.setReportingLatency(latencyMs);
-                            if (pClientApiService->mDiagLogIface) {
-                                pClientApiService->mDiagLogIface->diagLogGnssReportInfo(
-                                        OUTPUT_MEAS_REPORT, latencyMs, 0);
-                            }
-                            if (pClientApiService->mService) {
-                                pClientApiService->mService->fireGnssMeasurementReportEvent(
-                                        idlGnssMeasurement);
-                            }
+                        if (pClientApiService) {
+                                    pClientApiService->handleGnssMeasurements(gnssMeasurements);
                         }
                     };
                 }
@@ -315,13 +185,8 @@ class LocationTrackingSessCbHandler {
                     mEngineCallbackOptions.gnssDataCallback =
                             [pClientApiService] (const ::GnssData n) {
                         //Convert GnssData report from LCA to FIDL format
-                        if (pClientApiService->mLcaIdlConverter) {
-                            LocationTypes::GnssDataT idlGnssDataRpt =
-                                    pClientApiService->parseGnssDataReport(n);
-                            if (pClientApiService->mService) {
-                                pClientApiService->mService->fireGnssDataReportEvent(
-                                        idlGnssDataRpt);
-                            }
+                        if (pClientApiService) {
+                            pClientApiService->handleGnssDataReport(n);
                         }
                     };
                 }
@@ -358,33 +223,265 @@ class LocationTrackingSessCbHandler {
 
 };
 
-LocationTypes::LocationReportT LocIdlAPIService::parseLocationReport
+void LocIdlAPIService::handleEngineLocationReport(
+    const std::vector<::GnssLocation> engLocations) const {
+
+    struct EnginePositionMsg : public LocMsg {
+        const LocIdlAPIService* mLCAService;
+        std::vector<::GnssLocation> mEngLoc;
+        inline EnginePositionMsg(const LocIdlAPIService* LCAService,
+                std::vector<::GnssLocation> engLocations) :
+            LocMsg(),
+            mLCAService(LCAService),
+            mEngLoc(engLocations){};
+        inline virtual void proc() const {
+            std::vector<LocationTypes::LocationReportT> idlEngLocVector;
+            for (auto gnssLocation : mEngLoc) {
+                LocationTypes::LocationReportT idlLocRpt =
+                        mLCAService->mLcaIdlConverter->parseLocReport(gnssLocation);
+                struct timespec curBootTime = {};
+                clock_gettime(CLOCK_BOOTTIME, &curBootTime);
+                int64_t curBootTimeNs = (
+                        (int64_t)curBootTime.tv_sec * 1000000000) +
+                        (int64_t)curBootTime.tv_nsec;
+                int16_t latencyMs = 0;
+                if (LOCATION_HAS_ELAPSED_REAL_TIME_BIT  & gnssLocation.flags) {
+                    latencyMs = (int16_t)((curBootTimeNs -
+                            gnssLocation.elapsedRealTimeNs)/1000000);
+                }
+                idlLocRpt.setReportingLatency(latencyMs);
+                if (mLCAService->mDiagLogIface) {
+                    mLCAService->mDiagLogIface->diagLogGnssReportInfo(
+                            OUTPUT_PVT_REPORT, latencyMs, latentPosCount);
+                }
+                idlEngLocVector.push_back(idlLocRpt);
+            }
+            if (mLCAService->mService) {
+                mLCAService->mService->fireGnssEngineLocationsReportEvent(
+                        idlEngLocVector);
+            }
+        }
+    };
+
+    mMsgTask->sendMsg(new EnginePositionMsg(this, engLocations));
+
+}
+
+void LocIdlAPIService::handleGnssLocationReport
 (
     const location_client::GnssLocation &lcaLoc
 
 ) const {
-    return (mLcaIdlConverter->parseLocReport(lcaLoc));
+
+    struct GnssPositionMsg : public LocMsg {
+        const LocIdlAPIService* mLCAService;
+        location_client::GnssLocation mLcaLoc;
+        inline GnssPositionMsg(const LocIdlAPIService* LCAService,
+                location_client::GnssLocation lcaLoc) :
+            LocMsg(),
+            mLCAService(LCAService),
+            mLcaLoc(lcaLoc){};
+        inline virtual void proc() const {
+            if (mLCAService) {
+                posCount++;
+                LocationTypes::LocationReportT idlLocRpt =
+                        mLCAService->mLcaIdlConverter->parseLocReport(mLcaLoc);
+                struct timespec curBootTime = {};
+                clock_gettime(CLOCK_BOOTTIME, &curBootTime);
+                int64_t curBootTimeNs = ((int64_t)curBootTime.tv_sec * 1000000000) +
+                        (int64_t)curBootTime.tv_nsec;
+                int16_t latencyMs = 0;
+                if (LOCATION_HAS_ELAPSED_REAL_TIME_BIT  & mLcaLoc.flags) {
+                    latencyMs = (int16_t)((curBootTimeNs -
+                            mLcaLoc.elapsedRealTimeNs)/1000000);
+                }
+                if (latencyMs > MAX_POSITION_LATENCY) {
+                      latentPosCount++;
+                }
+                if (posCount % 600 == 0) {
+                    LOC_LOGe("%"PRId64" out of %"PRId64" Position samples are"
+                             " latent by 20 msec",
+                            latentPosCount, posCount);
+                }
+                idlLocRpt.setReportingLatency(latencyMs);
+                if (mLCAService->mService) {
+                    mLCAService->mService->fireGnssLocationReportEvent(idlLocRpt);
+                }
+                if (mLCAService->mDiagLogIface) {
+                    mLCAService->mDiagLogIface->diagLogGnssReportInfo(
+                        OUTPUT_PVT_REPORT, latencyMs, latentPosCount);
+                }
+            }
+        }
+    };
+
+    mMsgTask->sendMsg(new GnssPositionMsg(this, lcaLoc));
 }
 
-LocationTypes::GnssSvDataT LocIdlAPIService::parseGnssSvReport
+void LocIdlAPIService::handleGnssSvReport
 (
-    const location_client::GnssSv& gnssSvs
+    const std::vector<::GnssSv>& gnssSvs
 ) const {
-    return (mLcaIdlConverter->parseSvReport(gnssSvs));
+
+    struct GnssSvInfoMsg : public LocMsg {
+        const LocIdlAPIService* mLCAService;
+        std::vector<::GnssSv> mGnssSvs;
+        inline GnssSvInfoMsg(const LocIdlAPIService* LCAService, std::vector<::GnssSv> gnssSvs) :
+            LocMsg(),
+            mLCAService(LCAService),
+            mGnssSvs(gnssSvs){};
+        inline virtual void proc() const {
+            if (mLCAService) {
+                std::vector<LocationTypes::GnssSvDataT> idlSVReportVector;
+                for (auto GnssSv : mGnssSvs) {
+                    //Convert Location report from LCA to FIDL format
+                    LocationTypes::GnssSvDataT idlSVRpt =
+                            mLCAService->mLcaIdlConverter->parseSvReport(GnssSv);
+                    idlSVReportVector.push_back(idlSVRpt);
+                }
+                if (mLCAService->mService) {
+                    mLCAService->mService->fireGnssSvReportEvent(
+                                idlSVReportVector);
+                }
+            }
+        }
+    };
+
+    mMsgTask->sendMsg(new GnssSvInfoMsg(this, gnssSvs));
 }
 
-LocationTypes::GnssMeasurementsT LocIdlAPIService::parseGnssMeasurements
+void LocIdlAPIService::handleGnssNmeaReport(uint64_t timestamp, string nmea) const {
+
+    struct GnssNmeaMsg : public LocMsg {
+        const LocIdlAPIService* mLCAService;
+        uint64_t mTimestamp;
+        string mNmea;
+        inline GnssNmeaMsg(const LocIdlAPIService* LCAService, uint64_t timestamp,
+                string nmea) :
+            LocMsg(),
+            mLCAService(LCAService),
+            mTimestamp(timestamp),
+            mNmea(nmea){};
+        inline virtual void proc() const {
+            if (mLCAService) {
+                mLCAService->mService->fireGnssNmeaEvent(mTimestamp, mNmea);
+            }
+        }
+    };
+
+    mMsgTask->sendMsg(new GnssNmeaMsg(this, timestamp, nmea));
+}
+
+void LocIdlAPIService::handleEngineNmeaReport(::LocOutputEngineType engType,
+         uint64_t timestamp, string nmea) const {
+
+    struct EngineNmeaMsg : public LocMsg {
+        const LocIdlAPIService* mLCAService;
+        ::LocOutputEngineType mEngType;
+        uint64_t mTimestamp;
+        string mNmea;
+        inline EngineNmeaMsg(const LocIdlAPIService* LCAService, ::LocOutputEngineType engType,
+                uint64_t timestamp, string nmea) :
+            LocMsg(),
+            mLCAService(LCAService),
+            mEngType(engType),
+            mTimestamp(timestamp),
+            mNmea(nmea){};
+        inline virtual void proc() const {
+            if (mLCAService) {
+                LocationTypes::LocOutputEngineTypeT idlEngType =
+                        LocationTypes::LocOutputEngineTypeT::LOETT_COUNT;
+                switch (mEngType)  {
+                    case LOC_OUTPUT_ENGINE_FUSED:
+                        idlEngType = LocationTypes::LocOutputEngineTypeT::LOETT_FUSED;
+                    break;
+                    case LOC_OUTPUT_ENGINE_SPE:
+                        idlEngType = LocationTypes::LocOutputEngineTypeT::LOETT_SPE;
+                        break;
+                    case LOC_OUTPUT_ENGINE_PPE:
+                        idlEngType = LocationTypes::LocOutputEngineTypeT::LOETT_PPE;
+                        break;
+                    case LOC_OUTPUT_ENGINE_VPE:
+                        idlEngType = LocationTypes::LocOutputEngineTypeT::LOETT_VPE;
+                        break;
+                    default:
+                        idlEngType =
+                            LocationTypes::LocOutputEngineTypeT::LOETT_COUNT;
+                    break;
+                }
+                mLCAService->mService->fireEngineNmeaEvent(
+                                      idlEngType, mTimestamp, mNmea);
+            }
+        }
+    };
+
+    mMsgTask->sendMsg(new EngineNmeaMsg(this, engType, timestamp, nmea));
+}
+
+void LocIdlAPIService::handleGnssMeasurements
 (
     const location_client::GnssMeasurements& gnssMeasurements
 ) const {
-    return (mLcaIdlConverter->parseMeasurements(gnssMeasurements));
+
+    struct GnssMeasMsg : public LocMsg {
+        const LocIdlAPIService* mLCAService;
+        const location_client::GnssMeasurements mMeas;
+
+        inline GnssMeasMsg(const LocIdlAPIService* LCAService,
+            const location_client::GnssMeasurements gnssMeasurements) :
+            LocMsg(),
+            mLCAService(LCAService),
+            mMeas(gnssMeasurements){};
+        inline virtual void proc() const {
+            if (mLCAService) {
+                LocationTypes::GnssMeasurementsT idlGnssMeasurement =
+                        mLCAService->mLcaIdlConverter->parseMeasurements(mMeas);
+                struct timespec curBootTime = {};
+                clock_gettime(CLOCK_BOOTTIME, &curBootTime);
+                int64_t curBootTimeNs = ((int64_t)curBootTime.tv_sec * 1000000000) +
+                        (int64_t)curBootTime.tv_nsec;
+                int16_t latencyMs = 0;
+                latencyMs = (int16_t)((curBootTimeNs -
+                        mMeas.clock.elapsedRealTime)/1000000);
+                idlGnssMeasurement.setReportingLatency(latencyMs);
+                if (mLCAService->mService) {
+                    mLCAService->mService->fireGnssMeasurementReportEvent(idlGnssMeasurement);
+                }
+                if (mLCAService->mDiagLogIface) {
+                    mLCAService->mDiagLogIface->diagLogGnssReportInfo(OUTPUT_MEAS_REPORT,
+                            latencyMs, 0);
+                }
+            }
+        }
+    };
+
+    mMsgTask->sendMsg(new GnssMeasMsg(this, gnssMeasurements));
 }
 
-LocationTypes::GnssDataT LocIdlAPIService::parseGnssDataReport
+void LocIdlAPIService::handleGnssDataReport
 (
     const location_client::GnssData& gnssData
 ) const {
-    return (mLcaIdlConverter->parseGnssData(gnssData));
+
+    struct GnssDataMsg : public LocMsg {
+        const LocIdlAPIService* mLCAService;
+        ::GnssData mGnssData;
+        inline GnssDataMsg(const LocIdlAPIService* LCAService, ::GnssData gnssData) :
+            LocMsg(),
+            mLCAService(LCAService),
+            mGnssData(gnssData){};
+        inline virtual void proc() const {
+            if (mLCAService) {
+                LocationTypes::GnssDataT idlGnssDataRpt =
+                        mLCAService->mLcaIdlConverter->parseGnssData(mGnssData);
+                if (mLCAService->mService) {
+                    mLCAService->mService->fireGnssDataReportEvent(idlGnssDataRpt);
+                }
+            }
+        }
+    };
+
+    mMsgTask->sendMsg(new GnssDataMsg(this, gnssData));
 }
 
 LocIdlAPIService* LocIdlAPIService::mInstance = nullptr;
@@ -891,7 +988,7 @@ void LocIdlAPIService::stopPositionSession
                         mLCAService->mDiagLogIface->diagLogSessionInfo(
                                 idlSessionInfo, mClient->hashCode());
                     }
-                    if (!mLCAService->numControlRequests) {
+                    if (!mLCAService->numControlRequests && mLCAService->mEnableStopSession) {
                         LOC_LOGe(" Sending STOP Session request !!");
                         mLCAService->mLcaInstance->stopPositionSession();
                         posCount = 0;
@@ -1038,7 +1135,14 @@ int main() {
         pLCAService->init();
     }
 
+    static loc_param_s_type locIdlServiceConfEntryTable[] = {
+        {"ENABLE_LOC_IDL_SERVICE_STOP_SESSION", &pLCAService->mEnableStopSession, NULL, 'n'}
+    };
+
+    UTIL_READ_CONF(LOC_PATH_IZAT_CONF_STR, locIdlServiceConfEntryTable);
+
     if (gptpInit()) {
+        pLCAService->mIsGptpInitialized = true;
         LOC_LOGd(" GPTP init success ");
     } else {
         LOC_LOGe(" GPTP init failed ");

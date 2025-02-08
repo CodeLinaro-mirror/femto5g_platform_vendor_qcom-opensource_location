@@ -1,4 +1,4 @@
-/** Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+/** Copyright (c) 2024- 2025 Qualcomm Innovation Center, Inc. All rights reserved.
    SPDX-License-Identifier: BSD-3-Clause-Clear */
 
 import "platform:/plugin/org.genivi.commonapi.someip/deployment/CommonAPI-4-SOMEIP_deployment_spec.fdepl"
@@ -228,6 +228,9 @@ define org.genivi.commonapi.someip.deployment for typeCollection com.qualcomm.qt
         SomeIpEnumWidth = 4
     }
 
+    enumeration GnssMeasCodeTypeT {
+        SomeIpEnumWidth = 1
+    }
 }
 
 define org.genivi.commonapi.someip.deployment for provider as Service {
