@@ -937,10 +937,6 @@ static void locClientIndCb
         locClientRespIndCbType localRespCallback =
             pCallbackData->respCallback;
 
-        // dummy to suppress compiler warnings
-        respIndUnion.pDeleteAssistDataInd =
-            (qmiLocDeleteAssistDataIndMsgT_v02 *)indBuffer;
-
         /* call the response callback
          * To avoid calling the respCallback after locClientClose
          * is called, check pCallbackData->respCallback again here
@@ -1097,12 +1093,6 @@ bool validateRequest(
     case QMI_LOC_SET_SERVER_REQ_V02:
     {
       *pOutLen = sizeof(qmiLocSetServerReqMsgT_v02);
-      break;
-    }
-
-    case QMI_LOC_DELETE_ASSIST_DATA_REQ_V02:
-    {
-      *pOutLen = sizeof(qmiLocDeleteAssistDataReqMsgT_v02);
       break;
     }
 

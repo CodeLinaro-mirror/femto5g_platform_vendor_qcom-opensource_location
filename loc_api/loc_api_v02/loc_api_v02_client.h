@@ -304,16 +304,6 @@ typedef union
         To send this request, set the reqId field in locClientSendReq() to
         QMI_LOC_SET_SERVER_REQ_V02. */
 
-   const qmiLocDeleteAssistDataReqMsgT_v02* pDeleteAssistDataReq;
-   /**< Deletes the aiding data from the engine.
-
-        If the request is accepted by the service, the client receives the
-        following indication containing a response:
-        QMI_LOC_DELETE_ASSIST_DATA_IND_V02.
-
-        To send this request, set the reqId field in locClientSendReq() to
-        QMI_LOC_DELETE_ASSIST_DATA_REQ_V02. */
-
    const qmiLocSetXtraTSessionControlReqMsgT_v02* pSetXtraTSessionControlReq;
    /**< Sets XTRA-T session control in the engine.
 
@@ -947,12 +937,6 @@ typedef union
 
         The respIndId field in the response indication callback is set to
         QMI_LOC_SET_SERVER_IND_V02. */
-
-   const qmiLocDeleteAssistDataIndMsgT_v02* pDeleteAssistDataInd;
-   /**< Response to the QMI_LOC_DELETE_ASSIST_DATA_REQ_V02 request.
-
-        The respIndId field in the response indication callback is set to
-        QMI_LOC_DELETE_ASSIST_DATA_IND_V02. */
 
    const qmiLocSetXtraTSessionControlIndMsgT_v02* pSetXtraTSessionControlInd;
    /**< Response to the QMI_LOC_SET_XTRA_T_SESSION_CONTROL_REQ_V02 request.
