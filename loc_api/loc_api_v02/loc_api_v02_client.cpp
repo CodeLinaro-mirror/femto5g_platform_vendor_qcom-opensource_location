@@ -308,10 +308,6 @@ static const locClientRespIndTableStructT locClientRespIndTable[]= {
   { QMI_LOC_NI_USER_RESPONSE_IND_V02,
     sizeof(qmiLocNiUserRespIndMsgT_v02)},
 
-  //Inject Predicted Orbits Data Resp Ind
-  { QMI_LOC_INJECT_PREDICTED_ORBITS_DATA_IND_V02,
-    sizeof(qmiLocInjectPredictedOrbitsDataIndMsgT_v02)},
-
   //Get Predicted Orbits Data Src Resp Ind
   { QMI_LOC_GET_PREDICTED_ORBITS_DATA_SOURCE_IND_V02,
     sizeof(qmiLocGetPredictedOrbitsDataSourceIndMsgT_v02)},
@@ -936,7 +932,8 @@ static void locClientIndCb
          */
         locClientRespIndCbType localRespCallback =
             pCallbackData->respCallback;
-
+        // Plz note this is required for QMI indication msg processing
+        respIndUnion.pSetEngineLockInd = (qmiLocSetEngineLockIndMsgT_v02 *)indBuffer;
         /* call the response callback
          * To avoid calling the respCallback after locClientClose
          * is called, check pCallbackData->respCallback again here
@@ -1064,12 +1061,6 @@ bool validateRequest(
     {
       *pOutLen = sizeof(qmiLocNiUserRespReqMsgT_v02);
        break;
-    }
-
-    case QMI_LOC_INJECT_PREDICTED_ORBITS_DATA_REQ_V02:
-    {
-      *pOutLen = sizeof(qmiLocInjectPredictedOrbitsDataReqMsgT_v02);
-      break;
     }
 
     case QMI_LOC_INJECT_UTC_TIME_REQ_V02:

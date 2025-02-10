@@ -294,9 +294,10 @@ static void globalRespCb(locClientHandleType clientHandle,
   }
 
   // process the sync call
-  // use pSetXtraTSessionControlInd as a dummy pointer
+  // use pSetEngineLockInd as a dummy pointer
+  // Plz note this is required to pass a valid locClientRespIndUnionType ind msg
   loc_sync_process_ind(clientHandle, respId,
-          (void *)respPayload.pSetXtraTSessionControlInd, respPayloadSize);
+          (void *)respPayload.pSetEngineLockInd, respPayloadSize);
 }
 
 /* global error callback, it will call the handle service down

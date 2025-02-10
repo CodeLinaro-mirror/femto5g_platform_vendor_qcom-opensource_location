@@ -231,19 +231,6 @@ typedef union
         To send this request, set the reqId field in locClientSendReq() to
         QMI_LOC_NI_USER_RESPONSE_REQ_V02. */
 
-   const qmiLocInjectPredictedOrbitsDataReqMsgT_v02* pInjectPredictedOrbitsDataReq;
-   /**< Injects the predicted orbits data into the service.
-
-        When all predicted orbits data parts have been injected, the client
-        receives the following indication containing a response:
-        QMI_LOC_INJECT_PREDICTED_ORBITS_DATA_IND_V02.
-
-        The client injects successive data parts without waiting for this
-        indication as long as locClientSendReq() returns successfully.
-
-        To send this request, set the reqId field in locClientSendReq() to
-        QMI_LOC_INJECT_PREDICTED_ORBITS_DATA_REQ_V02. */
-
    const qmiLocInjectUtcTimeReqMsgT_v02* pInjectUtcTimeReq;
    /**< Injects UTC time into the service.
 
@@ -882,17 +869,6 @@ typedef union
 
         The respIndId field in the response indication callback is set to
         QMI_LOC_NI_USER_RESPONSE_IND_V02. */
-
-   const qmiLocInjectPredictedOrbitsDataIndMsgT_v02*
-     pInjectPredictedOrbitsDataInd;
-   /**< Sent after a predicted orbits data part has been successfully injected.
-
-        The client waits for this indication before injecting the next part.
-        This indication is sent in response to
-        QMI_LOC_INJECT_PREDICTED_ORBITS_DATA_REQ_V02.
-
-        The respIndId field in the response indication callback is set to
-        QMI_LOC_INJECT_PREDICTED_ORBITS_DATA_IND_V02. */
 
    const qmiLocGetPredictedOrbitsDataSourceIndMsgT_v02*
       pGetPredictedOrbitsDataSourceInd;
