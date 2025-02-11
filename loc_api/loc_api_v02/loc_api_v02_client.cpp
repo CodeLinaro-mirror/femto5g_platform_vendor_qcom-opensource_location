@@ -469,12 +469,6 @@ static const locClientRespIndTableStructT locClientRespIndTable[]= {
    { QMI_LOC_QUERY_XTRA_INFO_IND_V02,
      sizeof(qmiLocQueryXtraInfoIndMsgT_v02) },
 
-   { QMI_LOC_START_OUTDOOR_TRIP_BATCHING_IND_V02,
-     sizeof(qmiLocStartOutdoorTripBatchingIndMsgT_v02) },
-
-   { QMI_LOC_QUERY_OTB_ACCUMULATED_DISTANCE_IND_V02,
-     sizeof(qmiLocQueryOTBAccumulatedDistanceIndMsgT_v02) },
-
    { QMI_LOC_SET_BLACKLIST_SV_IND_V02,
      sizeof(qmiLocGenReqStatusIndMsgT_v02) },
 
@@ -1259,12 +1253,6 @@ bool validateRequest(
         break;
     }
 
-    case QMI_LOC_START_OUTDOOR_TRIP_BATCHING_REQ_V02:
-    {
-        *pOutLen = sizeof(qmiLocStartOutdoorTripBatchingReqMsgT_v02);
-        break;
-    }
-
     case QMI_LOC_SET_BLACKLIST_SV_REQ_V02:
     {
         *pOutLen = sizeof(qmiLocSetBlacklistSvReqMsgT_v02);
@@ -1385,7 +1373,6 @@ bool validateRequest(
     case QMI_LOC_GET_PREDICTED_ORBITS_DATA_SOURCE_REQ_V02:
     case QMI_LOC_GET_ENGINE_LOCK_REQ_V02:
     case QMI_LOC_GET_SUPPORTED_MSGS_REQ_V02:
-    case QMI_LOC_QUERY_OTB_ACCUMULATED_DISTANCE_REQ_V02:
     case QMI_LOC_GET_BLACKLIST_SV_REQ_V02:
     case QMI_LOC_GET_ROBUST_LOCATION_CONFIG_REQ_V02:
     case QMI_LOC_GET_MIN_GPS_WEEK_NUMBER_REQ_V02:

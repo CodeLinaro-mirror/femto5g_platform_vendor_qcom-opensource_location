@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -871,12 +871,9 @@ void LocHalDaemonClientHandler::onBatchingStatusCb(const BatchingStatusInfo& bat
                 std::list<uint32_t>& listOfCompletedTrips) {
     std::lock_guard<std::recursive_mutex> lock(LocationApiService::mMutex);
     LOC_LOGd("--< onBatchingStatusCb");
-    if ((nullptr != mIpcSender) && (mSubscriptionMask & E_LOC_CB_BATCHING_STATUS_BIT) &&
-                (BATCHING_MODE_TRIP == mBatchingMode) &&
-                (BATCHING_STATUS_TRIP_COMPLETED == batchingStatus.batchingStatus)) {
-        // For trip batching, notify client to stop session when BATCHING_STATUS_TRIP_COMPLETED
+    if ((nullptr != mIpcSender) && (mSubscriptionMask & E_LOC_CB_BATCHING_STATUS_BIT)) {
         LocAPIBatchNotification batchNotif = {};
-        batchNotif.status = BATCHING_STATUS_TRIP_COMPLETED;
+        batchNotif.status = batchingStatus.batchingStatus;
         string pbStr;
         LocAPIBatchingIndMsg msg(SERVICE_NAME, batchNotif, mBatchingMode, &mService->mPbufMsgConv);
         if (msg.serializeToProtobuf(pbStr)) {

@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -201,14 +201,8 @@ LocationCapabilitiesMask LocationClientApiImpl::parseCapabilitiesMask(
     if (LOCATION_CAPABILITIES_DISTANCE_BASED_TRACKING_BIT & mask) {
         capsMask |=  LOCATION_CAPS_DISTANCE_BASED_TRACKING_BIT;
     }
-    if (LOCATION_CAPABILITIES_DISTANCE_BASED_BATCHING_BIT & mask) {
-        capsMask |=  LOCATION_CAPS_DISTANCE_BASED_BATCHING_BIT;
-    }
     if (LOCATION_CAPABILITIES_GEOFENCE_BIT & mask) {
         capsMask |=  LOCATION_CAPS_GEOFENCE_BIT;
-    }
-    if (LOCATION_CAPABILITIES_OUTDOOR_TRIP_BATCHING_BIT & mask) {
-        capsMask |=  LOCATION_CAPS_OUTDOOR_TRIP_BATCHING_BIT;
     }
     if (LOCATION_CAPABILITIES_GNSS_MEASUREMENTS_BIT & mask) {
         capsMask |=  LOCATION_CAPS_GNSS_MEASUREMENTS_BIT;
@@ -3623,10 +3617,7 @@ void IpcListener::onReceive(const char* data, uint32_t length,
                     const LocAPIBatchingIndMsg* pBatchingIndMsg =
                             (LocAPIBatchingIndMsg*)(&msg);
                     ::BatchingStatus batchStatus = pBatchingIndMsg->batchNotification.status;
-                    if (BATCHING_STATUS_TRIP_COMPLETED == batchStatus) {
-                        mApiImpl.stopBatching(0);
-                        repStatusDone = true;
-                    } else if (
+                    if (
                         (BATCHING_STATUS_POSITION_AVAILABE != batchStatus) &&
                         (BATCHING_STATUS_POSITION_UNAVAILABLE != batchStatus)) {
                         LOC_LOGe("invalid Batching Status!");
@@ -3638,9 +3629,7 @@ void IpcListener::onReceive(const char* data, uint32_t length,
                             Location location = LocationClientApiImpl::parseLocation(
                                     pBatchingIndMsg->batchNotification.location[i]);
                             mApiImpl.logLocation(location,
-                                    BATCHING_MODE_ROUTINE == pBatchingIndMsg->batchingMode ?
-                                    LOC_REPORT_TRIGGER_ROUTINE_BATCHING_SESSION :
-                                    LOC_REPORT_TRIGGER_TRIP_BATCHING_SESSION);
+                                    LOC_REPORT_TRIGGER_ROUTINE_BATCHING_SESSION);
                         }
                     }
 
@@ -3651,13 +3640,6 @@ void IpcListener::onReceive(const char* data, uint32_t length,
                                 pBatchingIndMsg->batchNotification.location.size(),
                                 (::Location *)pBatchingIndMsg->batchNotification.location.data(),
                                 batchingOpts);
-                    }
-
-                    if ((repStatusDone) && (mApiImpl.mLocationCbs.batchingStatusCb)) {
-                        BatchingStatusInfo statusInfo =
-                                {sizeof(BatchingStatusInfo), BATCHING_STATUS_TRIP_COMPLETED};
-                        std::list<uint32_t> listOfCompletedTrips;
-                        mApiImpl.mLocationCbs.batchingStatusCb(statusInfo, listOfCompletedTrips);
                     }
                 }
                 break;

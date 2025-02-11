@@ -535,11 +535,6 @@ typedef union
 
     const qmiLocQueryXtraInfoReqMsgT_v02   *pQueryXtraInfoReq;
     /*QMI_LOC_QUERY_XTRA_INFO_REQ_V02*/
-    const qmiLocStartOutdoorTripBatchingReqMsgT_v02 *pStartOutdoorTripBatchingReq;
-    /*QMI_LOC_START_OUTDOOR_TRIP_BATCHING_REQ_V02*/
-
-    const qmiLocQueryOTBAccumulatedDistanceReqMsgT_v02 *pQueryOTBAccumulatedDistanceReq;
-    /*QMI_LOC_QUERY_OTB_ACCUMULATED_DISTANCE_REQ_V02*/
 
     const qmiLocSetBlacklistSvReqMsgT_v02 *pSetBlacklistSvReq;
     /*QMI_LOC_SET_BLACKLIST_SV_REQ_V02*/
@@ -1048,12 +1043,6 @@ typedef union
 
     const qmiLocDeleteGNSSServiceDataIndMsgT_v02 *pDeleteGNSSServiceDataInd;
     /* QMI_LOC_DELETE_GNSS_SERVICE_DATA_REQ_V02*/
-
-    const qmiLocStartOutdoorTripBatchingIndMsgT_v02 *pStartOutdoorTripBatchingInd;
-    /*QMI_LOC_START_OUTDOOR_TRIP_BATCHING_IND_V02*/
-
-    const qmiLocQueryOTBAccumulatedDistanceIndMsgT_v02 *pQueryOTBAccumulatedDistanceInd;
-    /*QMI_LOC_QUERY_OTB_ACCUMULATED_DISTANCE_IND_V02*/
 
     const qmiLocInjectXtraDataIndMsgT_v02 *pInjectXtraDataInd;
     /*QMI_LOC_INJECT_XTRA_DATA_IND_V02*/

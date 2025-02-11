@@ -149,14 +149,12 @@ using namespace loc_core;
 #define GF_RESPONSIVENESS_THRESHOLD_MSEC_MEDIUM 900000 //15 mins
 
 #define FLP_BATCHING_MINIMUN_INTERVAL           (1000) // in msec
-#define FLP_BATCHING_MIN_TRIP_DISTANCE           1 // 1 meter
 #define MEAS_STATUS_DONT_USE (0xFFC0000000000000)
 
 #define MAX_REFOUNT_DIFF_FOR_1HZ (1100)
 #define MAX_REFOUNT_DIFF_FOR_NHZ (110)
 
 
-template struct loc_core::LocApiResponseData<LocApiBatchData>;
 template struct loc_core::LocApiResponseData<LocApiGeofenceData>;
 template struct loc_core::LocApiResponseData<LocGpsLocation>;
 
@@ -350,7 +348,6 @@ LocApiV02 :: LocApiV02(LOC_API_ADAPTER_EVENT_MASK_T exMask,
     mCounter(0), mMinInterval(1000),
     mGnssMeasurements(nullptr),
     mBatchSize(0), mDesiredBatchSize(0),
-    mTripBatchSize(0), mDesiredTripBatchSize(0),
     mIsFirstFinalFixReported(false),
     mIsFirstStartFixReq(false),
     mTimeBiases{},
@@ -9393,32 +9390,21 @@ void LocApiV02::batchFullEvent(const qmiLocEventBatchFullIndMsgT_v02* batchFullI
     struct MsgGetBatchedLocations : public LocMsg {
         LocApiBase& mApi;
         size_t mCount;
-        uint32_t mAccumulatedDistance;
         qmiLocBatchingTypeEnumT_v02 mBatchType;
         inline MsgGetBatchedLocations(LocApiV02& api,
                                       size_t count,
-                                      uint32_t accumulatedDistance,
                                       qmiLocBatchingTypeEnumT_v02 batchType) :
             LocMsg(),
             mApi(api),
             mCount(count),
-            mAccumulatedDistance(accumulatedDistance),
             mBatchType(batchType) {}
         inline virtual void proc() const {
-            // Explicit check for if OTB is supported or not to work around an
-            // issue with older modems where uninitialized batchInd is being sent
-            if (mBatchType == eQMI_LOC_OUTDOOR_TRIP_BATCHING_V02) {
-                mApi.getBatchedTripLocationsSync(mCount, mAccumulatedDistance);
-            } else {
-                mApi.getBatchedLocationsSync(mCount);
-            }
+            mApi.getBatchedLocationsSync(mCount);
         }
     };
 
     sendMsg(new MsgGetBatchedLocations(*this,
                                         batchFullInfo->batchCount,
-                                        (batchFullInfo->accumulatedDistance_valid ?
-                                                batchFullInfo->accumulatedDistance: 0),
                                         (batchFullInfo->batchType_valid ? batchFullInfo->batchType :
                                                 eQMI_LOC_LOCATION_BATCHING_V02)));
 }
@@ -10035,14 +10021,6 @@ void LocApiV02::setBatchSize(size_t size)
     mBatchSize = 0;
 }
 
-void LocApiV02::setTripBatchSize(size_t size)
-{
-    mDesiredTripBatchSize = size;
-    // set to zero so the actual trip batch size will be queried from modem on
-    // first startOutdoorTripBatching call
-    mTripBatchSize = 0;
-}
-
 LocationError
 LocApiV02::queryBatchBuffer(size_t desiredSize,
         size_t &allocatedSize, BatchingMode batchMode)
@@ -10055,8 +10033,7 @@ LocApiV02::queryBatchBuffer(size_t desiredSize,
     batchSizeReq.batchSize = desiredSize;
 
     batchSizeReq.batchType_valid = 1;
-    batchSizeReq.batchType = (batchMode == BATCHING_MODE_ROUTINE ? eQMI_LOC_LOCATION_BATCHING_V02 :
-            eQMI_LOC_OUTDOOR_TRIP_BATCHING_V02);
+    batchSizeReq.batchType = eQMI_LOC_LOCATION_BATCHING_V02;
     LOC_SEND_SYNC_REQ(GetBatchSize, GET_BATCH_SIZE, batchSizeReq);
 
     if (rv) {
@@ -10068,7 +10045,7 @@ LocApiV02::queryBatchBuffer(size_t desiredSize,
             err = LOCATION_ERROR_SUCCESS;
         }
     } else {
-        if ((batchMode == BATCHING_MODE_TRIP) &&
+        if (
             (ind.status == eQMI_LOC_INVALID_PARAMETER_V02) &&
             (ind.batchSize > 0)) {
 
@@ -10101,46 +10078,6 @@ LocApiV02::queryBatchBuffer(size_t desiredSize,
 
     return err;
 }
-
-LocationError
-LocApiV02::releaseBatchBuffer(BatchingMode batchMode) {
-
-    LocationError err = LOCATION_ERROR_GENERAL_FAILURE;
-
-    qmiLocReleaseBatchReqMsgT_v02 batchReleaseReq;
-    memset(&batchReleaseReq, 0, sizeof(batchReleaseReq));
-    batchReleaseReq.transactionId = 1;
-
-    batchReleaseReq.batchType_valid = 1;
-    switch (batchMode) {
-        case BATCHING_MODE_ROUTINE:
-            batchReleaseReq.batchType = eQMI_LOC_LOCATION_BATCHING_V02;
-        break;
-
-        case BATCHING_MODE_TRIP:
-            batchReleaseReq.batchType = eQMI_LOC_OUTDOOR_TRIP_BATCHING_V02;
-        break;
-
-        default:
-            err = LOCATION_ERROR_INVALID_PARAMETER;
-            LOC_LOGe("release batch failed for batch mode %u", batchMode);
-            return err;
-    }
-
-    LOC_SEND_SYNC_REQ(ReleaseBatch, RELEASE_BATCH, batchReleaseReq);
-
-    if (rv) {
-        LOC_LOGv("release batch succeeded for batch mode %u", batchMode);
-        mTripBatchSize = 0;
-        err = LOCATION_ERROR_SUCCESS;
-    } else {
-        LOC_LOGe("release batch failed for batch mode %u",
-                batchMode);
-    }
-
-    return err;
-}
-
 
 void
 LocApiV02::setOperationMode(GnssSuplMode mode)
@@ -10968,9 +10905,8 @@ LocApiV02::startBatching(uint32_t sessionId,
 {
     sendMsg(new LocApiMsg([this, sessionId, options, accuracy, timeout, adapterResponse] () {
 
-    LOC_LOGD("startBatching: session id %u minInterval %u minDistance %u "
-             "accuracy %u timeout %u",
-             sessionId, options.minInterval, options.minDistance, accuracy, timeout);
+    LOC_LOGD("startBatching: session id %u minInterval %u "
+             "accuracy %u timeout %u", sessionId, options.minInterval, accuracy, timeout);
     LocationError err = LOCATION_ERROR_SUCCESS;
 
     setOperationMode(options.mode);
@@ -11074,140 +11010,6 @@ LocApiV02::stopBatching(uint32_t sessionId, LocApiResponse* adapterResponse)
     if (adapterResponse != NULL) {
         adapterResponse->returnToSender(err);
     }
-    }));
-}
-
-LocationError
-LocApiV02::startOutdoorTripBatchingSync(uint32_t tripDistance, uint32_t tripTbf, uint32_t timeout)
-{
-    LOC_LOGd("minInterval %u minDistance %u timeout %u",
-             tripTbf, tripDistance, timeout);
-    LocationError err = LOCATION_ERROR_SUCCESS;
-
-    //get batch size if needs
-    if (mTripBatchSize == 0) {
-        if (LOCATION_ERROR_SUCCESS != queryBatchBuffer(mDesiredTripBatchSize,
-            mTripBatchSize, BATCHING_MODE_TRIP)) {
-            return LOCATION_ERROR_GENERAL_FAILURE;
-        }
-    }
-
-    qmiLocStartOutdoorTripBatchingReqMsgT_v02 startOutdoorTripBatchReq;
-    memset(&startOutdoorTripBatchReq, 0, sizeof(startOutdoorTripBatchReq));
-
-    if (tripDistance > 0) {
-        startOutdoorTripBatchReq.batchDistance = tripDistance;
-    } else {
-        startOutdoorTripBatchReq.batchDistance = FLP_BATCHING_MIN_TRIP_DISTANCE; // 1 meter
-    }
-
-    if (tripTbf >= FLP_BATCHING_MINIMUN_INTERVAL) {
-        startOutdoorTripBatchReq.minTimeInterval = tripTbf;
-    } else {
-        startOutdoorTripBatchReq.minTimeInterval = FLP_BATCHING_MINIMUN_INTERVAL; // 1 second
-    }
-
-    // batch all fixes always
-    startOutdoorTripBatchReq.batchAllPos_valid = 1;
-    startOutdoorTripBatchReq.batchAllPos = true;
-
-    // time out
-    if (timeout > 0) {
-        startOutdoorTripBatchReq.fixSessionTimeout_valid = 1;
-        startOutdoorTripBatchReq.fixSessionTimeout = timeout;
-    } else {
-        // modem will use the default time out (20 seconds)
-        startOutdoorTripBatchReq.fixSessionTimeout_valid = 0;
-    }
-
-    LOC_SEND_SYNC_REQ(StartOutdoorTripBatching, START_OUTDOOR_TRIP_BATCHING,
-            startOutdoorTripBatchReq);
-
-    if (!rv) {
-        if (ENGINE_LOCK_STATE_DISABLED == getEngineLockState()) {
-            LOC_LOGd("engine state disabled");
-            err = LOCATION_ERROR_TZ_LOCKED;
-        } else {
-            LOC_LOGe("failed!");
-            err = LOCATION_ERROR_GENERAL_FAILURE;
-        }
-    }
-    return err;
-}
-
-void
-LocApiV02::startOutdoorTripBatching(uint32_t tripDistance, uint32_t tripTbf, uint32_t timeout,
-                                          LocApiResponse* adapterResponse) {
-    sendMsg(new LocApiMsg([this, tripDistance, tripTbf, timeout, adapterResponse] () {
-        if (adapterResponse != NULL) {
-            adapterResponse->returnToSender(startOutdoorTripBatchingSync(tripDistance,
-                                                                         tripTbf,
-                                                                         timeout));
-        }
-    }));
-}
-
-void
-LocApiV02::reStartOutdoorTripBatching(uint32_t ongoingTripDistance,
-                                            uint32_t ongoingTripInterval,
-                                            uint32_t batchingTimeout,
-                                            LocApiResponse* adapterResponse)
-{
-    sendMsg(new LocApiMsg([this, ongoingTripDistance, ongoingTripInterval, batchingTimeout,
-                           adapterResponse] () {
-        LocationError err = LOCATION_ERROR_SUCCESS;
-
-        uint32_t accumulatedDistance = 0;
-        uint32_t numOfBatchedPositions = 0;
-        queryAccumulatedTripDistanceSync(accumulatedDistance, numOfBatchedPositions);
-
-        if (numOfBatchedPositions) {
-            getBatchedTripLocationsSync(numOfBatchedPositions, 0);
-        }
-
-        stopOutdoorTripBatchingSync(false);
-
-        err = startOutdoorTripBatchingSync(ongoingTripDistance,
-                                           ongoingTripInterval,
-                                           batchingTimeout);
-        if (adapterResponse != NULL) {
-            adapterResponse->returnToSender(err);
-        }
-    }));
-}
-
-LocationError
-LocApiV02::stopOutdoorTripBatchingSync(bool deallocBatchBuffer)
-{
-    LOC_LOGd("dellocBatchBuffer : %d", deallocBatchBuffer);
-    LocationError err = LOCATION_ERROR_SUCCESS;
-
-    qmiLocStopBatchingReqMsgT_v02 stopBatchingReq;
-    memset(&stopBatchingReq, 0, sizeof(stopBatchingReq));
-
-    stopBatchingReq.batchType_valid = 1;
-    stopBatchingReq.batchType = eQMI_LOC_OUTDOOR_TRIP_BATCHING_V02;
-    LOC_SEND_SYNC_REQ(StopBatching, STOP_BATCHING, stopBatchingReq);
-
-    if (!rv) {
-        err = LOCATION_ERROR_GENERAL_FAILURE;
-        return err;
-    }
-
-    if (deallocBatchBuffer) {
-        err = releaseBatchBuffer(BATCHING_MODE_TRIP);
-    }
-
-    return err;
-}
-
-void
-LocApiV02::stopOutdoorTripBatching(bool deallocBatchBuffer, LocApiResponse* adapterResponse)
-{
-    sendMsg(new LocApiMsg([this, deallocBatchBuffer, adapterResponse] () {
-        if (adapterResponse != NULL) {
-            adapterResponse->returnToSender(stopOutdoorTripBatchingSync(deallocBatchBuffer));
-        }
     }));
 }
 
@@ -11318,82 +11120,6 @@ LocApiV02::getBatchedLocations(size_t count, LocApiResponse* adapterResponse)
     }));
 }
 
-LocationError LocApiV02::getBatchedTripLocationsSync(size_t count, uint32_t accumulatedDistance)
-{
-    LocationError err = LOCATION_ERROR_SUCCESS;
-    size_t idxLocationFromModem = 0;
-
-    size_t entriesToReadInTotal = std::min(mTripBatchSize, count);
-    if (entriesToReadInTotal == 0) {
-        LOC_LOGd("No trip batching memory allocated in modem or nothing to read");
-        // calling the base class
-        reportLocations(NULL, 0, BATCHING_MODE_TRIP);
-    } else {
-        size_t entriesToRead =
-                std::min(entriesToReadInTotal, (size_t)QMI_LOC_READ_FROM_BATCH_MAX_SIZE_V02);
-        size_t entriesGotInTotal = 0;
-        size_t entriesGotInEachTime = 0;
-
-        Location* pLocationsFromModem = new Location[entriesToReadInTotal]();
-        if (pLocationsFromModem == nullptr) {
-            LOC_LOGE("new allocation failed, fatal error.");
-            return LOCATION_ERROR_GENERAL_FAILURE;
-        }
-        memset(pLocationsFromModem, 0, sizeof(Location)*(entriesToReadInTotal));
-        Location* tempLocationP = new Location[QMI_LOC_READ_FROM_BATCH_MAX_SIZE_V02]();
-        if (tempLocationP == nullptr) {
-            LOC_LOGE("new allocation failed, fatal error.");
-            return LOCATION_ERROR_GENERAL_FAILURE;
-        }
-
-        do {
-            memset(tempLocationP, 0, QMI_LOC_READ_FROM_BATCH_MAX_SIZE_V02*sizeof(Location));
-            readModemLocations(tempLocationP,
-                               entriesToRead,
-                               BATCHING_MODE_TRIP,
-                               entriesGotInEachTime);
-            for (size_t iEntryIndex = 0; iEntryIndex<entriesGotInEachTime;
-                    iEntryIndex++, idxLocationFromModem++) {
-                // make sure index is not too large fit in the array
-                if (idxLocationFromModem < entriesToReadInTotal) {
-                    pLocationsFromModem[idxLocationFromModem] = tempLocationP[iEntryIndex];
-                } else {
-                    LOC_LOGw("dropped an unexpected location.");
-                }
-            }
-            entriesGotInTotal += entriesGotInEachTime;
-            entriesToRead = std::min(entriesToReadInTotal - entriesGotInTotal,
-                                     (size_t)QMI_LOC_READ_FROM_BATCH_MAX_SIZE_V02);
-        } while (entriesGotInEachTime > 0 && entriesToRead > 0);
-        delete[] tempLocationP;
-
-        LOC_LOGd("Calling reportLocations with count:%zu and entriesGotInTotal:%zu",
-                 count, entriesGotInTotal);
-
-        // calling the base class
-        reportLocations(pLocationsFromModem, entriesGotInTotal, BATCHING_MODE_TRIP);
-
-        if (accumulatedDistance != 0) {
-            LOC_LOGd("Calling reportCompletedTrips with distance %u:", accumulatedDistance);
-            reportCompletedTrips(accumulatedDistance);
-        }
-
-        delete[] pLocationsFromModem;
-    }
-
-    return err;
-}
-
-void LocApiV02::getBatchedTripLocations(size_t count, uint32_t accumulatedDistance,
-                                              LocApiResponse* adapterResponse)
-{
-    sendMsg(new LocApiMsg([this, count, accumulatedDistance, adapterResponse] () {
-        if (adapterResponse != NULL) {
-            adapterResponse->returnToSender(getBatchedTripLocationsSync(count, accumulatedDistance));
-        }
-    }));
-}
-
 void
 LocApiV02::readModemLocations(Location* pLocationPiece,
                               size_t count,
@@ -11411,8 +11137,7 @@ LocApiV02::readModemLocations(Location* pLocationPiece,
     }
 
     getBatchLocatonReq.batchType_valid = 1;
-    getBatchLocatonReq.batchType = ((batchingMode == BATCHING_MODE_ROUTINE) ?
-            eQMI_LOC_LOCATION_BATCHING_V02: eQMI_LOC_OUTDOOR_TRIP_BATCHING_V02);
+    getBatchLocatonReq.batchType = eQMI_LOC_LOCATION_BATCHING_V02;
 
     LOC_SEND_SYNC_REQ(ReadFromBatch, READ_FROM_BATCH, getBatchLocatonReq);
 
@@ -11494,56 +11219,6 @@ LocApiV02::readModemLocations(Location* pLocationPiece,
     } else {
         LOC_LOGd("Modem does not return batched location.");
     }
-}
-
-LocationError LocApiV02::queryAccumulatedTripDistanceSync(uint32_t &accumulatedTripDistance,
-        uint32_t &numOfBatchedPositions)
-{
-    locClientReqUnionType req_union;
-    locClientStatusEnumType status = eLOC_CLIENT_SUCCESS;
-
-    qmiLocQueryOTBAccumulatedDistanceReqMsgT_v02 accumulated_distance_req;
-    qmiLocQueryOTBAccumulatedDistanceIndMsgT_v02 accumulated_distance_ind;
-
-    memset(&accumulated_distance_req,0,sizeof(accumulated_distance_req));
-    memset(&accumulated_distance_ind, 0, sizeof(accumulated_distance_ind));
-
-    req_union.pQueryOTBAccumulatedDistanceReq = &accumulated_distance_req;
-
-    status = locSyncSendReq(QMI_LOC_QUERY_OTB_ACCUMULATED_DISTANCE_REQ_V02,
-                            req_union,
-                            LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
-                            QMI_LOC_QUERY_OTB_ACCUMULATED_DISTANCE_IND_V02,
-                            &accumulated_distance_ind);
-    if ((eLOC_CLIENT_SUCCESS != status) ||
-        (eQMI_LOC_SUCCESS_V02 != accumulated_distance_ind.status))
-    {
-        return LOCATION_ERROR_GENERAL_FAILURE;
-    }
-    else
-    {
-        LOC_LOGD("Got accumulated distance: %u number of accumulated positions %u",
-        accumulated_distance_ind.accumulatedDistance, accumulated_distance_ind.batchedPosition);
-
-        accumulatedTripDistance = accumulated_distance_ind.accumulatedDistance;
-        numOfBatchedPositions = accumulated_distance_ind.batchedPosition;
-
-        return LOCATION_ERROR_SUCCESS;
-    }
-}
-
-void LocApiV02::queryAccumulatedTripDistance(
-        LocApiResponseData<LocApiBatchData>* adapterResponseData)
-{
-    sendMsg(new LocApiMsg([this, adapterResponseData] () {
-        LocationError err = LOCATION_ERROR_SUCCESS;
-        LocApiBatchData data;
-        err = queryAccumulatedTripDistanceSync(data.accumulatedDistance,
-                                               data.numOfBatchedPositions);
-        if (adapterResponseData != NULL) {
-            adapterResponseData->returnToSender(err, data);
-        }
-    }));
 }
 
 void LocApiV02::addToCallQueue(LocApiResponse* adapterResponse)
