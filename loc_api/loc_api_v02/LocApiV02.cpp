@@ -62,6 +62,9 @@
 using namespace std;
 using namespace loc_core;
 
+/* convert time uncertainty from three sigma to one sigma */
+#define ONE_THIRD_SCALE_FACTOR (1.0/3.0)
+
 /* Doppler Conversion from M/S to NS/S */
 #define MPS_TO_NSPS         (1.0/0.299792458)
 
@@ -5401,6 +5404,8 @@ void LocApiV02::setGnssBiasesForL1CA() {
         default:
             break;
         }
+        // timeBiasUnc is 3-sigma, convert to 1-sigma scale.
+        measData->fullInterSignalBiasUncertaintyNs *= ONE_THIRD_SCALE_FACTOR;
     }
 }
 
@@ -7012,7 +7017,7 @@ void LocApiV02 :: convertGnssClock (GnssMeasurementsClock& clock,
                }
                clock.fullBiasNs = clock.timeNs - gpsTimeNs;
                clock.biasNs = sysClkBiasMs * 1e6 - (double)((int64_t)(sysClkBiasMs * 1e6));
-               clock.biasUncertaintyNs = (double)sysClkUncMs * 1e6;
+               clock.biasUncertaintyNs = (double)sysClkUncMs * 1e6 * ONE_THIRD_SCALE_FACTOR;
                flags |= (GNSS_MEASUREMENTS_CLOCK_FLAGS_FULL_BIAS_BIT |
                          GNSS_MEASUREMENTS_CLOCK_FLAGS_BIAS_BIT |
                          GNSS_MEASUREMENTS_CLOCK_FLAGS_BIAS_UNCERTAINTY_BIT);
@@ -7042,7 +7047,7 @@ void LocApiV02 :: convertGnssClock (GnssMeasurementsClock& clock,
         double driftUncMPS = gnss_measurement_info.rcvrClockFrequencyInfo.clockDriftUnc;
 
         clock.driftNsps = driftMPS * MPS_TO_NSPS;
-        clock.driftUncertaintyNsps = driftUncMPS * MPS_TO_NSPS;
+        clock.driftUncertaintyNsps = driftUncMPS * MPS_TO_NSPS * ONE_THIRD_SCALE_FACTOR;
 
         flags |= (GNSS_MEASUREMENTS_CLOCK_FLAGS_DRIFT_BIT |
                   GNSS_MEASUREMENTS_CLOCK_FLAGS_DRIFT_UNCERTAINTY_BIT);
