@@ -1061,13 +1061,6 @@ typedef union
         The respIndId field in the response indication callback is set to
         QMI_LOC_GET_BEST_AVAILABLE_POSITION_IND_V02. */
 
-   const qmiLocSecureGetAvailablePositionIndMsgT_v02*
-      pSecureGetBestAvailablePositionInd;
-   /**< Response to the QMI_LOC_SECURE_GET_AVAILABLE_POSITION_REQ_V02 request.
-
-        The respIndId field in the response indication callback is set to
-        QMI_LOC_SECURE_GET_AVAILABLE_POSITION_IND_V02. */
-
    const qmiLocInjectMotionDataIndMsgT_v02* pInjectMotionDataInd;
    /**< Response to the QMI_LOC_INJECT_MOTION_DATA_REQ_V02 request.
 
