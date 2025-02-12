@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2024- 2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -120,22 +120,27 @@ public:
     ) const;
 
     /** Utility functions to support Location reports */
-    LocationTypes::LocationReportT parseLocationReport
+    void handleGnssLocationReport
     (
         const ::GnssLocation &lcaLoc
     ) const;
 
-    LocationTypes::GnssSvDataT parseGnssSvReport
+    void handleEngineLocationReport
     (
-        const location_client::GnssSv& gnssSvs
+        const std::vector<::GnssLocation> engLocations
     ) const;
 
-    LocationTypes::GnssMeasurementsT parseGnssMeasurements
+    void handleGnssSvReport
+    (
+        const std::vector<::GnssSv>& gnssSvs
+    ) const;
+
+    void handleGnssMeasurements
     (
         const location_client::GnssMeasurements& gnssMeasurements
     ) const;
 
-    LocationTypes::GnssDataT parseGnssDataReport
+    void handleGnssDataReport
     (
         const location_client::GnssData& gnssData
     ) const;
@@ -144,6 +149,11 @@ public:
     (
         const location_client::LocationResponse lcaResponse
     ) const;
+
+    void handleGnssNmeaReport(uint64_t timestamp, string nmea) const;
+
+    void handleEngineNmeaReport(::LocOutputEngineType engType,
+        uint64_t timestamp, string nmea) const;
 
     void onPowerEvent(IDLPowerStateType powerEvent);
     void injectMapMatchedFeedbackData
@@ -179,6 +189,8 @@ public:
     /**Keeps track of latest caps recieved */
     uint32_t mGnssCapabilites;
 
+    /** Configuration varaible to control Stop session execution by LocIdlService */
+    bool mEnableStopSession = false;
 private:
     static LocIdlAPIService *mInstance;
     LocationClientApi* mLcaInstance;
