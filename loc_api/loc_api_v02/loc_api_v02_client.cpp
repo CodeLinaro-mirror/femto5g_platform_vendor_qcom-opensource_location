@@ -404,10 +404,6 @@ static const locClientRespIndTableStructT locClientRespIndTable[]= {
    { QMI_LOC_GET_BEST_AVAILABLE_POSITION_IND_V02,
      sizeof(qmiLocGetBestAvailablePositionIndMsgT_v02)},
 
-   //Secure Get available position
-   { QMI_LOC_SECURE_GET_AVAILABLE_POSITION_IND_V02,
-     sizeof(qmiLocSecureGetAvailablePositionIndMsgT_v02)},
-
    //Inject motion data
    { QMI_LOC_INJECT_MOTION_DATA_IND_V02,
      sizeof(qmiLocInjectMotionDataIndMsgT_v02)},
