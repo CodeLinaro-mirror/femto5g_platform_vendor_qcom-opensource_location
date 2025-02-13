@@ -117,6 +117,7 @@ static uint32_t singleShotFixCnt = 0;
 vector<Geofence> sGeofences;
 
 static char NMEA_PORT[] = "/dev/at_usb1";
+static char nmeaBuffer[4097] = {0};
 static int ttyFd = -1;
 static int routeToNMEAPort = 0;
 enum ReportType {
@@ -185,6 +186,8 @@ enum TrackingSessionType {
 #define RESUME_GEOFENCES            "resumeGeofences"
 #define MODIFY_GEOFENCES            "modifyGeofences"
 #define REMOVE_GEOFENCES            "removeGeofences"
+#define SET_XTRA_END_USER_CONSENT   "setXtraEndUserConsent"
+
 
 static bool openPort(void)
 {
@@ -207,11 +210,11 @@ static bool openPort(void)
 static bool sendNMEAToTty(const std::string& nmea)
 {
     int n;
-    char buffer[201] = { 0 };
     bool retVal = true;
-    strlcpy(buffer, nmea.c_str(), sizeof(buffer));
-    if (1 < nmea.length() && sizeof(buffer) > nmea.length()) {
-        n = write(ttyFd, buffer, nmea.length());
+    memset(nmeaBuffer, 0, sizeof(nmeaBuffer));
+    strlcpy(nmeaBuffer, nmea.c_str(), sizeof(nmeaBuffer));
+    if (1 < nmea.length() && sizeof(nmeaBuffer) > nmea.length()) {
+        n = write(ttyFd, nmeaBuffer, nmea.length());
         if (n < 0) {
             printf("write() of %d bytes failed!\n", n);
             retVal = false;
@@ -220,7 +223,7 @@ static bool sendNMEAToTty(const std::string& nmea)
                 nmea.length(), errno, strerror(errno));
             /* Sleep of 0.1 msec and reattempt to write*/
             usleep(100);
-            n = write(ttyFd, buffer, nmea.length() - 1);
+            n = write(ttyFd, nmeaBuffer, nmea.length() - 1);
             if (n < 0) {
                 printf("reattempt write() failed! errno:%d [%s] \n", errno, strerror(errno));
                 retVal = false;
@@ -507,7 +510,7 @@ static void onGnssNmeaCb(uint64_t timestamp, const std::string& nmea) {
     printf("<<< onGnssNmeaCb cnt=%u time=%" PRIu64" nmea=%s",
             numGnssNmeaCb, timestamp, nmea.c_str());
     if (routeToNMEAPort && openPort()) {
-                sendNMEAToTty(nmea);
+       sendNMEAToTty(nmea);
     }
 }
 
@@ -609,9 +612,10 @@ static void onGetGnssEnergyConsumedCb(const GnssEnergyConsumedInfo& gnssEneryCon
 }
 
 static void onGetXtraStatusCb(XtraStatusUpdateTrigger updateTrigger, const XtraStatus& xtraStatus) {
-    printf("<<< onXtraStatusCb, update trigger %d, enable %d, status %d, valid hours %d\n",
+    printf("<<< onXtraStatusCb, update trigger %d, enable %d, status %d, valid hours %d, "
+           " UserConsent %d \n",
            updateTrigger, xtraStatus.featureEnabled, xtraStatus.xtraDataStatus,
-           xtraStatus.xtraValidForHours);
+           xtraStatus.xtraValidForHours, xtraStatus.userConsent);
 }
 
 static void onGnssSignalTypesCb(GnssSignalTypeMask signalType) {
@@ -684,6 +688,7 @@ static void printHelp() {
     printf("%s: modify geofences with index/breachtype/responsiveness/dwelltime\n",
             MODIFY_GEOFENCES );
     printf("%s: remove geofences with indexes\n", REMOVE_GEOFENCES );
+    printf("%s: Set xtra end user consent \n", SET_XTRA_END_USER_CONSENT);
 }
 
 void setRequiredPermToRunAsLocClient() {
@@ -1539,7 +1544,7 @@ static bool checkForAutoStart(int argc, char *argv[]) {
     uint32_t aidingDataMask = 0;
     int interval = 100;
     LocReqEngineTypeMask reqEngMask = (LocReqEngineTypeMask) 0x7;
-    uint32_t reportType =  0x2fd;
+    uint32_t reportType = 0xff;
     TrackingSessionType trackingType = NO_TRACKING;
 
     //Specifying the expected options
@@ -1627,12 +1632,14 @@ static bool checkForAutoStart(int argc, char *argv[]) {
                  }
                  break;
              case 'r' :
-                 printf("report type: %s\n", optarg);
                  reportType = atoi(optarg);
                  if (reportType <= 0) {
-                     reportType = 1;
-                     printf("setting reportType to %d", reportType);
+                    reportType = strtoul(optarg, NULL, 16);
                  }
+                 if (reportType <= 0) {
+                     reportType = 0xff;
+                 }
+                 printf("input report type %s, setting reportType to 0x%x", optarg, reportType);
                  break;
              case 'U' :
                  printf("route to NMEA port: %s\n", optarg);
@@ -2123,6 +2130,7 @@ int main(int argc, char *argv[]) {
     while (1) {
         bool retVal = true;
         char buf[1500];
+        std::string strBuf(buf);
         memset (buf, 0, sizeof(buf));
         fgets(buf, sizeof(buf), stdin);
 
@@ -2550,6 +2558,19 @@ int main(int argc, char *argv[]) {
             }
             if (pLcaClient) {
                 modifyGeofences(buf);
+            }
+        } else if (strBuf.compare(0, strlen(SET_XTRA_END_USER_CONSENT),
+                SET_XTRA_END_USER_CONSENT) == 0) {
+            static char *save = nullptr;
+            bool xtraUserConsent = false;
+            char* token = strtok_r(buf, " ", &save);
+            token = strtok_r(NULL, " ", &save);
+            if (token != NULL) {
+                xtraUserConsent = (atoi(token) != 0);
+            }
+            printf("xtrauserConsent %d\n", xtraUserConsent);
+            if (pIntClient) {
+                pIntClient->setUserConsentForXtra(xtraUserConsent);
             }
         } else {
             int command = buf[0];

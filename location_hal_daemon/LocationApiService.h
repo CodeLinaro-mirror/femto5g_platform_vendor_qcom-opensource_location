@@ -316,6 +316,7 @@ private:
     // Location configuration API util routines
     void addConfigRequestToMap(uint32_t sessionId,
                                const LocAPIMsgHeader* pMsg);
+    void configXtraUserConsent(const LocInjectXtraUserConsentMsg* pMsg);
 
     LocationApiService(const configParamToRead & configParamRead);
     virtual ~LocationApiService();

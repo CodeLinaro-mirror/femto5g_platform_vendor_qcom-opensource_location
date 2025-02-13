@@ -1662,7 +1662,8 @@ string GnssMeasurementsData::toString() const {
     out += FIELDVAL_DEC(fullInterSignalBiasUncertaintyNs);
     out += FIELDVAL_DEC(cycleSlipCount);
     out += FIELDVAL_DEC(basebandCarrierToNoiseDbHz);
-
+    out += FIELDVAL_DEC(measCodeType);
+    out += otherCodeTypeName;
     return out;
 }
 
@@ -1812,10 +1813,32 @@ string GnssEphCommonInfo::toString() const {
     return out;
 }
 
+string GpsQzssExtEphemeris::toString() const {
+    string out;
+    out.reserve(4096);
+    out += FIELDVAL_DEC(gnssSvId);
+    out += FIELDVAL_DEC(validityMask);
+    out += FIELDVAL_DEC(iscL1ca);
+    out += FIELDVAL_DEC(iscL2c);
+    out += FIELDVAL_DEC(iscL5I5);
+    out += FIELDVAL_DEC(iscL5Q5);
+    out += FIELDVAL_DEC(alert);
+    out += FIELDVAL_DEC(uraNed0);
+    out += FIELDVAL_DEC(uraNed1);
+    out += FIELDVAL_DEC(uraNed2);
+    out += FIELDVAL_DEC(top);
+    out += FIELDVAL_DEC(topClock);
+    out += FIELDVAL_DEC(validityPeriod);
+    out += FIELDVAL_DEC(deltaNdot);
+    out += FIELDVAL_DEC(deltaA);
+    out += FIELDVAL_DEC(adot);
+    return out;
+}
+
 string GpsQzssEphemeris::toString() const {
 
     string out;
-    out.reserve(256);
+    out.reserve(4096);
     out += commonEphemerisData.toString();
     out += FIELDVAL_DEC(signalHealth);
     out += FIELDVAL_DEC(URAI);
@@ -1824,6 +1847,8 @@ string GpsQzssEphemeris::toString() const {
     out += FIELDVAL_DEC(tgd);
     out += FIELDVAL_DEC(fitInterval);
     out += FIELDVAL_DEC(IODC);
+    out += FIELDVAL_DEC(extendedEphDataValidity);
+    out += gpsQzssExtEphData.toString();
     return out;
 }
 
@@ -1860,16 +1885,37 @@ string GlonassEphemeris::toString() const {
     return out;
 }
 
+string BdsExtEphemeris::toString() const {
+
+    string out;
+    out.reserve(4096);
+    out += FIELDVAL_DEC(gnssSvId);
+    out += FIELDVAL_DEC(validityMask);
+    out += FIELDVAL_DEC(svType);
+    out += FIELDVAL_DEC(tgdB2a);
+    out += FIELDVAL_DEC(iscB2a);
+    out += FIELDVAL_DEC(tgdB1c);
+    out += FIELDVAL_DEC(iscB1c);
+    out += FIELDVAL_DEC(validityPeriod);
+    out += FIELDVAL_DEC(integrityFlags);
+    out += FIELDVAL_DEC(deltaNdot);
+    out += FIELDVAL_DEC(deltaA);
+    out += FIELDVAL_DEC(adot);
+    return out;
+}
+
 string BdsEphemeris::toString() const {
 
     string out;
-    out.reserve(256);
+    out.reserve(4096);
     out += commonEphemerisData.toString();
     out += FIELDVAL_DEC(svHealth);
     out += FIELDVAL_DEC(AODC);
     out += FIELDVAL_DEC(tgd1);
     out += FIELDVAL_DEC(tgd2);
     out += FIELDVAL_DEC(URAI);
+    out += FIELDVAL_DEC(extendedEphDataValidity);
+    out += bdsExtEphData.toString();
     return out;
 }
 
@@ -1973,6 +2019,8 @@ string GnssEphemeris::toString() const {
             }
             break;
     }
+    out += FIELDVAL_DEC(validDataSourceSignal);
+    out += FIELDVAL_DEC(dataSourceSignal);
     return out;
 }
 
