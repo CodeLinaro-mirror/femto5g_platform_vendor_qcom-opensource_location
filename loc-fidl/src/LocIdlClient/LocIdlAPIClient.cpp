@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2024- 2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -280,6 +280,9 @@ void printMeasurement(const LocationTypes::GnssMeasurementsT& gnssMeasurements)
             cout <<"fullInterSignalBiasUncertaintyNs "
                     ""<< measData[idx].getFullInterSignalBiasUncertaintyNs() << endl;
             cout <<"cycleSlipCount "<< static_cast<int>(measData[idx].getCycleSlipCount()) << endl;
+            cout <<"MeasCodeType   "<< static_cast<int>(measData[idx].getMeasCodeType()) << endl;
+            cout <<"OtherCodeTypeName "<< measData[idx].getOtherCodeTypeName() << endl;
+
         }
         cout <<"ReportingLatency "<< gnssMeasurements.getReportingLatency() << endl;
         cout << "-------" << endl;
@@ -599,8 +602,8 @@ void printPosResport(const LocationTypes::LocationReportT &_locationReport)
     static bool printPvtHeader = true;
 
     if (printPvtHeader) {
-        cout << "Type, UTCTimestamp(ms), Latitude, Longitude, "
-                        "RxTimeStampPTP(ns), TxTimestampPTP(ns), Latency(ms)" << endl;
+        cout << "Type, ReportType, UTCTimestamp(ms), Latitude, Longitude, "
+                    "RxTimeStampPTP(ns), TxTimestampPTP(ns), Latency(ms), Latency IVC(ms)" << endl;
         printPvtHeader = false;
     }
 
@@ -650,30 +653,36 @@ void printPosResport(const LocationTypes::LocationReportT &_locationReport)
         if (retPtp) {
             cout <<"PVT, "
                 "" << location.getTimestamp()<< ", "
+                "" << static_cast<int>(_locationReport.getLocOutputEngType())<< ", "
                 "" <<location.getLatitude() << ", " << location.getLongitude() << ", "
                 "" << gptp_time_ns << ", "
                 "" << _locationReport.getElapsedgPtpTime()<<", "
                 "" << fixed << setprecision(3) << ""
                 "" <<(float)(gptp_time_ns -
-                            _locationReport.getElapsedgPtpTime()) / (float)1000000 <<""
+                            _locationReport.getElapsedgPtpTime()) / (float)1000000 <<", "
+                "" << _locationReport.getReportingLatency()<<""
                 ""  << endl;
         } else {
             cout <<"PVT, "
                 "" << location.getTimestamp()<< ", "
+                "" << static_cast<int>(_locationReport.getLocOutputEngType())<< ", "
                 "" <<location.getLatitude() << ", " << location.getLongitude() << ", "
                 "" << "NA" << ", "
                 "" << _locationReport.getElapsedgPtpTime() <<", "
                 "" << fixed << setprecision(3) << ""
+                "" <<"NA" <<", "
                 "" <<"NA" <<""
                 ""  << endl;
         }
     } else {
             cout <<"PVT, "
                 "" << location.getTimestamp()<< ", "
+                "" <<static_cast<int>(_locationReport.getLocOutputEngType())<< ", "
                 "" <<location.getLatitude() << ", " << location.getLongitude() << ", "
                 "" << "NA" << ", "
                 "" << "NA" <<", "
                 "" << fixed << setprecision(3) << ""
+                "" <<"NA" <<", "
                 "" <<"NA" <<""
                 ""  << endl;
     }
@@ -910,7 +919,7 @@ void printNmea(const uint64_t timestamp, const string &nmea)
 
 void DeInitHandles()
 {
-    CommonAPI::CallStatus callStatus;
+    CommonAPI::CallStatus callStatus = {};
     LocationTypes::LocationStatusT sessStatus =
             LocationTypes::LocationStatusT::LOCATION_STATUS_T_SUCCESS;
     if (sessionStarted && myProxy) {
@@ -981,7 +990,7 @@ void signalHandler(int signal) {
 
 void getLocationCapabilities() {
     if (myProxy) {
-        CommonAPI::CallStatus callStatus;
+        CommonAPI::CallStatus callStatus = {};
         uint32_t capsMask = 0;
         myProxy->GetLocationCapabilities(callStatus, capsMask, &info);
         if (callStatus == CommonAPI::CallStatus::SUCCESS)
@@ -1232,7 +1241,7 @@ void sessionStart()
 {
     uint32_t intervalInMs = tbf;
     LocationTypes::LocationStatusT resp;
-    CommonAPI::CallStatus callStatus;
+    CommonAPI::CallStatus callStatus = {};
     info.sender_ = 1234;
 
     sleep(1);
@@ -1324,7 +1333,7 @@ void setRequiredPermToRunAsIdlClient() {
 
 void mmfDataInjection(LocationTypes::MapMatchingFeedbackDataT   &mapData)
 {
-    CommonAPI::CallStatus callStatus;
+    CommonAPI::CallStatus callStatus = {};
     myProxy->InjectMapMatchedFeedbackData(mapData, callStatus);
 }
 

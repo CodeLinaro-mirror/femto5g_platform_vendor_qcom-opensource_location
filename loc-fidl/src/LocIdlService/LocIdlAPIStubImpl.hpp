@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2024- 2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -55,7 +55,7 @@ public:
     virtual const CommonAPI::Version& getInterfaceVersion(
             std::shared_ptr<CommonAPI::ClientId> client)
     {
-        return CommonAPI::Version(0, 1);
+        return v1::com::qualcomm::qti::location::Location::getInterfaceVersion();
     }
 
     /// This is the method that will be called on remote calls on the method StartPositionSessionLocationReport.

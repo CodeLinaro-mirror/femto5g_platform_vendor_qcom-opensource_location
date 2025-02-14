@@ -128,6 +128,11 @@ typedef uint64_t GpsSvMeasHeaderFlags;
 #define BIAS_BDSB1_BDSB2BI_VALID        0x04000000
 #define BIAS_BDSB1_BDSB2BI_UNC_VALID    0x08000000
 
+#define BIAS_GLOG1_VALID                0x10000000
+#define BIAS_GLOG1_UNC_VALID            0x20000000
+#define BIAS_NAVICL5_NAVICL1_VALID      0x40000000
+#define BIAS_NAVICL5_NAVICL1_UNC_VALID  0x80000000
+
 typedef struct {
     uint64_t flags;
 
@@ -162,6 +167,10 @@ typedef struct {
     float bdsB1_bdsB2aUnc;
     float bdsB1_bdsB2bi;
     float bdsB1_bdsB2biUnc;
+    float gloG1;
+    float gloG1Unc;
+    float navicL5_navicL1;
+    float navicL5_navicL1Unc;
 } timeBiases;
 
 typedef struct {
@@ -202,6 +211,12 @@ enum GnssRfBand {
 typedef std::unordered_map<string, MeasCacheInfo> CycleSlipCountMap;
 typedef CycleSlipCountMap::iterator CycleSlipCountMapItr;
 
+typedef struct {
+    GnssSvType svType;
+    double carrierFrequencyHz;
+    GnssMeasurementsCodeType codeType;
+} referenceSignalTypeForIsb;
+
 /* This class derives from the LocApiBase class.
    The members of this class are responsible for converting
    the Loc API V02 data structures into Loc Adapter data structures.
@@ -229,7 +244,6 @@ private:
   CycleSlipCountMap mCurrentCycleSlipCountMapNHz;
 
   GnssMeasurements*  mGnssMeasurements;
-  bool mGPSreceived;
   int  mMsInWeek;
   bool mAgcIsPresent;
   timeBiases mTimeBiases;
@@ -243,7 +257,8 @@ private:
   bool mIsFirstStartFixReq;
   uint64_t mHlosQtimer1, mHlosQtimer2;
   uint32_t mRefFCount;
-  std::string mPackageName[eQMI_LOC_R3_V02+1];
+  std::string mPackageName[eQMI_LOC_ECALL_V02+1];
+  GnssSvType mPreferredSvSystemType;
   ModemGnssQesdkFeatureMask mQesdkFeatureMask;
   bool mIsFullTracking;
   // GPTP inititialization
@@ -251,6 +266,8 @@ private:
   // Dwell Time Allignment
   uint8_t mDwellAlignTimeMsValid;
   uint32_t mDwellAlignTimeMs;
+
+  qmiLocGnssSignalTypeMaskT_v02 mPreferredSignalType;
 
   // Below two member variables are for elapsedRealTime calculation
   RealtimeEstimator mMeasElapsedRealTimeCal;
@@ -262,6 +279,9 @@ private:
 
   /* Convert GPS LOCK from LocationAPI format to QMI format */
   static qmiLocLockEnumT_v02 convertGpsLockFromAPItoQMI(GnssConfigGpsLock lock);
+
+  /* Convert GPS LOCK to QMI Client Config Mask */
+  static qmiLocClientsMaskT_v02 convertGpsLock(GnssConfigGpsLock lock);
 
   /* Convert Engine Lock State from QMI format to LocationAPI format */
   static EngineLockState convertEngineLockState(qmiLocEngineLockStateEnumT_v02 LockState);
@@ -313,6 +333,9 @@ private:
 
   static GnssSignalTypeMask convertQmiGnssSignalType(
         qmiLocGnssSignalTypeMaskT_v02 qmiGnssSignalType);
+
+  static Gnss_LocSignalEnumType convertQmiGnssSignalEnumType(
+        qmiLocGnssSignalTypeEnumT_v02 qmiGnssSignalType);
 
   void convertOsnmaTreeNode(qmiLocOsnmaTreeNodeT_v02& out, mgpOsnmaTreeNodeT& in);
   void convertPublicKeyAndMerkleTreeStruct(qmiLocOsnmaPublicKeyMerkleTreeReqMsgT_v02& qmiOut,
@@ -407,7 +430,6 @@ private:
               sizeof(GnssSvMeasurementHeader);
       }
       memset(&mTimeBiases, 0, sizeof(mTimeBiases));
-      mGPSreceived = false;
       mMsInWeek = -1;
       mAgcIsPresent = false;
   }
@@ -422,7 +444,7 @@ private:
         const qmiLocEventGnssSvMeasInfoIndMsgT_v02& gnss_measurement_report_ptr,
         GnssSvType& svType);
 
-  void setGnssBiases();
+  void setGnssBiasesForL1CA();
 
   /* convert and report ODCPI request */
   void requestOdcpi(
@@ -484,6 +506,7 @@ private:
             const qmiLocGnssBandsSupportedIndMsgT_v02* pGnssBandsSupportedIndMsg);
 
   GnssMeasurementsCodeType getCodeType(qmiLocGnssSignalTypeMaskT_v02 gnssSignalType);
+  GnssSvType getSvTypeFromSignalType(qmiLocGnssSignalTypeMaskT_v02 gnssSignalType);
   void updateGnssCapabNotification(GnssCapabNotification& gnssCapabNotification,
                                    qmiLocGnssSignalTypeMaskT_v02 gnssSignalType);
 

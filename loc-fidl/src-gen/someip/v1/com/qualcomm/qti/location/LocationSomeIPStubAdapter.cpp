@@ -37,10 +37,10 @@ std::shared_ptr<CommonAPI::SomeIP::StubAdapter> createLocationSomeIPStubAdapter(
 
 void initializeLocationSomeIPStubAdapter() {
     CommonAPI::SomeIP::AddressTranslator::get()->insert(
-        "local:com.qualcomm.qti.location.Location:v1_0:com.qualcomm.qti.location.Location",
-         0xee00, 0x1, 1, 0);
+        "local:com.qualcomm.qti.location.Location:v1_1:com.qualcomm.qti.location.Location",
+         0xee00, 0x1, 1, 1);
     CommonAPI::SomeIP::Factory::get()->registerStubAdapterCreateMethod(
-        "com.qualcomm.qti.location.Location:v1_0",
+        "com.qualcomm.qti.location.Location:v1_1",
         &createLocationSomeIPStubAdapter);
 }
 
