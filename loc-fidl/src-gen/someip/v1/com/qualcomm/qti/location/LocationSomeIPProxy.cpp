@@ -35,10 +35,10 @@ std::shared_ptr<CommonAPI::SomeIP::Proxy> createLocationSomeIPProxy(
 
 void initializeLocationSomeIPProxy() {
     CommonAPI::SomeIP::AddressTranslator::get()->insert(
-        "local:com.qualcomm.qti.location.Location:v1_0:com.qualcomm.qti.location.Location",
-        0xee00, 0x1, 1, 0);
+        "local:com.qualcomm.qti.location.Location:v1_1:com.qualcomm.qti.location.Location",
+        0xee00, 0x1, 1, 1);
     CommonAPI::SomeIP::Factory::get()->registerProxyCreateMethod(
-        "com.qualcomm.qti.location.Location:v1_0",
+        "com.qualcomm.qti.location.Location:v1_1",
         &createLocationSomeIPProxy);
 }
 
@@ -467,7 +467,7 @@ std::future<CommonAPI::CallStatus> LocationSomeIPProxy::GetLocationCapabilitiesA
 
 void LocationSomeIPProxy::getOwnVersion(uint16_t& ownVersionMajor, uint16_t& ownVersionMinor) const {
     ownVersionMajor = 1;
-    ownVersionMinor = 0;
+    ownVersionMinor = 1;
 }
 
 std::future<void> LocationSomeIPProxy::getCompletionFuture() {
