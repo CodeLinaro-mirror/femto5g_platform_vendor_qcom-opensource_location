@@ -21,7 +21,6 @@ cc_library_shared {
 
     shared_libs: [
         "libsqlite",
-        "libssl",
         "liblog",
     ],
 

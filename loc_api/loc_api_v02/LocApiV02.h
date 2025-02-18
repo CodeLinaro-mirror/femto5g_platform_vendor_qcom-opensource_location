@@ -29,7 +29,7 @@
  /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -252,8 +252,6 @@ private:
   size_t mTripBatchSize, mDesiredTripBatchSize;
   bool mIsFirstFinalFixReported;
   bool mIsFirstStartFixReq;
-  uint64_t mHlosQtimer1, mHlosQtimer2;
-  uint32_t mRefFCount;
   std::string mPackageName[eQMI_LOC_NTN_V02+1];
   bool mIsFullTracking;
   qmiLocGnssSignalTypeMaskT_v02 mPreferredSignalType;
@@ -266,7 +264,6 @@ private:
   uint32_t mDwellAlignTimeMs;
 
   // Below two member variables are for elapsedRealTime calculation
-  RealtimeEstimator mMeasElapsedRealTimeCal;
   GnssMeasurementsNotification m1HzMeasurementsNotify;
   GnssBasicMeasurementsInfo m1HzMeasurementsInfo;
 
@@ -458,7 +455,6 @@ private:
   void geofenceBreachEvent(const qmiLocEventGeofenceBatchedBreachIndMsgT_v02* batchedBreachInfo);
   void geofenceStatusEvent(const qmiLocEventGeofenceGenAlertIndMsgT_v02* alertInfo);
   void geofenceDwellEvent(const qmiLocEventGeofenceBatchedDwellIndMsgT_v02 *dwellEvent);
-  void reportLatencyInfo(const qmiLocLatencyInformationIndMsgT_v02* pLocLatencyInfo);
   void reportEngineLockStatus(const qmiLocEngineLockStateEnumT_v02 engineLockState);
   void reportEngDebugDataInfo(const qmiLocEngineDebugDataIndMsgT_v02* pLocEngDbgDataInfoIndMsg);
 

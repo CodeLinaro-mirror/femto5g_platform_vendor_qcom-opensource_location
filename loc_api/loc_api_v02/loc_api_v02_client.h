@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -1090,10 +1090,6 @@ typedef union
    const qmiLocEventQueryXtraInfoReqIndMsgT_v02 *pLocQueryXtraReqEvent;
    /** Sent by the engine to notify client about query reqest
    QMI_LOC_EVENT_QUERY_XTRA_INFO_REQ_IND_V02 */
-
-   const qmiLocLatencyInformationIndMsgT_v02 *pLocLatencyInfoIndMsg;
-   /** Sent by the engine to inform of latency info
-    QMI_LOC_LATENCY_INFORMATION_IND_V02 */
 
    const qmiLocPlatformPowerStateChangedIndMsgT_v02 *pPowerStateChangedIndMsg;
    /** Sent by the engine to inform power state change

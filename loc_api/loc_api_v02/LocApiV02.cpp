@@ -253,7 +253,6 @@ static void globalEventCb(locClientHandleType clientHandle,
     case QMI_LOC_EVENT_BDS_EPHEMERIS_REPORT_IND_V02:
     case QMI_LOC_EVENT_GALILEO_EPHEMERIS_REPORT_IND_V02:
     case QMI_LOC_EVENT_QZSS_EPHEMERIS_REPORT_IND_V02:
-    case QMI_LOC_LATENCY_INFORMATION_IND_V02:
     case QMI_LOC_ENGINE_DEBUG_DATA_IND_V02:
         MODEM_LOG_CALLFLOW_DEBUG(%s, loc_get_v02_event_name(eventId));
         break;
@@ -373,10 +372,6 @@ LocApiV02 :: LocApiV02(LOC_API_ADAPTER_EVENT_MASK_T exMask,
     mTripBatchSize(0), mDesiredTripBatchSize(0),
     mIsFirstFinalFixReported(false),
     mIsFirstStartFixReq(false),
-    mHlosQtimer1(0),
-    mHlosQtimer2(0),
-    mRefFCount(0),
-    mMeasElapsedRealTimeCal(600000000),
     mTimeBiases{},
     mPlatformPowerState(eQMI_LOC_POWER_STATE_UNKNOWN_V02),
     mIsFullTracking(true),
@@ -715,7 +710,6 @@ locClientEventMaskType LocApiV02 :: adjustLocClientEventMask(locClientEventMaskT
 #ifdef __ANDROID__
                                            QMI_LOC_EVENT_MASK_NEXT_LS_INFO_REPORT_V02 |
 #endif
-                                           QMI_LOC_EVENT_MASK_LATENCY_INFORMATION_REPORT_V02 |
                                            QMI_LOC_EVENT_MASK_ENGINE_DEBUG_DATA_REPORT_V02;
         // clear GNSS_EVENT_REPORT mask because QMI_LOC_EVENT_MASK_FEATURE_STATUS_V02 is set
         // when LOC_SUPPORTED_FEATURE_DYNAMIC_FEATURE_STATUS is supported
@@ -2329,10 +2323,6 @@ locClientEventMaskType LocApiV02 :: convertLocClientEventMask(
       eventMask |= QMI_LOC_EVENT_MASK_GNSS_NHZ_MEASUREMENT_REPORT_V02;
   }
 
-  if (mask & LOC_API_ADAPTER_BIT_LATENCY_INFORMATION) {
-      eventMask |= QMI_LOC_EVENT_MASK_LATENCY_INFORMATION_REPORT_V02;
-  }
-
   if (mask & LOC_API_ADAPTER_BIT_ENGINE_DEBUG_DATA_REPORT) {
      eventMask |= QMI_LOC_EVENT_MASK_ENGINE_DEBUG_DATA_REPORT_V02;
   }
@@ -2544,9 +2534,6 @@ void LocApiV02 :: reportPosition (
 {
     UlpLocation location;
 
-    mHlosQtimer2 = getQTimerTickCount();
-    LOC_LOGd("Reporting position from V2 Adapter, qtimer %" PRIu64 " ",
-             mHlosQtimer2);
     memset(&location, 0, sizeof (UlpLocation));
     location.size = sizeof(location);
     location.unpropagatedPosition = unpropagatedPosition;
@@ -5516,8 +5503,6 @@ void LocApiV02::reportGnssMeasurementData(
             newMeasProcessed = false;
         }
 
-        mHlosQtimer1 = getQTimerTickCount();
-        mRefFCount = gnss_measurement_report_ptr.systemTimeExt.refFCount;
         prevRefFCount = gnss_measurement_report_ptr.systemTimeExt.refFCount;
         if (gnss_measurement_report_ptr.nHzMeasurement_valid &&
             gnss_measurement_report_ptr.nHzMeasurement) {
@@ -5675,62 +5660,7 @@ void LocApiV02::reportGnssMeasurementData(
     }
     if (gnss_measurement_report_ptr.maxMessageNum == gnss_measurement_report_ptr.seqNum &&
         maxSubSeqNum == subSeqNum) {
-        int64_t elapsedRealTime = -1;
-        int64_t unc;
-        if (gnss_measurement_report_ptr.refCountTicks_valid &&
-            gnss_measurement_report_ptr.refCountTicksUnc_valid) {
-            /* deal with Qtimer for ElapsedRealTimeNanos */
-            elapsedRealTime = RealtimeEstimator::getElapsedRealtimeQtimer(
-                    gnss_measurement_report_ptr.refCountTicks);
 
-            /* Uncertainty on HLOS time is 0, so the uncertainty of the difference
-            is the uncertainty of the Qtimer in the modem
-            Note that gnss_measurement_report_ptr.refCountTicksUncis in msec */
-            unc = gnss_measurement_report_ptr.refCountTicksUnc * 1000000;
-#ifdef PTP_SUPPORTED
-            uint64_t elapsedgPTPTime = 0;
-            /* deal with gPTP time */
-            /* Fill PTP time corresponding to Time of generation of meas packet */
-            if (!mIsGptpInitialized && gptpInit()) {
-                mIsGptpInitialized = true;
-            }
-
-            if (mIsGptpInitialized) {
-                bool gotMPQTickPtpTime = gptpGetPtpTimeFromQTimeTickCount(&elapsedgPTPTime,
-                        gnss_measurement_report_ptr.refCountTicks);
-                if (gotMPQTickPtpTime) {
-                    measData.clock.flags |= GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_GPTP_TIME_BIT;
-                    measData.clock.elapsedgPTPTime = elapsedgPTPTime;
-                    measData.clock.elapsedgPTPTimeUnc = unc;
-                    measData.clock.flags |= GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_GPTP_TIME_UNC_BIT;
-                }
-            }
-#endif
-        } else {
-            //If Qtimer isn't valid, estimate the elapsedRealTime
-            GnssMeasurementsNotification& in = mGnssMeasurements->gnssMeasNotification;
-            const uint32_t UTC_TO_GPS_SECONDS = 315964800;
-            int64_t measTimeNanos = (int64_t)in.clock.timeNs - (int64_t)in.clock.fullBiasNs
-                    - (int64_t)in.clock.biasNs - (int64_t)in.clock.leapSecond * 1000000000
-                    + (int64_t)UTC_TO_GPS_SECONDS * 1000000000;
-            bool isCurDataTimeTrustable =
-                    in.clock.flags & GNSS_MEASUREMENTS_CLOCK_FLAGS_LEAP_SECOND_BIT &&
-                    in.clock.flags & GNSS_MEASUREMENTS_CLOCK_FLAGS_FULL_BIAS_BIT &&
-                    in.clock.flags & GNSS_MEASUREMENTS_CLOCK_FLAGS_BIAS_BIT &&
-                    in.clock.flags & GNSS_MEASUREMENTS_CLOCK_FLAGS_BIAS_UNCERTAINTY_BIT;
-            elapsedRealTime = mMeasElapsedRealTimeCal.
-                    getElapsedRealtimeEstimateNanos(measTimeNanos, isCurDataTimeTrustable, 0);
-            unc = mMeasElapsedRealTimeCal.getElapsedRealtimeUncNanos();
-        }
-
-        if (-1 == elapsedRealTime) {
-            elapsedRealTime = getBootTimeMilliSec() * 1000000;
-            unc = mMeasElapsedRealTimeCal.getElapsedRealtimeUncNanos();
-        }
-        measData.clock.flags |= GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_BIT;
-        measData.clock.elapsedRealTime = elapsedRealTime;
-        measData.clock.flags |= GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_UNC_BIT;
-        measData.clock.elapsedRealTimeUnc = unc;
         measData.isFullTracking = mIsFullTracking;
 
         //AGC Status
@@ -7786,10 +7716,6 @@ void LocApiV02 :: eventCb(locClientHandleType /*clientHandle*/,
     case QMI_LOC_EVENT_DBT_POSITION_REPORT_IND_V02:
       onDbtPosReportEvent(eventPayload.pDbtPositionReportEvent);
       break;
-
-    case QMI_LOC_LATENCY_INFORMATION_IND_V02:
-      reportLatencyInfo(eventPayload.pLocLatencyInfoIndMsg);
-      break;
     case QMI_LOC_ENGINE_DEBUG_DATA_IND_V02:
       reportEngDebugDataInfo(eventPayload.pLocEngDbgDataInfoIndMsg);
       break;
@@ -8238,81 +8164,6 @@ void LocApiV02::updatePowerConnectState(bool connected)
 
     LOC_SEND_SYNC_REQ(SetExternalPowerConfig, SET_EXTERNAL_POWER_CONFIG, chargerStatus);
     }));
-}
-
-void LocApiV02::reportLatencyInfo(const qmiLocLatencyInformationIndMsgT_v02* pLocLatencyInfo)
-{
-    GnssLatencyInfo gnssLatencyInfo = {};
-
-    if (nullptr == pLocLatencyInfo) {
-        LOC_LOGe("pLocLatencyInfo is nullptr");
-        return;
-    }
-
-    if (eQMI_LOC_LATENCY_INFO_TYPE_MEASUREMENT_V02 != pLocLatencyInfo->latencyInfo) {
-        LOC_LOGe("Invalid Latency Info Type");
-        return;
-    }
-
-    /* check refCount */
-    if (pLocLatencyInfo->fCountOfMeasBlk != mRefFCount) {
-        LOC_LOGw("FCount mismatch: Latency Fcount=%d Meas. FCount=%d",
-                 pLocLatencyInfo->fCountOfMeasBlk,
-                 mRefFCount);
-        return;
-    }
-
-    if (pLocLatencyInfo->sysTickAtChkPt1_valid) {
-        gnssLatencyInfo.meQtimer1 = pLocLatencyInfo->sysTickAtChkPt1;
-    }
-    if (pLocLatencyInfo->sysTickAtChkPt2_valid) {
-        gnssLatencyInfo.meQtimer2 = pLocLatencyInfo->sysTickAtChkPt2;
-    }
-    if (pLocLatencyInfo->sysTickAtChkPt3_valid) {
-        gnssLatencyInfo.meQtimer3 = pLocLatencyInfo->sysTickAtChkPt3;
-    }
-    if (pLocLatencyInfo->sysTickAtChkPt4_valid) {
-        gnssLatencyInfo.peQtimer1 = pLocLatencyInfo->sysTickAtChkPt4;
-    }
-    if (pLocLatencyInfo->sysTickAtChkPt5_valid) {
-        gnssLatencyInfo.peQtimer2 = pLocLatencyInfo->sysTickAtChkPt5;
-    }
-    if (pLocLatencyInfo->sysTickAtChkPt6_valid) {
-        gnssLatencyInfo.peQtimer3 = pLocLatencyInfo->sysTickAtChkPt6;
-    }
-    if (pLocLatencyInfo->sysTickAtChkPt7_valid) {
-        gnssLatencyInfo.smQtimer1 = pLocLatencyInfo->sysTickAtChkPt7;
-    }
-    if (pLocLatencyInfo->sysTickAtChkPt8_valid) {
-        gnssLatencyInfo.smQtimer2 = pLocLatencyInfo->sysTickAtChkPt8;
-    }
-    if (pLocLatencyInfo->sysTickAtChkPt9_valid) {
-        gnssLatencyInfo.smQtimer3 = pLocLatencyInfo->sysTickAtChkPt9;
-    }
-    if (pLocLatencyInfo->sysTickAtChkPt10_valid) {
-        gnssLatencyInfo.locMwQtimer = pLocLatencyInfo->sysTickAtChkPt10;
-    }
-    gnssLatencyInfo.hlosQtimer1 = mHlosQtimer1;
-    gnssLatencyInfo.hlosQtimer2 = mHlosQtimer2;
-    LOC_LOGa("meQtimer1=%" PRIi64 " "
-             "meQtimer2=%" PRIi64 " "
-             "meQtimer3=%" PRIi64 " "
-             "peQtimer1=%" PRIi64 " "
-             "peQtimer2=%" PRIi64 " "
-             "peQtimer3=%" PRIi64 " "
-             "smQtimer1=%" PRIi64 " "
-             "smQtimer2=%" PRIi64 " "
-             "smQtimer3=%" PRIi64 " "
-             "locMwQtimer=%" PRIi64 " "
-             "hlosQtimer1=%" PRIi64 " "
-             "hlosQtimer2=%" PRIi64 " ",
-             gnssLatencyInfo.meQtimer1, gnssLatencyInfo.meQtimer2,
-             gnssLatencyInfo.meQtimer3, gnssLatencyInfo.peQtimer1, gnssLatencyInfo.peQtimer2,
-             gnssLatencyInfo.peQtimer3, gnssLatencyInfo.smQtimer1, gnssLatencyInfo.smQtimer2,
-             gnssLatencyInfo.smQtimer3, gnssLatencyInfo.locMwQtimer,
-             gnssLatencyInfo.hlosQtimer1, gnssLatencyInfo.hlosQtimer2);
-
-    LocApiBase::reportLatencyInfo(gnssLatencyInfo);
 }
 
 void LocApiV02::reportEngineLockStatus(const qmiLocEngineLockStateEnumT_v02 engineLockState)
@@ -10834,10 +10685,6 @@ LocApiV02::startTimeBasedTracking(const TrackingOptions& options, LocApiResponse
     LOC_LOGI("startTimeBasedTracking: minInterval %u, mode %u",
              options.minInterval, options.mode);
     LocationError err = LOCATION_ERROR_SUCCESS;
-
-    if (!mInSession) {
-        mMeasElapsedRealTimeCal.reset();
-    }
 
     // BOOT KPI marker, print only once for a session
     if (false == mInSession) {
