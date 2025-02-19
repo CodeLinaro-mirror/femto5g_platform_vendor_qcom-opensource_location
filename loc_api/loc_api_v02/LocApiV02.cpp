@@ -141,9 +141,6 @@ using namespace loc_core;
 
 #define MAX_SV_CNT_SUPPORTED_IN_ONE_CONSTELLATION 64
 
-/* number of QMI_LOC messages that need to be checked*/
-#define NUMBER_OF_MSG_TO_BE_CHECKED        (3)
-
 /* the time, in seconds, to wait for user response for NI  */
 #define LOC_NI_NO_RESPONSE_TIME 20
 
@@ -444,100 +441,12 @@ LocApiV02 :: open(LOC_API_ADAPTER_EVENT_MASK_T mask)
                 loc_get_v02_client_status_name(status));
       rtv = LOC_API_ADAPTER_ERR_FAILURE;
     } else {
-        uint64_t supportedMsgList = 0;
         bool gnssMeasurementSupported = false;
-        const uint32_t msgArray[NUMBER_OF_MSG_TO_BE_CHECKED] =
-        {
-            // For - LOC_API_ADAPTER_MESSAGE_LOCATION_BATCHING
-            QMI_LOC_GET_BATCH_SIZE_REQ_V02,
-
-            // For - LOC_API_ADAPTER_MESSAGE_BATCHED_GENFENCE_BREACH
-            QMI_LOC_EVENT_GEOFENCE_BATCHED_BREACH_NOTIFICATION_IND_V02,
-
-            // For - LOC_API_ADAPTER_MESSAGE_DISTANCE_BASE_TRACKING
-            QMI_LOC_START_DBT_REQ_V02
-        };
-
         if (isMaster()) {
             registerMasterClient();
             gnssMeasurementSupported = cacheGnssMeasurementSupport();
             LocContext::injectFeatureConfig(mContext);
         }
-
-        // check the modem
-        status = locClientSupportMsgCheck(clientHandle,
-                                          msgArray,
-                                          NUMBER_OF_MSG_TO_BE_CHECKED,
-                                          &supportedMsgList);
-        if (eLOC_CLIENT_SUCCESS != status) {
-            LOC_LOGe("Failed to checking QMI_LOC message supported.");
-        }
-
-        /** if batching is supported , check if the adaptive batching or
-            distance-based batching is supported. */
-        uint32_t messageChecker = 1 << LOC_API_ADAPTER_MESSAGE_LOCATION_BATCHING;
-        if ((messageChecker & supportedMsgList) == messageChecker) {
-            locClientReqUnionType req_union;
-            locClientStatusEnumType status = eLOC_CLIENT_SUCCESS;
-            qmiLocQueryAonConfigReqMsgT_v02 queryAonConfigReq;
-            qmiLocQueryAonConfigIndMsgT_v02 queryAonConfigInd;
-
-            memset(&queryAonConfigReq, 0, sizeof(queryAonConfigReq));
-            memset(&queryAonConfigInd, 0, sizeof(queryAonConfigInd));
-            queryAonConfigReq.transactionId = LOC_API_V02_DEF_SESSION_ID;
-
-            req_union.pQueryAonConfigReq = &queryAonConfigReq;
-            status = locSyncSendReq(QMI_LOC_QUERY_AON_CONFIG_REQ_V02,
-                                    req_union,
-                                    LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
-                                    QMI_LOC_QUERY_AON_CONFIG_IND_V02,
-                                    &queryAonConfigInd);
-
-            if (status == eLOC_CLIENT_FAILURE_UNSUPPORTED) {
-                LOC_LOGe("Query AON config is not supported.");
-            } else {
-                if (status != eLOC_CLIENT_SUCCESS ||
-                    queryAonConfigInd.status != eQMI_LOC_SUCCESS_V02) {
-                    LOC_LOGe("Query AON config failed. status: %s, ind status:%s",
-                             loc_get_v02_client_status_name(status),
-                             loc_get_v02_qmi_status_name(queryAonConfigInd.status));
-                } else {
-                    LOC_LOGd("Query AON config succeeded. aonCapability valid %d, cap 0x%x.",
-                             queryAonConfigInd.aonCapability_valid,
-                             queryAonConfigInd.aonCapability);
-                    if (queryAonConfigInd.aonCapability_valid) {
-                        if (queryAonConfigInd.aonCapability &
-                                QMI_LOC_MASK_AON_TIME_BASED_BATCHING_SUPPORTED_V02) {
-                            LOC_LOGd("LB 1.0 is supported.\n");
-                        }
-                        if (queryAonConfigInd.aonCapability &
-                                QMI_LOC_MASK_AON_AUTO_BATCHING_SUPPORTED_V02) {
-                            supportedMsgList |=
-                                (1 << LOC_API_ADAPTER_MESSAGE_ADAPTIVE_LOCATION_BATCHING);
-                        }
-                        if (queryAonConfigInd.aonCapability &
-                                QMI_LOC_MASK_AON_DISTANCE_BASED_BATCHING_SUPPORTED_V02) {
-                            supportedMsgList |=
-                                (1 << LOC_API_ADAPTER_MESSAGE_DISTANCE_BASE_LOCATION_BATCHING);
-                        }
-                        if (queryAonConfigInd.aonCapability &
-                            QMI_LOC_MASK_AON_DISTANCE_BASED_TRACKING_SUPPORTED_V02) {
-                        }
-                        if (queryAonConfigInd.aonCapability &
-                                QMI_LOC_MASK_AON_UPDATE_TBF_SUPPORTED_V02) {
-                            supportedMsgList |=
-                                (1 << LOC_API_ADAPTER_MESSAGE_UPDATE_TBF_ON_THE_FLY);
-                        }
-                        if (queryAonConfigInd.aonCapability &
-                                QMI_LOC_MASK_AON_OUTDOOR_TRIP_BATCHING_SUPPORTED_V02) {
-                            supportedMsgList |=
-                                (1 << LOC_API_ADAPTER_MESSAGE_OUTDOOR_TRIP_BATCHING);
-                        }
-                    }
-                }
-            }
-        }
-        LOC_LOGi("supportedMsgList is %" PRIu64 ".", supportedMsgList);
 
         // Query for supported feature list
         locClientReqUnionType req_union;
@@ -564,9 +473,8 @@ LocApiV02 :: open(LOC_API_ADAPTER_EVENT_MASK_T mask)
                 }
             }
         }
-
         // cache the mpss engine capabilities
-        mContext->setEngineCapabilities(supportedMsgList,
+        mContext->setEngineCapabilities(
             (getSupportedFeatureList_ind.feature_len != 0 ? getSupportedFeatureList_ind.feature:
             NULL), gnssMeasurementSupported);
 
@@ -2120,11 +2028,7 @@ locClientEventMaskType LocApiV02 :: convertLocClientEventMask(
       eventMask |= QMI_LOC_EVENT_MASK_GEOFENCE_BREACH_NOTIFICATION_V02;
 
   if (mask & LOC_API_ADAPTER_BIT_BATCHED_GENFENCE_BREACH_REPORT) {
-      if (ContextBase::isMessageSupported(LOC_API_ADAPTER_MESSAGE_BATCHED_GENFENCE_BREACH)) {
-          eventMask |= QMI_LOC_EVENT_MASK_GEOFENCE_BATCH_BREACH_NOTIFICATION_V02;
-      } else {
-          eventMask |= QMI_LOC_EVENT_MASK_GEOFENCE_BREACH_NOTIFICATION_V02;
-      }
+      eventMask |= QMI_LOC_EVENT_MASK_GEOFENCE_BATCH_BREACH_NOTIFICATION_V02;
   }
 
   if (mask & LOC_API_ADAPTER_BIT_PEDOMETER_CTRL)
@@ -7577,9 +7481,6 @@ void LocApiV02 :: eventCb(locClientHandleType /*clientHandle*/,
       batchStatusEvent(eventPayload.pBatchingStatusEvent);
       break;
 
-    case QMI_LOC_EVENT_DBT_POSITION_REPORT_IND_V02:
-      onDbtPosReportEvent(eventPayload.pDbtPositionReportEvent);
-      break;
     case QMI_LOC_ENGINE_DEBUG_DATA_IND_V02:
       reportEngDebugDataInfo(eventPayload.pLocEngDbgDataInfoIndMsg);
       break;
@@ -9487,90 +9388,6 @@ void LocApiV02::reportPowerStateChangeInfo(
     }
 }
 
-void LocApiV02::onDbtPosReportEvent(const qmiLocEventDbtPositionReportIndMsgT_v02* pDbtPosReport)
-{
-    UlpLocation location;
-    memset (&location, 0, sizeof (location));
-    location.size = sizeof(location);
-    const qmiLocDbtPositionStructT_v02 *pReport = &pDbtPosReport->dbtPosition;
-
-    // time stamp
-    location.gpsLocation.timestamp = pReport->timestampUtc;
-    // latitude & longitude
-    location.gpsLocation.flags |= LOC_GPS_LOCATION_HAS_LAT_LONG;
-    location.gpsLocation.latitude  = pReport->latitude;
-    location.gpsLocation.longitude = pReport->longitude;
-    // Altitude
-    if (pReport->altitudeWrtEllipsoid_valid == 1) {
-        location.gpsLocation.flags |= LOC_GPS_LOCATION_HAS_ALTITUDE;
-        location.gpsLocation.altitude = pReport->altitudeWrtEllipsoid;
-    }
-    // Speed
-    if (pReport->speedHorizontal_valid == 1) {
-        location.gpsLocation.flags |= LOC_GPS_LOCATION_HAS_SPEED;
-        location.gpsLocation.speed = pReport->speedHorizontal;
-    }
-    // Heading
-    if (pReport->heading_valid == 1) {
-        location.gpsLocation.flags |= LOC_GPS_LOCATION_HAS_BEARING;
-        location.gpsLocation.bearing = pReport->heading;
-    }
-    // Accuracy
-    location.gpsLocation.flags |= LOC_GPS_LOCATION_HAS_ACCURACY;
-    location.gpsLocation.accuracy = sqrt(pReport->horUncEllipseSemiMinor*
-                                         pReport->horUncEllipseSemiMinor +
-                                         pReport->horUncEllipseSemiMajor*
-                                         pReport->horUncEllipseSemiMajor);
-    // Source used
-    LocPosTechMask loc_technology_mask = LOC_POS_TECH_MASK_DEFAULT;
-    if (pDbtPosReport->positionSrc_valid) {
-        switch (pDbtPosReport->positionSrc) {
-            case eQMI_LOC_POSITION_SRC_GNSS_V02:
-                loc_technology_mask = LOC_POS_TECH_MASK_SATELLITE;
-                break;
-            case eQMI_LOC_POSITION_SRC_CELLID_V02:
-                loc_technology_mask = LOC_POS_TECH_MASK_CELLID;
-                break;
-            case eQMI_LOC_POSITION_SRC_ENH_CELLID_V02:
-                loc_technology_mask = LOC_POS_TECH_MASK_CELLID;
-                break;
-            case eQMI_LOC_POSITION_SRC_WIFI_V02:
-                loc_technology_mask = LOC_POS_TECH_MASK_WIFI;
-                break;
-            case eQMI_LOC_POSITION_SRC_TERRESTRIAL_V02:
-                loc_technology_mask = LOC_POS_TECH_MASK_REFERENCE_LOCATION;
-                break;
-            case eQMI_LOC_POSITION_SRC_GNSS_TERRESTRIAL_HYBRID_V02:
-                loc_technology_mask = LOC_POS_TECH_MASK_HYBRID;
-                break;
-            default:
-                loc_technology_mask = LOC_POS_TECH_MASK_DEFAULT;
-        }
-    }
-
-    GpsLocationExtended locationExtended;
-    memset(&locationExtended, 0, sizeof (GpsLocationExtended));
-    locationExtended.size = sizeof(locationExtended);
-
-    if (pReport->vertUnc_valid) {
-       locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_VERT_UNC;
-       locationExtended.vert_unc = pReport->vertUnc;
-    }
-    if (pDbtPosReport->speedUnc_valid) {
-        locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_SPEED_UNC;
-        locationExtended.speed_unc = pDbtPosReport->speedUnc;
-    }
-    if (pDbtPosReport->headingUnc_valid) {
-       locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_BEARING_UNC;
-       locationExtended.bearing_unc = pDbtPosReport->headingUnc;
-    }
-    // Calling the base
-    reportDBTPosition(location,
-                      locationExtended,
-                      LOC_SESS_INTERMEDIATE,
-                      loc_technology_mask);
-}
-
 void LocApiV02::batchFullEvent(const qmiLocEventBatchFullIndMsgT_v02* batchFullInfo)
 {
     struct MsgGetBatchedLocations : public LocMsg {
@@ -9590,8 +9407,7 @@ void LocApiV02::batchFullEvent(const qmiLocEventBatchFullIndMsgT_v02* batchFullI
         inline virtual void proc() const {
             // Explicit check for if OTB is supported or not to work around an
             // issue with older modems where uninitialized batchInd is being sent
-            if ((mBatchType == eQMI_LOC_OUTDOOR_TRIP_BATCHING_V02) &&
-                (ContextBase::isMessageSupported(LOC_API_ADAPTER_MESSAGE_OUTDOOR_TRIP_BATCHING))) {
+            if (mBatchType == eQMI_LOC_OUTDOOR_TRIP_BATCHING_V02) {
                 mApi.getBatchedTripLocationsSync(mCount, mAccumulatedDistance);
             } else {
                 mApi.getBatchedLocationsSync(mCount);

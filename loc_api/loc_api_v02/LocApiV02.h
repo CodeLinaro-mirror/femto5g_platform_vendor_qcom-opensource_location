@@ -450,7 +450,6 @@ private:
           uint32_t &accumulatedDistance, uint32_t &numOfBatchedPositions);
   void batchFullEvent(const qmiLocEventBatchFullIndMsgT_v02* batchFullInfo);
   void batchStatusEvent(const qmiLocEventBatchingStatusIndMsgT_v02* batchStatusInfo);
-  void onDbtPosReportEvent(const qmiLocEventDbtPositionReportIndMsgT_v02* pDbtPosReport);
   void geofenceBreachEvent(const qmiLocEventGeofenceBreachIndMsgT_v02* breachInfo);
   void geofenceBreachEvent(const qmiLocEventGeofenceBatchedBreachIndMsgT_v02* batchedBreachInfo);
   void geofenceStatusEvent(const qmiLocEventGeofenceGenAlertIndMsgT_v02* alertInfo);

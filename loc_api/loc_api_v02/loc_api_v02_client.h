@@ -520,9 +520,6 @@ typedef union
     const qmiLocInjectTimeZoneInfoReqMsgT_v02 *pInjectTimeZoneInfoReq;
     /*QMI_LOC_INJECT_TIME_ZONE_INFO*/
 
-    const qmiLocQueryAonConfigReqMsgT_v02 *pQueryAonConfigReq;
-    /*QMI_LOC_QUERY_AON_CONFIG_REQ_V02*/
-
     const qmiLocGetSupportedFeatureReqMsgT_v02 *pGetSupportedFeatureReq;
     /* QMI_LOC_GET_SUPPORTED_FEATURE_REQ_V02*/
 
@@ -770,11 +767,6 @@ typedef union
    /**< Sent by the engine when GNSS measurements are available
         The eventIndId field in the event indication callback is set to
         QMI_LOC_EVENT_SV_POLYNOMIAL_REPORT_IND_V02. @newpagetable */
-
-   const qmiLocEventDbtPositionReportIndMsgT_v02 *pDbtPositionReportEvent;
-   /**< Sent by the engine to notify the client of a distance based
-        tracking position report.
-        QMI_LOC_EVENT_DBT_POSITION_REPORT_IND_V02*/
 
    const qmiLocEventGeofenceBatchedDwellIndMsgT_v02 *pGeofenceBatchedDwellEvent;
    /**< Sent by the engine to notify the client of the dwell time inside
@@ -1051,9 +1043,6 @@ typedef union
     const qmiLocInjectTimeZoneInfoIndMsgT_v02 *pInjectTimeZoneInfoInd;
     /*QMI_LOC_INJECT_TIME_ZONE_INFO_IND_V02*/
 
-    const qmiLocQueryAonConfigIndMsgT_v02 *pQueryAonConfigInd;
-    /*QMI_LOC_QUERY_AON_CONFIG_IND_V02*/
-
     const qmiLocGetSupportedFeatureIndMsgT_v02 *pGetSupportedFeatureInd;
     /*QMI_LOC_GET_SUPPORTED_FEATURE_IND_V02*/
 
@@ -1201,14 +1190,6 @@ typedef struct
                                               @newpagetable */
 }locClientCallbacksType;
 
-/**
-  Response for getting qmi service list
-*/
-typedef struct
-{
-    qmi_get_supported_msgs_resp_v01 resp; /**< Response */
-}qmiLocGetSupportMsgT_v02;
-
 /*===========================================================================
  *
  *                          FUNCTION DECLARATION
@@ -1312,35 +1293,6 @@ extern locClientStatusEnumType locClientSendReq(
      locClientHandleType       handle,
      uint32_t                  reqId,
      locClientReqUnionType     reqPayload
-);
-
-/*=============================================================================
-    locClientSupportMsgCheck */
-/**
-  @brief Sends a QMI_LOC_GET_SUPPORTED_MSGS_REQ_V02 message to the
-         location engine, and then receives a list of all services supported
-         by the engine. This function will check if the input service(s) form
-         the client is in the list or not. If the locClientSupportMsgCheck()
-         function is successful, the client should expect an result of
-         the service is supported or not recorded in supportedMsg.
-  @param [in] handle Handle returned by the locClientOpen()
-              function.
-  @param [in] supportedMsg   a integer used to record which
-                             message is supported
-
-  @return
-  One of the following error codes:
-  - 0 (eLOC_CLIENT_SUCCESS) -- On success.
-  - Non-zero error code (see \ref locClientStatusEnumType) -- On failure.
-
-  @dependencies
-  None. @newpage
-*/
-extern locClientStatusEnumType locClientSupportMsgCheck(
-     locClientHandleType      handle,
-     const uint32_t*          msgArray,
-     uint32_t                 msgArrayLength,
-     uint64_t*                supportedMsg
 );
 
 /*=============================================================================

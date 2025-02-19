@@ -1303,7 +1303,7 @@ SynergyLocApi::open(LOC_API_ADAPTER_EVENT_MASK_T mask) {
                         (supportedMask & LOC_API_ADAPTER_BIT_GNSS_MEASUREMENT))) {
                     gnssMeasurementSupported = true;
                 }
-            mContext->setEngineCapabilities(supportedMask, (getSllFeatures.feature_len != 0 ?
+            mContext->setEngineCapabilities((getSllFeatures.feature_len != 0 ?
                 getSllFeatures.feature : NULL), gnssMeasurementSupported);
         }
     }

@@ -222,9 +222,6 @@ static const locClientEventIndTableStructT locClientEventIndTable[]= {
    { QMI_LOC_EVENT_SV_POLYNOMIAL_REPORT_IND_V02,
     sizeof(qmiLocEventGnssSvPolyIndMsgT_v02) },
 
-  { QMI_LOC_EVENT_DBT_POSITION_REPORT_IND_V02,
-    sizeof(qmiLocEventDbtPositionReportIndMsgT_v02) },
-
   { QMI_LOC_EVENT_GEOFENCE_BATCHED_DWELL_NOTIFICATION_IND_V02,
     sizeof(qmiLocEventGeofenceBatchedDwellIndMsgT_v02) },
 
@@ -454,9 +451,6 @@ static const locClientRespIndTableStructT locClientRespIndTable[]= {
    { QMI_LOC_INJECT_TIME_ZONE_INFO_IND_V02,
      sizeof(qmiLocInjectTimeZoneInfoIndMsgT_v02)},
 
-   { QMI_LOC_QUERY_AON_CONFIG_IND_V02,
-     sizeof(qmiLocQueryAonConfigIndMsgT_v02)},
-
    { QMI_LOC_GET_SUPPORTED_FEATURE_IND_V02,
      sizeof(qmiLocGetSupportedFeatureIndMsgT_v02) },
 
@@ -642,54 +636,6 @@ static bool locClientGetSizeAndTypeByIndId (uint32_t indId, size_t *pIndSize,
   // Id not found
   LOC_LOGw("indId %d not found\n", indId);
   return false;
-}
-
-/** checkQmiMsgsSupported
- @brief check the qmi service is supported or not.
- @param [in] pResponse  pointer to the response received from
-        QMI_LOC service.
-*/
-static void checkQmiMsgsSupported(
-  const uint32_t*          reqIdArray,
-  int                      reqIdArrayLength,
-  qmiLocGetSupportMsgT_v02 *pResponse,
-  uint64_t*                supportedMsg)
-{
-    uint64_t result = 0;
-    if (pResponse->resp.supported_msgs_valid) {
-
-        /* For example, if a service supports exactly four messages with
-        IDs 0, 1, 30, and 31 (decimal), the array (in hexadecimal) is
-        4 bytes [03 00 00 c0]. */
-
-        size_t idx = 0;
-        uint32_t reqId = 0;
-        uint32_t length = 0;
-        uint32_t supportedMsgsLen = pResponse->resp.supported_msgs_len;
-
-        // every bit saves a checked message result
-        uint32_t maxCheckedMsgsSavedNum = sizeof(result)<<3;
-
-        uint32_t loopSize = reqIdArrayLength;
-        loopSize =
-            loopSize < supportedMsgsLen ? loopSize : supportedMsgsLen;
-        loopSize =
-            loopSize < maxCheckedMsgsSavedNum ? loopSize : maxCheckedMsgsSavedNum;
-
-        for (idx = 0; idx < loopSize; idx++) {
-            reqId = reqIdArray[idx];
-            length = reqId >> 3;
-            if(supportedMsgsLen > length) {
-                uint32_t bit = reqId & ((uint32_t)7);
-                if (pResponse->resp.supported_msgs[length] & (1<<bit)) {
-                    result |= ( 1 << idx ) ;
-                }
-            }
-        }
-    } else {
-        LOC_LOGe("Invalid supported message list.");
-    }
-    *supportedMsg = result;
 }
 
 /** convertQmiResponseToLocStatus
@@ -1278,12 +1224,6 @@ bool validateRequest(
     case QMI_LOC_INJECT_TIME_ZONE_INFO_REQ_V02:
     {
         *pOutLen = sizeof(qmiLocInjectTimeZoneInfoReqMsgT_v02);
-        break;
-    }
-
-    case QMI_LOC_QUERY_AON_CONFIG_REQ_V02:
-    {
-        *pOutLen = sizeof(qmiLocQueryAonConfigReqMsgT_v02);
         break;
     }
 
@@ -1958,115 +1898,6 @@ locClientStatusEnumType locClientSendReq(
   return(status);
 }
 
-/** locClientSupportMsgCheck
-  @brief Sends a QMI_LOC_GET_SUPPORTED_MSGS_REQ_V02 message to the
-         location engine, and then receives a list of all services supported
-         by the engine. This function will check if the input service(s) form
-         the client is in the list or not. If the locClientSupportMsgCheck()
-         function is successful, the client should expect an result of
-         the service is supported or not recorded in supportedMsg.
-  @param [in] handle Handle returned by the locClientOpen()
-              function.
-  @param [in] supportedMsg   an integer used to record which
-                             message is supported
-
-  @return
-  One of the following error codes:
-  - 0 (eLOC_CLIENT_SUCCESS) -- On success.
-  - Non-zero error code (see \ref locClientStatusEnumType) -- On failure.
-*/
-
-locClientStatusEnumType locClientSupportMsgCheck(
-     locClientHandleType      handle,
-     const uint32_t*          msgArray,
-     uint32_t                 msgArrayLength,
-     uint64_t*                supportedMsg)
-{
-
-  // set to true if one client has checked the modem capability.
-  static bool isCheckedAlready = false;
-  /*
-  The 1st bit in supportedMsgChecked indicates if
-      QMI_LOC_EVENT_GEOFENCE_BATCHED_BREACH_NOTIFICATION_IND_V02
-      is supported or not;
-  The 2ed bit in supportedMsgChecked indicates if
-      QMI_LOC_GET_BATCH_SIZE_REQ_V02
-      is supported or not;
-  */
-  static uint64_t supportedMsgChecked = 0;
-
-  // Validate input arguments
-  if(msgArray == NULL || supportedMsg == NULL) {
-
-    LOC_LOGe("Input argument is NULL");
-    return eLOC_CLIENT_FAILURE_INVALID_PARAMETER;
-  }
-
-  if (isCheckedAlready) {
-    // already checked modem
-    LOC_LOGv("Already checked. The supportedMsgChecked is %" PRId64 "",
-             supportedMsgChecked);
-    *supportedMsg = supportedMsgChecked;
-    return eLOC_CLIENT_SUCCESS;
-  }
-
-  locClientStatusEnumType status = eLOC_CLIENT_SUCCESS;
-  qmi_client_error_type rc = QMI_NO_ERR; //No error
-  qmiLocGetSupportMsgT_v02 resp;
-
-  uint32_t reqLen = 0;
-  void *pReqData = NULL;
-  locClientCallbackDataType *pCallbackData =
-        (locClientCallbackDataType *)handle;
-
-  // check the input handle for sanity
-   if( NULL == pCallbackData ||
-       NULL == pCallbackData->userHandle ||
-       pCallbackData != pCallbackData->pMe ) {
-     // did not find the handle in the client List
-     LOC_LOGe("invalid handle");
-
-     return eLOC_CLIENT_FAILURE_GENERAL;
-   }
-
-  // NEXT call goes out to modem. We log the callflow before it
-  // actually happens to ensure the this comes before resp callflow
-  // back from the modem, to avoid confusing log order. We trust
-  // that the QMI framework is robust.
-
-  EXIT_LOG_CALLFLOW(%s, loc_get_v02_event_name(QMI_LOC_GET_SUPPORTED_MSGS_REQ_V02));
-  rc = qmi_client_send_msg_sync(
-      pCallbackData->userHandle,
-      QMI_LOC_GET_SUPPORTED_MSGS_REQ_V02,
-      pReqData,
-      reqLen,
-      &resp,
-      sizeof(resp),
-      LOC_CLIENT_ACK_TIMEOUT);
-
-  if (rc != QMI_NO_ERR)
-  {
-    LOC_LOGe("send_msg_sync error: %d", rc);
-    return eLOC_CLIENT_FAILURE_GENERAL;
-  }
-
-  // map the QCCI response to Loc API v02 status
-  status = convertQmiResponseToLocStatus((qmiLocGenRespMsgT_v02*)&resp);
-
-  if(eLOC_CLIENT_SUCCESS == status)
-  {
-    // check every message listed in msgArray supported by modem or not
-    checkQmiMsgsSupported(msgArray, msgArrayLength, &resp, &supportedMsgChecked);
-
-    LOC_LOGa("supportedMsgChecked is %" PRId64 "", supportedMsgChecked);
-    *supportedMsg = supportedMsgChecked;
-    isCheckedAlready = true;
-    return status;
-  } else {
-    LOC_LOGe("convertQmiResponseToLocStatus error: %d", status);
-    return eLOC_CLIENT_FAILURE_GENERAL;
-  }
-}
 
 /** locClientGetSizeByRespIndId
  *  @brief Get the size of the response indication structure,
