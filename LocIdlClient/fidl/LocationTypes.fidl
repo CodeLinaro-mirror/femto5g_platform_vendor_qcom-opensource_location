@@ -1,4 +1,4 @@
-/** Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+/** Copyright (c) 2024- 2025 Qualcomm Innovation Center, Inc. All rights reserved.
    SPDX-License-Identifier: BSD-3-Clause-Clear */
 
 package com.qualcomm.qti.location
@@ -9,7 +9,7 @@ package com.qualcomm.qti.location
             
 **/
 typeCollection LocationTypes {
-    version { major 1 minor 0 }
+    version { major 1 minor 1 }
     
     /**
         @description :
@@ -393,6 +393,12 @@ typeCollection LocationTypes {
         
         /** GnssMeasurementsDataT has valid GnssMeasurementsData::gnssSignalType  **/
         GMDFMT_BASEBAND_CARRIER_TO_NOISE_BIT = 4194304
+
+        /** GnssMeasurementsDataT has valid GnssMeasurementsData::measCodeType **/
+        GMDFMT_CODE_TYPE_BIT = 8388608
+        
+        /** GnssMeasurementsDataT has valid GnssMeasurementsData::otherCodeType  **/
+        GMDFMT_OTHER_MEAS_CODE_TYPE_BIT = 16777216
             
     }
     
@@ -607,6 +613,68 @@ typeCollection LocationTypes {
         
         /** Maximum number of signal types  **/
         GSTT_MAX_NUMBER_OF_SIGNAL_TYPES = 25
+            
+    }
+    
+    /**
+        @description :
+            
+        @experimental: type : uint8
+    **/
+    enumeration GnssMeasCodeTypeT {
+        /** Measurement code type not known   **/
+        GNSS_MEAS_CODE_TYPE_UNKNOWN = 0
+        
+        /** Measurement code type is A   **/
+        GNSS_MEAS_CODE_TYPE_A = 1
+        
+        /** Measurement code type is B   **/
+        GNSS_MEAS_CODE_TYPE_B = 2
+        
+        /** Measurement code type is C   **/
+        GNSS_MEAS_CODE_TYPE_C = 3
+        
+        /** Measurement code type is I   **/
+        GNSS_MEAS_CODE_TYPE_I = 4
+        
+        /** Measurement code type is L   **/
+        GNSS_MEAS_CODE_TYPE_L = 5
+        
+        /** Measurement code type is M   **/
+        GNSS_MEAS_CODE_TYPE_M = 6
+        
+        /** Measurement code type is P   **/
+        GNSS_MEAS_CODE_TYPE_P = 7
+        
+        /** Measurement code type is Q   **/
+        GNSS_MEAS_CODE_TYPE_Q = 8
+        
+        /** Measurement code type is S   **/
+        GNSS_MEAS_CODE_TYPE_S = 9
+        
+        /** Measurement code type is W   **/
+        GNSS_MEAS_CODE_TYPE_W = 10
+        
+        /** Measurement code type is X   **/
+        GNSS_MEAS_CODE_TYPE_X = 11
+        
+        /** Measurement code type is Y   **/
+        GNSS_MEAS_CODE_TYPE_Y = 12
+        
+        /** Measurement code type is Z   **/
+        GNSS_MEAS_CODE_TYPE_Z = 13
+        
+        /** Measurement code type is N   **/
+        GNSS_MEAS_CODE_TYPE_N = 14
+        
+        /** Measurement code type is D   **/
+        GNSS_MEAS_CODE_TYPE_D = 15
+        
+        /** Measurement code type is E   **/
+        GNSS_MEAS_CODE_TYPE_E = 16
+        
+        /** Measurement code type is Other   **/
+        GNSS_MEAS_CODE_TYPE_OTHER = 255
             
     }
     
@@ -1413,73 +1481,6 @@ typeCollection LocationTypes {
         @description :
 
     **/
-    struct LocationReportRequest {
-        /**
-            @description :  Time between fixes, or TBF, in milliseconds. 
-        **/
-        UInt32 intervalInMs
-        
-        /**
-            @description :  Specify the mask to receive the reports when invoking 
-             StartPositionSessionLocationReport()  
-        **/
-        UInt32 gnssReportCallbackMask
-          
-    }
-    
-    /**
-        @description :
-
-    **/
-    struct LocationResponse {
-        /**
-            @description :  Location status code defined in LocationStatusT  
-        **/
-        LocationStatusT status
-          
-    }
-    
-    /**
-        @description :
-
-    **/
-    struct EngineSpecificLocationRequest {
-        /**
-            @description :  Time between fixes, or TBF, in milliseconds. 
-        **/
-        UInt32 intervalInMs
-        
-        /**
-            @description :  Specify the set of engines whose position reports are requested 
-             via StartPositionSessionEngineSpecificLocation() 
-        **/
-        UInt32 locReqEngMask
-        
-        /**
-            @description :  Specify the set of callback masks to receive the reports when 
-             invoking StartPositionSessionEngineSpecificLocation() 
-        **/
-        UInt32 engReportCallbackMask
-          
-    }
-    
-    /**
-        @description :
-
-    **/
-    struct LocationAidingDataDeletionMask {
-        /**
-            @description :  Mask used to specify the set of aiding data that can be 
-             deleted via DeleteAidingData()  
-        **/
-        UInt32 deleteMask
-          
-    }
-    
-    /**
-        @description :
-
-    **/
     struct GnssSvIdInfoT {
         /**
             @description : constellation for the sv 
@@ -1496,31 +1497,6 @@ typeCollection LocationTypes {
              NAVIC SV id range: 401 to 414 
         **/
         UInt32 svId
-          
-    }
-    
-    /**
-        @description :
-
-    **/
-    struct LocationGnssSvIdInfo {
-        /**
-            @description : None 
-            @experimental : repeated_field_max_count: 176
-        **/
-        GnssSvIdInfoT [] svList
-          
-    }
-    
-    /**
-        @description :
-
-    **/
-    struct LocationCapabilities {
-        /**
-            @description :  Location capabilities information 
-        **/
-        UInt32 capabilitiesMask
           
     }
     
@@ -1763,6 +1739,17 @@ typeCollection LocationTypes {
             @description : Increments when a cycle slip is detected. 
         **/
         UInt32 cycleSlipCount
+        
+        /**
+            @description : GNSS Measurement Code Type 
+        **/
+        GnssMeasCodeTypeT measCodeType
+        
+        /**
+            @description : GNSS Measurement other Code Type 
+            @experimental : variable_type_max_size: 255
+        **/
+        String otherCodeTypeName
           
     }
     
@@ -2633,5 +2620,5 @@ typeCollection LocationTypes {
         Double [] agc
           
     }
-
+    
 }
