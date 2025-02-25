@@ -4104,6 +4104,11 @@ void LocApiV02::populateFeatureStatusReport
     } else {
         featureMap[LOCATION_QWES_FEATURE_TYPE_ROBUST_LOCATION] = false;
     }
+    if (featureStatusReport & QMI_LOC_FEATURE_STATUS_SBAS_WOCS_V02) {
+        featureMap[LOCATION_QWES_FEATURE_TYPE_WOCS] = true;
+    } else {
+        featureMap[LOCATION_QWES_FEATURE_TYPE_WOCS] = false;
+    }
 }
 
 void LocApiV02::reportSvEphemeris (
