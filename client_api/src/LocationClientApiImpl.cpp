@@ -198,9 +198,6 @@ LocationCapabilitiesMask LocationClientApiImpl::parseCapabilitiesMask(
     if (LOCATION_CAPABILITIES_TIME_BASED_BATCHING_BIT & mask) {
         capsMask |=  LOCATION_CAPS_TIME_BASED_BATCHING_BIT;
     }
-    if (LOCATION_CAPABILITIES_DISTANCE_BASED_TRACKING_BIT & mask) {
-        capsMask |=  LOCATION_CAPS_DISTANCE_BASED_TRACKING_BIT;
-    }
     if (LOCATION_CAPABILITIES_GEOFENCE_BIT & mask) {
         capsMask |=  LOCATION_CAPS_GEOFENCE_BIT;
     }
@@ -2181,7 +2178,6 @@ uint32_t LocationClientApiImpl::startTrackingSync(const TrackingOptions& option)
     bool isOptionUpdated = false;
 
     if ((mLocationOptions.minInterval != option.minInterval) ||
-        (mLocationOptions.minDistance != option.minDistance) ||
         (mLocationOptions.locReqEngTypeMask != option.locReqEngTypeMask)) {
         isOptionUpdated = true;
     }
@@ -2199,17 +2195,15 @@ uint32_t LocationClientApiImpl::startTrackingSync(const TrackingOptions& option)
         //start a new tracking session
         mSessionId = mClientId;
 
-        if ((0 != mLocationOptions.minInterval) ||
-                (0 != mLocationOptions.minDistance)) {
+        if (0 != mLocationOptions.minInterval) {
             string pbStr;
             LocAPIStartTrackingReqMsg msg(mSocketName, mLocationOptions, &mPbufMsgConv);
             if (msg.serializeToProtobuf(pbStr)) {
                 bool rc = sendMessage(
                    reinterpret_cast<uint8_t *>((uint8_t *)pbStr.c_str()), pbStr.size());
-                LOC_LOGd(">>> StartTrackingReq Interval=%d Distance=%d,"
+                LOC_LOGd(">>> StartTrackingReq Interval=%d "
                          " locReqEngTypeMask=0x%x rc=%d",
                          mLocationOptions.minInterval,
-                         mLocationOptions.minDistance,
                          mLocationOptions.locReqEngTypeMask, rc);
             } else {
                 LOC_LOGe("LocAPIStartTrackingReqMsg serializeToProtobuf failed");
@@ -2238,7 +2232,6 @@ void LocationClientApiImpl::updateTrackingOptions(uint32_t id, const TrackingOpt
             bool isOptionUpdated = false;
 
             if ((mApiImpl->mLocationOptions.minInterval != mUpdatedOptions.minInterval) ||
-                (mApiImpl->mLocationOptions.minDistance != mUpdatedOptions.minDistance) ||
                 (mApiImpl->mLocationOptions.locReqEngTypeMask !=
                         mUpdatedOptions.locReqEngTypeMask)) {
                 isOptionUpdated = true;
@@ -2341,8 +2334,7 @@ void LocationClientApiImpl::stopTrackingAndClearSubscriptions(uint32_t) {
 void LocationClientApiImpl::stopTrackingSync(bool clearSubscriptions) {
     if (mSessionId != LOCATION_CLIENT_SESSION_ID_INVALID) {
         if (mHalRegistered &&
-                ((mLocationOptions.minInterval != 0) ||
-                    (mLocationOptions.minDistance != 0))) {
+                (mLocationOptions.minInterval != 0)) {
             string pbStr;
             LocAPIStopTrackingReqMsg msg(mSocketName, &mPbufMsgConv,
                     clearSubscriptions);
@@ -2358,7 +2350,6 @@ void LocationClientApiImpl::stopTrackingSync(bool clearSubscriptions) {
     }
 
     mLocationOptions.minInterval = 0;
-    mLocationOptions.minDistance = 0;
     mSessionId = LOCATION_CLIENT_SESSION_ID_INVALID;
     mPositionSessionResponseCbPending = false;
     mSessionStartBootTimestampNs = 0;
@@ -2399,18 +2390,16 @@ void LocationClientApiImpl::updateTrackingOptionsSync(const TrackingOptions& opt
         bool clearSubscriptions) {
 
     LOC_LOGd(">>> updateTrackingOptionsSync,sessionId=%d, "
-             "new Interval=%d Distance=%d, current Interval=%d Distance=%d",
+             "new Interval=%d , current Interval=%d ",
              mSessionId, option.minInterval,
-             option.minDistance, mLocationOptions.minInterval,
-             mLocationOptions.minDistance);
+             mLocationOptions.minInterval);
 
     bool rc = true;
     string pbStr;
     // update option to passive listening where previous option
     // is not passive listening, in this case, we need to stop the session
-    if (((0 == option.minInterval) && (0 == option.minDistance)) &&
-            ((mLocationOptions.minInterval != 0) ||
-             (mLocationOptions.minDistance != 0))) {
+    if ((0 == option.minInterval) &&
+            (mLocationOptions.minInterval != 0)) {
         LocAPIStopTrackingReqMsg msg(mSocketName, &mPbufMsgConv, clearSubscriptions);
         if (msg.serializeToProtobuf(pbStr)) {
             rc = sendMessage(reinterpret_cast<uint8_t *>((uint8_t *)pbStr.c_str()),
@@ -2418,17 +2407,15 @@ void LocationClientApiImpl::updateTrackingOptionsSync(const TrackingOptions& opt
         } else {
             LOC_LOGe("LocAPIStopTrackingReqMsg serializeToProtobuf failed");
         }
-    } else if (((0 != option.minInterval) || (0 != option.minDistance)) &&
-               ((0 == mLocationOptions.minInterval) &&
-                (0 == mLocationOptions.minDistance))) {
+    } else if ((0 != option.minInterval) &&
+               (0 == mLocationOptions.minInterval)) {
         // update option from passive listening to none passive listening,
         // we need to start the session
         LocAPIStartTrackingReqMsg msg(mSocketName, option, &mPbufMsgConv);
         if (msg.serializeToProtobuf(pbStr)) {
             rc = sendMessage(reinterpret_cast<uint8_t *>((uint8_t *)pbStr.c_str()),
                     pbStr.size());
-            LOC_LOGd(">>> start tracking Interval=%d Distance=%d",
-                     option.minInterval, option.minDistance);
+            LOC_LOGd(">>> start tracking Interval=%d ", option.minInterval);
         } else {
             LOC_LOGe("LocAPIStartTrackingReqMsg serializeToProtobuf failed");
         }
@@ -2437,9 +2424,9 @@ void LocationClientApiImpl::updateTrackingOptionsSync(const TrackingOptions& opt
         if (msg.serializeToProtobuf(pbStr)) {
             bool rc = sendMessage(reinterpret_cast<uint8_t *>((uint8_t *)pbStr.c_str()),
                     pbStr.size());
-            LOC_LOGd(">>> updateTrackingOptionsSync Interval=%d Distance=%d, reqTypeMask=0x%x "
+            LOC_LOGd(">>> updateTrackingOptionsSync Interval=%d reqTypeMask=0x%x "
                     "rc=%d",
-                    option.minInterval, option.minDistance, option.locReqEngTypeMask, rc);
+                    option.minInterval, option.locReqEngTypeMask, rc);
         } else {
             LOC_LOGe("LocAPIUpdateTrackingOptionsReqMsg serializeToProtobuf failed");
         }
@@ -2480,13 +2467,13 @@ uint32_t LocationClientApiImpl::startBatchingSync(const BatchingOptions& batchOp
         string pbStr;
         mBatchingId = mClientId;
         LocAPIStartBatchingReqMsg msg(mSocketName, mBatchingOptions.minInterval,
-                                      mBatchingOptions.minDistance, mBatchingOptions.batchingMode,
+                                      0, mBatchingOptions.batchingMode,
                                       &mPbufMsgConv);
         if (msg.serializeToProtobuf(pbStr)) {
             bool rc = sendMessage(
             reinterpret_cast<uint8_t *>((uint8_t *)pbStr.c_str()), pbStr.size());
-            LOC_LOGd(">>> StartBatchingReq Interval=%d Distance=%d BatchingMode=%d rc=%d",
-                     mBatchingOptions.minInterval, mBatchingOptions.minDistance,
+            LOC_LOGd(">>> StartBatchingReq Interval=%d BatchingMode=%d rc=%d",
+                     mBatchingOptions.minInterval,
                      mBatchingOptions.batchingMode, rc);
         } else {
             LOC_LOGe("LocAPIStartBatchingReqMsg serializeToProtobuf failed");
@@ -2560,26 +2547,25 @@ void LocationClientApiImpl::updateBatchingOptions(uint32_t id,
         const BatchingOptions& batchOptions) {
 
     if ((mBatchingOptions.minInterval != batchOptions.minInterval) ||
-            (mBatchingOptions.minDistance != batchOptions.minDistance) ||
             (mBatchingOptions.batchingMode != batchOptions.batchingMode)) {
         string pbStr;
         mBatchingOptions = batchOptions;
         LocAPIUpdateBatchingOptionsReqMsg msg(mSocketName, mBatchingOptions.minInterval,
-                                              mBatchingOptions.minDistance,
+                                              0,
                                               mBatchingOptions.batchingMode,
                                               &mPbufMsgConv);
         if (msg.serializeToProtobuf(pbStr)) {
             bool rc = sendMessage(
                     reinterpret_cast<uint8_t *>((uint8_t *)pbStr.c_str()), pbStr.size());
-            LOC_LOGd(">>> StartBatchingReq Interval=%d Distance=%d BatchingMode=%d rc=%d",
-                     mBatchingOptions.minInterval, mBatchingOptions.minDistance,
+            LOC_LOGd(">>> StartBatchingReq Interval=%d BatchingMode=%d rc=%d",
+                     mBatchingOptions.minInterval,
                      mBatchingOptions.batchingMode, rc);
         } else {
             LOC_LOGe("LocAPIUpdateBatchingOptionsReqMsg serializeToProtobuf failed");
         }
     } else {
-        LOC_LOGd("No UpdateBatchingOptions because same Interval=%d Distance=%d, BatchingMode=%d",
-                batchOptions.minInterval, batchOptions.minDistance, batchOptions.batchingMode);
+        LOC_LOGd("No UpdateBatchingOptions because same Interval=%d BatchingMode=%d",
+                batchOptions.minInterval, batchOptions.batchingMode);
         invokePositionSessionResponseCb(LOCATION_ERROR_SUCCESS);
     }
 }

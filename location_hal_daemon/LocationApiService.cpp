@@ -61,6 +61,11 @@ IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+/*
+Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
+Copyright (c) 2025 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 
 #include <stdint.h>
 #include <sys/stat.h>
@@ -266,7 +271,6 @@ LocationApiService::LocationApiService(const configParamToRead & configParamRead
         LocationOptions locationOption = {};
         locationOption.size = sizeof(locationOption);
         locationOption.minInterval = configParamRead.gnssSessionTbfMs;
-        locationOption.minDistance = 0;
         locationOption.mode = mPositionMode;
 
         pClient->startTracking(locationOption);
@@ -2152,7 +2156,6 @@ void LocationApiService::getSinglePos(LocAPIGetSinglePosReqMsg* pReqMsg) {
             TrackingOptions options = {};
             options.size = sizeof(options);
             options.minInterval = 1000;
-            options.minDistance = 0;
             options.qualityLevelAccepted = QUALITY_ANY_OR_FAILED_FIX;
             mSingleFixTrackingSessionId = mSingleFixLocationApi->startTracking(options);
         }

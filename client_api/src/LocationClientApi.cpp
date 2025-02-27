@@ -411,7 +411,6 @@ bool LocationClientApi::startPositionSession(
     LocationOptions locationOption;
     locationOption.size = sizeof(locationOption);
     locationOption.minInterval = intervalInMs;
-    locationOption.minDistance = distanceInMeters;
     locationOption.qualityLevelAccepted = QUALITY_ANY_OR_FAILED_FIX;
 
     TrackingOptions trackingOption(locationOption);
@@ -439,7 +438,6 @@ bool LocationClientApi::startPositionSession(
     LocationOptions locationOption;
     locationOption.size = sizeof(locationOption);
     locationOption.minInterval = intervalInMs;
-    locationOption.minDistance = 0;
     locationOption.qualityLevelAccepted = QUALITY_ANY_OR_FAILED_FIX;
 
     TrackingOptions trackingOption(locationOption);
@@ -466,7 +464,6 @@ bool LocationClientApi::startPositionSession(
     LocationOptions locationOption;
     locationOption.size = sizeof(locationOption);
     locationOption.minInterval = intervalInMs;
-    locationOption.minDistance = 0;
     locationOption.locReqEngTypeMask =(::LocReqEngineTypeMask)locEngReqMask;
     locationOption.qualityLevelAccepted = QUALITY_ANY_OR_FAILED_FIX;
 
@@ -527,7 +524,6 @@ bool LocationClientApi::startTripBatchingSession(uint32_t minInterval, uint32_t 
     LocationOptions locOption = {};
     locOption.size = sizeof(locOption);
     locOption.minInterval = minInterval;
-    locOption.minDistance = tripDistance;
     locOption.mode = GNSS_SUPL_MODE_STANDALONE;
 
     BatchingOptions     batchOption = {};
@@ -580,7 +576,6 @@ bool LocationClientApi::startRoutineBatchingSession(uint32_t minInterval, uint32
     LocationOptions locOption = {};
     locOption.size = sizeof(locOption);
     locOption.minInterval = minInterval;
-    locOption.minDistance = minDistance;
     locOption.mode = GNSS_SUPL_MODE_STANDALONE;
 
     BatchingOptions     batchOption = {};
