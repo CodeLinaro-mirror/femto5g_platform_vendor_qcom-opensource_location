@@ -28,39 +28,8 @@
  */
 
 /*
-Changes from Qualcomm Innovation Center are provided under the following license:
-
-Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted (subject to the limitations in the
-disclaimer below) provided that the following conditions are met:
-
-    * Redistributions of source code must retain the above copyright
-      notice, this list of conditions and the following disclaimer.
-
-    * Redistributions in binary form must reproduce the above
-      copyright notice, this list of conditions and the following
-      disclaimer in the documentation and/or other materials provided
-      with the distribution.
-
-    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
-      contributors may be used to endorse or promote products derived
-      from this software without specific prior written permission.
-
-NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
-WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
-GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
-IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
-OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
 #include <stdio.h>
@@ -117,6 +86,7 @@ static uint32_t singleShotFixCnt = 0;
 vector<Geofence> sGeofences;
 
 static char NMEA_PORT[] = "/dev/at_usb1";
+static char nmeaBuffer[4097] = {0};
 static int ttyFd = -1;
 static int routeToNMEAPort = 0;
 enum ReportType {
@@ -209,11 +179,11 @@ static bool openPort(void)
 static bool sendNMEAToTty(const std::string& nmea)
 {
     int n;
-    char buffer[201] = { 0 };
     bool retVal = true;
-    strlcpy(buffer, nmea.c_str(), sizeof(buffer));
-    if (1 < nmea.length() && sizeof(buffer) > nmea.length()) {
-        n = write(ttyFd, buffer, nmea.length());
+    memset(nmeaBuffer, 0, sizeof(nmeaBuffer));
+    strlcpy(nmeaBuffer, nmea.c_str(), sizeof(nmeaBuffer));
+    if (1 < nmea.length() && sizeof(nmeaBuffer) > nmea.length()) {
+        n = write(ttyFd, nmeaBuffer, nmea.length());
         if (n < 0) {
             printf("write() of %d bytes failed!\n", n);
             retVal = false;
@@ -222,7 +192,7 @@ static bool sendNMEAToTty(const std::string& nmea)
                 nmea.length(), errno, strerror(errno));
             /* Sleep of 0.1 msec and reattempt to write*/
             usleep(100);
-            n = write(ttyFd, buffer, nmea.length() - 1);
+            n = write(ttyFd, nmeaBuffer, nmea.length() - 1);
             if (n < 0) {
                 printf("reattempt write() failed! errno:%d [%s] \n", errno, strerror(errno));
                 retVal = false;
@@ -509,7 +479,7 @@ static void onGnssNmeaCb(uint64_t timestamp, const std::string& nmea) {
     printf("<<< onGnssNmeaCb cnt=%u time=%" PRIu64" nmea=%s",
             numGnssNmeaCb, timestamp, nmea.c_str());
     if (routeToNMEAPort && openPort()) {
-                sendNMEAToTty(nmea);
+       sendNMEAToTty(nmea);
     }
 }
 
@@ -1543,7 +1513,7 @@ static bool checkForAutoStart(int argc, char *argv[]) {
     uint32_t aidingDataMask = 0;
     int interval = 100;
     LocReqEngineTypeMask reqEngMask = (LocReqEngineTypeMask) 0x7;
-    uint32_t reportType =  0x2fd;
+    uint32_t reportType = 0xff;
     TrackingSessionType trackingType = NO_TRACKING;
 
     //Specifying the expected options
@@ -1631,12 +1601,14 @@ static bool checkForAutoStart(int argc, char *argv[]) {
                  }
                  break;
              case 'r' :
-                 printf("report type: %s\n", optarg);
                  reportType = atoi(optarg);
                  if (reportType <= 0) {
-                     reportType = 1;
-                     printf("setting reportType to %d", reportType);
+                    reportType = strtoul(optarg, NULL, 16);
                  }
+                 if (reportType <= 0) {
+                     reportType = 0xff;
+                 }
+                 printf("input report type %s, setting reportType to 0x%x", optarg, reportType);
                  break;
              case 'U' :
                  printf("route to NMEA port: %s\n", optarg);
