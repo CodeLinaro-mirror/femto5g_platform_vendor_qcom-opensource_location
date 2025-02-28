@@ -222,23 +222,25 @@ private:
         bool retVal = false;
         do {
             retryCount++;
-            retVal= LocIpc::send(*mIpcSender, reinterpret_cast<const uint8_t*>(msg), msglen);
-            if (retVal == false) {
-                struct timespec ts;
-                localErrno = errno;
-                clock_gettime(CLOCK_BOOTTIME, &ts);
-                LOC_LOGe("failed: attempt %d errno %d client %s, msg id: %d, msg size %d, err %s,"
-                         " boot timestamp %" PRIu64" msec",
-                         retryCount, localErrno, mName.c_str(), msg_id, msglen, strerror(errno),
-                         (ts.tv_sec * 1000ULL + ts.tv_nsec/1000000));
-                // EAGAIN indicatest Resource temporarily unavailable,
-                // lets re-try for couple of times.
-                if (localErrno == EAGAIN) {
-                    // sleep for 1 msec
-                    usleep(1000);
+            if (NULL != mIpcSender) {
+                retVal= LocIpc::send(*mIpcSender, reinterpret_cast<const uint8_t*>(msg), msglen);
+                if (retVal == false) {
+                    struct timespec ts;
+                    localErrno = errno;
+                    clock_gettime(CLOCK_BOOTTIME, &ts);
+                    LOC_LOGe("failed: attempt %d errno %d client %s, msg id: %d, msg size %d,"
+                             "  err %s, boot timestamp %" PRIu64" msec",
+                             retryCount, localErrno, mName.c_str(), msg_id, msglen,
+                             strerror(errno), (ts.tv_sec * 1000ULL + ts.tv_nsec/1000000));
+                    // EAGAIN indicatest Resource temporarily unavailable,
+                    // lets re-try for couple of times.
+                    if (localErrno == EAGAIN) {
+                        // sleep for 1 msec
+                        usleep(1000);
+                    }
+                } else {
+                    break;
                 }
-            } else {
-                break;
             }
         } while ((retryCount < 5) && (localErrno == EAGAIN));
         // For EAP clients, always send return value as true.
