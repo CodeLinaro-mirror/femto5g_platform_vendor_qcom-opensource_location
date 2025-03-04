@@ -343,6 +343,7 @@ LocIdlClientDevice::LocIdlClientDevice():
     states(ClientDeviceStates::DEVICE_STATE_UNDEFINED),
     mask(0x1F),
     info(1000),
+    lastknowUtcTime(1),
     mMsgTask(new MsgTask("LocIdlClientMsgTask"))
 {
 

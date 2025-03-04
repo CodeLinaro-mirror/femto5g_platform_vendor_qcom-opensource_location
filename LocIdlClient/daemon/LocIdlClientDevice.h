@@ -74,6 +74,7 @@ public:
     bool                        mIsListenerReady;
     uint64_t                    mSessionStartBootTimestampNs;
     uint32_t                    recvdCapsMask;
+    LocGpsUtcTime               lastknowUtcTime;
 
     LocIdlClientDevice();
     ~LocIdlClientDevice();

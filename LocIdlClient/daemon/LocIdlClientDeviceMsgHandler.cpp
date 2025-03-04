@@ -315,8 +315,14 @@ void LocIdlClientDevice::sendPosRespEvent(
                                                         (float)1000000);
     }
 
-    LOC_LOGD("%s] Rx= %llu Tx= %llu Latency= %0.4f--> ", __func__,
-                        msg->posRpt.gptp_time_ns, msg->posRpt.elapsedgPTPTime, latency);
+    LOC_LOGD("%s] Rx= %llu Tx= %llu Latency= %0.4f UTCTime %" PRId64 "--> ", __func__,
+           msg->posRpt.gptp_time_ns, msg->posRpt.elapsedgPTPTime, latency, lastknowUtcTime);
+
+    if ((0 != msg->posRpt.location.gpsLocation.timestamp) &&
+        (lastknowUtcTime == msg->posRpt.location.gpsLocation.timestamp)) {
+        return;
+    }
+    lastknowUtcTime = msg->posRpt.location.gpsLocation.timestamp;
 
     mDiagObj.diagLogPosInfo(gnssPosDiag, clk_bootTime, gptp_time_ns, getGptpSyncStatus(), latency);
     sendEventsIpcHelper(msg, sizeof(EventMsgPosPkt));
@@ -472,6 +478,7 @@ void LocIdlClientDevice::sessionStart()
     getGptpTimeNs(gptp_time_ns);
     startReq.interval = _intervalInMs;
     startReq.mask = mask;
+    lastknowUtcTime = 1;
     mDiagObj.diagLogGnssStartReq(startReq, clk_bootTime, gptp_time_ns, false);
     mSessionStartBootTimestampNs = clk_bootTime;
     myProxy->StartPositionSessionLocationReport(_intervalInMs, mask, callStatus, resp, &info);
@@ -497,7 +504,7 @@ void LocIdlClientDevice::sessionStop()
     uint64_t gptp_time_ns = 0;
 
     UnSubscribeGnssResports();
-
+    lastknowUtcTime = 1;
     myProxy->StopPositionSession(callStatus, status, &info);
     if (callStatus != CommonAPI::CallStatus::SUCCESS) {
         LOC_LOGE("stopPositionSession() Remote call failed! callStatus : %d", (int)callStatus);
