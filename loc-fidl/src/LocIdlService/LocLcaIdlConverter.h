@@ -45,10 +45,11 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <inttypes.h>
 #include <cstring>
 #include "LocationClientApi.h"
-#include <v0/com/qualcomm/qti/location/LocIdlAPIStub.hpp>
+#include <v1/com/qualcomm/qti/location/LocationTypes.hpp>
+#include <v1/com/qualcomm/qti/location/LocationStub.hpp>
 #include <gptp_helper.h>
 
-using namespace v0::com::qualcomm::qti::location;
+using namespace v1::com::qualcomm::qti::location;
 using namespace std;
 using namespace location_client;
 
@@ -56,17 +57,17 @@ class LocLcaIdlConverter {
 
 public:
 
-    LocIdlAPI::IDLLocation parseBasicLocationInfo
+    LocationTypes::LocationT parseBasicLocationInfo
     (
         const ::GnssLocation &basicLoc
     );
 
-    uint32_t parseIDLLocReliability
+    uint8_t parseIDLLocReliability
     (
         ::LocationReliability locReliability
     );
 
-    LocIdlAPI::IDLLocationReportSvUsedInPosition parseIDLSvUsedInPosition
+    LocationTypes::LocationReportSvUsedInPositionT parseIDLSvUsedInPosition
     (
         ::GnssLocationSvUsedInPosition halSv
     );
@@ -81,32 +82,32 @@ public:
         location_client::LocationTechnologyMask   posTechMask
     );
 
-    LocIdlAPI::IDLLocationReportPositionDynamics parseIDLBodyFrameData
+    LocationTypes::LocationReportPositionDynamicsT parseIDLBodyFrameData
     (
         location_client::GnssLocationPositionDynamics bodyFrameData
     );
 
-    LocIdlAPI::IDLGnssSystemTime parseGnssSystemTime
+    LocationTypes::GnssSystemTimeT parseGnssSystemTime
     (
         location_client::GnssSystemTime gnssSystemTime
     );
 
-    LocIdlAPI::IDLGnssSystemTimeStructType parseIDLGnssTime
+    LocationTypes::GnssSystemTimeStructTypeT parseIDLGnssTime
     (
         location_client::GnssSystemTimeStructType gnssTime
     );
 
-    LocIdlAPI::IDLGnssGloTimeStructType parseIDLGloTime
+    LocationTypes::GnssGloTimeStructTypeT parseIDLGloTime
     (
         location_client::GnssGloTimeStructType gloTime
     );
 
-    uint32_t  parseIDLGnssConstellation
+    LocationTypes::GnssConstellationTypeT  parseIDLGnssConstellation
     (
         location_client::Gnss_LocSvSystemEnumType constellation
     );
 
-    vector< LocIdlAPI::IDLGnssMeasUsageInfo > parseIDLMeasUsageInfo
+    vector< LocationTypes::GnssMeasUsageInfoT > parseIDLMeasUsageInfo
     (
         vector<location_client::GnssMeasUsageInfo> measUsageInfo
     );
@@ -121,22 +122,22 @@ public:
         location_client::PositioningEngineMask locOutputEngMask
     );
 
-    LocIdlAPI::IDLLLAInfo parseIDLLatLongAltInfo
+    LocationTypes::LlaInfoT parseIDLLatLongAltInfo
     (
        location_client::LLAInfo llaVRPBased
     );
 
-    uint64_t parseIDLDrSolStatusMask
+    uint32_t parseIDLDrSolStatusMask
     (
         location_client::DrSolutionStatusMask drSolutionStatusMask
     );
 
-    LocIdlAPI::IDLLocationReport parseLocReport
+    LocationTypes::LocationReportT parseLocReport
     (
         const location_client::GnssLocation &lcaLoc
     );
 
-    LocIdlAPI::IDLGnssSvType  parseIDLSvType
+    LocationTypes::GnssSvTypeT parseIDLSvType
     (
         location_client::GnssSvType  svType
     );
@@ -146,7 +147,7 @@ public:
         location_client:: GnssSvOptionsMask optionMask
     );
 
-    LocIdlAPI::IDLGnssSv parseSvReport
+    LocationTypes::GnssSvDataT parseSvReport
     (
         const location_client::GnssSv& gnssSvs
     );
@@ -156,7 +157,7 @@ public:
     );
 
 
-    LocIdlAPI::IDLGnssMeasurementsClock parseIDLMeasClockInfo
+    LocationTypes::GnssMeasurementsClockT parseIDLMeasClockInfo
     (
         location_client::GnssMeasurementsClock gnssClock
     );
@@ -177,12 +178,12 @@ public:
         location_client::GnssMeasurementsMultipathIndicator multipathIndicator
     );
 
-    vector<LocIdlAPI::IDLGnssMeasurementsData > parseIDLMeasData
+    vector<LocationTypes::GnssMeasurementsDataT > parseIDLMeasData
     (
         vector<location_client::GnssMeasurementsData> gnssMeasData
     );
 
-    LocIdlAPI::IDLGnssMeasurements parseMeasurements
+    LocationTypes::GnssMeasurementsT parseMeasurements
     (
         const location_client::GnssMeasurements& gnssMeasurements
     );
@@ -192,12 +193,12 @@ public:
         const location_client::GnssDataMask& mask
     );
 
-    LocIdlAPI::IDLGnssData parseGnssData
+    LocationTypes::GnssDataT parseGnssData
     (
         const location_client::GnssData& gnssData
     );
 
-    uint32_t parseIDLSignalType (
+    LocationTypes::GnssSignalTypeT parseIDLSignalType (
         location_client::GnssSignalTypeMask lcaSignalType
     );
 
