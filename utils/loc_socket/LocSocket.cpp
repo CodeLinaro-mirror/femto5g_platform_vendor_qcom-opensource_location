@@ -302,7 +302,8 @@ public:
             mSock(make_shared<Sock>(::socket(AF_QIPCRTR, SOCK_DGRAM, 0))),
             mAddr({AF_QIPCRTR, 0, 0}),
             mCtrlPkt({}),
-            mLookupPending(true) {
+            mLookupPending(true),
+            mCtrlPntAddr({}) {
         // set timeout so if failed to send, call will return after SOCKET_TIMEOUT_MSEC
         // otherwise, call may never return
         timeval timeout;
