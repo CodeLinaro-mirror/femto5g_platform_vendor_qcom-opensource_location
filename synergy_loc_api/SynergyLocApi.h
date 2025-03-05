@@ -198,10 +198,6 @@ public:
     virtual void startTimeBasedTracking(const TrackingOptions& options,
              LocApiResponse* adapterResponse);
     virtual void stopTimeBasedTracking(LocApiResponse* adapterResponse);
-    virtual void startDistanceBasedTracking(uint32_t sessionId, const LocationOptions& options,
-             LocApiResponse* adapterResponse);
-    virtual void stopDistanceBasedTracking(uint32_t sessionId,
-             LocApiResponse* adapterResponse = nullptr);
 
     virtual GnssConfigSuplVersion convertSuplVersion(const uint32_t suplVersion);
     virtual GnssConfigLppeControlPlaneMask convertLppeCp(const uint32_t lppeControlPlaneMask);

@@ -1467,9 +1467,6 @@ uint64_t LocationApiPbMsgConv::getPBMaskForLocationCapabilitiesMask(
     if (locCapabMask & LOCATION_CAPABILITIES_TIME_BASED_BATCHING_BIT) {
         pbLocCapabMask |= PB_LOCATION_CAPS_TIME_BASED_BATCHING_BIT;
     }
-    if (locCapabMask & LOCATION_CAPABILITIES_DISTANCE_BASED_TRACKING_BIT) {
-        pbLocCapabMask |= PB_LOCATION_CAPS_DISTANCE_BASED_TRACKING_BIT;
-    }
     if (locCapabMask & LOCATION_CAPABILITIES_GEOFENCE_BIT) {
         pbLocCapabMask |= PB_LOCATION_CAPS_GEOFENCE_BIT;
     }
@@ -2582,9 +2579,6 @@ uint64_t LocationApiPbMsgConv::getLocationCapabilitiesMaskFromPB(
     }
     if (pbLocCapabMask & PB_LOCATION_CAPS_TIME_BASED_BATCHING_BIT) {
         locCapabMask |= LOCATION_CAPABILITIES_TIME_BASED_BATCHING_BIT;
-    }
-    if (pbLocCapabMask & PB_LOCATION_CAPS_DISTANCE_BASED_TRACKING_BIT) {
-        locCapabMask |= LOCATION_CAPABILITIES_DISTANCE_BASED_TRACKING_BIT;
     }
     if (pbLocCapabMask & PB_LOCATION_CAPS_GEOFENCE_BIT) {
         locCapabMask |= LOCATION_CAPABILITIES_GEOFENCE_BIT;
@@ -4028,7 +4022,7 @@ int LocationApiPbMsgConv::convertLocationOptionsToPB(const LocationOptions &locO
     pbLocOpt->set_mininterval(locOpt.minInterval);
 
     // uint32 minDistance = 2;
-    pbLocOpt->set_mindistance(locOpt.minDistance);
+    pbLocOpt->set_mindistance(0);
 
     // PBGnssSuplMode mode = 3;
     pbLocOpt->set_mode(getPBEnumForGnssSuplMode(locOpt.mode));
@@ -4039,9 +4033,9 @@ int LocationApiPbMsgConv::convertLocationOptionsToPB(const LocationOptions &locO
     // PBFixQualityLevel = 5;
     pbLocOpt->set_qualitylevelaccepted(getPBEnumForFixQualityLevel(locOpt.qualityLevelAccepted));
 
-    LocApiPb_LOGd("LocApiPB: locOpt - MinInterval: %u, MinDistance:%u, GnssSuplMode:%d, "\
+    LocApiPb_LOGd("LocApiPB: locOpt - MinInterval: %u, GnssSuplMode:%d, "\
             "LocReqEngineTypeMask:%x qualityLevelAccepted:%d",
-            locOpt.minInterval, locOpt.minDistance, locOpt.mode,
+            locOpt.minInterval, locOpt.mode,
             locOpt.locReqEngTypeMask, locOpt.qualityLevelAccepted);
     return 0;
 }
@@ -6002,10 +5996,6 @@ int LocationApiPbMsgConv::pbConvertToLocationOptions(const PBLocationOptions &pb
     locOpt.size = sizeof(LocationOptions);
     // uint32 minInterval = 1;
     locOpt.minInterval = pbLocOpt.mininterval();
-
-    // uint32 minDistance = 2;
-    locOpt.minDistance = pbLocOpt.mindistance();
-
     // PBGnssSuplMode mode = 3;
     locOpt.mode = getEnumForPBGnssSuplMode(pbLocOpt.mode());
 
@@ -6017,9 +6007,9 @@ int LocationApiPbMsgConv::pbConvertToLocationOptions(const PBLocationOptions &pb
     // PBQuailtyLevelAccepted = 5;
     locOpt.qualityLevelAccepted = getEnumForPBFixQualityLevel(pbLocOpt.qualitylevelaccepted());
 
-    LocApiPb_LOGd("LocApiPB: pbLocOpt - MinInterval: %u, MinDistance:%u, GnssSuplMode:%d, "\
+    LocApiPb_LOGd("LocApiPB: pbLocOpt - MinInterval: %u, GnssSuplMode:%d, "\
             "LocReqEngineTypeMask:%x qualityLevelAccepted: %d",
-            locOpt.minInterval, locOpt.minDistance, locOpt.mode,
+            locOpt.minInterval, locOpt.mode,
             locOpt.locReqEngTypeMask, locOpt.qualityLevelAccepted);
     return 0;
 }

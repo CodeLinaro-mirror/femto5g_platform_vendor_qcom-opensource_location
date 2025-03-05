@@ -259,8 +259,8 @@ void LocHalDaemonClientHandler::updateSubscription(uint32_t mask) {
 // input tbf < 1000 msec, round to 500 msec, else
 // round up input tbf to the closet integer seconds
 uint32_t LocHalDaemonClientHandler::startTracking(LocationOptions & locOptions) {
-    LOC_LOGd("distance %d, internal %d, req mask %x",
-             locOptions.minDistance, locOptions.minInterval,
+    LOC_LOGd("internal %d, req mask %x",
+             locOptions.minInterval,
              locOptions.locReqEngTypeMask);
     if (mSessionId == 0 && mLocationApi) {
         // update option
@@ -297,8 +297,8 @@ void LocHalDaemonClientHandler::unsubscribeLocationSessionCb() {
 
 void LocHalDaemonClientHandler::updateTrackingOptions(LocationOptions & locOptions) {
     if (mSessionId != 0 && mLocationApi) {
-        LOC_LOGe("distance %d, internal %d, req mask %x",
-             locOptions.minDistance, locOptions.minInterval,
+        LOC_LOGe("internal %d, req mask %x",
+             locOptions.minInterval,
              locOptions.locReqEngTypeMask);
 
         TrackingOptions trackingOption(locOptions);
@@ -318,7 +318,6 @@ uint32_t LocHalDaemonClientHandler::startBatching(uint32_t minInterval, uint32_t
         LocationOptions locOption = {};
         locOption.size = sizeof(locOption);
         locOption.minInterval = minInterval;
-        locOption.minDistance = minDistance;
         locOption.mode = GNSS_SUPL_MODE_STANDALONE;
         mBatchOptions.size = sizeof(mBatchOptions);
         mBatchOptions.batchingMode = batchMode;
@@ -344,7 +343,6 @@ void LocHalDaemonClientHandler::updateBatchingOptions(uint32_t minInterval, uint
         LocationOptions locOption = {};
         locOption.size = sizeof(locOption);
         locOption.minInterval = minInterval;
-        locOption.minDistance = minDistance;
         locOption.mode = GNSS_SUPL_MODE_STANDALONE;
         mBatchOptions.size = sizeof(mBatchOptions);
         mBatchOptions.batchingMode = batchMode;

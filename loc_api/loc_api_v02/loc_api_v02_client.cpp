@@ -442,12 +442,6 @@ static const locClientRespIndTableStructT locClientRespIndTable[]= {
    { QMI_LOC_SET_GNSS_CONSTELL_REPORT_CONFIG_IND_V02,
      sizeof(qmiLocSetGNSSConstRepConfigIndMsgT_v02)},
 
-   { QMI_LOC_START_DBT_IND_V02,
-     sizeof(qmiLocStartDbtIndMsgT_v02)},
-
-   { QMI_LOC_STOP_DBT_IND_V02,
-     sizeof(qmiLocStopDbtIndMsgT_v02)},
-
    { QMI_LOC_INJECT_TIME_ZONE_INFO_IND_V02,
      sizeof(qmiLocInjectTimeZoneInfoIndMsgT_v02)},
 
@@ -1200,18 +1194,6 @@ bool validateRequest(
     case QMI_LOC_SET_GNSS_CONSTELL_REPORT_CONFIG_V02:
     {
         *pOutLen = sizeof(qmiLocSetGNSSConstRepConfigReqMsgT_v02);
-        break;
-    }
-
-    case QMI_LOC_START_DBT_REQ_V02:
-    {
-        *pOutLen = sizeof(qmiLocStartDbtReqMsgT_v02);
-        break;
-    }
-
-    case QMI_LOC_STOP_DBT_REQ_V02:
-    {
-        *pOutLen = sizeof(qmiLocStopDbtReqMsgT_v02);
         break;
     }
 
