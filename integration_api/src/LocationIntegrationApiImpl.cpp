@@ -362,7 +362,7 @@ LocationIntegrationApiImpl::LocationIntegrationApiImpl(LocIntegrationCbs& integr
 LocationIntegrationApiImpl::~LocationIntegrationApiImpl() {
 }
 
-void LocationIntegrationApiImpl::destroy() {
+void LocationIntegrationApiImpl::destroyMe(locationApiDestroyCompleteCallback destroyCompleteCb) {
 
     struct DestroyReq : public LocMsg {
         DestroyReq(LocationIntegrationApiImpl* apiImpl) :
@@ -389,15 +389,18 @@ void LocationIntegrationApiImpl::destroy() {
                 lock_guard<mutex> lock(mMutex);
                 mApiImpl->mClientRunning = false;
             }
-            usleep(50000); //give 50ms for socket clean up
-
-            delete mApiImpl;
         }
         LocationIntegrationApiImpl* mApiImpl;
     };
 
     mMsgTask.sendMsg(new (nothrow) DestroyReq(this));
-    usleep(100000); //100ms for handling onReceive() messages
+    wait(500); //500ms
+    LOC_LOGw("wait deregister received");
+    if (destroyCompleteCb) {
+        destroyCompleteCb();
+    }
+    delete this;
+
 }
 
 bool LocationIntegrationApiImpl::integrationClientAllowed() {
@@ -502,12 +505,18 @@ void IpcListener::onReceive(const char* data, uint32_t length,
             case E_INTAPI_DEREGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID:
             case E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_REQ_MSG_ID:
             case E_INTAPI_CONFIG_MAP_MATCHED_FEEDBACK_MSG_ID:
+            case E_LOCAPI_CLIENT_DEREGISTER_MSG_ID:
             {
                 PBLocAPIGenericRespMsg pbLocApiGenericRsp;
                 if (0 == pbLocApiGenericRsp.ParseFromString(pbLocApiMsg.payload())) {
                     LOC_LOGe("Failed to parse pbLocApiGenericRsp from payload!!");
                     return;
                 }
+                if (locApiMsg.msgId == E_LOCAPI_CLIENT_DEREGISTER_MSG_ID) {
+                    mApiImpl.notify(); //for the wait in destroy()
+                    return;
+                }
+
                 LocAPIGenericRespMsg msg(sockName.c_str(), eLocMsgid, pbLocApiGenericRsp,
                         &mApiImpl.mPbufMsgConv);
                 mApiImpl.processConfigRespCb((LocAPIGenericRespMsg*)&msg);
