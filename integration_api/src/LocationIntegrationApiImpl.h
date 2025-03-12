@@ -46,6 +46,7 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #include <LocationApiPbMsgConv.h>
 #include <queue>
 #include <unordered_map>
+#include <condition_variable>
 
 using namespace std;
 using namespace loc_util;
@@ -109,14 +110,33 @@ struct ProtoMsgInfo{
             configType(inType), protoStr(std::move(inStr)) {}
 };
 
+// utility for wait / notify
+class Waitable {
+    std::mutex mMutex;
+    std::condition_variable mCond;
+public:
+    Waitable() = default;
+    ~Waitable() = default;
+
+    void wait(uint32_t ms) {
+        std::unique_lock<std::mutex> lock(mMutex);
+        mCond.wait_for(lock, std::chrono::milliseconds(ms));
+    }
+
+    void notify() {
+        mCond.notify_one();
+    }
+};
+
 class IpcListener;
 
-class LocationIntegrationApiImpl : public ILocationControlAPI {
+class LocationIntegrationApiImpl : public ILocationControlAPI, public Waitable {
     friend IpcListener;
 public:
     LocationIntegrationApiImpl(LocIntegrationCbs& integrationCbs);
 
-    virtual void destroy() override;
+    virtual void destroy() override {}
+    void destroyMe(locationApiDestroyCompleteCallback destroyCompleteCb);
 
     // convenient methods
     inline bool sendMessage(const uint8_t* data, uint32_t length) const {

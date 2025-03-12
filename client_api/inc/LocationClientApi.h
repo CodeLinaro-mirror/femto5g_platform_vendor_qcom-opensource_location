@@ -3402,6 +3402,12 @@ typedef std::function<void(
     const GnssEnergyConsumedInfo& gnssEneryConsumed
 )> GnssEnergyConsumedCb;
 
+/** @brief Callback to confirm the the LocationClientApi
+           instance is destroyed.<br/>
+*/
+typedef std::function<void(
+)> LocClientDestroyCb;
+
 class LocationClientApiImpl;
 class LocationClientApi
 {
@@ -3422,6 +3428,15 @@ public:
 
     /** @brief Default destructor */
     virtual ~LocationClientApi();
+
+    /** @brief
+       Destroy/cleans up the instance of LocationClientApi object,
+       which should be called when LocationClientApi object is
+       no longer needed.
+       The caller shall not destruct LocationClientApi object before
+       destroyCompleteCb is invoked
+    */
+    void destroy(LocClientDestroyCb destroyCompleteCb);
 
     /* ================================== POSITIONING ================================== */
 

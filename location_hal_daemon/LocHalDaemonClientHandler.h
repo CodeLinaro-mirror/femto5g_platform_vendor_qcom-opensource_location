@@ -159,7 +159,12 @@ private:
         }
     };
 
-    inline ~LocHalDaemonClientHandler() {}
+    inline ~LocHalDaemonClientHandler() {
+        mIpcSender = nullptr;
+        if (mLocationApi) {
+            delete mLocationApi;
+        }
+    }
 
     // Location API callback functions
     void onCapabilitiesCallback(LocationCapabilitiesMask capabilitiesMask);

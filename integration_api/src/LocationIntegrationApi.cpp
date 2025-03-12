@@ -57,11 +57,22 @@ LocationIntegrationApi::LocationIntegrationApi(
 }
 
 LocationIntegrationApi::~LocationIntegrationApi() {
+}
 
-    LOC_LOGd("calling destructor of LocationIntegrationApi");
-    if (mApiImpl) {
-        mApiImpl->destroy();
+void LocationIntegrationApi::destroy(LocIntegrationDestroyCb destroyCompleteCb) {
+    locationApiDestroyCompleteCallback destroyCb = nullptr;
+    if (destroyCompleteCb) {
+        destroyCb = [destroyCompleteCb] () {
+            LOC_LOGw("call destroyCompleteCb");
+            destroyCompleteCb();
+        };
     }
+
+    if (mApiImpl) {
+        // two steps processes due to asynchronous message processing
+        mApiImpl->destroyMe(destroyCb);
+    }
+
 }
 
 bool LocationIntegrationApi::configConstellations(
