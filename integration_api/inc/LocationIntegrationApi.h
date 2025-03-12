@@ -570,6 +570,12 @@ typedef std::function<void(
    uint8_t minSvElevation
 )> LocConfigGetMinSvElevationCb;
 
+/** @brief Callback to confirm the the LocationIntegrationApi
+           instance is destroyed.<br/>
+*/
+typedef std::function<void(
+)> LocIntegrationDestroyCb;
+
 /** @brief
     LocConfigGetConstellationSecondaryBandConfigCb is for
     receiving the GNSS secondary band configuration for
@@ -2121,6 +2127,15 @@ public:
                 will be performed and LocConfigCb() will not be invoked.<br/>
     */
     bool updateNetworkInfo(const NetworkInfoData& data);
+
+    /** @brief
+       Destroy/cleans up the instance of LocationIntegrationApi object,
+       which should be called when LocationIntegrationApi object is
+       no longer needed.
+       The caller shall not destruct LocationIntegrationApi object before
+       destroyCompleteCb is invoked
+    */
+    void destroy(LocIntegrationDestroyCb destroyCompleteCb);
 
     /** @example example1:testGetConfigApi
     * <pre>
