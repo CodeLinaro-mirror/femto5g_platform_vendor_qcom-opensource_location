@@ -1633,6 +1633,8 @@ struct GnssSv {
 - *  element with index set to the signal type. <br/>
 - */
 enum GnssSignalTypes {
+    /** Invalid value of signal type. <br/>   */
+    GNSS_INVALID_SIGNAL_TYPE = -1,
     /**  GNSS signal is of GPS L1CA RF band.  <br/>   */
     GNSS_SIGNAL_TYPE_GPS_L1CA = 0,
     /**  GNSS signal is of GPS L1C RF band.  <br/>   */
@@ -1847,6 +1849,12 @@ enum GnssMeasurementsDataFlagsMask{
     /** GnssMeasurementsData has valid
      *  GnssMeasurementsData::basebandCarrierToNoiseDbHz. <br/> */
     GNSS_MEASUREMENTS_DATA_BASEBAND_CARRIER_TO_NOISE_BIT    = (1<<22),
+    /** GnssMeasurementsData has valid
+     *  GnssMeasurementsData::measCodeType. <br/> */
+    GNSS_MEASUREMENTS_DATA_MEAS_CODE_TYPE_BIT               = (1<<23),
+    /** GnssMeasurementsData has valid
+     *  GnssMeasurementsData::otherCodeType. <br/> */
+    GNSS_MEASUREMENTS_DATA_OTHER_MEAS_CODE_TYPE_BIT         = (1<<24),
 };
 
 /** Specify GNSS measurement state in
@@ -1955,6 +1963,27 @@ enum GnssMeasurementsClockFlagsMask {
     GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_GPTP_TIME_UNC_BIT         = (1<<12),
 };
 
+enum GnssMeasCodeType {
+    GNSS_MEAS_CODE_TYPE_UNKNOWN  = 0,
+    GNSS_MEAS_CODE_TYPE_A        = 1,
+    GNSS_MEAS_CODE_TYPE_B        = 2,
+    GNSS_MEAS_CODE_TYPE_C        = 3,
+    GNSS_MEAS_CODE_TYPE_I        = 4,
+    GNSS_MEAS_CODE_TYPE_L        = 5,
+    GNSS_MEAS_CODE_TYPE_M        = 6,
+    GNSS_MEAS_CODE_TYPE_P        = 7,
+    GNSS_MEAS_CODE_TYPE_Q        = 8,
+    GNSS_MEAS_CODE_TYPE_S        = 9,
+    GNSS_MEAS_CODE_TYPE_W        = 10,
+    GNSS_MEAS_CODE_TYPE_X        = 11,
+    GNSS_MEAS_CODE_TYPE_Y        = 12,
+    GNSS_MEAS_CODE_TYPE_Z        = 13,
+    GNSS_MEAS_CODE_TYPE_N        = 14,
+    GNSS_MEAS_CODE_TYPE_D        = 15,
+    GNSS_MEAS_CODE_TYPE_E        = 16,
+    GNSS_MEAS_CODE_TYPE_OTHER    = 255,
+};
+
 /** Specify the SV pseudo range and carrier phase measurement
  *  from standard SPE engine. <br/>
  *
@@ -2050,7 +2079,11 @@ struct GnssMeasurementsData {
     double fullInterSignalBiasUncertaintyNs;
     /** Increments when a cycle slip is detected. <br/> */
     uint8_t cycleSlipCount;
-
+    /**  GNSS Measurement Code Type */
+    GnssMeasCodeType measCodeType;
+    /** Measurement Code type, If measCodeType is GNSS_MEAS_CODE_TYPE_OTHER and
+        GnssMeasurementsDataFlagsMask::GNSS_MEASUREMENTS_DATA_OTHER_MEAS_CODE_TYPE_BIT is set */
+    string otherCodeTypeName;
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
     string toString() const;
@@ -2445,6 +2478,122 @@ struct GnssEphCommonInfo {
 
 };
 
+enum GpsQzssExtEphValidity {
+    /** Valid GpsQzssExtEphemeris::iscL1ca*/
+    GPS_QZSS_EXT_EPH_ISC_L1CA_VALID = (1<<0),
+     /** Valid GpsQzssExtEphemeris::iscL2c*/
+    GPS_QZSS_EXT_EPH_ISC_L2C_VALID = (1<<1),
+    /** Valid GpsQzssExtEphemeris::iscL5I5*/
+    GPS_QZSS_EXT_EPH_ISC_L5I5_VALID = (1<<2),
+    /** Valid GpsQzssExtEphemeris::iscL5Q5*/
+    GPS_QZSS_EXT_EPH_ISC_L5Q5_VALID = (1<<3),
+    /** Valid GpsQzssExtEphemeris::alert*/
+    GPS_QZSS_EXT_EPH_ALERT_VALID = (1<<4),
+    /** Valid GpsQzssExtEphemeris::uraned0*/
+    GPS_QZSS_EXT_EPH_URANED0_VALID = (1<<5),
+    /** Valid GpsQzssExtEphemeris::uraned1*/
+    GPS_QZSS_EXT_EPH_URANED1_VALID = (1<<6),
+    /** Valid GpsQzssExtEphemeris::uraned2*/
+    GPS_QZSS_EXT_EPH_URANED2_VALID = (1<<7),
+    /** Valid GpsQzssExtEphemeris::top*/
+    GPS_QZSS_EXT_EPH_TOP_VALID = (1<<8),
+    /** Valid GpsQzssExtEphemeris::topClock*/
+    GPS_QZSS_EXT_EPH_TOP_CLOCK_VALID = (1<<9),
+    /** Valid GpsQzssExtEphemeris::validtyPeriod*/
+    GPS_QZSS_EXT_EPH_VALIDITY_PERIOD_VALID = (1<<10),
+    /** Valid GpsQzssExtEphemeris::deltaNdot */
+    GPS_QZSS_EXT_EPH_DELTA_NDOT_VALID = (1<11),
+    /** Valid GpsQzssExtEphemeris::delaA*/
+    GPS_QZSS_EXT_EPH_DELTAA_VALID = (1<<12),
+    /** Valid GpsQzssExtEphemeris::adot */
+    GPS_QZSS_EXT_EPH_ADOT_VALID = (1<<13)
+};
+
+struct GpsQzssExtEphemeris {
+    /**<   GNSS SV ID. \n
+       Range:\n
+       - GPS --     1 to 32 \n
+       - QZSS --    193 to 197 \n
+       - BDS --     201 to 263 \n
+       - Galileo -- 301 to 336 \n
+       - NavIC --   401 to 420 \n
+    */
+    uint16_t gnssSvId;
+
+    /**<   Specifies validity of all the fields.  \n
+        - iscL1ca -- 0x0001 \n
+        - iscL2c  -- 0x0002 \n
+        - iscL5I5  -- 0x0004  \n
+        - iscL5Q5 --  0x0008  \n
+        - alert   -- 0x0010 \n
+        - uraNed0  -- 0x0020 \n
+        - uraNed1  -- 0x0040  \n
+        - uraNed2 --  0x0080  \n
+        - top     -- 0x0100 \n
+        - topClock  -- 0x0200 \n
+        - validityPeriod  -- 0x0400  \n
+        - deltaNdot --  0x0800  \n
+        - deltaA    --  0x1000  \n
+        - adot      --  0x2000  \n
+    */
+    GpsQzssExtEphValidity validityMask;
+
+    /** InterSignal Correction between L1ca Data and Pilot channels in milliseconds
+     *  always zero for QZSS.
+        - Units -- milliseconds */
+    float iscL1ca;
+
+    /** InterSignal Correction between L2c Data and Pilot channels in milliseconds.
+        - Units -- milliseconds */
+    float iscL2c;
+
+    /**  InterSignal Correction between L5I5 Data and Pilot channels in milliseconds.
+         - Units -- milliseconds */
+    float iscL5I5;
+
+    /**<   InterSignal Correction between L5Q5 Data and Pilot channels in milliseconds.
+         - Units -- milliseconds    */
+    float iscL5Q5;
+
+    /** Alert Bit Info (unitless). */
+    uint8_t alert;
+
+    /** NED accuracy index (5 bits, unitless). */
+    uint8_t uraNed0;
+
+    /**NED accuracy change index(3 bits), UraNed1 = 1/2^N (m/s), N=14 + UraNed1 index (unitless).*/
+    uint8_t uraNed1;
+
+    /** NED accuracy change rate index (3 bits),
+     *  UraNed2 = 1/2^N (m/s^2), N=28 + UraNed2 index (unitless). */
+    uint8_t uraNed2;
+
+    /** Data predict time of week, 0-604500 sec.
+         - Units -- Seconds */
+    double top;
+
+    /** Data predict time of week (clock) , scale 300 seconds.
+         - Units -- Seconds */
+    uint16_t topClock;
+
+    /** Validity Period in seconds.
+         - Units -- Seconds */
+    uint32_t validityPeriod;
+
+    /** Rate of Mean motion difference from computed value [semi-circle/sec^2] (unitless).
+     */
+    double deltaNdot;
+    /** Semi-Major Axis Difference At Reference Time [m].
+        - Units -- Meters */
+    double deltaA;
+    /** Change Rate In Semi-Major Axis [m/sec].
+        - Units -- Meters/seconds */
+    double adot;
+
+    /** Method to print the struct to human readable form, for logging. */
+    string toString() const;
+};
+
 /** GPS Navigation Model Info */
 struct GpsQzssEphemeris {
     /**   Common ephemeris data.   */
@@ -2493,6 +2642,12 @@ struct GpsQzssEphemeris {
      *   - Type: uint16
      *   - Units: Unit-less */
     uint16_t IODC;
+
+    /** Validity field for GpsQzssExtEphemeris */
+    bool extendedEphDataValidity;
+
+    /** Extended Ephemeris data for GPS/QZSS */
+    GpsQzssExtEphemeris gpsQzssExtEphData;
 
     /** Method to print the struct to human readable form, for logging. */
     string toString() const;
@@ -2616,6 +2771,111 @@ struct GlonassEphemeris {
 
 };
 
+/* BDS SV type */
+enum BdsSvTypeEnum {
+    BDS_SV_TYPE_UNKNOWN = 0, /* BDS SV type unknown */
+    BDS_SV_TYPE_GEO     = 1, /* GEO */
+    BDS_SV_TYPE_IGSO    = 2, /* IGSO */
+    BDS_SV_TYPE_MEO     = 3, /* MEO */
+};
+typedef uint8_t BdsSvType;
+
+enum BdsExtEphValidity {
+    /** Valid BdsExtEphemeris::iscB2a*/
+    BDS_EXT_EPH_ISC_B2A_VALID = (1<<0),
+    /** Valid BdsExtEphemeris::iscB1c */
+    BDS_EXT_EPH_ISC_B1C_VALID = (1<<1),
+    /** Valid BdsExtEphemeris::tgdB2a */
+    BDS_EXT_EPH_TGD_B2A_VALID = (1<<2),
+    /** Valid BdsExtEphemeris::tgdB1c */
+    BDS_EXT_EPH_TGD_B1C_VALID = (1<<3),
+    /** Valid BdsExtEphemeris::svType */
+    BDS_EXT_EPH_SV_TYPE_VALID = (1<<4),
+    /** Valid BdsExtEphemeris::validtyPeriod */
+    BDS_EXT_EPH_VALIDITY_PERIOD = (1<<5),
+    /** Valid BdsExtEphemeris::integrityFlags */
+    BDS_EXT_EPH_INTEGRITY_FLAGS = (1<<6),
+    /** Valid BdsExtEphemeris::deltaNdot */
+    BDS_EXT_EPH_DELTA_NDOT_VALID = (1<<7),
+    /** Valid BdsExtEphemeris::deltaA */
+    BDS_EXT_EPH_DELTAA_VALID = (1<<8),
+    /** Valid BdsExtEphemeris::adot */
+    BDS_EXT_EPH_ADOT_VALID = (1<<9)
+};
+
+struct BdsExtEphemeris {
+    /**<   GNSS SV ID. \n
+       Range:\n
+       - GPS --     1 to 32 \n
+       - QZSS --    193 to 197 \n
+       - BDS --     201 to 263 \n
+       - Galileo -- 301 to 336 \n
+       - NavIC --   401 to 420 \n
+    */
+    uint16_t gnssSvId;
+
+    /**<   Specifies validity of all the fields.  \n
+        - iscB2a -- 0x0001   \n
+        - iscB1c -- 0x0002  \n
+        - tgdB2a -- 0x0004   \n
+        - tgdB1c -- 0x0008  \n
+        - svType -- 0x0010   \n
+        - validityPeriod  -- 0x0020  \n
+        - integrityFlags -- 0x0040   \n
+        - deltaNdot  -- 0x0080  \n
+        - deltaA -- 0x0100   \n
+        - adot  -- 0x0200  \n
+    */
+    BdsExtEphValidity validityMask;
+
+    /** InterSignal Correction between B2a Data and Pilot channels in milliseconds.
+        - Units -- milliseconds */
+    float iscB2a;
+
+    /** InterSignal Correction between B1c Data and Pilot channels in milliseconds.
+        - Units -- milliseconds */
+    float iscB1c;
+
+    /** Time of Group Delay For B2a in milliseconds.
+        - Units -- milliseconds */
+    float tgdB2a;
+
+    /** Time of Group Delay For B1C in milliseconds.
+        - Units -- milliseconds */
+    float tgdB1c;
+
+    /** Sv Type  GEO / MEO / IGSO (Unitless). Defined by BdsSvTypeEnum */
+    BdsSvType svType;
+
+    /** Validity Period in seconds.
+       - Units -- Seconds */
+    uint32_t validityPeriod;
+
+    /** Satellite Integrity Flags consists data integrity Flag(DIF),
+     *  Signal Integrity Flag(SIF), Accuracy Integrity Flag (AIF).
+     *  Values:
+     *  - b0 - AIF, The signal is Valid(0) or Invalid (1).
+     *  - b1 - SIF, The signal is Normal(0) or Abnormal (1).
+     *  - b2 - DIF, The error of message parameters in this signal does not
+     *  exceeds the prediction accuracy (0)/ Exceeds the prediction accuracy (1).
+     *  - b3 - B1I, ephemeris health (unitless).
+     */
+    uint8_t integrityFlags;
+
+    /** Rate of Mean motion difference from computed value [semi-circle/sec^2] (unitless).
+     */
+    double deltaNdot;
+    /** Semi-Major Axis Difference At Reference Time [m].
+        - Units -- Meters */
+    double deltaA;
+    /** Change Rate In Semi-Major Axis [m/sec].
+        - Units -- Meters/seconds */
+    double adot;
+
+    /** Method to print the struct to human readable form, for logging. */
+    string toString() const;
+};
+
 /** BDS Navigation Model Info */
 struct BdsEphemeris {
 
@@ -2648,6 +2908,12 @@ struct BdsEphemeris {
      * - Type: uint8
      * - Units: Unit-less */
     uint8_t URAI;
+
+    /** Validity field for BdsExtEphemeris */
+    bool extendedEphDataValidity;
+
+    /** Extended Ephemeris data for BDS */
+    BdsExtEphemeris bdsExtEphData;
 
     /** Method to print the struct to human readable form, for logging. */
     string toString() const;
@@ -2774,6 +3040,13 @@ struct GnssEphemeris {
 
     /** Ephemeris Data for each NavIC SV */
     std::vector<NavicEphemeris> navicEphemerisData;
+
+    /** Validity for Ephmeris Signal Source
+     *  Valid only for GPS/QZSS/BDS constellations */
+    bool validDataSourceSignal;
+
+    /**  Ephemeris Signal Source Type (Unitless) */
+    GnssSignalTypes dataSourceSignal;
 
     /** Method to print the struct to human readable form, for logging.*/
     string toString() const;
@@ -2993,6 +3266,16 @@ typedef std::function<void(
     const GnssEphemeris& ephInfo
 )> GnssEphReportCb;
 
+/** @brief
+    GNSSExtendedDataInfoCb is for receiving gnss extended Data
+    <br/>
+    @param payload: vectory of binary data
+           <br/>
+*/
+typedef std::function<void(
+    const std::vector<uint8_t>& payload
+)> GNSSExtendedDataInfoCb;
+
 /** Specify the set of callbacks to receive the reports when
  *  invoking startPositionSession(uint32_t,
  *  LocReqEngineTypeMask, const GnssReportCbs&, ResponseCb) with
@@ -3108,6 +3391,9 @@ struct EngineReportCbs {
      * gnssNmeaCb and/or EngineNmeaCb is subscribed or not.
      * Recommend to use NmeaSentencesCb. <br/> */
     NmeaSentencesCb nmeaSentencesCallback;
+    /** Callback to receive GNSS Extended Data from modem GNSS
+     *  engine. <br/> */
+    GNSSExtendedDataInfoCb gnssExtendedDataInfoCallback;
 };
 
 /**

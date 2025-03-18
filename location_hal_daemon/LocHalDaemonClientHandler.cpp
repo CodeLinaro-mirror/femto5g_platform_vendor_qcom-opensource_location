@@ -736,10 +736,11 @@ void LocHalDaemonClientHandler::onGnssConfigCb(ELocMsgID configMsgId,
     case E_INTAPI_GET_XTRA_STATUS_REQ_MSG_ID:
         if (gnssConfig.flags & GNSS_CONFIG_FLAGS_XTRA_STATUS_BIT)
         {
-            LOC_LOGd("--< onGnssConfigCb, xtra status received, %d %d %d",
+            LOC_LOGd("--< onGnssConfigCb, xtra status received, %d %d %d UserConsentStatus %d",
                      gnssConfig.xtraStatus.featureEnabled,
                      gnssConfig.xtraStatus.xtraDataStatus,
-                     gnssConfig.xtraStatus.xtraValidForHours);
+                     gnssConfig.xtraStatus.xtraValidForHours,
+                     gnssConfig.xtraStatus.userConsentStatus);
             LocConfigGetXtraStatusRespMsg msg(SERVICE_NAME,
                                               XTRA_STATUS_UPDATE_UPON_QUERY,
                                               gnssConfig.xtraStatus,
@@ -936,6 +937,11 @@ void LocHalDaemonClientHandler::onGeofenceBreachCb(
 bool LocHalDaemonClientHandler::filterPositionReport(
         const GnssLocationInfoNotification& notification,
         LocOutputEngineType engType) {
+
+    // For min interval 0, pass reports at engine running rate
+    if (!mOptions.minInterval || LOC_OUTPUT_ENGINE_COUNT <= engType) {
+        return false;
+    }
 
     uint64_t curBootTimeMsec = getBootTimeMilliSec();
     // minInterval must be atleast 100msec

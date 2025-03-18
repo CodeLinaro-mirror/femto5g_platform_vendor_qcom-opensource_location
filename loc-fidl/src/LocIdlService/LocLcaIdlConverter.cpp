@@ -1,35 +1,6 @@
 /*
-Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted (subject to the limitations in the
-disclaimer below) provided that the following conditions are met:
-
-    * Redistributions of source code must retain the above copyright
-      notice, this list of conditions and the following disclaimer.
-
-    * Redistributions in binary form must reproduce the above
-      copyright notice, this list of conditions and the following
-      disclaimer in the documentation and/or other materials provided
-      with the distribution.
-
-    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
-      contributors may be used to endorse or promote products derived
-      from this software without specific prior written permission.
-
-NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
-WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
-GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
-IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
-OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+Copyright (c) 2024-2025 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
 #define LOG_TAG "LOC_IDL_LCA_CONV"
@@ -1491,6 +1462,67 @@ uint32_t parseIDLMultiPathIndicator(
     return idlMultiPathInd;
 }
 
+LocationTypes::GnssMeasCodeTypeT parseIDLMeasCodeType(::GnssMeasCodeType measCode) {
+    LocationTypes::GnssMeasCodeTypeT measCodeType =
+            LocationTypes::GnssMeasCodeTypeT::GNSS_MEAS_CODE_TYPE_UNKNOWN;
+    switch (measCode) {
+        case GNSS_MEAS_CODE_TYPE_A:
+            measCodeType = LocationTypes::GnssMeasCodeTypeT::GNSS_MEAS_CODE_TYPE_A;
+            break;
+        case GNSS_MEAS_CODE_TYPE_B:
+            measCodeType = LocationTypes::GnssMeasCodeTypeT::GNSS_MEAS_CODE_TYPE_B;
+            break;
+        case GNSS_MEAS_CODE_TYPE_C:
+            measCodeType = LocationTypes::GnssMeasCodeTypeT::GNSS_MEAS_CODE_TYPE_C;
+            break;
+        case GNSS_MEAS_CODE_TYPE_I:
+            measCodeType = LocationTypes::GnssMeasCodeTypeT::GNSS_MEAS_CODE_TYPE_I;
+            break;
+        case GNSS_MEAS_CODE_TYPE_L:
+            measCodeType = LocationTypes::GnssMeasCodeTypeT::GNSS_MEAS_CODE_TYPE_L;
+            break;
+        case GNSS_MEAS_CODE_TYPE_M:
+            measCodeType = LocationTypes::GnssMeasCodeTypeT::GNSS_MEAS_CODE_TYPE_M;
+            break;
+        case GNSS_MEAS_CODE_TYPE_P:
+            measCodeType = LocationTypes::GnssMeasCodeTypeT::GNSS_MEAS_CODE_TYPE_P;
+            break;
+        case GNSS_MEAS_CODE_TYPE_Q:
+            measCodeType = LocationTypes::GnssMeasCodeTypeT::GNSS_MEAS_CODE_TYPE_Q;
+            break;
+        case GNSS_MEAS_CODE_TYPE_S:
+            measCodeType = LocationTypes::GnssMeasCodeTypeT::GNSS_MEAS_CODE_TYPE_S;
+            break;
+        case GNSS_MEAS_CODE_TYPE_W:
+            measCodeType = LocationTypes::GnssMeasCodeTypeT::GNSS_MEAS_CODE_TYPE_W;
+            break;
+        case GNSS_MEAS_CODE_TYPE_X:
+            measCodeType = LocationTypes::GnssMeasCodeTypeT::GNSS_MEAS_CODE_TYPE_X;
+            break;
+        case GNSS_MEAS_CODE_TYPE_Y:
+            measCodeType = LocationTypes::GnssMeasCodeTypeT::GNSS_MEAS_CODE_TYPE_Y;
+            break;
+        case GNSS_MEAS_CODE_TYPE_Z:
+            measCodeType = LocationTypes::GnssMeasCodeTypeT::GNSS_MEAS_CODE_TYPE_Z;
+            break;
+        case GNSS_MEAS_CODE_TYPE_N:
+            measCodeType = LocationTypes::GnssMeasCodeTypeT::GNSS_MEAS_CODE_TYPE_N;
+            break;
+        case GNSS_MEAS_CODE_TYPE_D:
+            measCodeType = LocationTypes::GnssMeasCodeTypeT::GNSS_MEAS_CODE_TYPE_D;
+            break;
+        case GNSS_MEAS_CODE_TYPE_E:
+            measCodeType = LocationTypes::GnssMeasCodeTypeT::GNSS_MEAS_CODE_TYPE_E;
+            break;
+        case GNSS_MEAS_CODE_TYPE_OTHER:
+            measCodeType = LocationTypes::GnssMeasCodeTypeT::GNSS_MEAS_CODE_TYPE_OTHER;
+            break;
+        default:
+            break;
+    }
+    return measCodeType;
+}
+
 vector<LocationTypes::GnssMeasurementsDataT > parseIDLMeasData
 (
     const vector<::GnssMeasurementsData>& gnssMeasData
@@ -1529,6 +1561,10 @@ vector<LocationTypes::GnssMeasurementsDataT > parseIDLMeasData
         idlMeas.setFullInterSignalBiasUncertaintyNs(
                 gnssMeasData[idx].fullInterSignalBiasUncertaintyNs);
         idlMeas.setCycleSlipCount(gnssMeasData[idx].cycleSlipCount);
+        idlMeas.setMeasCodeType(::parseIDLMeasCodeType(gnssMeasData[idx].measCodeType));
+        if (gnssMeasData[idx].otherCodeTypeName.length()) {
+            idlMeas.setOtherCodeTypeName(gnssMeasData[idx].otherCodeTypeName);
+        }
 
         idlMeasData.push_back(idlMeas);
     }
@@ -1580,9 +1616,11 @@ LocationTypes::GnssDataT LocLcaIdlConverter::parseGnssData
     vector<uint32_t> dataMaskVal;
     vector<double> jammerIndVal;
     vector<double> agcVal;
-    for (uint8_t idx = 0; idx < (LocationTypes::GnssSignalTypeT::\
-            GSTT_MAX_NUMBER_OF_SIGNAL_TYPES - 1); idx++) {
-
+    // For signal type UNKNOWN, Filling in values 0
+    dataMaskVal.push_back(0);
+    jammerIndVal.push_back(0);
+    agcVal.push_back(0);
+    for (uint8_t idx = GNSS_SIGNAL_TYPE_GPS_L1CA; idx < GNSS_MAX_NUMBER_OF_SIGNAL_TYPES; idx++) {
          dataMaskVal.push_back(parseIDLDataMask(gnssData.gnssDataMask[idx]));
          jammerIndVal.push_back(gnssData.jammerInd[idx]);
          agcVal.push_back(gnssData.agc[idx]);
