@@ -25,7 +25,10 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
+/* Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
+ * Copyright (c) 2025 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
 #ifndef ALT_REC_H
 #define ALT_REC_H
 
@@ -43,8 +46,11 @@ typedef struct {
 /** @brief
     All the memory pointers received will be never freed internally.
     Caller shall manage the memory before and after calling these functions.
-    If altitude is valid, ALTITUDE_BIT must set in loc.locationFlagsMask.
-    elapsedRealTimeInMs must be set correctly using boottime of system.
+    If altitude and altitude uncertainty is valid, ALTITUDE_BIT
+    and VERTICAL_ACCURACY_BIT must set in loc.locationFlagsMask.
+    All other fields in location object should not be altered, in
+    particular, the elasedRealTimeStamp in the location report should not
+    be changed.
 */
 typedef struct {
     void (*pushAltitude)(const LocationExt* location);
