@@ -23,6 +23,7 @@
 #include <CommonAPI/Struct.hpp>
 #include <CommonAPI/Types.hpp>
 #include <cstdint>
+#include <string>
 
 #if defined (HAS_DEFINED_COMMONAPI_INTERNAL_COMPILATION_HERE)
 #undef COMMONAPI_INTERNAL_COMPILATION
@@ -623,7 +624,9 @@ struct LocationTypes {
             GMDFMT_FULL_ISB_UNC_BIT = 524288,
             GMDFMT_CYCLE_SLIP_COUNT_BIT = 1048576,
             GMDFMT_GNSS_SIGNAL_TYPE_BIT = 2097152,
-            GMDFMT_BASEBAND_CARRIER_TO_NOISE_BIT = 4194304
+            GMDFMT_BASEBAND_CARRIER_TO_NOISE_BIT = 4194304,
+            GMDFMT_CODE_TYPE_BIT = 8388608,
+            GMDFMT_OTHER_MEAS_CODE_TYPE_BIT = 16777216
         };
     
         GnssMeasurementsDataFlagsMaskT()
@@ -657,6 +660,8 @@ struct LocationTypes {
                 case static_cast< uint32_t>(Literal::GMDFMT_CYCLE_SLIP_COUNT_BIT):
                 case static_cast< uint32_t>(Literal::GMDFMT_GNSS_SIGNAL_TYPE_BIT):
                 case static_cast< uint32_t>(Literal::GMDFMT_BASEBAND_CARRIER_TO_NOISE_BIT):
+                case static_cast< uint32_t>(Literal::GMDFMT_CODE_TYPE_BIT):
+                case static_cast< uint32_t>(Literal::GMDFMT_OTHER_MEAS_CODE_TYPE_BIT):
                 return true;
             default:
                 return false;
@@ -705,6 +710,8 @@ struct LocationTypes {
             case static_cast< uint32_t>(Literal::GMDFMT_CYCLE_SLIP_COUNT_BIT): return "GMDFMT_CYCLE_SLIP_COUNT_BIT";
             case static_cast< uint32_t>(Literal::GMDFMT_GNSS_SIGNAL_TYPE_BIT): return "GMDFMT_GNSS_SIGNAL_TYPE_BIT";
             case static_cast< uint32_t>(Literal::GMDFMT_BASEBAND_CARRIER_TO_NOISE_BIT): return "GMDFMT_BASEBAND_CARRIER_TO_NOISE_BIT";
+            case static_cast< uint32_t>(Literal::GMDFMT_CODE_TYPE_BIT): return "GMDFMT_CODE_TYPE_BIT";
+            case static_cast< uint32_t>(Literal::GMDFMT_OTHER_MEAS_CODE_TYPE_BIT): return "GMDFMT_OTHER_MEAS_CODE_TYPE_BIT";
             default: return "UNDEFINED";
             }
         }
@@ -1079,6 +1086,100 @@ struct LocationTypes {
             case static_cast< uint32_t>(Literal::GSTT_BEIDOU_B2BQ_BIT): return "GSTT_BEIDOU_B2BQ_BIT";
             case static_cast< uint32_t>(Literal::GSTT_NAVIC_L1_BIT): return "GSTT_NAVIC_L1_BIT";
             //case static_cast< uint32_t>(Literal::GSTT_MAX_NUMBER_OF_SIGNAL_TYPES): return "GSTT_MAX_NUMBER_OF_SIGNAL_TYPES";
+            default: return "UNDEFINED";
+            }
+        }
+    };
+    
+    struct GnssMeasCodeTypeT : CommonAPI::Enumeration< uint8_t> {
+        enum Literal : uint8_t {
+            GNSS_MEAS_CODE_TYPE_UNKNOWN = 0,
+            GNSS_MEAS_CODE_TYPE_A = 1,
+            GNSS_MEAS_CODE_TYPE_B = 2,
+            GNSS_MEAS_CODE_TYPE_C = 3,
+            GNSS_MEAS_CODE_TYPE_I = 4,
+            GNSS_MEAS_CODE_TYPE_L = 5,
+            GNSS_MEAS_CODE_TYPE_M = 6,
+            GNSS_MEAS_CODE_TYPE_P = 7,
+            GNSS_MEAS_CODE_TYPE_Q = 8,
+            GNSS_MEAS_CODE_TYPE_S = 9,
+            GNSS_MEAS_CODE_TYPE_W = 10,
+            GNSS_MEAS_CODE_TYPE_X = 11,
+            GNSS_MEAS_CODE_TYPE_Y = 12,
+            GNSS_MEAS_CODE_TYPE_Z = 13,
+            GNSS_MEAS_CODE_TYPE_N = 14,
+            GNSS_MEAS_CODE_TYPE_D = 15,
+            GNSS_MEAS_CODE_TYPE_E = 16,
+            GNSS_MEAS_CODE_TYPE_OTHER = 255
+        };
+    
+        GnssMeasCodeTypeT()
+            : CommonAPI::Enumeration< uint8_t>(static_cast< uint8_t>(Literal::GNSS_MEAS_CODE_TYPE_UNKNOWN)) {}
+        GnssMeasCodeTypeT(Literal _literal)
+            : CommonAPI::Enumeration< uint8_t>(static_cast< uint8_t>(_literal)) {}
+    
+        inline bool validate() const {
+            switch (value_) {
+                case static_cast< uint8_t>(Literal::GNSS_MEAS_CODE_TYPE_UNKNOWN):
+                case static_cast< uint8_t>(Literal::GNSS_MEAS_CODE_TYPE_A):
+                case static_cast< uint8_t>(Literal::GNSS_MEAS_CODE_TYPE_B):
+                case static_cast< uint8_t>(Literal::GNSS_MEAS_CODE_TYPE_C):
+                case static_cast< uint8_t>(Literal::GNSS_MEAS_CODE_TYPE_I):
+                case static_cast< uint8_t>(Literal::GNSS_MEAS_CODE_TYPE_L):
+                case static_cast< uint8_t>(Literal::GNSS_MEAS_CODE_TYPE_M):
+                case static_cast< uint8_t>(Literal::GNSS_MEAS_CODE_TYPE_P):
+                case static_cast< uint8_t>(Literal::GNSS_MEAS_CODE_TYPE_Q):
+                case static_cast< uint8_t>(Literal::GNSS_MEAS_CODE_TYPE_S):
+                case static_cast< uint8_t>(Literal::GNSS_MEAS_CODE_TYPE_W):
+                case static_cast< uint8_t>(Literal::GNSS_MEAS_CODE_TYPE_X):
+                case static_cast< uint8_t>(Literal::GNSS_MEAS_CODE_TYPE_Y):
+                case static_cast< uint8_t>(Literal::GNSS_MEAS_CODE_TYPE_Z):
+                case static_cast< uint8_t>(Literal::GNSS_MEAS_CODE_TYPE_N):
+                case static_cast< uint8_t>(Literal::GNSS_MEAS_CODE_TYPE_D):
+                case static_cast< uint8_t>(Literal::GNSS_MEAS_CODE_TYPE_E):
+                case static_cast< uint8_t>(Literal::GNSS_MEAS_CODE_TYPE_OTHER):
+                return true;
+            default:
+                return false;
+            }
+        }
+    
+        inline bool operator==(const GnssMeasCodeTypeT &_other) const { return (value_ == _other.value_); }
+        inline bool operator!=(const GnssMeasCodeTypeT &_other) const { return (value_ != _other.value_); }
+        inline bool operator<=(const GnssMeasCodeTypeT &_other) const { return (value_ <= _other.value_); }
+        inline bool operator>=(const GnssMeasCodeTypeT &_other) const { return (value_ >= _other.value_); }
+        inline bool operator<(const GnssMeasCodeTypeT &_other) const { return (value_ < _other.value_); }
+        inline bool operator>(const GnssMeasCodeTypeT &_other) const { return (value_ > _other.value_); }
+    
+        inline bool operator==(const Literal &_value) const { return (value_ == static_cast< uint8_t>(_value)); }
+        inline bool operator!=(const Literal &_value) const { return (value_ != static_cast< uint8_t>(_value)); }
+        inline bool operator<=(const Literal &_value) const { return (value_ <= static_cast< uint8_t>(_value)); }
+        inline bool operator>=(const Literal &_value) const { return (value_ >= static_cast< uint8_t>(_value)); }
+        inline bool operator<(const Literal &_value) const { return (value_ < static_cast< uint8_t>(_value)); }
+        inline bool operator>(const Literal &_value) const { return (value_ > static_cast< uint8_t>(_value)); }
+    
+        const char* toString() const noexcept
+        {
+            switch(value_)
+            {
+            case static_cast< uint8_t>(Literal::GNSS_MEAS_CODE_TYPE_UNKNOWN): return "GNSS_MEAS_CODE_TYPE_UNKNOWN";
+            case static_cast< uint8_t>(Literal::GNSS_MEAS_CODE_TYPE_A): return "GNSS_MEAS_CODE_TYPE_A";
+            case static_cast< uint8_t>(Literal::GNSS_MEAS_CODE_TYPE_B): return "GNSS_MEAS_CODE_TYPE_B";
+            case static_cast< uint8_t>(Literal::GNSS_MEAS_CODE_TYPE_C): return "GNSS_MEAS_CODE_TYPE_C";
+            case static_cast< uint8_t>(Literal::GNSS_MEAS_CODE_TYPE_I): return "GNSS_MEAS_CODE_TYPE_I";
+            case static_cast< uint8_t>(Literal::GNSS_MEAS_CODE_TYPE_L): return "GNSS_MEAS_CODE_TYPE_L";
+            case static_cast< uint8_t>(Literal::GNSS_MEAS_CODE_TYPE_M): return "GNSS_MEAS_CODE_TYPE_M";
+            case static_cast< uint8_t>(Literal::GNSS_MEAS_CODE_TYPE_P): return "GNSS_MEAS_CODE_TYPE_P";
+            case static_cast< uint8_t>(Literal::GNSS_MEAS_CODE_TYPE_Q): return "GNSS_MEAS_CODE_TYPE_Q";
+            case static_cast< uint8_t>(Literal::GNSS_MEAS_CODE_TYPE_S): return "GNSS_MEAS_CODE_TYPE_S";
+            case static_cast< uint8_t>(Literal::GNSS_MEAS_CODE_TYPE_W): return "GNSS_MEAS_CODE_TYPE_W";
+            case static_cast< uint8_t>(Literal::GNSS_MEAS_CODE_TYPE_X): return "GNSS_MEAS_CODE_TYPE_X";
+            case static_cast< uint8_t>(Literal::GNSS_MEAS_CODE_TYPE_Y): return "GNSS_MEAS_CODE_TYPE_Y";
+            case static_cast< uint8_t>(Literal::GNSS_MEAS_CODE_TYPE_Z): return "GNSS_MEAS_CODE_TYPE_Z";
+            case static_cast< uint8_t>(Literal::GNSS_MEAS_CODE_TYPE_N): return "GNSS_MEAS_CODE_TYPE_N";
+            case static_cast< uint8_t>(Literal::GNSS_MEAS_CODE_TYPE_D): return "GNSS_MEAS_CODE_TYPE_D";
+            case static_cast< uint8_t>(Literal::GNSS_MEAS_CODE_TYPE_E): return "GNSS_MEAS_CODE_TYPE_E";
+            case static_cast< uint8_t>(Literal::GNSS_MEAS_CODE_TYPE_OTHER): return "GNSS_MEAS_CODE_TYPE_OTHER";
             default: return "UNDEFINED";
             }
         }
@@ -2404,98 +2505,6 @@ struct LocationTypes {
         }
     
     };
-    struct LocationReportRequest : CommonAPI::Struct< uint32_t, uint32_t> {
-    
-        LocationReportRequest()
-        {
-            std::get< 0>(values_) = 0ul;
-            std::get< 1>(values_) = 0ul;
-        }
-        LocationReportRequest(const uint32_t &_intervalInMs, const uint32_t &_gnssReportCallbackMask)
-        {
-            std::get< 0>(values_) = _intervalInMs;
-            std::get< 1>(values_) = _gnssReportCallbackMask;
-        }
-        inline const uint32_t &getIntervalInMs() const { return std::get< 0>(values_); }
-        inline void setIntervalInMs(const uint32_t &_value) { std::get< 0>(values_) = _value; }
-        inline const uint32_t &getGnssReportCallbackMask() const { return std::get< 1>(values_); }
-        inline void setGnssReportCallbackMask(const uint32_t &_value) { std::get< 1>(values_) = _value; }
-        inline bool operator==(const LocationReportRequest& _other) const {
-        return (getIntervalInMs() == _other.getIntervalInMs() && getGnssReportCallbackMask() == _other.getGnssReportCallbackMask());
-        }
-        inline bool operator!=(const LocationReportRequest &_other) const {
-            return !((*this) == _other);
-        }
-    
-    };
-    struct LocationResponse : CommonAPI::Struct< LocationStatusT> {
-    
-        LocationResponse()
-        {
-            std::get< 0>(values_) = LocationStatusT();
-        }
-        LocationResponse(const LocationStatusT &_status)
-        {
-            std::get< 0>(values_) = _status;
-        }
-        inline const LocationStatusT &getStatus() const { return std::get< 0>(values_); }
-        inline void setStatus(const LocationStatusT &_value) { std::get< 0>(values_) = _value; }
-        inline bool operator==(const LocationResponse& _other) const {
-        return (getStatus() == _other.getStatus());
-        }
-        inline bool operator!=(const LocationResponse &_other) const {
-            return !((*this) == _other);
-        }
-    
-    };
-    struct EngineSpecificLocationRequest : CommonAPI::Struct< uint32_t, uint32_t, uint32_t> {
-    
-        EngineSpecificLocationRequest()
-        {
-            std::get< 0>(values_) = 0ul;
-            std::get< 1>(values_) = 0ul;
-            std::get< 2>(values_) = 0ul;
-        }
-        EngineSpecificLocationRequest(const uint32_t &_intervalInMs, const uint32_t &_locReqEngMask, const uint32_t &_engReportCallbackMask)
-        {
-            std::get< 0>(values_) = _intervalInMs;
-            std::get< 1>(values_) = _locReqEngMask;
-            std::get< 2>(values_) = _engReportCallbackMask;
-        }
-        inline const uint32_t &getIntervalInMs() const { return std::get< 0>(values_); }
-        inline void setIntervalInMs(const uint32_t &_value) { std::get< 0>(values_) = _value; }
-        inline const uint32_t &getLocReqEngMask() const { return std::get< 1>(values_); }
-        inline void setLocReqEngMask(const uint32_t &_value) { std::get< 1>(values_) = _value; }
-        inline const uint32_t &getEngReportCallbackMask() const { return std::get< 2>(values_); }
-        inline void setEngReportCallbackMask(const uint32_t &_value) { std::get< 2>(values_) = _value; }
-        inline bool operator==(const EngineSpecificLocationRequest& _other) const {
-        return (getIntervalInMs() == _other.getIntervalInMs() && getLocReqEngMask() == _other.getLocReqEngMask() && getEngReportCallbackMask() == _other.getEngReportCallbackMask());
-        }
-        inline bool operator!=(const EngineSpecificLocationRequest &_other) const {
-            return !((*this) == _other);
-        }
-    
-    };
-    struct LocationAidingDataDeletionMask : CommonAPI::Struct< uint32_t> {
-    
-        LocationAidingDataDeletionMask()
-        {
-            std::get< 0>(values_) = 0ul;
-        }
-        LocationAidingDataDeletionMask(const uint32_t &_deleteMask)
-        {
-            std::get< 0>(values_) = _deleteMask;
-        }
-        inline const uint32_t &getDeleteMask() const { return std::get< 0>(values_); }
-        inline void setDeleteMask(const uint32_t &_value) { std::get< 0>(values_) = _value; }
-        inline bool operator==(const LocationAidingDataDeletionMask& _other) const {
-        return (getDeleteMask() == _other.getDeleteMask());
-        }
-        inline bool operator!=(const LocationAidingDataDeletionMask &_other) const {
-            return !((*this) == _other);
-        }
-    
-    };
     struct GnssSvIdInfoT : CommonAPI::Struct< GnssConstellationTypeT, uint32_t> {
     
         GnssSvIdInfoT()
@@ -2516,46 +2525,6 @@ struct LocationTypes {
         return (getConstellation() == _other.getConstellation() && getSvId() == _other.getSvId());
         }
         inline bool operator!=(const GnssSvIdInfoT &_other) const {
-            return !((*this) == _other);
-        }
-    
-    };
-    struct LocationGnssSvIdInfo : CommonAPI::Struct< std::vector< GnssSvIdInfoT >> {
-    
-        LocationGnssSvIdInfo()
-        {
-            std::get< 0>(values_) = std::vector< GnssSvIdInfoT >();
-        }
-        LocationGnssSvIdInfo(const std::vector< GnssSvIdInfoT > &_svList)
-        {
-            std::get< 0>(values_) = _svList;
-        }
-        inline const std::vector< GnssSvIdInfoT > &getSvList() const { return std::get< 0>(values_); }
-        inline void setSvList(const std::vector< GnssSvIdInfoT > &_value) { std::get< 0>(values_) = _value; }
-        inline bool operator==(const LocationGnssSvIdInfo& _other) const {
-        return (getSvList() == _other.getSvList());
-        }
-        inline bool operator!=(const LocationGnssSvIdInfo &_other) const {
-            return !((*this) == _other);
-        }
-    
-    };
-    struct LocationCapabilities : CommonAPI::Struct< uint32_t> {
-    
-        LocationCapabilities()
-        {
-            std::get< 0>(values_) = 0ul;
-        }
-        LocationCapabilities(const uint32_t &_capabilitiesMask)
-        {
-            std::get< 0>(values_) = _capabilitiesMask;
-        }
-        inline const uint32_t &getCapabilitiesMask() const { return std::get< 0>(values_); }
-        inline void setCapabilitiesMask(const uint32_t &_value) { std::get< 0>(values_) = _value; }
-        inline bool operator==(const LocationCapabilities& _other) const {
-        return (getCapabilitiesMask() == _other.getCapabilitiesMask());
-        }
-        inline bool operator!=(const LocationCapabilities &_other) const {
             return !((*this) == _other);
         }
     
@@ -2632,7 +2601,7 @@ struct LocationTypes {
         }
     
     };
-    struct GnssMeasurementsDataT : CommonAPI::Struct< uint32_t, uint32_t, GnssSvTypeT, double, uint32_t, int64_t, float, int64_t, double, double, double, uint32_t, double, double, float, int64_t, double, double, uint32_t, double, double, double, GnssSignalTypeT, double, double, uint32_t> {
+    struct GnssMeasurementsDataT : CommonAPI::Struct< uint32_t, uint32_t, GnssSvTypeT, double, uint32_t, int64_t, float, int64_t, double, double, double, uint32_t, double, double, float, int64_t, double, double, uint32_t, double, double, double, GnssSignalTypeT, double, double, uint32_t, GnssMeasCodeTypeT, std::string> {
     
         GnssMeasurementsDataT()
         {
@@ -2662,8 +2631,10 @@ struct LocationTypes {
             std::get< 23>(values_) = 0.0;
             std::get< 24>(values_) = 0.0;
             std::get< 25>(values_) = 0ul;
+            std::get< 26>(values_) = GnssMeasCodeTypeT();
+            std::get< 27>(values_) = "";
         }
-        GnssMeasurementsDataT(const uint32_t &_flags, const uint32_t &_svId, const GnssSvTypeT &_svType, const double &_timeOffsetNs, const uint32_t &_stateMask, const int64_t &_receivedSvTimeNs, const float &_receivedSvTimeSubNs, const int64_t &_receivedSvTimeUncertaintyNs, const double &_carrierToNoiseDbHz, const double &_pseudorangeRateMps, const double &_pseudorangeRateUncertaintyMps, const uint32_t &_adrStateMask, const double &_adrMeters, const double &_adrUncertaintyMeters, const float &_carrierFrequencyHz, const int64_t &_carrierCycles, const double &_carrierPhase, const double &_carrierPhaseUncertainty, const uint32_t &_multipathIndicator, const double &_signalToNoiseRatioDb, const double &_agcLevelDb, const double &_basebandCarrierToNoiseDbHz, const GnssSignalTypeT &_gnssSignalType, const double &_fullInterSignalBiasNs, const double &_fullInterSignalBiasUncertaintyNs, const uint32_t &_cycleSlipCount)
+        GnssMeasurementsDataT(const uint32_t &_flags, const uint32_t &_svId, const GnssSvTypeT &_svType, const double &_timeOffsetNs, const uint32_t &_stateMask, const int64_t &_receivedSvTimeNs, const float &_receivedSvTimeSubNs, const int64_t &_receivedSvTimeUncertaintyNs, const double &_carrierToNoiseDbHz, const double &_pseudorangeRateMps, const double &_pseudorangeRateUncertaintyMps, const uint32_t &_adrStateMask, const double &_adrMeters, const double &_adrUncertaintyMeters, const float &_carrierFrequencyHz, const int64_t &_carrierCycles, const double &_carrierPhase, const double &_carrierPhaseUncertainty, const uint32_t &_multipathIndicator, const double &_signalToNoiseRatioDb, const double &_agcLevelDb, const double &_basebandCarrierToNoiseDbHz, const GnssSignalTypeT &_gnssSignalType, const double &_fullInterSignalBiasNs, const double &_fullInterSignalBiasUncertaintyNs, const uint32_t &_cycleSlipCount, const GnssMeasCodeTypeT &_measCodeType, const std::string &_otherCodeTypeName)
         {
             std::get< 0>(values_) = _flags;
             std::get< 1>(values_) = _svId;
@@ -2691,6 +2662,8 @@ struct LocationTypes {
             std::get< 23>(values_) = _fullInterSignalBiasNs;
             std::get< 24>(values_) = _fullInterSignalBiasUncertaintyNs;
             std::get< 25>(values_) = _cycleSlipCount;
+            std::get< 26>(values_) = _measCodeType;
+            std::get< 27>(values_) = _otherCodeTypeName;
         }
         inline const uint32_t &getFlags() const { return std::get< 0>(values_); }
         inline void setFlags(const uint32_t &_value) { std::get< 0>(values_) = _value; }
@@ -2744,8 +2717,12 @@ struct LocationTypes {
         inline void setFullInterSignalBiasUncertaintyNs(const double &_value) { std::get< 24>(values_) = _value; }
         inline const uint32_t &getCycleSlipCount() const { return std::get< 25>(values_); }
         inline void setCycleSlipCount(const uint32_t &_value) { std::get< 25>(values_) = _value; }
+        inline const GnssMeasCodeTypeT &getMeasCodeType() const { return std::get< 26>(values_); }
+        inline void setMeasCodeType(const GnssMeasCodeTypeT &_value) { std::get< 26>(values_) = _value; }
+        inline const std::string &getOtherCodeTypeName() const { return std::get< 27>(values_); }
+        inline void setOtherCodeTypeName(const std::string &_value) { std::get< 27>(values_) = _value; }
         inline bool operator==(const GnssMeasurementsDataT& _other) const {
-        return (getFlags() == _other.getFlags() && getSvId() == _other.getSvId() && getSvType() == _other.getSvType() && getTimeOffsetNs() == _other.getTimeOffsetNs() && getStateMask() == _other.getStateMask() && getReceivedSvTimeNs() == _other.getReceivedSvTimeNs() && getReceivedSvTimeSubNs() == _other.getReceivedSvTimeSubNs() && getReceivedSvTimeUncertaintyNs() == _other.getReceivedSvTimeUncertaintyNs() && getCarrierToNoiseDbHz() == _other.getCarrierToNoiseDbHz() && getPseudorangeRateMps() == _other.getPseudorangeRateMps() && getPseudorangeRateUncertaintyMps() == _other.getPseudorangeRateUncertaintyMps() && getAdrStateMask() == _other.getAdrStateMask() && getAdrMeters() == _other.getAdrMeters() && getAdrUncertaintyMeters() == _other.getAdrUncertaintyMeters() && getCarrierFrequencyHz() == _other.getCarrierFrequencyHz() && getCarrierCycles() == _other.getCarrierCycles() && getCarrierPhase() == _other.getCarrierPhase() && getCarrierPhaseUncertainty() == _other.getCarrierPhaseUncertainty() && getMultipathIndicator() == _other.getMultipathIndicator() && getSignalToNoiseRatioDb() == _other.getSignalToNoiseRatioDb() && getAgcLevelDb() == _other.getAgcLevelDb() && getBasebandCarrierToNoiseDbHz() == _other.getBasebandCarrierToNoiseDbHz() && getGnssSignalType() == _other.getGnssSignalType() && getFullInterSignalBiasNs() == _other.getFullInterSignalBiasNs() && getFullInterSignalBiasUncertaintyNs() == _other.getFullInterSignalBiasUncertaintyNs() && getCycleSlipCount() == _other.getCycleSlipCount());
+        return (getFlags() == _other.getFlags() && getSvId() == _other.getSvId() && getSvType() == _other.getSvType() && getTimeOffsetNs() == _other.getTimeOffsetNs() && getStateMask() == _other.getStateMask() && getReceivedSvTimeNs() == _other.getReceivedSvTimeNs() && getReceivedSvTimeSubNs() == _other.getReceivedSvTimeSubNs() && getReceivedSvTimeUncertaintyNs() == _other.getReceivedSvTimeUncertaintyNs() && getCarrierToNoiseDbHz() == _other.getCarrierToNoiseDbHz() && getPseudorangeRateMps() == _other.getPseudorangeRateMps() && getPseudorangeRateUncertaintyMps() == _other.getPseudorangeRateUncertaintyMps() && getAdrStateMask() == _other.getAdrStateMask() && getAdrMeters() == _other.getAdrMeters() && getAdrUncertaintyMeters() == _other.getAdrUncertaintyMeters() && getCarrierFrequencyHz() == _other.getCarrierFrequencyHz() && getCarrierCycles() == _other.getCarrierCycles() && getCarrierPhase() == _other.getCarrierPhase() && getCarrierPhaseUncertainty() == _other.getCarrierPhaseUncertainty() && getMultipathIndicator() == _other.getMultipathIndicator() && getSignalToNoiseRatioDb() == _other.getSignalToNoiseRatioDb() && getAgcLevelDb() == _other.getAgcLevelDb() && getBasebandCarrierToNoiseDbHz() == _other.getBasebandCarrierToNoiseDbHz() && getGnssSignalType() == _other.getGnssSignalType() && getFullInterSignalBiasNs() == _other.getFullInterSignalBiasNs() && getFullInterSignalBiasUncertaintyNs() == _other.getFullInterSignalBiasUncertaintyNs() && getCycleSlipCount() == _other.getCycleSlipCount() && getMeasCodeType() == _other.getMeasCodeType() && getOtherCodeTypeName() == _other.getOtherCodeTypeName());
         }
         inline bool operator!=(const GnssMeasurementsDataT &_other) const {
             return !((*this) == _other);
@@ -3508,7 +3485,7 @@ static inline const char* getTypeCollectionName() {
 }
 
 inline CommonAPI::Version getTypeCollectionVersion() {
-    return CommonAPI::Version(1, 0);
+    return CommonAPI::Version(1, 1);
 }
 
 }; // struct LocationTypes
@@ -3627,6 +3604,13 @@ namespace std {
     struct hash< ::v1::com::qualcomm::qti::location::LocationTypes::GnssSignalTypeT> {
         inline size_t operator()(const ::v1::com::qualcomm::qti::location::LocationTypes::GnssSignalTypeT& gnssSignalTypeT) const {
             return static_cast< uint32_t>(gnssSignalTypeT);
+        }
+    };
+    //Hash for GnssMeasCodeTypeT
+    template<>
+    struct hash< ::v1::com::qualcomm::qti::location::LocationTypes::GnssMeasCodeTypeT> {
+        inline size_t operator()(const ::v1::com::qualcomm::qti::location::LocationTypes::GnssMeasCodeTypeT& gnssMeasCodeTypeT) const {
+            return static_cast< uint8_t>(gnssMeasCodeTypeT);
         }
     };
     //Hash for LocationFlagsMaskT
@@ -3752,6 +3736,6 @@ namespace std {
 
 
 // Compatibility
-namespace v1_0 = v1;
+namespace v1_1 = v1;
 
 #endif // V1_COM_QUALCOMM_QTI_LOCATION_Location_Types_HPP_

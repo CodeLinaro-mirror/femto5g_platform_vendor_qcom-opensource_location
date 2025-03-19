@@ -79,8 +79,8 @@ enum LocationApiDataTypesVersion {
     LOCAPI_DATA_TYPES_VER_MAJOR = 1;
     // Minor - New features / API addition, new message/elemtent addition.
     // Bump the last byte of version i.e. x.2 to x.3
-    // Minor version 49: Support Extended Ephemeris data, ODCPI DBH position
-    LOCAPI_DATA_TYPES_VER_MINOR = 49;
+    // Minor version 52: Support External connectivity for XTRA
+    LOCAPI_DATA_TYPES_VER_MINOR = 52;
 }
 
 // ============================================================================
@@ -537,6 +537,8 @@ enum PBGnssMeasurementsDataFlagsMask {
     PB_GNSS_MEASUREMENTS_DATA_CYCLE_SLIP_COUNT_BIT             = 0x00100000;
     PB_GNSS_MEASUREMENTS_DATA_GNSS_SIGNAL_TYPE_BIT             = 0x00200000;
     PB_GNSS_MEASUREMENTS_DATA_BASEBAND_CARRIER_TO_NOISE_BIT    = 0x00400000;
+    PB_GNSS_MEASUREMENTS_DATA_MEAS_CODE_TYPE_BIT               = 0x00800000;
+    PB_GNSS_MEASUREMENTS_DATA_OTHER_MEAS_CODE_TYPE_BIT         = 0x01000000;
 }
 
 enum PBGnssMeasurementsStateMask {
@@ -986,6 +988,26 @@ message PBGnssMeasurementsClock {
     uint64 elapsedgPTPTimeUnc = 14;
 }
 
+enum PBGnssMeasurementsCodeType {
+    PB_GNSS_MEASUREMENTS_CODE_TYPE_A       = 0;
+    PB_GNSS_MEASUREMENTS_CODE_TYPE_B       = 1;
+    PB_GNSS_MEASUREMENTS_CODE_TYPE_C       = 2;
+    PB_GNSS_MEASUREMENTS_CODE_TYPE_I       = 3;
+    PB_GNSS_MEASUREMENTS_CODE_TYPE_L       = 4;
+    PB_GNSS_MEASUREMENTS_CODE_TYPE_M       = 5;
+    PB_GNSS_MEASUREMENTS_CODE_TYPE_P       = 6;
+    PB_GNSS_MEASUREMENTS_CODE_TYPE_Q       = 7;
+    PB_GNSS_MEASUREMENTS_CODE_TYPE_S       = 8;
+    PB_GNSS_MEASUREMENTS_CODE_TYPE_W       = 9;
+    PB_GNSS_MEASUREMENTS_CODE_TYPE_X       = 10;
+    PB_GNSS_MEASUREMENTS_CODE_TYPE_Y       = 11;
+    PB_GNSS_MEASUREMENTS_CODE_TYPE_Z       = 12;
+    PB_GNSS_MEASUREMENTS_CODE_TYPE_N       = 13;
+    PB_GNSS_MEASUREMENTS_CODE_TYPE_D       = 14;
+    PB_GNSS_MEASUREMENTS_CODE_TYPE_E       = 15;
+    PB_GNSS_MEASUREMENTS_CODE_TYPE_OTHER   = 255;
+}
+
 message PBGnssMeasurementsData {
     // bitwise OR of PBGnssMeasurementsDataFlagsMask
     uint32 flags = 1;
@@ -1021,6 +1043,8 @@ message PBGnssMeasurementsData {
     double fullInterSignalBiasUncertaintyNs = 24;
     uint32 cycleSlipCount = 25;
     float receivedSvTimeSubNs = 26;
+    PBGnssMeasurementsCodeType codeType = 27;
+    string otherCodeTypeName = 28;
 }
 
 message PBLocApiGnssLocationPositionDynamics {
@@ -1696,6 +1720,8 @@ message PBXtraStatus {
     // XTRA_DATA_STATUS_VALID.
     // For all other XtraDataStatus, this field will be set to 0.
     uint32 xtraValidForHours = 3;
+    // End user consent status for xtra assistance data usage
+    bool userConsentStatus = 4;
 };
 
 message PBTimespec {
@@ -2575,3 +2601,33 @@ message PBOdcpiRequestInfo {
     uint32 tbfMillis = 3;
     bool isEmergencyMode = 4;
 }
+
+enum PBNetworkConnection {
+    PB_NET_CONNECTION_UNKNOWN = 0;
+    PB_NET_CONNECTED = 1;
+    PB_NET_DISCONNECTED = 2;
+};
+
+enum PBNetworkType {
+    PB_TYPE_UNKNOWN = 0;
+    PB_TYPE_WWAN = 1;
+    PB_TYPE_WLAN = 2;
+};
+
+/** @brief
+    Always set a 2-byte country string, such as "cn","us","in"<br>
+
+    When networkType is TYPE_WWAN,
+    set Mobile Country Code and the Mobile Network Code to the networkInfo,
+    The MCC is a three-digit code representing the country,
+    while the MNC is a two or three-digit code representing
+    the specific mobile network within that country.
+    For example "405|854", for Indian mobile operator Andhra Pradesh <br/>
+*/
+message PBNetworkInfoData {
+    PBNetworkConnection connection = 1;
+    PBNetworkType networkType = 2;
+    string country = 3;
+    string mccmnc = 4;
+};
+
