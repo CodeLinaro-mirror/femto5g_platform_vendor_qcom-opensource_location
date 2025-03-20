@@ -61,6 +61,13 @@ IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+
+/*
+Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
+Copyright (c) 2025 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
+
 #ifndef SYNERGY_LOC_API_H
 #define SYNERGY_LOC_API_H
 
@@ -176,8 +183,6 @@ public:
         setAGLONASSProtocolSync(GnssConfigAGlonassPositionProtocolMask aGlonassProtocol);
     virtual LocationError setLPPeProtocolCpSync(GnssConfigLppeControlPlaneMask lppeCP);
     virtual LocationError setLPPeProtocolUpSync(GnssConfigLppeUserPlaneMask lppeUP);
-    virtual void getWwanZppFix();
-    virtual void getBestAvailableZppFix();
     virtual LocationError setGpsLockSync(GnssConfigGpsLock lock);
     virtual void setConstrainedTuncMode(bool enabled,
                                         float tuncConstraint,
@@ -193,10 +198,6 @@ public:
     virtual void startTimeBasedTracking(const TrackingOptions& options,
              LocApiResponse* adapterResponse);
     virtual void stopTimeBasedTracking(LocApiResponse* adapterResponse);
-    virtual void startDistanceBasedTracking(uint32_t sessionId, const LocationOptions& options,
-             LocApiResponse* adapterResponse);
-    virtual void stopDistanceBasedTracking(uint32_t sessionId,
-             LocApiResponse* adapterResponse = nullptr);
 
     virtual GnssConfigSuplVersion convertSuplVersion(const uint32_t suplVersion);
     virtual GnssConfigLppeControlPlaneMask convertLppeCp(const uint32_t lppeControlPlaneMask);

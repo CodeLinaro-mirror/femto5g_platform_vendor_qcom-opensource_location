@@ -1,35 +1,6 @@
 /*
-Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted (subject to the limitations in the
-disclaimer below) provided that the following conditions are met:
-
-    * Redistributions of source code must retain the above copyright
-      notice, this list of conditions and the following disclaimer.
-
-    * Redistributions in binary form must reproduce the above
-      copyright notice, this list of conditions and the following
-      disclaimer in the documentation and/or other materials provided
-      with the distribution.
-
-    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
-      contributors may be used to endorse or promote products derived
-      from this software without specific prior written permission.
-
-NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
-WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
-GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
-IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
-OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+Copyright (c) 2024-2025 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
 #ifndef LOC_IDL_SERVICE_LOG_H
@@ -42,9 +13,11 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "LocDiagIfaceApi.h"
 #include "LocIdlAPIStubImpl.hpp"
-#include <v0/com/qualcomm/qti/location/LocIdlAPIStub.hpp>
+#include <v1/com/qualcomm/qti/location/LocationTypes.hpp>
+#include <v1/com/qualcomm/qti/location/LocationStub.hpp>
 
 using namespace std;
+using namespace v1::com::qualcomm::qti::location;
 
 #ifndef LOG_1X_BASE_C
 #define LOG_1X_BASE_C        ((uint16_t) 0x1000)
@@ -269,7 +242,7 @@ public:
     void diagLogPowerEventInfo(uint8_t powerEvent, uint8_t serviceStatus);
     void diagLogDeleteAidingRequest (uint64_t clientIdentifier, uint32_t aidingMask);
     void diagLogConfigConstellationRequest(uint64_t clientIdentifier,
-            vector< LocIdlAPI::IDLGnssSvIdInfo > svListSrc);
+            vector<LocationTypes::GnssSvIdInfoT > svListSrc);
     void updateSystemHealth(uint32_t totalRss, bool gptpSyncStatus);
 private:
     uint32_t mTotalRss;

@@ -1,35 +1,6 @@
 /*
-Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted (subject to the limitations in the
-disclaimer below) provided that the following conditions are met:
-
-    * Redistributions of source code must retain the above copyright
-      notice, this list of conditions and the following disclaimer.
-
-    * Redistributions in binary form must reproduce the above
-      copyright notice, this list of conditions and the following
-      disclaimer in the documentation and/or other materials provided
-      with the distribution.
-
-    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
-      contributors may be used to endorse or promote products derived
-      from this software without specific prior written permission.
-
-NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
-WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
-GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
-IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
-OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+Copyright (c) 2024-2025 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
 /************************************************************************
@@ -45,10 +16,11 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <inttypes.h>
 #include <cstring>
 #include "LocationClientApi.h"
-#include <v0/com/qualcomm/qti/location/LocIdlAPIStub.hpp>
+#include <v1/com/qualcomm/qti/location/LocationTypes.hpp>
+#include <v1/com/qualcomm/qti/location/LocationStub.hpp>
 #include <gptp_helper.h>
 
-using namespace v0::com::qualcomm::qti::location;
+using namespace v1::com::qualcomm::qti::location;
 using namespace std;
 using namespace location_client;
 
@@ -56,17 +28,17 @@ class LocLcaIdlConverter {
 
 public:
 
-    LocIdlAPI::IDLLocation parseBasicLocationInfo
+    LocationTypes::LocationT parseBasicLocationInfo
     (
         const ::GnssLocation &basicLoc
     );
 
-    uint32_t parseIDLLocReliability
+    uint8_t parseIDLLocReliability
     (
         ::LocationReliability locReliability
     );
 
-    LocIdlAPI::IDLLocationReportSvUsedInPosition parseIDLSvUsedInPosition
+    LocationTypes::LocationReportSvUsedInPositionT parseIDLSvUsedInPosition
     (
         ::GnssLocationSvUsedInPosition halSv
     );
@@ -81,32 +53,32 @@ public:
         location_client::LocationTechnologyMask   posTechMask
     );
 
-    LocIdlAPI::IDLLocationReportPositionDynamics parseIDLBodyFrameData
+    LocationTypes::LocationReportPositionDynamicsT parseIDLBodyFrameData
     (
         location_client::GnssLocationPositionDynamics bodyFrameData
     );
 
-    LocIdlAPI::IDLGnssSystemTime parseGnssSystemTime
+    LocationTypes::GnssSystemTimeT parseGnssSystemTime
     (
         location_client::GnssSystemTime gnssSystemTime
     );
 
-    LocIdlAPI::IDLGnssSystemTimeStructType parseIDLGnssTime
+    LocationTypes::GnssSystemTimeStructTypeT parseIDLGnssTime
     (
         location_client::GnssSystemTimeStructType gnssTime
     );
 
-    LocIdlAPI::IDLGnssGloTimeStructType parseIDLGloTime
+    LocationTypes::GnssGloTimeStructTypeT parseIDLGloTime
     (
         location_client::GnssGloTimeStructType gloTime
     );
 
-    uint32_t  parseIDLGnssConstellation
+    LocationTypes::GnssConstellationTypeT  parseIDLGnssConstellation
     (
         location_client::Gnss_LocSvSystemEnumType constellation
     );
 
-    vector< LocIdlAPI::IDLGnssMeasUsageInfo > parseIDLMeasUsageInfo
+    vector< LocationTypes::GnssMeasUsageInfoT > parseIDLMeasUsageInfo
     (
         vector<location_client::GnssMeasUsageInfo> measUsageInfo
     );
@@ -121,22 +93,22 @@ public:
         location_client::PositioningEngineMask locOutputEngMask
     );
 
-    LocIdlAPI::IDLLLAInfo parseIDLLatLongAltInfo
+    LocationTypes::LlaInfoT parseIDLLatLongAltInfo
     (
        location_client::LLAInfo llaVRPBased
     );
 
-    uint64_t parseIDLDrSolStatusMask
+    uint32_t parseIDLDrSolStatusMask
     (
         location_client::DrSolutionStatusMask drSolutionStatusMask
     );
 
-    LocIdlAPI::IDLLocationReport parseLocReport
+    LocationTypes::LocationReportT parseLocReport
     (
         const location_client::GnssLocation &lcaLoc
     );
 
-    LocIdlAPI::IDLGnssSvType  parseIDLSvType
+    LocationTypes::GnssSvTypeT parseIDLSvType
     (
         location_client::GnssSvType  svType
     );
@@ -146,7 +118,7 @@ public:
         location_client:: GnssSvOptionsMask optionMask
     );
 
-    LocIdlAPI::IDLGnssSv parseSvReport
+    LocationTypes::GnssSvDataT parseSvReport
     (
         const location_client::GnssSv& gnssSvs
     );
@@ -156,7 +128,7 @@ public:
     );
 
 
-    LocIdlAPI::IDLGnssMeasurementsClock parseIDLMeasClockInfo
+    LocationTypes::GnssMeasurementsClockT parseIDLMeasClockInfo
     (
         location_client::GnssMeasurementsClock gnssClock
     );
@@ -177,12 +149,12 @@ public:
         location_client::GnssMeasurementsMultipathIndicator multipathIndicator
     );
 
-    vector<LocIdlAPI::IDLGnssMeasurementsData > parseIDLMeasData
+    vector<LocationTypes::GnssMeasurementsDataT > parseIDLMeasData
     (
         vector<location_client::GnssMeasurementsData> gnssMeasData
     );
 
-    LocIdlAPI::IDLGnssMeasurements parseMeasurements
+    LocationTypes::GnssMeasurementsT parseMeasurements
     (
         const location_client::GnssMeasurements& gnssMeasurements
     );
@@ -192,12 +164,12 @@ public:
         const location_client::GnssDataMask& mask
     );
 
-    LocIdlAPI::IDLGnssData parseGnssData
+    LocationTypes::GnssDataT parseGnssData
     (
         const location_client::GnssData& gnssData
     );
 
-    uint32_t parseIDLSignalType (
+    LocationTypes::GnssSignalTypeT parseIDLSignalType (
         location_client::GnssSignalTypeMask lcaSignalType
     );
 

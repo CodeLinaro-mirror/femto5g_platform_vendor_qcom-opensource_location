@@ -28,7 +28,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -411,7 +411,6 @@ bool LocationClientApi::startPositionSession(
     LocationOptions locationOption;
     locationOption.size = sizeof(locationOption);
     locationOption.minInterval = intervalInMs;
-    locationOption.minDistance = distanceInMeters;
     locationOption.qualityLevelAccepted = QUALITY_ANY_OR_FAILED_FIX;
 
     TrackingOptions trackingOption(locationOption);
@@ -439,7 +438,6 @@ bool LocationClientApi::startPositionSession(
     LocationOptions locationOption;
     locationOption.size = sizeof(locationOption);
     locationOption.minInterval = intervalInMs;
-    locationOption.minDistance = 0;
     locationOption.qualityLevelAccepted = QUALITY_ANY_OR_FAILED_FIX;
 
     TrackingOptions trackingOption(locationOption);
@@ -466,7 +464,6 @@ bool LocationClientApi::startPositionSession(
     LocationOptions locationOption;
     locationOption.size = sizeof(locationOption);
     locationOption.minInterval = intervalInMs;
-    locationOption.minDistance = 0;
     locationOption.locReqEngTypeMask =(::LocReqEngineTypeMask)locEngReqMask;
     locationOption.qualityLevelAccepted = QUALITY_ANY_OR_FAILED_FIX;
 
@@ -480,7 +477,7 @@ void LocationClientApi::stopPositionSession() {
         mApiImpl->stopTrackingAndClearSubscriptions(0);
     }
 }
-
+// Not supported
 bool LocationClientApi::startTripBatchingSession(uint32_t minInterval, uint32_t tripDistance,
         BatchingCb batchingCb, ResponseCb rspCb) {
     //Input parameter check
@@ -519,22 +516,18 @@ bool LocationClientApi::startTripBatchingSession(uint32_t minInterval, uint32_t 
 
     callbacksOption.batchingStatusCb = [batchingCb](const BatchingStatusInfo& batchingSt,
             std::list<uint32_t>& listOfcompletedTrips) {
-        if (BATCHING_STATUS_TRIP_COMPLETED == batchingSt.batchingStatus) {
-            std::vector<Location> locationVector;
-            BatchingStatus status = BATCHING_STATUS_DONE;
-            batchingCb(locationVector, status);
-        }
+        std::vector<Location> locationVector;
+        BatchingStatus status = BATCHING_STATUS_DONE;
+        batchingCb(locationVector, status);
     };
 
     LocationOptions locOption = {};
     locOption.size = sizeof(locOption);
     locOption.minInterval = minInterval;
-    locOption.minDistance = tripDistance;
     locOption.mode = GNSS_SUPL_MODE_STANDALONE;
 
     BatchingOptions     batchOption = {};
     batchOption.size = sizeof(batchOption);
-    batchOption.batchingMode = BATCHING_MODE_TRIP;
     batchOption.setLocationOptions(locOption);
 
     mApiImpl->startBatchingSession(callbacksOption, batchOption);
@@ -583,7 +576,6 @@ bool LocationClientApi::startRoutineBatchingSession(uint32_t minInterval, uint32
     LocationOptions locOption = {};
     locOption.size = sizeof(locOption);
     locOption.minInterval = minInterval;
-    locOption.minDistance = minDistance;
     locOption.mode = GNSS_SUPL_MODE_STANDALONE;
 
     BatchingOptions     batchOption = {};
@@ -969,9 +961,7 @@ DECLARE_TBL(LocationCapabilitiesMask) = {
     {LOCATION_CAPS_TIME_BASED_TRACKING_BIT, "TIME_BASED_TRACKING"},
     {LOCATION_CAPS_TIME_BASED_BATCHING_BIT, "TIME_BASED_BATCHING"},
     {LOCATION_CAPS_DISTANCE_BASED_TRACKING_BIT, "DIST_BASED_TRACKING"},
-    {LOCATION_CAPS_DISTANCE_BASED_BATCHING_BIT, "DIST_BASED_BATCHING"},
     {LOCATION_CAPS_GEOFENCE_BIT, "GEOFENCE"},
-    {LOCATION_CAPS_OUTDOOR_TRIP_BATCHING_BIT, "OUTDOOR_TRIP_BATCHING"},
     {LOCATION_CAPS_GNSS_MEASUREMENTS_BIT, "GNSS_MEASUREMENTS"},
     {LOCATION_CAPS_CONSTELLATION_ENABLEMENT_BIT, "CONSTELLATION_ENABLE"},
     {LOCATION_CAPS_CARRIER_PHASE_BIT, "CARRIER_PHASE"},

@@ -61,6 +61,13 @@ IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+
+/*
+Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
+Copyright (c) 2025 Qualcomm Innovation Center, Inc. All rights reserved.
+SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
+
 #define LOG_NDEBUG 0
 #define LOG_TAG "SynergyLoc_Api"
 
@@ -508,13 +515,7 @@ void handleSllReportGnssMeasurementData(GnssMeasurements &measurements,
        None.
 */
 void handleSllReportWwanZppFix(LocGpsLocation &zppLoc, void *context) {
-
-    if (nullptr != context) {
-        SynergyLocApi *synergyLocApiInstance = (SynergyLocApi*)context;
-        synergyLocApiInstance->reportWwanZppFix(zppLoc);
-    } else {
-        LOC_LOGw ("Context is NULL");
-    }
+   LOC_LOGw ("Default Implementation");
 }
 
 /**
@@ -533,14 +534,7 @@ void handleSllReportWwanZppFix(LocGpsLocation &zppLoc, void *context) {
 void handleSllReportZppBestAvailableFix(LocGpsLocation &zppLoc,
     GpsLocationExtended &location_extended, LocPosTechMask tech_mask, void *context) {
 
-    if (nullptr != context) {
-        SynergyLocApi *synergyLocApiInstance = (SynergyLocApi*)context;
-        synergyLocApiInstance->reportZppBestAvailableFix(zppLoc,
-                    location_extended, tech_mask);
-    } else {
-        LOC_LOGw ("Context is NULL");
-    }
-
+   LOC_LOGw ("Default Implementation");
 }
 
 /**
@@ -1309,7 +1303,7 @@ SynergyLocApi::open(LOC_API_ADAPTER_EVENT_MASK_T mask) {
                         (supportedMask & LOC_API_ADAPTER_BIT_GNSS_MEASUREMENT))) {
                     gnssMeasurementSupported = true;
                 }
-            mContext->setEngineCapabilities(supportedMask, (getSllFeatures.feature_len != 0 ?
+            mContext->setEngineCapabilities((getSllFeatures.feature_len != 0 ?
                 getSllFeatures.feature : NULL), gnssMeasurementSupported);
         }
     }
@@ -1995,68 +1989,6 @@ SynergyLocApi::setLPPeProtocolUpSync(GnssConfigLppeUserPlaneMask lppeUP) {
 
 }
 
-
-/**
-   Request for WWAN ZPP Fix- Position reprot.
-
-   @param
-        None
-
-   @return
-        None
-
-   @dependencies
-       None.
-*/
-void SynergyLocApi::getWwanZppFix() {
-
-    sendMsg(new LocApiMsg([this] () {
-        enum loc_api_adapter_err rtv = LOC_API_ADAPTER_ERR_SUCCESS;
-
-        if ((nullptr != sllReqIf) && (nullptr != sllReqIf->sllGetWwanZppFix)) {
-            rtv= sllReqIf->sllGetWwanZppFix((void *)this);
-            if (LOC_API_ADAPTER_ERR_SUCCESS != rtv) {
-                 LOC_LOGe("Error: %d", rtv);
-            }
-        } else {
-            rtv = LOC_API_ADAPTER_ERR_UNSUPPORTED;
-        }
-        LOC_LOGd("Status: %d", rtv);
-    }));
-
-}
-
-/**
-   Request for Best Available ZPP Fix- Position reprot.
-
-   @param
-        None
-
-   @return
-        None
-
-   @dependencies
-       None.
-*/
-void SynergyLocApi::getBestAvailableZppFix() {
-
-    sendMsg(new LocApiMsg([this] () {
-        enum loc_api_adapter_err rtv = LOC_API_ADAPTER_ERR_SUCCESS;
-
-        if ((nullptr != sllReqIf) && (nullptr != sllReqIf->sllGetWwanZppFix)) {
-            rtv= sllReqIf->sllGetWwanZppFix((void *)this);
-            if (LOC_API_ADAPTER_ERR_SUCCESS != rtv) {
-                 LOC_LOGe("Error: %d", rtv);
-            }
-        } else {
-            rtv = LOC_API_ADAPTER_ERR_UNSUPPORTED;
-        }
-        LOC_LOGd("Status: %d", rtv);
-    }));
-
-}
-
-
 /**
    Set GPS Lock.
 
@@ -2523,63 +2455,6 @@ SynergyLocApi::startTimeBasedTracking(const TrackingOptions& options,
 
 void
 SynergyLocApi::stopTimeBasedTracking(LocApiResponse* adapterResponse){
-
-    sendMsg(new LocApiMsg([this, adapterResponse] () {
-        LocationError err = LOCATION_ERROR_GENERAL_FAILURE;
-        enum loc_api_adapter_err rtv = LOC_API_ADAPTER_ERR_SUCCESS;
-
-        if ((nullptr != sllReqIf) && (nullptr != sllReqIf->sllStopFix)) {
-
-            rtv = sllReqIf->sllStopFix((void *)this);
-            if (LOC_API_ADAPTER_ERR_SUCCESS == rtv) {
-                err = LOCATION_ERROR_SUCCESS;
-            }
-        } else {
-            err = LOCATION_ERROR_NOT_SUPPORTED;
-        }
-
-        if (adapterResponse != NULL) {
-            adapterResponse->returnToSender(err);
-        }
-    }));
-}
-
-void
-SynergyLocApi::startDistanceBasedTracking(uint32_t sessionId,
-        const LocationOptions& options, LocApiResponse* adapterResponse) {
-
-    sendMsg(new LocApiMsg([this, options, adapterResponse] () {
-        LocationError err = LOCATION_ERROR_GENERAL_FAILURE;
-        enum loc_api_adapter_err rtv = LOC_API_ADAPTER_ERR_SUCCESS;
-        sllPosMode posMode;
-
-        if ((nullptr != sllReqIf) && (nullptr != sllReqIf->sllStartFix)) {
-
-            posMode.mode = LOC_POSITION_MODE_STANDALONE;
-            posMode.recurrence = LOC_GPS_POSITION_RECURRENCE_PERIODIC;
-            posMode.min_interval = options.minInterval;
-            posMode.preferred_accuracy = 100;
-            posMode.preferred_time = 120000;
-            posMode.share_position = true;
-            posMode.powerMode = GNSS_POWER_MODE_M2;
-            posMode.timeBetweenMeasurements = 1000;
-
-            rtv = sllReqIf->sllStartFix(posMode, ((void *)this));
-            if (LOC_API_ADAPTER_ERR_SUCCESS == rtv) {
-                err = LOCATION_ERROR_SUCCESS;
-            }
-        } else {
-            err = LOCATION_ERROR_NOT_SUPPORTED;
-        }
-        if (adapterResponse != NULL) {
-            adapterResponse->returnToSender(err);
-        }
-    }));
-}
-
-void
-SynergyLocApi::stopDistanceBasedTracking(uint32_t sessionId,
-         LocApiResponse* adapterResponse) {
 
     sendMsg(new LocApiMsg([this, adapterResponse] () {
         LocationError err = LOCATION_ERROR_GENERAL_FAILURE;

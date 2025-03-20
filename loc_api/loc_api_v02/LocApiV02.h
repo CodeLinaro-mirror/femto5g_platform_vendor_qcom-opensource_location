@@ -249,7 +249,6 @@ private:
   qmiLocPlatformPowerStateEnumT_v02 mPlatformPowerState;
 
   size_t mBatchSize, mDesiredBatchSize;
-  size_t mTripBatchSize, mDesiredTripBatchSize;
   bool mIsFirstFinalFixReported;
   bool mIsFirstStartFixReq;
   std::string mPackageName[eQMI_LOC_NTN_V02+1];
@@ -442,15 +441,11 @@ private:
   void sendNfwNotification(GnssNfwNotification& notification);
   LocationError queryBatchBuffer(size_t desiredSize,
           size_t &allocatedSize, BatchingMode batchMode);
-  LocationError releaseBatchBuffer(BatchingMode batchMode);
   void readModemLocations(Location* pLocationPiece, size_t count,
           BatchingMode batchingMode, size_t& numbOfEntries);
   void setOperationMode(GnssSuplMode mode);
-  bool needsNewTripBatchRestart(uint32_t newTripDistance, uint32_t newTripTBFInterval,
-          uint32_t &accumulatedDistance, uint32_t &numOfBatchedPositions);
   void batchFullEvent(const qmiLocEventBatchFullIndMsgT_v02* batchFullInfo);
   void batchStatusEvent(const qmiLocEventBatchingStatusIndMsgT_v02* batchStatusInfo);
-  void onDbtPosReportEvent(const qmiLocEventDbtPositionReportIndMsgT_v02* pDbtPosReport);
   void geofenceBreachEvent(const qmiLocEventGeofenceBreachIndMsgT_v02* breachInfo);
   void geofenceBreachEvent(const qmiLocEventGeofenceBatchedBreachIndMsgT_v02* batchedBreachInfo);
   void geofenceStatusEvent(const qmiLocEventGeofenceGenAlertIndMsgT_v02* alertInfo);
@@ -504,35 +499,14 @@ public:
   // Tracking
   void startTimeBasedTracking(const TrackingOptions& options, LocApiResponse* adapterResponse);
   void stopTimeBasedTracking(LocApiResponse* adapterResponse);
-  void startDistanceBasedTracking(uint32_t sessionId, const LocationOptions& options,
-         LocApiResponse* adapterResponse);
-  void stopDistanceBasedTracking(uint32_t sessionId, LocApiResponse* adapterResponse);
 
   // Batching
   void startBatching(uint32_t sessionId, const LocationOptions& options, uint32_t accuracy,
           uint32_t timeout, LocApiResponse* adapterResponse);
   void stopBatching(uint32_t sessionId, LocApiResponse* adapterResponse);
-  LocationError startOutdoorTripBatchingSync(uint32_t tripDistance, uint32_t tripTbf,
-          uint32_t timeout);
-  void startOutdoorTripBatching(uint32_t tripDistance, uint32_t tripTbf, uint32_t timeout,
-          LocApiResponse* adapterResponse);
-  void reStartOutdoorTripBatching(uint32_t ongoingTripDistance, uint32_t ongoingTripInterval,
-          uint32_t batchingTimeout, LocApiResponse* adapterResponse);
-  LocationError stopOutdoorTripBatchingSync(bool deallocBatchBuffer = true);
-  void stopOutdoorTripBatching(bool deallocBatchBuffer = true,
-          LocApiResponse* adapterResponse = nullptr);
   LocationError getBatchedLocationsSync(size_t count);
   void getBatchedLocations(size_t count, LocApiResponse* adapterResponse);
-  LocationError getBatchedTripLocationsSync(size_t count, uint32_t accumulatedDistance);
-  void getBatchedTripLocations(size_t count, uint32_t accumulatedDistance,
-          LocApiResponse* adapterResponse);
   virtual void setBatchSize(size_t size);
-  virtual void setTripBatchSize(size_t size);
-  LocationError queryAccumulatedTripDistanceSync(uint32_t &accumulatedTripDistance,
-          uint32_t &numOfBatchedPositions);
-  void queryAccumulatedTripDistance(
-          LocApiResponseData<LocApiBatchData>* adapterResponseData);
-
   // Geofence
   virtual void addGeofence(uint32_t clientId, const GeofenceOption& options,
           const GeofenceInfo& info, LocApiResponseData<LocApiGeofenceData>* adapterResponseData);
@@ -593,12 +567,6 @@ public:
       setAGLONASSProtocolSync(GnssConfigAGlonassPositionProtocolMask aGlonassProtocol);
   virtual LocationError setLPPeProtocolCpSync(GnssConfigLppeControlPlaneMask lppeCP);
   virtual LocationError setLPPeProtocolUpSync(GnssConfigLppeUserPlaneMask lppeUP);
-  virtual void getWwanZppFix();
-  virtual void
-      handleWwanZppFixIndication(const qmiLocGetAvailWwanPositionIndMsgT_v02 &zpp_ind);
-  virtual void
-      handleZppBestAvailableFixIndication(const qmiLocGetBestAvailablePositionIndMsgT_v02 &zpp_ind);
-  virtual void getBestAvailableZppFix();
   virtual bool getBestAvailableZppFixSync(LocGpsLocation &zppLoc,
           LocPosTechMask &tech_mask);
   virtual LocationError setGpsLockSync(GnssConfigGpsLock lock);

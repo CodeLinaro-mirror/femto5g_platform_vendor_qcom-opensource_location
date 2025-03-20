@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -372,15 +372,8 @@ ClientType LocationApiPbMsgConv::getEnumForPBClientType(const PBClientType &pbCl
 BatchingMode LocationApiPbMsgConv::getEnumForPBBatchingMode(
         const PBBatchingMode &pbBatchMode) const {
     BatchingMode batchMode = BATCHING_MODE_ROUTINE;
-    switch (pbBatchMode) {
-        case PB_BATCHING_MODE_TRIP:
-            batchMode = BATCHING_MODE_TRIP;
-            break;
-        case PB_BATCHING_MODE_NO_AUTO_REPORT:
-            batchMode = BATCHING_MODE_NO_AUTO_REPORT;
-            break;
-        default:
-            break;
+    if (pbBatchMode == PB_BATCHING_MODE_NO_AUTO_REPORT) {
+        batchMode = BATCHING_MODE_NO_AUTO_REPORT;
     }
     LocApiPb_LOGv("LocApiPB: pbBatchMode:%d, batchMode:%d", pbBatchMode, batchMode);
     return batchMode;
@@ -427,9 +420,6 @@ BatchingStatus LocationApiPbMsgConv::getEnumForPBBatchingStatus(
         const PBBatchingStatus &pbBatchStat) const {
     BatchingStatus batchStat = BATCHING_STATUS_POSITION_UNAVAILABLE;
     switch (pbBatchStat) {
-        case PB_BATCHING_STATUS_TRIP_COMPLETED:
-            batchStat = BATCHING_STATUS_TRIP_COMPLETED;
-            break;
         case PB_BATCHING_STATUS_POSITION_AVAILABE:
             batchStat = BATCHING_STATUS_POSITION_AVAILABE;
             break;
@@ -1170,9 +1160,6 @@ PBBatchingMode LocationApiPbMsgConv::getPBEnumForBatchingMode(
         case BATCHING_MODE_ROUTINE:
             pbBatchMode = PB_BATCHING_MODE_ROUTINE;
             break;
-        case BATCHING_MODE_TRIP:
-            pbBatchMode = PB_BATCHING_MODE_TRIP;
-            break;
         case BATCHING_MODE_NO_AUTO_REPORT:
             pbBatchMode = PB_BATCHING_MODE_NO_AUTO_REPORT;
             break;
@@ -1246,9 +1233,6 @@ PBBatchingStatus LocationApiPbMsgConv::getPBEnumForBatchingStatus(
         const BatchingStatus &batchStatus) const {
     PBBatchingStatus pbBatchStatus = PB_BATCHING_STATUS_POSITION_UNAVAILABLE;
     switch (batchStatus) {
-        case BATCHING_STATUS_TRIP_COMPLETED:
-            pbBatchStatus = PB_BATCHING_STATUS_TRIP_COMPLETED;
-            break;
         case BATCHING_STATUS_POSITION_AVAILABE:
             pbBatchStatus = PB_BATCHING_STATUS_POSITION_AVAILABE;
             break;
@@ -1483,17 +1467,8 @@ uint64_t LocationApiPbMsgConv::getPBMaskForLocationCapabilitiesMask(
     if (locCapabMask & LOCATION_CAPABILITIES_TIME_BASED_BATCHING_BIT) {
         pbLocCapabMask |= PB_LOCATION_CAPS_TIME_BASED_BATCHING_BIT;
     }
-    if (locCapabMask & LOCATION_CAPABILITIES_DISTANCE_BASED_TRACKING_BIT) {
-        pbLocCapabMask |= PB_LOCATION_CAPS_DISTANCE_BASED_TRACKING_BIT;
-    }
-    if (locCapabMask & LOCATION_CAPABILITIES_DISTANCE_BASED_BATCHING_BIT) {
-        pbLocCapabMask |= PB_LOCATION_CAPS_DISTANCE_BASED_BATCHING_BIT;
-    }
     if (locCapabMask & LOCATION_CAPABILITIES_GEOFENCE_BIT) {
         pbLocCapabMask |= PB_LOCATION_CAPS_GEOFENCE_BIT;
-    }
-    if (locCapabMask & LOCATION_CAPABILITIES_OUTDOOR_TRIP_BATCHING_BIT) {
-        pbLocCapabMask |= PB_LOCATION_CAPS_OUTDOOR_TRIP_BATCHING_BIT;
     }
     if (locCapabMask & LOCATION_CAPABILITIES_GNSS_MEASUREMENTS_BIT) {
         pbLocCapabMask |= PB_LOCATION_CAPS_GNSS_MEASUREMENTS_BIT;
@@ -2605,17 +2580,8 @@ uint64_t LocationApiPbMsgConv::getLocationCapabilitiesMaskFromPB(
     if (pbLocCapabMask & PB_LOCATION_CAPS_TIME_BASED_BATCHING_BIT) {
         locCapabMask |= LOCATION_CAPABILITIES_TIME_BASED_BATCHING_BIT;
     }
-    if (pbLocCapabMask & PB_LOCATION_CAPS_DISTANCE_BASED_TRACKING_BIT) {
-        locCapabMask |= LOCATION_CAPABILITIES_DISTANCE_BASED_TRACKING_BIT;
-    }
-    if (pbLocCapabMask & PB_LOCATION_CAPS_DISTANCE_BASED_BATCHING_BIT) {
-        locCapabMask |= LOCATION_CAPABILITIES_DISTANCE_BASED_BATCHING_BIT;
-    }
     if (pbLocCapabMask & PB_LOCATION_CAPS_GEOFENCE_BIT) {
         locCapabMask |= LOCATION_CAPABILITIES_GEOFENCE_BIT;
-    }
-    if (pbLocCapabMask & PB_LOCATION_CAPS_OUTDOOR_TRIP_BATCHING_BIT) {
-        locCapabMask |= LOCATION_CAPABILITIES_OUTDOOR_TRIP_BATCHING_BIT;
     }
     if (pbLocCapabMask & PB_LOCATION_CAPS_GNSS_MEASUREMENTS_BIT) {
         locCapabMask |= LOCATION_CAPABILITIES_GNSS_MEASUREMENTS_BIT;
@@ -4056,7 +4022,7 @@ int LocationApiPbMsgConv::convertLocationOptionsToPB(const LocationOptions &locO
     pbLocOpt->set_mininterval(locOpt.minInterval);
 
     // uint32 minDistance = 2;
-    pbLocOpt->set_mindistance(locOpt.minDistance);
+    pbLocOpt->set_mindistance(0);
 
     // PBGnssSuplMode mode = 3;
     pbLocOpt->set_mode(getPBEnumForGnssSuplMode(locOpt.mode));
@@ -4067,9 +4033,9 @@ int LocationApiPbMsgConv::convertLocationOptionsToPB(const LocationOptions &locO
     // PBFixQualityLevel = 5;
     pbLocOpt->set_qualitylevelaccepted(getPBEnumForFixQualityLevel(locOpt.qualityLevelAccepted));
 
-    LocApiPb_LOGd("LocApiPB: locOpt - MinInterval: %u, MinDistance:%u, GnssSuplMode:%d, "\
+    LocApiPb_LOGd("LocApiPB: locOpt - MinInterval: %u, GnssSuplMode:%d, "\
             "LocReqEngineTypeMask:%x qualityLevelAccepted:%d",
-            locOpt.minInterval, locOpt.minDistance, locOpt.mode,
+            locOpt.minInterval, locOpt.mode,
             locOpt.locReqEngTypeMask, locOpt.qualityLevelAccepted);
     return 0;
 }
@@ -6030,10 +5996,6 @@ int LocationApiPbMsgConv::pbConvertToLocationOptions(const PBLocationOptions &pb
     locOpt.size = sizeof(LocationOptions);
     // uint32 minInterval = 1;
     locOpt.minInterval = pbLocOpt.mininterval();
-
-    // uint32 minDistance = 2;
-    locOpt.minDistance = pbLocOpt.mindistance();
-
     // PBGnssSuplMode mode = 3;
     locOpt.mode = getEnumForPBGnssSuplMode(pbLocOpt.mode());
 
@@ -6045,9 +6007,9 @@ int LocationApiPbMsgConv::pbConvertToLocationOptions(const PBLocationOptions &pb
     // PBQuailtyLevelAccepted = 5;
     locOpt.qualityLevelAccepted = getEnumForPBFixQualityLevel(pbLocOpt.qualitylevelaccepted());
 
-    LocApiPb_LOGd("LocApiPB: pbLocOpt - MinInterval: %u, MinDistance:%u, GnssSuplMode:%d, "\
+    LocApiPb_LOGd("LocApiPB: pbLocOpt - MinInterval: %u, GnssSuplMode:%d, "\
             "LocReqEngineTypeMask:%x qualityLevelAccepted: %d",
-            locOpt.minInterval, locOpt.minDistance, locOpt.mode,
+            locOpt.minInterval, locOpt.mode,
             locOpt.locReqEngTypeMask, locOpt.qualityLevelAccepted);
     return 0;
 }
@@ -7326,7 +7288,7 @@ int LocationApiPbMsgConv::pbConvertToAntennaInfo(
     //repeated PBGnssAntennaInformation antennaInfos = 1;
     int count = pbAntennaInfo.antennainfos_size();
     for (int i = 0; i < count; i++) {
-        GnssAntennaInformation gnssAntennaInfo;
+        GnssAntennaInformation gnssAntennaInfo = {0};
         pbConvertToGnssAntennaInformaiton(pbAntennaInfo.antennainfos(i), gnssAntennaInfo);
         antennaInfo.antennaInfos.push_back(std::move(gnssAntennaInfo));
     }

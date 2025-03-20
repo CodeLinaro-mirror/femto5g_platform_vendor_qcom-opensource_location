@@ -162,10 +162,6 @@ static const locClientEventIndTableStructT locClientEventIndTable[]= {
   { QMI_LOC_EVENT_INJECT_PREDICTED_ORBITS_REQ_IND_V02,
     sizeof(qmiLocEventInjectPredictedOrbitsReqIndMsgT_v02) },
 
-  //Position Injection Request Ind
-  { QMI_LOC_EVENT_INJECT_POSITION_REQ_IND_V02,
-    sizeof(qmiLocEventInjectPositionReqIndMsgT_v02) },
-
   //Engine State Report Ind
   { QMI_LOC_EVENT_ENGINE_STATE_IND_V02,
     sizeof(qmiLocEventEngineStateIndMsgT_v02) },
@@ -226,9 +222,6 @@ static const locClientEventIndTableStructT locClientEventIndTable[]= {
    { QMI_LOC_EVENT_SV_POLYNOMIAL_REPORT_IND_V02,
     sizeof(qmiLocEventGnssSvPolyIndMsgT_v02) },
 
-  { QMI_LOC_EVENT_DBT_POSITION_REPORT_IND_V02,
-    sizeof(qmiLocEventDbtPositionReportIndMsgT_v02) },
-
   { QMI_LOC_EVENT_GEOFENCE_BATCHED_DWELL_NOTIFICATION_IND_V02,
     sizeof(qmiLocEventGeofenceBatchedDwellIndMsgT_v02) },
 
@@ -270,10 +263,6 @@ static const locClientEventIndTableStructT locClientEventIndTable[]= {
   { QMI_LOC_SYSTEM_INFO_IND_V02,
     sizeof(qmiLocSystemInfoIndMsgT_v02)},
 
-  // Power Metrics with multiband support
-  { QMI_LOC_GET_BAND_MEASUREMENT_METRICS_IND_V02,
-    sizeof(qmiLocGetBandMeasurementMetricsIndMsgT_v02)},
-
   // loc system info event ind
   { QMI_LOC_LOCATION_REQUEST_NOTIFICATION_IND_V02,
     sizeof(qmiLocLocationRequestNotificationIndMsgT_v02)},
@@ -312,29 +301,13 @@ typedef struct
 
 static const locClientRespIndTableStructT locClientRespIndTable[]= {
 
-  // get service revision ind
-  { QMI_LOC_GET_SERVICE_REVISION_IND_V02,
-    sizeof(qmiLocGetServiceRevisionIndMsgT_v02)},
-
-  // Get Fix Criteria Resp Ind
-  { QMI_LOC_GET_FIX_CRITERIA_IND_V02,
-     sizeof(qmiLocGetFixCriteriaIndMsgT_v02)},
-
   // NI User Resp In
   { QMI_LOC_NI_USER_RESPONSE_IND_V02,
     sizeof(qmiLocNiUserRespIndMsgT_v02)},
 
-  //Inject Predicted Orbits Data Resp Ind
-  { QMI_LOC_INJECT_PREDICTED_ORBITS_DATA_IND_V02,
-    sizeof(qmiLocInjectPredictedOrbitsDataIndMsgT_v02)},
-
   //Get Predicted Orbits Data Src Resp Ind
   { QMI_LOC_GET_PREDICTED_ORBITS_DATA_SOURCE_IND_V02,
     sizeof(qmiLocGetPredictedOrbitsDataSourceIndMsgT_v02)},
-
-  // Get Predicted Orbits Data Validity Resp Ind
-   { QMI_LOC_GET_PREDICTED_ORBITS_DATA_VALIDITY_IND_V02,
-     sizeof(qmiLocGetPredictedOrbitsDataValidityIndMsgT_v02)},
 
    // Inject UTC Time Resp Ind
    { QMI_LOC_INJECT_UTC_TIME_IND_V02,
@@ -352,69 +325,25 @@ static const locClientRespIndTableStructT locClientRespIndTable[]= {
    { QMI_LOC_GET_ENGINE_LOCK_IND_V02,
      sizeof(qmiLocGetEngineLockIndMsgT_v02)},
 
-   //Set SBAS Config Resp Ind
-   { QMI_LOC_SET_SBAS_CONFIG_IND_V02,
-     sizeof(qmiLocSetSbasConfigIndMsgT_v02)},
-
-   //Get SBAS Config Resp Ind
-   { QMI_LOC_GET_SBAS_CONFIG_IND_V02,
-     sizeof(qmiLocGetSbasConfigIndMsgT_v02)},
-
-   //Set Low Power Mode Resp Ind
-   { QMI_LOC_SET_LOW_POWER_MODE_IND_V02,
-     sizeof(qmiLocSetLowPowerModeIndMsgT_v02)},
-
-   //Get Low Power Mode Resp Ind
-   { QMI_LOC_GET_LOW_POWER_MODE_IND_V02,
-     sizeof(qmiLocGetLowPowerModeIndMsgT_v02)},
-
    //Set Server Resp Ind
    { QMI_LOC_SET_SERVER_IND_V02,
      sizeof(qmiLocSetServerIndMsgT_v02)},
-
-   //Get Server Resp Ind
-   { QMI_LOC_GET_SERVER_IND_V02,
-     sizeof(qmiLocGetServerIndMsgT_v02)},
 
     //Delete Assist Data Resp Ind
    { QMI_LOC_DELETE_ASSIST_DATA_IND_V02,
      sizeof(qmiLocDeleteAssistDataIndMsgT_v02)},
 
-   //Set AP cache injection Resp Ind
-   { QMI_LOC_INJECT_APCACHE_DATA_IND_V02,
-     sizeof(qmiLocInjectApCacheDataIndMsgT_v02)},
-
-   //Set No AP cache injection Resp Ind
-   { QMI_LOC_INJECT_APDONOTCACHE_DATA_IND_V02,
-     sizeof(qmiLocInjectApDoNotCacheDataIndMsgT_v02)},
-
    //Set XTRA-T Session Control Resp Ind
    { QMI_LOC_SET_XTRA_T_SESSION_CONTROL_IND_V02,
      sizeof(qmiLocSetXtraTSessionControlIndMsgT_v02)},
-
-   //Get XTRA-T Session Control Resp Ind
-   { QMI_LOC_GET_XTRA_T_SESSION_CONTROL_IND_V02,
-     sizeof(qmiLocGetXtraTSessionControlIndMsgT_v02)},
-
-   //Inject Wifi Position Resp Ind
-   { QMI_LOC_INJECT_WIFI_POSITION_IND_V02,
-     sizeof(qmiLocInjectWifiPositionIndMsgT_v02)},
 
    //Notify Wifi Status Resp Ind
    { QMI_LOC_NOTIFY_WIFI_STATUS_IND_V02,
      sizeof(qmiLocNotifyWifiStatusIndMsgT_v02)},
 
-   //Get Registered Events Resp Ind
-   { QMI_LOC_GET_REGISTERED_EVENTS_IND_V02,
-     sizeof(qmiLocGetRegisteredEventsIndMsgT_v02)},
-
    //Set Operation Mode Resp Ind
    { QMI_LOC_SET_OPERATION_MODE_IND_V02,
      sizeof(qmiLocSetOperationModeIndMsgT_v02)},
-
-   //Get Operation Mode Resp Ind
-   { QMI_LOC_GET_OPERATION_MODE_IND_V02,
-     sizeof(qmiLocGetOperationModeIndMsgT_v02)},
 
    //Set SPI Status Resp Ind
    { QMI_LOC_SET_SPI_STATUS_IND_V02,
@@ -428,21 +357,9 @@ static const locClientRespIndTableStructT locClientRespIndTable[]= {
    { QMI_LOC_INJECT_TIME_SYNC_DATA_IND_V02,
      sizeof(qmiLocInjectTimeSyncDataIndMsgT_v02)},
 
-   //Set Cradle Mount config Resp Ind
-   { QMI_LOC_SET_CRADLE_MOUNT_CONFIG_IND_V02,
-     sizeof(qmiLocSetCradleMountConfigIndMsgT_v02)},
-
-   //Get Cradle Mount config Resp Ind
-   { QMI_LOC_GET_CRADLE_MOUNT_CONFIG_IND_V02,
-     sizeof(qmiLocGetCradleMountConfigIndMsgT_v02)},
-
    //Set External Power config Resp Ind
    { QMI_LOC_SET_EXTERNAL_POWER_CONFIG_IND_V02,
      sizeof(qmiLocSetExternalPowerConfigIndMsgT_v02)},
-
-   //Get External Power config Resp Ind
-   { QMI_LOC_GET_EXTERNAL_POWER_CONFIG_IND_V02,
-     sizeof(qmiLocGetExternalPowerConfigIndMsgT_v02)},
 
    //Location server connection status
    { QMI_LOC_INFORM_LOCATION_SERVER_CONN_STATUS_IND_V02,
@@ -452,48 +369,17 @@ static const locClientRespIndTableStructT locClientRespIndTable[]= {
    { QMI_LOC_SET_PROTOCOL_CONFIG_PARAMETERS_IND_V02,
      sizeof(qmiLocSetProtocolConfigParametersIndMsgT_v02)},
 
-   //Get Protocol Config Parameters
-   { QMI_LOC_GET_PROTOCOL_CONFIG_PARAMETERS_IND_V02,
-     sizeof(qmiLocGetProtocolConfigParametersIndMsgT_v02)},
-
-   //Set Sensor Control Config
-   { QMI_LOC_SET_SENSOR_CONTROL_CONFIG_IND_V02,
-     sizeof(qmiLocSetSensorControlConfigIndMsgT_v02)},
-
-   //Get Sensor Control Config
-   { QMI_LOC_GET_SENSOR_CONTROL_CONFIG_IND_V02,
-     sizeof(qmiLocGetSensorControlConfigIndMsgT_v02)},
-
    //Set Sensor Properties
    { QMI_LOC_SET_SENSOR_PROPERTIES_IND_V02,
      sizeof(qmiLocSetSensorPropertiesIndMsgT_v02)},
-
-   //Get Sensor Properties
-   { QMI_LOC_GET_SENSOR_PROPERTIES_IND_V02,
-     sizeof(qmiLocGetSensorPropertiesIndMsgT_v02)},
 
    //Set Sensor Performance Control Config
    { QMI_LOC_SET_SENSOR_PERFORMANCE_CONTROL_CONFIGURATION_IND_V02,
      sizeof(qmiLocSetSensorPerformanceControlConfigIndMsgT_v02)},
 
-   //Get Sensor Performance Control Config
-   { QMI_LOC_GET_SENSOR_PERFORMANCE_CONTROL_CONFIGURATION_IND_V02,
-     sizeof(qmiLocGetSensorPerformanceControlConfigIndMsgT_v02)},
    //Inject SUPL certificate
    { QMI_LOC_INJECT_SUPL_CERTIFICATE_IND_V02,
      sizeof(qmiLocInjectSuplCertificateIndMsgT_v02) },
-
-   //Delete SUPL certificate
-   { QMI_LOC_DELETE_SUPL_CERTIFICATE_IND_V02,
-     sizeof(qmiLocDeleteSuplCertificateIndMsgT_v02) },
-
-   // Set Position Engine Config
-   { QMI_LOC_SET_POSITION_ENGINE_CONFIG_PARAMETERS_IND_V02,
-     sizeof(qmiLocSetPositionEngineConfigParametersIndMsgT_v02)},
-
-   // Get Position Engine Config
-   { QMI_LOC_GET_POSITION_ENGINE_CONFIG_PARAMETERS_IND_V02,
-     sizeof(qmiLocGetPositionEngineConfigParametersIndMsgT_v02)},
 
    //Add a Circular Geofence
    { QMI_LOC_ADD_CIRCULAR_GEOFENCE_IND_V02,
@@ -503,10 +389,6 @@ static const locClientRespIndTableStructT locClientRespIndTable[]= {
    { QMI_LOC_DELETE_GEOFENCE_IND_V02,
      sizeof(qmiLocDeleteGeofenceIndMsgT_v02)} ,
 
-   //Query a Geofence
-   { QMI_LOC_QUERY_GEOFENCE_IND_V02,
-     sizeof(qmiLocQueryGeofenceIndMsgT_v02)},
-
    //Edit a Geofence
    { QMI_LOC_EDIT_GEOFENCE_IND_V02,
      sizeof(qmiLocEditGeofenceIndMsgT_v02)},
@@ -515,42 +397,13 @@ static const locClientRespIndTableStructT locClientRespIndTable[]= {
    { QMI_LOC_GET_BEST_AVAILABLE_POSITION_IND_V02,
      sizeof(qmiLocGetBestAvailablePositionIndMsgT_v02)},
 
-   //Secure Get available position
-   { QMI_LOC_SECURE_GET_AVAILABLE_POSITION_IND_V02,
-     sizeof(qmiLocSecureGetAvailablePositionIndMsgT_v02)},
-
    //Inject motion data
    { QMI_LOC_INJECT_MOTION_DATA_IND_V02,
      sizeof(qmiLocInjectMotionDataIndMsgT_v02)},
 
-   //Get NI Geofence list
-   { QMI_LOC_GET_NI_GEOFENCE_ID_LIST_IND_V02,
-     sizeof(qmiLocGetNiGeofenceIdListIndMsgT_v02)},
-
-   //Inject GSM Cell Info
-   { QMI_LOC_INJECT_GSM_CELL_INFO_IND_V02,
-     sizeof(qmiLocInjectGSMCellInfoIndMsgT_v02)},
-
-   //Inject Network Initiated Message
-   { QMI_LOC_INJECT_NETWORK_INITIATED_MESSAGE_IND_V02,
-     sizeof(qmiLocInjectNetworkInitiatedMessageIndMsgT_v02)},
-
-   //WWAN Out of Service Notification
-   { QMI_LOC_WWAN_OUT_OF_SERVICE_NOTIFICATION_IND_V02,
-     sizeof(qmiLocWWANOutOfServiceNotificationIndMsgT_v02)},
-
    //Pedomete Report
    { QMI_LOC_PEDOMETER_REPORT_IND_V02,
      sizeof(qmiLocPedometerReportIndMsgT_v02)},
-
-   { QMI_LOC_INJECT_WCDMA_CELL_INFO_IND_V02,
-     sizeof(qmiLocInjectWCDMACellInfoIndMsgT_v02)},
-
-   { QMI_LOC_INJECT_TDSCDMA_CELL_INFO_IND_V02,
-     sizeof(qmiLocInjectTDSCDMACellInfoIndMsgT_v02)},
-
-   { QMI_LOC_INJECT_SUBSCRIBER_ID_IND_V02,
-     sizeof(qmiLocInjectSubscriberIDIndMsgT_v02)},
 
    //Inject Wifi AP data Resp Ind
    { QMI_LOC_INJECT_WIFI_AP_DATA_IND_V02,
@@ -577,10 +430,6 @@ static const locClientRespIndTableStructT locClientRespIndTable[]= {
    { QMI_LOC_SET_XTRA_VERSION_CHECK_IND_V02,
      sizeof(qmiLocSetXtraVersionCheckIndMsgT_v02)},
 
-    //Vehicle Sensor Data
-    { QMI_LOC_INJECT_VEHICLE_SENSOR_DATA_IND_V02,
-      sizeof(qmiLocInjectVehicleSensorDataIndMsgT_v02)},
-
    { QMI_LOC_NOTIFY_WIFI_ATTACHMENT_STATUS_IND_V02,
      sizeof(qmiLocNotifyWifiAttachmentStatusIndMsgT_v02)},
 
@@ -590,23 +439,11 @@ static const locClientRespIndTableStructT locClientRespIndTable[]= {
    { QMI_LOC_SET_PREMIUM_SERVICES_CONFIG_IND_V02,
      sizeof(qmiLocSetPremiumServicesCfgIndMsgT_v02)},
 
-   { QMI_LOC_GET_AVAILABLE_WWAN_POSITION_IND_V02,
-     sizeof(qmiLocGetAvailWwanPositionIndMsgT_v02)},
-
    { QMI_LOC_SET_GNSS_CONSTELL_REPORT_CONFIG_IND_V02,
      sizeof(qmiLocSetGNSSConstRepConfigIndMsgT_v02)},
 
-   { QMI_LOC_START_DBT_IND_V02,
-     sizeof(qmiLocStartDbtIndMsgT_v02)},
-
-   { QMI_LOC_STOP_DBT_IND_V02,
-     sizeof(qmiLocStopDbtIndMsgT_v02)},
-
    { QMI_LOC_INJECT_TIME_ZONE_INFO_IND_V02,
      sizeof(qmiLocInjectTimeZoneInfoIndMsgT_v02)},
-
-   { QMI_LOC_QUERY_AON_CONFIG_IND_V02,
-     sizeof(qmiLocQueryAonConfigIndMsgT_v02)},
 
    { QMI_LOC_GET_SUPPORTED_FEATURE_IND_V02,
      sizeof(qmiLocGetSupportedFeatureIndMsgT_v02) },
@@ -622,28 +459,9 @@ static const locClientRespIndTableStructT locClientRespIndTable[]= {
    { QMI_LOC_INJECT_XTRA_PCID_IND_V02,
      sizeof(qmiLocInjectXtraPcidIndMsgT_v02) },
 
-  // for Fusion CSM
-   { QMI_LOC_CROWDSOURCE_MANAGER_CONTROL_IND_V02,
-     sizeof(qmiLocCrowdSourceManagerControlIndMsgT_v02) },
-
    //xtra config data
    { QMI_LOC_QUERY_XTRA_INFO_IND_V02,
      sizeof(qmiLocQueryXtraInfoIndMsgT_v02) },
-
-   { QMI_LOC_START_OUTDOOR_TRIP_BATCHING_IND_V02,
-     sizeof(qmiLocStartOutdoorTripBatchingIndMsgT_v02) },
-
-   { QMI_LOC_QUERY_OTB_ACCUMULATED_DISTANCE_IND_V02,
-     sizeof(qmiLocQueryOTBAccumulatedDistanceIndMsgT_v02) },
-
-   { QMI_LOC_GET_FDCL_BS_LIST_IND_V02,
-     sizeof(qmiLocGetFdclBsListIndMsgT_v02) },
-
-   { QMI_LOC_INJECT_FDCL_DATA_IND_V02,
-     sizeof(qmiLocInjectFdclDataIndMsgT_v02) },
-
-   { QMI_LOC_GET_BS_OBS_DATA_IND_V02,
-     sizeof(qmiLocGetBsObsDataIndMsgT_v02) },
 
    { QMI_LOC_SET_BLACKLIST_SV_IND_V02,
      sizeof(qmiLocGenReqStatusIndMsgT_v02) },
@@ -657,9 +475,6 @@ static const locClientRespIndTableStructT locClientRespIndTable[]= {
 
    { QMI_LOC_SET_CONSTELLATION_CONTROL_IND_V02,
      sizeof(qmiLocGenReqStatusIndMsgT_v02) },
-
-   { QMI_LOC_GET_CONSTELLATION_CONTROL_IND_V02,
-     sizeof(qmiLocGetConstellationConfigIndMsgT_v02) },
 
    { QMI_LOC_SET_CONSTRAINED_TUNC_MODE_IND_V02,
      sizeof(qmiLocSetConstrainedTuncModeIndMsgT_v02) },
@@ -705,9 +520,6 @@ static const locClientRespIndTableStructT locClientRespIndTable[]= {
 
    { QMI_LOC_SET_TRIBAND_STATE_IND_V02,
      sizeof(qmiLocGenReqStatusIndMsgT_v02) },
-
-   { QMI_LOC_GET_TRIBAND_STATE_IND_V02,
-     sizeof(qmiLocGetTribandStateIndMsgT_v02) },
 
    { QMI_LOC_SET_SDK_FEATURE_CONFIG_IND_V02,
      sizeof(qmiLocSetSdkFeatureConfigIndMsgT_v02) },
@@ -812,54 +624,6 @@ static bool locClientGetSizeAndTypeByIndId (uint32_t indId, size_t *pIndSize,
   // Id not found
   LOC_LOGw("indId %d not found\n", indId);
   return false;
-}
-
-/** checkQmiMsgsSupported
- @brief check the qmi service is supported or not.
- @param [in] pResponse  pointer to the response received from
-        QMI_LOC service.
-*/
-static void checkQmiMsgsSupported(
-  const uint32_t*          reqIdArray,
-  int                      reqIdArrayLength,
-  qmiLocGetSupportMsgT_v02 *pResponse,
-  uint64_t*                supportedMsg)
-{
-    uint64_t result = 0;
-    if (pResponse->resp.supported_msgs_valid) {
-
-        /* For example, if a service supports exactly four messages with
-        IDs 0, 1, 30, and 31 (decimal), the array (in hexadecimal) is
-        4 bytes [03 00 00 c0]. */
-
-        size_t idx = 0;
-        uint32_t reqId = 0;
-        uint32_t length = 0;
-        uint32_t supportedMsgsLen = pResponse->resp.supported_msgs_len;
-
-        // every bit saves a checked message result
-        uint32_t maxCheckedMsgsSavedNum = sizeof(result)<<3;
-
-        uint32_t loopSize = reqIdArrayLength;
-        loopSize =
-            loopSize < supportedMsgsLen ? loopSize : supportedMsgsLen;
-        loopSize =
-            loopSize < maxCheckedMsgsSavedNum ? loopSize : maxCheckedMsgsSavedNum;
-
-        for (idx = 0; idx < loopSize; idx++) {
-            reqId = reqIdArray[idx];
-            length = reqId >> 3;
-            if(supportedMsgsLen > length) {
-                uint32_t bit = reqId & ((uint32_t)7);
-                if (pResponse->resp.supported_msgs[length] & (1<<bit)) {
-                    result |= ( 1 << idx ) ;
-                }
-            }
-        }
-    } else {
-        LOC_LOGe("Invalid supported message list.");
-    }
-    *supportedMsg = result;
 }
 
 /** convertQmiResponseToLocStatus
@@ -1102,11 +866,8 @@ static void locClientIndCb
          */
         locClientRespIndCbType localRespCallback =
             pCallbackData->respCallback;
-
-        // dummy to suppress compiler warnings
-        respIndUnion.pDeleteAssistDataInd =
-            (qmiLocDeleteAssistDataIndMsgT_v02 *)indBuffer;
-
+        // Plz note this is required for QMI indication msg processing
+        respIndUnion.pSetEngineLockInd = (qmiLocSetEngineLockIndMsgT_v02 *)indBuffer;
         /* call the response callback
          * To avoid calling the respCallback after locClientClose
          * is called, check pCallbackData->respCallback again here
@@ -1212,12 +973,6 @@ bool validateRequest(
 
   switch(reqId)
   {
-    case QMI_LOC_INFORM_CLIENT_REVISION_REQ_V02:
-    {
-      *pOutLen = sizeof(qmiLocInformClientRevisionReqMsgT_v02);
-      break;
-    }
-
     case QMI_LOC_REG_EVENTS_REQ_V02:
     {
       *pOutLen = sizeof(qmiLocRegEventsReqMsgT_v02);
@@ -1242,12 +997,6 @@ bool validateRequest(
        break;
     }
 
-    case QMI_LOC_INJECT_PREDICTED_ORBITS_DATA_REQ_V02:
-    {
-      *pOutLen = sizeof(qmiLocInjectPredictedOrbitsDataReqMsgT_v02);
-      break;
-    }
-
     case QMI_LOC_INJECT_UTC_TIME_REQ_V02:
     {
       *pOutLen = sizeof(qmiLocInjectUtcTimeReqMsgT_v02);
@@ -1266,51 +1015,15 @@ bool validateRequest(
       break;
     }
 
-    case QMI_LOC_SET_SBAS_CONFIG_REQ_V02:
-    {
-      *pOutLen = sizeof(qmiLocSetSbasConfigReqMsgT_v02);
-      break;
-    }
-
-    case QMI_LOC_SET_LOW_POWER_MODE_REQ_V02:
-    {
-      *pOutLen = sizeof(qmiLocSetLowPowerModeReqMsgT_v02);
-      break;
-    }
-
     case QMI_LOC_SET_SERVER_REQ_V02:
     {
       *pOutLen = sizeof(qmiLocSetServerReqMsgT_v02);
       break;
     }
 
-    case QMI_LOC_DELETE_ASSIST_DATA_REQ_V02:
-    {
-      *pOutLen = sizeof(qmiLocDeleteAssistDataReqMsgT_v02);
-      break;
-    }
-
-    case QMI_LOC_INJECT_APCACHE_DATA_REQ_V02:
-    {
-      *pOutLen = sizeof(qmiLocInjectApCacheDataReqMsgT_v02);
-      break;
-    }
-
-    case QMI_LOC_INJECT_APDONOTCACHE_DATA_REQ_V02:
-    {
-      *pOutLen = sizeof(qmiLocInjectApDoNotCacheDataReqMsgT_v02);
-      break;
-    }
-
     case QMI_LOC_SET_XTRA_T_SESSION_CONTROL_REQ_V02:
     {
       *pOutLen = sizeof(qmiLocSetXtraTSessionControlReqMsgT_v02);
-      break;
-    }
-
-    case QMI_LOC_INJECT_WIFI_POSITION_REQ_V02:
-    {
-      *pOutLen = sizeof(qmiLocInjectWifiPositionReqMsgT_v02);
       break;
     }
 
@@ -1344,12 +1057,6 @@ bool validateRequest(
       break;
     }
 
-    case QMI_LOC_SET_CRADLE_MOUNT_CONFIG_REQ_V02:
-    {
-      *pOutLen = sizeof(qmiLocSetCradleMountConfigReqMsgT_v02);
-      break;
-    }
-
     case QMI_LOC_SET_EXTERNAL_POWER_CONFIG_REQ_V02:
     {
       *pOutLen = sizeof(qmiLocSetExternalPowerConfigReqMsgT_v02);
@@ -1365,24 +1072,6 @@ bool validateRequest(
     case QMI_LOC_SET_PROTOCOL_CONFIG_PARAMETERS_REQ_V02:
     {
       *pOutLen = sizeof(qmiLocSetProtocolConfigParametersReqMsgT_v02);
-      break;
-    }
-
-    case QMI_LOC_GET_PROTOCOL_CONFIG_PARAMETERS_REQ_V02:
-    {
-      *pOutLen = sizeof(qmiLocGetProtocolConfigParametersReqMsgT_v02);
-      break;
-    }
-
-    case QMI_LOC_SET_SENSOR_CONTROL_CONFIG_REQ_V02:
-    {
-      *pOutLen = sizeof(qmiLocSetSensorControlConfigReqMsgT_v02);
-      break;
-    }
-
-    case QMI_LOC_GET_SENSOR_PROPERTIES_REQ_V02:
-    {
-      *pOutLen = sizeof(qmiLocGetSensorPropertiesReqMsgT_v02);
       break;
     }
 
@@ -1403,21 +1092,6 @@ bool validateRequest(
       *pOutLen = sizeof(qmiLocInjectSuplCertificateReqMsgT_v02);
       break;
     }
-    case QMI_LOC_DELETE_SUPL_CERTIFICATE_REQ_V02:
-    {
-      *pOutLen = sizeof(qmiLocDeleteSuplCertificateReqMsgT_v02);
-      break;
-    }
-    case QMI_LOC_SET_POSITION_ENGINE_CONFIG_PARAMETERS_REQ_V02:
-    {
-      *pOutLen = sizeof(qmiLocSetPositionEngineConfigParametersReqMsgT_v02);
-      break;
-    }
-    case QMI_LOC_GET_POSITION_ENGINE_CONFIG_PARAMETERS_REQ_V02:
-    {
-      *pOutLen = sizeof(qmiLocGetPositionEngineConfigParametersReqMsgT_v02);
-      break;
-    }
     case QMI_LOC_ADD_CIRCULAR_GEOFENCE_REQ_V02:
     {
       *pOutLen = sizeof(qmiLocAddCircularGeofenceReqMsgT_v02);
@@ -1426,11 +1100,6 @@ bool validateRequest(
     case QMI_LOC_DELETE_GEOFENCE_REQ_V02:
     {
       *pOutLen = sizeof(qmiLocDeleteGeofenceReqMsgT_v02);
-      break;
-    }
-    case QMI_LOC_QUERY_GEOFENCE_REQ_V02:
-    {
-      *pOutLen = sizeof(qmiLocQueryGeofenceReqMsgT_v02);
       break;
     }
     case QMI_LOC_EDIT_GEOFENCE_REQ_V02:
@@ -1456,45 +1125,9 @@ bool validateRequest(
       break;
     }
 
-    case QMI_LOC_GET_NI_GEOFENCE_ID_LIST_REQ_V02:
-    {
-      *pOutLen = sizeof(qmiLocGetNiGeofenceIdListReqMsgT_v02);
-      break;
-    }
-
-    case QMI_LOC_INJECT_GSM_CELL_INFO_REQ_V02:
-    {
-      *pOutLen = sizeof(qmiLocInjectGSMCellInfoReqMsgT_v02);
-      break;
-    }
-
-    case QMI_LOC_INJECT_NETWORK_INITIATED_MESSAGE_REQ_V02:
-    {
-      *pOutLen = sizeof(qmiLocInjectNetworkInitiatedMessageReqMsgT_v02);
-      break;
-    }
-
     case QMI_LOC_PEDOMETER_REPORT_REQ_V02:
     {
       *pOutLen = sizeof(qmiLocPedometerReportReqMsgT_v02);
-      break;
-    }
-
-    case QMI_LOC_INJECT_WCDMA_CELL_INFO_REQ_V02:
-    {
-      *pOutLen = sizeof(qmiLocInjectWCDMACellInfoReqMsgT_v02);
-      break;
-    }
-
-    case QMI_LOC_INJECT_TDSCDMA_CELL_INFO_REQ_V02:
-    {
-      *pOutLen = sizeof(qmiLocInjectTDSCDMACellInfoReqMsgT_v02);
-      break;
-    }
-
-    case QMI_LOC_INJECT_SUBSCRIBER_ID_REQ_V02:
-    {
-      *pOutLen = sizeof(qmiLocInjectSubscriberIDReqMsgT_v02);
       break;
     }
 
@@ -1540,12 +1173,6 @@ bool validateRequest(
         break;
     }
 
-    case QMI_LOC_INJECT_VEHICLE_SENSOR_DATA_REQ_V02:
-    {
-      *pOutLen = sizeof(qmiLocInjectVehicleSensorDataReqMsgT_v02);
-      break;
-    }
-
     case QMI_LOC_NOTIFY_WIFI_ATTACHMENT_STATUS_REQ_V02:
     {
       *pOutLen = sizeof(qmiLocNotifyWifiAttachmentStatusReqMsgT_v02);
@@ -1564,39 +1191,15 @@ bool validateRequest(
         break;
     }
 
-    case QMI_LOC_GET_AVAILABLE_WWAN_POSITION_REQ_V02:
-    {
-        *pOutLen = sizeof(qmiLocGetAvailWwanPositionReqMsgT_v02);
-        break;
-    }
-
     case QMI_LOC_SET_GNSS_CONSTELL_REPORT_CONFIG_V02:
     {
         *pOutLen = sizeof(qmiLocSetGNSSConstRepConfigReqMsgT_v02);
         break;
     }
 
-    case QMI_LOC_START_DBT_REQ_V02:
-    {
-        *pOutLen = sizeof(qmiLocStartDbtReqMsgT_v02);
-        break;
-    }
-
-    case QMI_LOC_STOP_DBT_REQ_V02:
-    {
-        *pOutLen = sizeof(qmiLocStopDbtReqMsgT_v02);
-        break;
-    }
-
     case QMI_LOC_INJECT_TIME_ZONE_INFO_REQ_V02:
     {
         *pOutLen = sizeof(qmiLocInjectTimeZoneInfoReqMsgT_v02);
-        break;
-    }
-
-    case QMI_LOC_QUERY_AON_CONFIG_REQ_V02:
-    {
-        *pOutLen = sizeof(qmiLocQueryAonConfigReqMsgT_v02);
         break;
     }
 
@@ -1625,47 +1228,10 @@ bool validateRequest(
         break;
     }
 
-    // SRN AP data injection
-    case QMI_LOC_INJECT_SRN_AP_DATA_REQ_V02:
-    {
-        *pOutLen = sizeof(qmiLocInjectSrnApDataReqMsgT_v02);
-        break;
-    }
-
-    case QMI_LOC_CROWDSOURCE_MANAGER_CONTROL_REQ_V02:
-    {
-        *pOutLen = sizeof(qmiLocCrowdSourceManagerControlReqMsgT_v02);
-        break;
-    }
-
-    case QMI_LOC_CROWDSOURCE_MANAGER_READ_DATA_REQ_V02:
-    {
-        *pOutLen = sizeof(qmiLocCrowdSourceManagerReadDataReqMsgT_v02);
-        break;
-    }
-
     // Query Xtra config data
     case QMI_LOC_QUERY_XTRA_INFO_REQ_V02 :
     {
         *pOutLen = sizeof(qmiLocQueryXtraInfoReqMsgT_v02);
-        break;
-    }
-
-    case QMI_LOC_START_OUTDOOR_TRIP_BATCHING_REQ_V02:
-    {
-        *pOutLen = sizeof(qmiLocStartOutdoorTripBatchingReqMsgT_v02);
-        break;
-    }
-
-    case QMI_LOC_GET_FDCL_BS_LIST_REQ_V02:
-    {
-        *pOutLen = sizeof(qmiLocGetFdclBsListReqMsgT_v02);
-        break;
-    }
-
-    case QMI_LOC_INJECT_FDCL_DATA_REQ_V02:
-    {
-        *pOutLen = sizeof(qmiLocInjectFdclDataReqMsgT_v02);
         break;
     }
 
@@ -1684,12 +1250,6 @@ bool validateRequest(
     case QMI_LOC_REGISTER_MASTER_CLIENT_REQ_V02 :
     {
         *pOutLen = sizeof(qmiLocRegisterMasterClientReqMsgT_v02);
-        break;
-    }
-
-    case QMI_LOC_GET_BS_OBS_DATA_REQ_V02:
-    {
-        *pOutLen = sizeof(qmiLocGetBsObsDataReqMsgT_v02);
         break;
     }
 
@@ -1792,27 +1352,10 @@ bool validateRequest(
     }
 
     // ALL requests with no payload
-    case QMI_LOC_GET_SERVICE_REVISION_REQ_V02:
-    case QMI_LOC_GET_FIX_CRITERIA_REQ_V02:
     case QMI_LOC_GET_PREDICTED_ORBITS_DATA_SOURCE_REQ_V02:
-    case QMI_LOC_GET_PREDICTED_ORBITS_DATA_VALIDITY_REQ_V02:
     case QMI_LOC_GET_ENGINE_LOCK_REQ_V02:
-    case QMI_LOC_GET_SBAS_CONFIG_REQ_V02:
-    case QMI_LOC_GET_LOW_POWER_MODE_REQ_V02:
-    case QMI_LOC_GET_SERVER_REQ_V02:
-    case QMI_LOC_GET_XTRA_T_SESSION_CONTROL_REQ_V02:
-    case QMI_LOC_GET_REGISTERED_EVENTS_REQ_V02:
-    case QMI_LOC_GET_OPERATION_MODE_REQ_V02:
-    case QMI_LOC_GET_CRADLE_MOUNT_CONFIG_REQ_V02:
-    case QMI_LOC_GET_EXTERNAL_POWER_CONFIG_REQ_V02:
-    case QMI_LOC_GET_SENSOR_CONTROL_CONFIG_REQ_V02:
-    case QMI_LOC_GET_SENSOR_PERFORMANCE_CONTROL_CONFIGURATION_REQ_V02:
-    case QMI_LOC_WWAN_OUT_OF_SERVICE_NOTIFICATION_REQ_V02:
     case QMI_LOC_GET_SUPPORTED_MSGS_REQ_V02:
-    case QMI_LOC_GET_SUPPORTED_FIELDS_REQ_V02:
-    case QMI_LOC_QUERY_OTB_ACCUMULATED_DISTANCE_REQ_V02:
     case QMI_LOC_GET_BLACKLIST_SV_REQ_V02:
-    case QMI_LOC_GET_CONSTELLATION_CONTROL_REQ_V02:
     case QMI_LOC_GET_ROBUST_LOCATION_CONFIG_REQ_V02:
     case QMI_LOC_GET_MIN_GPS_WEEK_NUMBER_REQ_V02:
     case QMI_LOC_GET_MULTIBAND_CONFIG_REQ_V02:
@@ -1833,8 +1376,8 @@ bool validateRequest(
   }
   else
   {
-    //set dummy pointer for request union
-    *ppOutData = (void*) reqPayload.pInformClientRevisionReq;
+    // point to one valid union member
+    *ppOutData = (void*) reqPayload.pRegEventsReq;
   }
   LOC_LOGa("reqId=%d, len = %d", reqId, *pOutLen);
   return true;
@@ -2324,115 +1867,6 @@ locClientStatusEnumType locClientSendReq(
   return(status);
 }
 
-/** locClientSupportMsgCheck
-  @brief Sends a QMI_LOC_GET_SUPPORTED_MSGS_REQ_V02 message to the
-         location engine, and then receives a list of all services supported
-         by the engine. This function will check if the input service(s) form
-         the client is in the list or not. If the locClientSupportMsgCheck()
-         function is successful, the client should expect an result of
-         the service is supported or not recorded in supportedMsg.
-  @param [in] handle Handle returned by the locClientOpen()
-              function.
-  @param [in] supportedMsg   an integer used to record which
-                             message is supported
-
-  @return
-  One of the following error codes:
-  - 0 (eLOC_CLIENT_SUCCESS) -- On success.
-  - Non-zero error code (see \ref locClientStatusEnumType) -- On failure.
-*/
-
-locClientStatusEnumType locClientSupportMsgCheck(
-     locClientHandleType      handle,
-     const uint32_t*          msgArray,
-     uint32_t                 msgArrayLength,
-     uint64_t*                supportedMsg)
-{
-
-  // set to true if one client has checked the modem capability.
-  static bool isCheckedAlready = false;
-  /*
-  The 1st bit in supportedMsgChecked indicates if
-      QMI_LOC_EVENT_GEOFENCE_BATCHED_BREACH_NOTIFICATION_IND_V02
-      is supported or not;
-  The 2ed bit in supportedMsgChecked indicates if
-      QMI_LOC_GET_BATCH_SIZE_REQ_V02
-      is supported or not;
-  */
-  static uint64_t supportedMsgChecked = 0;
-
-  // Validate input arguments
-  if(msgArray == NULL || supportedMsg == NULL) {
-
-    LOC_LOGe("Input argument is NULL");
-    return eLOC_CLIENT_FAILURE_INVALID_PARAMETER;
-  }
-
-  if (isCheckedAlready) {
-    // already checked modem
-    LOC_LOGv("Already checked. The supportedMsgChecked is %" PRId64 "",
-             supportedMsgChecked);
-    *supportedMsg = supportedMsgChecked;
-    return eLOC_CLIENT_SUCCESS;
-  }
-
-  locClientStatusEnumType status = eLOC_CLIENT_SUCCESS;
-  qmi_client_error_type rc = QMI_NO_ERR; //No error
-  qmiLocGetSupportMsgT_v02 resp;
-
-  uint32_t reqLen = 0;
-  void *pReqData = NULL;
-  locClientCallbackDataType *pCallbackData =
-        (locClientCallbackDataType *)handle;
-
-  // check the input handle for sanity
-   if( NULL == pCallbackData ||
-       NULL == pCallbackData->userHandle ||
-       pCallbackData != pCallbackData->pMe ) {
-     // did not find the handle in the client List
-     LOC_LOGe("invalid handle");
-
-     return eLOC_CLIENT_FAILURE_GENERAL;
-   }
-
-  // NEXT call goes out to modem. We log the callflow before it
-  // actually happens to ensure the this comes before resp callflow
-  // back from the modem, to avoid confusing log order. We trust
-  // that the QMI framework is robust.
-
-  EXIT_LOG_CALLFLOW(%s, loc_get_v02_event_name(QMI_LOC_GET_SUPPORTED_MSGS_REQ_V02));
-  rc = qmi_client_send_msg_sync(
-      pCallbackData->userHandle,
-      QMI_LOC_GET_SUPPORTED_MSGS_REQ_V02,
-      pReqData,
-      reqLen,
-      &resp,
-      sizeof(resp),
-      LOC_CLIENT_ACK_TIMEOUT);
-
-  if (rc != QMI_NO_ERR)
-  {
-    LOC_LOGe("send_msg_sync error: %d", rc);
-    return eLOC_CLIENT_FAILURE_GENERAL;
-  }
-
-  // map the QCCI response to Loc API v02 status
-  status = convertQmiResponseToLocStatus((qmiLocGenRespMsgT_v02*)&resp);
-
-  if(eLOC_CLIENT_SUCCESS == status)
-  {
-    // check every message listed in msgArray supported by modem or not
-    checkQmiMsgsSupported(msgArray, msgArrayLength, &resp, &supportedMsgChecked);
-
-    LOC_LOGa("supportedMsgChecked is %" PRId64 "", supportedMsgChecked);
-    *supportedMsg = supportedMsgChecked;
-    isCheckedAlready = true;
-    return status;
-  } else {
-    LOC_LOGe("convertQmiResponseToLocStatus error: %d", status);
-    return eLOC_CLIENT_FAILURE_GENERAL;
-  }
-}
 
 /** locClientGetSizeByRespIndId
  *  @brief Get the size of the response indication structure,
