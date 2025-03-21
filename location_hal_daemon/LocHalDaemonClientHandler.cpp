@@ -736,10 +736,11 @@ void LocHalDaemonClientHandler::onGnssConfigCb(ELocMsgID configMsgId,
     case E_INTAPI_GET_XTRA_STATUS_REQ_MSG_ID:
         if (gnssConfig.flags & GNSS_CONFIG_FLAGS_XTRA_STATUS_BIT)
         {
-            LOC_LOGd("--< onGnssConfigCb, xtra status received, %d %d %d",
+            LOC_LOGd("--< onGnssConfigCb, xtra status received, %d %d %d UserConsentStatus %d",
                      gnssConfig.xtraStatus.featureEnabled,
                      gnssConfig.xtraStatus.xtraDataStatus,
-                     gnssConfig.xtraStatus.xtraValidForHours);
+                     gnssConfig.xtraStatus.xtraValidForHours,
+                     gnssConfig.xtraStatus.userConsentStatus);
             LocConfigGetXtraStatusRespMsg msg(SERVICE_NAME,
                                               XTRA_STATUS_UPDATE_UPON_QUERY,
                                               gnssConfig.xtraStatus,
