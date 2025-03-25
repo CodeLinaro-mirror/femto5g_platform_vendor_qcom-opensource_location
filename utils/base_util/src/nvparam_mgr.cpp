@@ -8,7 +8,7 @@
  module parameters coming from server that need to be persistent
  across bootup.
 
- Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ Copyright (c) 2024-2025 Qualcomm Innovation Center, Inc. All rights reserved.
  SPDX-License-Identifier: BSD-3-Clause-Clear
  =============================================================================*/
 #include <stdio.h>
@@ -88,103 +88,6 @@ static const char * const TAG = "NvParamMgr";
 // device to obtain pseudo client id
 #define RANDOM_DEVICE "/dev/random"
 
-class NvParamMgrImpl: public NvParamMgr
-{
-public:
-  NvParamMgrImpl (const char* const filename);
-
-  virtual ~NvParamMgrImpl () {};
-
-  nv_param_err_code init();
-
-  nv_param_err_code deinit();
-
-  // save the given param value into the permanent storage file
-  nv_param_err_code saveInt32Param (const char* param_name,
-                                    const int param_value);
-
-  nv_param_err_code saveBoolParam (const char* param_name,
-                                   const bool param_value);
-
-  nv_param_err_code saveFloatParam (const char* param_name,
-                                    const float param_value);
-
-  nv_param_err_code saveUInt32Param (const char* param_name,
-                                     const unsigned int param_value);
-
-  nv_param_err_code saveInt64Param (const char* param_name,
-                                    const long long param_value);
-
-  nv_param_err_code saveUInt64Param (const char* param_name,
-                                     const unsigned long long param_value);
-
-  nv_param_err_code saveStringParam (const char* param_name,
-                                     const char* param_value);
-
-  nv_param_err_code saveBlobParam (const char* param_name,
-                                   const unsigned char* param_value,
-                                   unsigned int param_size_in_bytes);
-
-  // retriev the given param value of int type
-  // If the value can not be retrieved, then
-  // param_value will not be modified
-  nv_param_err_code getInt32Param (const char* param_name,
-                                   int & param_value);
-
-  nv_param_err_code getBoolParam (const char* param_name,
-                                  bool & param_value);
-
-  nv_param_err_code getFloatParam (const char* param_name,
-                                   float & param_value);
-
-  nv_param_err_code getUInt32Param (const char* param_name,
-                                    unsigned int & param_value);
-
-  nv_param_err_code getStringParam (const char* param_name,
-                                    char* &param_value,
-                                    unsigned int & param_size_in_bytes);
-
-  nv_param_err_code getInt64Param (const char* param_name,
-                                   long long & param_value);
-
-  nv_param_err_code getUInt64Param (const char* param_name,
-                                    unsigned long long & param_value);
-
-  nv_param_err_code getBlobParam (const char* param_name,
-                                  unsigned char* &param_value,
-                                  unsigned int &param_size_in_bytes);
-
-private:
-  nv_param_err_code openDB ();
-
-  nv_param_err_code saveNvDataBlob (const char* param_name,
-                                    const void* data,
-                                    uint32_t data_len);
-
-  nv_param_err_code getNvDataBlob (const char* param_name,
-                                   void* data,
-                                   int &data_len);
-
-  // internal functions
-  int generatePseudoClientIdIfNeeded ();
-
-  // internal functions
-  int wrapper_mprintf (char* &output_buf, unsigned int &output_size,
-                       const char *sentence,... );
-
-  // Variables
-  // sqlite file and etc
-  const char* m_filename;
-  sqlite3*    m_db;
-
-  char*        m_sqlite_sentence;
-  unsigned int m_sqlite_sentence_size;
-
-  bool               m_pseudo_client_id_exist;
-  unsigned long long m_pseudo_client_id_64;
-  unsigned int       m_pseudo_client_id_32;
-};
-
 // When schema below changes, please increase the NVPARAM_DB_USER_VERSION
 static const int NVPARAM_DB_USER_VERSION = 1;
 
@@ -195,14 +98,14 @@ static const char* SQL_CREATE_NVPARAM_TABLE =
   "'param_data' blob ,"
   "CONSTRAINT c_u_id UNIQUE (param_name));";
 
-static Mutex*          m_mutex = Mutex::createInstance();
-static NvParamMgrImpl* m_nv_mgr = NULL;
-static int             m_ref_cnt = 0;
+static Mutex*      m_mutex = Mutex::createInstance();
+static NvParamMgr* m_nv_mgr = NULL;
+static int         m_ref_cnt = 0;
 
 // If any of the parameters fail to load, then none of the
 // parameters will be retrieved from the persistent parameter file,
 // and we will use the default values from configuration file.
-NvParamMgrImpl::NvParamMgrImpl(const char* const filename) :
+NvParamMgr::NvParamMgr(const char* const filename) :
   m_filename (filename),
   m_db (NULL),
   m_sqlite_sentence (NULL),
@@ -211,11 +114,10 @@ NvParamMgrImpl::NvParamMgrImpl(const char* const filename) :
   // exist in database when attempting to retrieve it.
   // After first successful retrieval, it will be set to true
   m_pseudo_client_id_exist (false),
-  m_pseudo_client_id_64 (0),
-  m_pseudo_client_id_32 (0)
+  m_pseudo_client_id_64 (0)
 {}
 
-nv_param_err_code NvParamMgrImpl::init()
+nv_param_err_code NvParamMgr::init()
 {
   nv_param_err_code result = NV_PARAM_ERR_SQLITE_OTHER_ERR;
 
@@ -241,7 +143,7 @@ nv_param_err_code NvParamMgrImpl::init()
   return result;
 }
 
-nv_param_err_code NvParamMgrImpl::openDB()
+nv_param_err_code NvParamMgr::openDB()
 {
   nv_param_err_code result = NV_PARAM_ERR_SQLITE_OTHER_ERR;
   bool newFile = false;
@@ -354,7 +256,7 @@ nv_param_err_code NvParamMgrImpl::openDB()
   return result;
 }
 
-nv_param_err_code NvParamMgrImpl::deinit()
+nv_param_err_code NvParamMgr::deinit()
 {
   log_debug(TAG, "deinit");
 
@@ -373,48 +275,9 @@ nv_param_err_code NvParamMgrImpl::deinit()
   return NV_PARAM_ERR_NO_ERR;
 }
 
-nv_param_err_code NvParamMgrImpl::saveInt32Param (const char* param_name,
-                                    const int param_value)
-{
-  AutoLock autolock(m_mutex);
-  return saveNvDataBlob (param_name,
-                         (const char*) (&param_value),
-                         sizeof(param_value));
-}
-
-// Save the param as bool type
-nv_param_err_code NvParamMgrImpl::saveBoolParam (const char* param_name,
-                                   const bool param_value)
-{
-  AutoLock autolock(m_mutex);
-  return saveNvDataBlob (param_name,
-                         (const char*) (&param_value),
-                         sizeof(param_value));
-}
-
-// Save the param as bool type
-nv_param_err_code NvParamMgrImpl::saveFloatParam (const char* param_name,
-                                    const float param_value)
-{
-  AutoLock autolock(m_mutex);
-  return saveNvDataBlob (param_name,
-                         (const char*) (&param_value),
-                         sizeof(param_value));
-}
-
-// Save the param as uint32_t type
-nv_param_err_code NvParamMgrImpl::saveUInt32Param (const char* param_name,
-                                     const unsigned int param_value)
-{
-  AutoLock autolock(m_mutex);
-  return saveNvDataBlob (param_name,
-                         (const char*) (&param_value),
-                         sizeof(param_value));
-}
-
 // Save the param as unsigned long long type
-nv_param_err_code NvParamMgrImpl::saveInt64Param (const char* param_name,
-                                    const long long param_value)
+nv_param_err_code NvParamMgr::saveUInt64Param (const char* param_name,
+                                               uint64_t param_value)
 {
   AutoLock autolock(m_mutex);
   return saveNvDataBlob (param_name,
@@ -422,27 +285,9 @@ nv_param_err_code NvParamMgrImpl::saveInt64Param (const char* param_name,
                          sizeof(param_value));
 }
 
-// Save the param as unsigned long long type
-nv_param_err_code NvParamMgrImpl::saveUInt64Param (const char* param_name,
-                                     const unsigned long long param_value)
-{
-  AutoLock autolock(m_mutex);
-  return saveNvDataBlob (param_name,
-                         (const char*) (&param_value),
-                         sizeof(param_value));
-}
-
-// Save the param as string type
-nv_param_err_code NvParamMgrImpl::saveStringParam (const char* param_name,
-                                     const char* param_value)
-{
-  AutoLock autolock(m_mutex);
-  return saveNvDataBlob (param_name, param_value, strlen(param_value));
-}
-
-nv_param_err_code NvParamMgrImpl::saveBlobParam (const char* param_name,
-                                   const unsigned char* param_value,
-                                   unsigned int param_size_in_bytes)
+nv_param_err_code NvParamMgr::saveBlobParam (const char* param_name,
+                                             const unsigned char* param_value,
+                                             unsigned int param_size_in_bytes)
 {
   AutoLock autolock(m_mutex);
   return saveNvDataBlob (param_name,
@@ -450,9 +295,9 @@ nv_param_err_code NvParamMgrImpl::saveBlobParam (const char* param_name,
                          param_size_in_bytes);
 }
 
-nv_param_err_code NvParamMgrImpl::saveNvDataBlob (const char* param_name,
-                                    const void* data,
-                                    uint32_t data_len)
+nv_param_err_code NvParamMgr::saveNvDataBlob (const char* param_name,
+                                              const void* data,
+                                              uint32_t data_len)
 {
   nv_param_err_code result = NV_PARAM_ERR_SQLITE_OTHER_ERR;
   sqlite3_stmt *pStmt = NULL;
@@ -500,173 +345,8 @@ nv_param_err_code NvParamMgrImpl::saveNvDataBlob (const char* param_name,
   return result;
 }
 
-// Retrieve the param.
-// If param can not be retrieved, the param_value will not be changed.
-nv_param_err_code NvParamMgrImpl::getInt32Param (const char* param_name,
-                                   int & param_value)
-{
-  nv_param_err_code result = NV_PARAM_ERR_SQLITE_OTHER_ERR;
-
-  AutoLock autolock(m_mutex);
-  do
-  {
-    // Check to see whether we need to generate pseudo client ID
-    // pseudo client ID will be generated upon first request to
-    // retrieve the pseudo client ID. It will only be generated once
-    // per device life time
-    if (strncmp (param_name, PARAM_NAME_PSEUDO_CLIENT_ID,
-                 sizeof (PARAM_NAME_PSEUDO_CLIENT_ID)) == 0)
-    {
-      int rc = generatePseudoClientIdIfNeeded ();
-      if (rc == 0)
-      {
-        param_value = (int) m_pseudo_client_id_32;
-        result = NV_PARAM_ERR_NO_ERR;
-      }
-      break;
-    }
-
-    int data_len = sizeof (int);
-    result = getNvDataBlob(param_name, ((char*) (&param_value)), data_len);
-    if (result != NV_PARAM_ERR_NO_ERR)
-    {
-      break;
-    }
-
-    if (data_len != sizeof (int))
-    {
-      log_error (TAG, "getInt32Param: failed for param %s, "
-                      "expected %d bytes, retrieved %d bytes\n",
-                 param_name, sizeof (int), data_len);
-      result = NV_PARAM_ERR_PRRAM_NOT_VALID ;
-      break;
-    }
-
-    result = NV_PARAM_ERR_NO_ERR;
-  } while (0);
-
-  return result;
-}
-
-// Retrieve the param as bool type.
-// If param can not be retrieved, the param_value will not be changed.
-nv_param_err_code NvParamMgrImpl::getBoolParam (const char* param_name,
-                                  bool & param_value)
-{
-  nv_param_err_code result = NV_PARAM_ERR_SQLITE_OTHER_ERR;
-
-  AutoLock autolock(m_mutex);
-  int data_len = sizeof (bool);
-  result = getNvDataBlob(param_name, ((char*) (&param_value)), data_len);
-  if (result == NV_PARAM_ERR_NO_ERR)
-  {
-    if (data_len != sizeof (bool))
-    {
-      log_error (TAG, "getInt32Param: failed for param %s, "
-                      "expected %d bytes, retrieved %d bytes\n",
-                 param_name, sizeof (bool), data_len);
-      result = NV_PARAM_ERR_PRRAM_NOT_VALID;
-    }
-  }
-
-  return result;
-}
-
-// Retrieve the param as float type.
-// If param can not be retrieved, the param_value will not be changed.
-nv_param_err_code NvParamMgrImpl::getFloatParam (const char* param_name,
-                                   float & param_value)
-{
-  nv_param_err_code result = NV_PARAM_ERR_SQLITE_OTHER_ERR;
-
-  AutoLock autolock(m_mutex);
-  int data_len = sizeof (float);
-  result = getNvDataBlob(param_name, ((char*) (&param_value)), data_len);
-  if (result == NV_PARAM_ERR_NO_ERR)
-  {
-    if (data_len != sizeof (float))
-    {
-      log_error (TAG, "getFloatParam: failed for param %s, "
-                      "expected %d bytes, retrieved %d bytes\n",
-                 param_name, sizeof (float), data_len);
-      result = NV_PARAM_ERR_PRRAM_NOT_VALID;
-    }
-  }
-
-  return result;
-}
-
-// Retrieve the param as uint32_t type.
-// If param can not be retrieved, the param_value will not be changed.
-nv_param_err_code NvParamMgrImpl::getUInt32Param (const char* param_name,
-                                    unsigned int & param_value)
-{
-  nv_param_err_code result = NV_PARAM_ERR_SQLITE_OTHER_ERR;
-
-  AutoLock autolock(m_mutex);
-  int data_len = sizeof (unsigned int);
-  result = getNvDataBlob(param_name, ((char*) (&param_value)), data_len);
-  if (result == NV_PARAM_ERR_NO_ERR)
-  {
-    if (data_len != sizeof (unsigned int))
-    {
-      log_error (TAG, "getUInt32Param: failed for param %s, "
-                      "expected %d bytes, retrieved %d bytes",
-                 param_name, sizeof (unsigned int), data_len);
-      result = NV_PARAM_ERR_PRRAM_NOT_VALID;
-    }
-  }
-
-  return result;
-}
-
-nv_param_err_code NvParamMgrImpl::getInt64Param (const char* param_name,
-                                   long long & param_value)
-{
-  nv_param_err_code result = NV_PARAM_ERR_SQLITE_OTHER_ERR;
-
-  AutoLock autolock(m_mutex);
-  do
-  {
-    // Check to see whether we need to generate 64 bit pseudo client ID
-    // 64bit pseudo client ID will be generated upon first request to
-    // retrieve the pseudo client ID. It will only be generated once
-    // per device life time
-    if (strncmp (param_name, PARAM_NAME_PSEUDO_CLIENT_ID_64BIT,
-                 sizeof (PARAM_NAME_PSEUDO_CLIENT_ID_64BIT)) == 0)
-    {
-      int rc = generatePseudoClientIdIfNeeded ();
-      if (rc == 0)
-      {
-        param_value = (long long) m_pseudo_client_id_64;
-        result = NV_PARAM_ERR_NO_ERR;
-      }
-      break;
-    }
-
-    int data_len = sizeof (long long);
-    result = getNvDataBlob(param_name, ((char*) (&param_value)), data_len);
-    if (result != NV_PARAM_ERR_NO_ERR)
-    {
-      break;
-    }
-    if (data_len != sizeof (long long))
-    {
-      log_error (TAG, "getInt64Param: failed for param %s, "
-                      "expected %d bytes, retrieved %d bytes\n",
-                 param_name, sizeof (long long), data_len);
-      result = NV_PARAM_ERR_PRRAM_NOT_VALID;
-      break;
-    }
-
-    result = NV_PARAM_ERR_NO_ERR;
-  }while (0);
-
-  return result;
-}
-
-nv_param_err_code NvParamMgrImpl::getUInt64Param (const char* param_name,
-                                    unsigned long long & param_value)
+nv_param_err_code NvParamMgr::getUInt64Param (const char* param_name,
+                                              uint64_t & param_value)
 {
   nv_param_err_code result = NV_PARAM_ERR_SQLITE_OTHER_ERR;
 
@@ -710,38 +390,20 @@ nv_param_err_code NvParamMgrImpl::getUInt64Param (const char* param_name,
   return result;
 }
 
-// Retrieve the param as string type.
+// Retrieve the param as blob type.
+//
+// PLEASE NOTE that param_value if non-null, need to be freed by the caller
+// after usage.
+//
+// param_value upon return will point to the memory allocated by nv param mgr,
+// and thus need to be FREED after usage.
+//
+// param_size_in_bytes will indicate the number of bytes returned via param-value,
+// it can be used by caller to check whether the returned size is expected or not.
 // If param can not be retrieved, the param_value will not be changed.
-nv_param_err_code NvParamMgrImpl::getStringParam (const char* param_name,
-                                    char* &param_value,
-                                    unsigned int & param_size_in_bytes)
-{
-  nv_param_err_code result = NV_PARAM_ERR_SQLITE_OTHER_ERR;
-
-  AutoLock autolock(m_mutex);
-  do
-  {
-    int data_len = 0;
-    char* data = NULL;
-    result = getNvDataBlob(param_name, &data, data_len);
-
-    if (result != NV_PARAM_ERR_NO_ERR)
-    {
-      break;
-    }
-
-    param_value = data;
-    param_size_in_bytes = data_len;
-  }while (0);
-
-  return result;
-}
-
-// Retrieve the param as string type.
-// If param can not be retrieved, the param_value will not be changed.
-nv_param_err_code NvParamMgrImpl::getBlobParam (const char* param_name,
-                                  unsigned char* & param_value,
-                                  unsigned int & param_size_in_bytes)
+nv_param_err_code NvParamMgr::getBlobParam (const char* param_name,
+                                            unsigned char* & param_value,
+                                            unsigned int & param_size_in_bytes)
 {
   nv_param_err_code result = NV_PARAM_ERR_SQLITE_OTHER_ERR;
 
@@ -764,9 +426,8 @@ nv_param_err_code NvParamMgrImpl::getBlobParam (const char* param_name,
   return result;
 }
 
-nv_param_err_code NvParamMgrImpl::getNvDataBlob (const char* param_name,
-                                   void* data,
-                                   int &data_len)
+nv_param_err_code NvParamMgr::getNvDataBlob (const char* param_name,
+                                             void* data, int &data_len)
 {
   nv_param_err_code result = NV_PARAM_ERR_SQLITE_OTHER_ERR;
   int sqlRes = SQLITE_OK;
@@ -797,7 +458,7 @@ nv_param_err_code NvParamMgrImpl::getNvDataBlob (const char* param_name,
       char* blob_copy = NULL;
       if (data_len == 0)
       {
-        blob_copy = new (std::nothrow) char [blob_len];
+        blob_copy = (char*) malloc(blob_len);
         if (blob_copy == NULL)
         {
           result = NV_PARAM_ERR_SQLITE_OTHER_ERR;
@@ -854,7 +515,7 @@ nv_param_err_code NvParamMgrImpl::getNvDataBlob (const char* param_name,
 // 0: pseudo client already exists or is generated successfully
 // non-0: pseudo client does not exist and can not be generated successfully
 // As this is internval function, return value is not mapped to NV_PARAM_ERR_XXX.
-int NvParamMgrImpl::generatePseudoClientIdIfNeeded ()
+int NvParamMgr::generatePseudoClientIdIfNeeded ()
 {
   // This is internal function, no need to hold the lock
   int      ret_val = -1;
@@ -880,7 +541,6 @@ int NvParamMgrImpl::generatePseudoClientIdIfNeeded ()
     if ((ret_val == 0) && (data_len == sizeof (unsigned long long)))
     {
       m_pseudo_client_id_64 = param_value;
-      m_pseudo_client_id_32 = (int32_t) (param_value & 0x00ffffffff);
       m_pseudo_client_id_exist = true;
       ret_val = 0;
       break;
@@ -1002,12 +662,9 @@ int NvParamMgrImpl::generatePseudoClientIdIfNeeded ()
     if (is_valid == true)
     {
       m_pseudo_client_id_64 = random_uint64;
-      m_pseudo_client_id_32 = (int32_t) (random_uint64 & 0x00ffffffff);
-      int rc1 = saveNvDataBlob (PARAM_NAME_PSEUDO_CLIENT_ID,
-                                &m_pseudo_client_id_32, sizeof (m_pseudo_client_id_32));
-      int rc2 = saveNvDataBlob (PARAM_NAME_PSEUDO_CLIENT_ID_64BIT,
+      int rc = saveNvDataBlob (PARAM_NAME_PSEUDO_CLIENT_ID_64BIT,
                                 &m_pseudo_client_id_64, sizeof (m_pseudo_client_id_64));
-      if (rc1 == 0 || rc2 == 0)
+      if (rc == 0)
       {
         m_pseudo_client_id_exist = true;
         ret_val = 0;
@@ -1035,7 +692,7 @@ int NvParamMgrImpl::generatePseudoClientIdIfNeeded ()
 //
 // As this is an internal function, the returned result does not need
 // to map to NV_PARAM error code
-int NvParamMgrImpl::wrapper_mprintf(char* &output_buf, unsigned int &output_size,
+int NvParamMgr::wrapper_mprintf(char* &output_buf, unsigned int &output_size,
                                     const char *sentence,... )
 {
   int result = -1;
@@ -1139,7 +796,7 @@ NvParamMgr * NvParamMgr::getInstance()
   // if m_nv_mgr is NULL, try to create one and initialize it
   if (m_nv_mgr == NULL)
   {
-    m_nv_mgr = new (std::nothrow) NvParamMgrImpl (NVPARAM_NAME);
+    m_nv_mgr = new (std::nothrow) NvParamMgr (NVPARAM_NAME);
     if ((m_nv_mgr != NULL) && (m_nv_mgr->init () != NV_PARAM_ERR_NO_ERR))
     {
       delete m_nv_mgr;
