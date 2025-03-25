@@ -618,6 +618,9 @@ public:
     // PositioningEngineMask to/from PB PositioningEngineMask
     uint32_t getPBMaskForPositioningEngineMask(const uint32_t &posEngMask) const;
     uint32_t getEnumForPBPositioningEngineMask(const uint32_t &pbPosEngMask) const;
+    // NmeaTypesMask to/frmom PB NmeaTypesMask
+    uint32_t getNmeaTypesMaskFromPB(const uint32_t &pbNmeaTypesMask) const;
+    uint32_t getPBMaskForNmeaTypesMask(const uint32_t& nmeaTypesMask) const;
 
 private:
     bool mPbDebugLogEnabled;

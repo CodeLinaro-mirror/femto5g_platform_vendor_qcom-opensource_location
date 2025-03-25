@@ -2199,6 +2199,62 @@ int LocConfigGetConstellationSecondaryBandConfigRespMsg::serializeToProtobuf(str
     return protoStr.size();
 }
 
+// Convert LocConfigOutputNmeaTypesReqMsg -> PBLocConfigOutputNmeaTypesReqMsg
+int LocConfigOutputNmeaTypesReqMsg::serializeToProtobuf(
+        string& protoStr) {
+
+    PBLocAPIMsgHeader pLocApiMsgHdr;
+    PBLocConfigOutputNmeaTypesReqMsg pbMsg;
+
+    if (nullptr == pLocApiPbMsgConv) {
+        LOC_LOGe("pLocApiPbMsgConv is null!");
+        return 0;
+    }
+    // string      mSocketName = 1;
+    pLocApiMsgHdr.set_msocketname(mSocketName);
+    // PBELocMsgID  msgId = 2;
+    pLocApiMsgHdr.set_msgid(pLocApiPbMsgConv->getPBEnumForELocMsgID(msgId));
+    // uint32   msgVersion = 3;
+    pLocApiMsgHdr.set_msgversion(msgVersion);
+
+    pbMsg.set_nmeatypesmask(pLocApiPbMsgConv->getPBMaskForNmeaTypesMask(mEnabledNmeaTypes));
+    pbMsg.set_nmeadatumtype((mNmeaDatumType == GEODETIC_TYPE_PZ_90) ?
+                            PB_GEODETIC_TYPE_PZ_90 : PB_GEODETIC_TYPE_WGS_84);
+    string pbStr;
+    if (!pbMsg.SerializeToString(&pbStr)) {
+        LOC_LOGe("SerializeToString failed!");
+        return 0;
+    }
+    // bytes       payload = 4;
+    pLocApiMsgHdr.set_payload(pbStr);
+
+    // uint32   payloadSize = 5;
+    pLocApiMsgHdr.set_payloadsize(
+            sizeof(LocConfigOutputNmeaTypesReqMsg));
+
+    if (!pLocApiMsgHdr.SerializeToString(&protoStr)) {
+        LOC_LOGe("SerializeToString on pLocApiMsgHdr failed!");
+        return 0;
+    }
+    return protoStr.size();
+}
+
+// Decode PBLocConfigOutputNmeaTypesReqMsg -> LocConfigOutputNmeaTypesReqMsg
+LocConfigOutputNmeaTypesReqMsg::
+        LocConfigOutputNmeaTypesReqMsg(
+            const char* name,
+            const PBLocConfigOutputNmeaTypesReqMsg &pbMsg,
+            const LocationApiPbMsgConv *pbMsgConv):
+        LocAPIMsgHeader(name,
+                        E_INTAPI_CONFIG_OUTPUT_NMEA_TYPES_MSG_ID,
+                        pbMsgConv) {
+
+    mEnabledNmeaTypes = (GnssNmeaTypesMask)
+            pLocApiPbMsgConv->getNmeaTypesMaskFromPB(pbMsg.nmeatypesmask());
+    mNmeaDatumType = (pbMsg.nmeadatumtype() == PB_GEODETIC_TYPE_PZ_90) ?
+            GEODETIC_TYPE_PZ_90 : GEODETIC_TYPE_WGS_84;
+}
+
 // Convert LocAPIPingTestReqMsg -> PBLocAPIPingTestReqMsg
 int LocAPIPingTestReqMsg::serializeToProtobuf(string& protoStr) {
     PBLocAPIMsgHeader pLocApiMsgHdr;

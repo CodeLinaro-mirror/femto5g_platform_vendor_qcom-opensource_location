@@ -618,13 +618,16 @@ void LocationApiService::processClientMsg(const char* data, uint32_t length) {
         }
 
         case E_INTAPI_CONFIG_OUTPUT_NMEA_TYPES_MSG_ID: {
-            if (sizeof(LocConfigOutputNmeaTypesReqMsg) != length) {
-                LOC_LOGe("invalid LocConfigOutputNmeaTypesReqMsg");
-                break;
+            PBLocConfigOutputNmeaTypesReqMsg pbMsg;
+            if (0 == pbMsg.ParseFromString(pbLocApiMsg.payload())) {
+                LOC_LOGe("Failed to parse PBLocConfigOutputNmeaTypesReqMsg from payload!!");
+                return;
             }
-            configOutputNmeaTypes(reinterpret_cast<LocConfigOutputNmeaTypesReqMsg*>(pMsg));
+            LocConfigOutputNmeaTypesReqMsg msg(sockName.c_str(), pbMsg, &mPbufMsgConv);
+            configOutputNmeaTypes(reinterpret_cast<LocConfigOutputNmeaTypesReqMsg*>(&msg));
             break;
         }
+
 
         case E_INTAPI_CONFIG_ENGINE_INTEGRITY_RISK_MSG_ID : {
             PBLocConfigEngineIntegrityRiskReqMsg pbLocConfEngineIntegrityRisk;

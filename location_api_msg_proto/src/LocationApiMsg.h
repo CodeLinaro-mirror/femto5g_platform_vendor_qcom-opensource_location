@@ -1182,10 +1182,19 @@ struct LocConfigOutputNmeaTypesReqMsg: LocAPIMsgHeader
 
     inline LocConfigOutputNmeaTypesReqMsg(
             const char* name, GnssNmeaTypesMask enabledNmeaTypes,
-            GnssGeodeticDatumType nmeaDatumType) :
-        LocAPIMsgHeader(name, E_INTAPI_CONFIG_OUTPUT_NMEA_TYPES_MSG_ID),
-        mEnabledNmeaTypes(enabledNmeaTypes),
-        mNmeaDatumType(nmeaDatumType) { }
+            GnssGeodeticDatumType nmeaDatumType,
+            const LocationApiPbMsgConv *pbMsgConv) :
+        LocAPIMsgHeader(name,
+                        E_INTAPI_CONFIG_OUTPUT_NMEA_TYPES_MSG_ID,
+                        pbMsgConv),
+            mEnabledNmeaTypes(enabledNmeaTypes),
+            mNmeaDatumType(nmeaDatumType) { }
+
+    LocConfigOutputNmeaTypesReqMsg(const char* name,
+            const PBLocConfigOutputNmeaTypesReqMsg &pbMsg,
+            const LocationApiPbMsgConv *pbMsgConv);
+
+    int serializeToProtobuf(string& protoStr) override;
 };
 
 struct LocConfigEngineIntegrityRiskReqMsg: LocAPIMsgHeader

@@ -265,6 +265,9 @@ ELocMsgID LocationApiPbMsgConv::getEnumForPBELocMsgID(const PBELocMsgID &pbLocMs
         case PB_E_INTAPI_GET_CONSTELLATION_SECONDARY_BAND_CONFIG_RESP_MSG_ID:
             eLocMsgId = E_INTAPI_GET_CONSTELLATION_SECONDARY_BAND_CONFIG_RESP_MSG_ID;
             break;
+        case PB_E_INTAPI_CONFIG_OUTPUT_NMEA_TYPES_MSG_ID:
+            eLocMsgId = E_INTAPI_CONFIG_OUTPUT_NMEA_TYPES_MSG_ID;
+            break;
         default:
             break;
     }
@@ -645,6 +648,9 @@ PBELocMsgID LocationApiPbMsgConv::getPBEnumForELocMsgID(const ELocMsgID &eLocMsg
         case E_INTAPI_GET_CONSTELLATION_SECONDARY_BAND_CONFIG_RESP_MSG_ID:
             pbLocMsgId = PB_E_INTAPI_GET_CONSTELLATION_SECONDARY_BAND_CONFIG_RESP_MSG_ID;
             break;
+            break;
+        case E_INTAPI_CONFIG_OUTPUT_NMEA_TYPES_MSG_ID:
+            pbLocMsgId = PB_E_INTAPI_CONFIG_OUTPUT_NMEA_TYPES_MSG_ID;
             break;
         default:
             break;
@@ -6372,4 +6378,92 @@ int LocationApiPbMsgConv::pbConvertToGnssEphNotif(
             break;
     }
     return 0;
+}
+
+// HAL NMEA types mask from PB format
+uint32_t LocationApiPbMsgConv::getNmeaTypesMaskFromPB(
+        const uint32_t &pbNmeaTypesMask) const {
+
+    uint32_t nmeaTypesMask = NMEA_TYPE_NONE;
+    if (pbNmeaTypesMask & PB_NMEA_TYPE_GGA) {
+        nmeaTypesMask |= NMEA_TYPE_GGA;
+    }
+    if (pbNmeaTypesMask & PB_NMEA_TYPE_RMC) {
+        nmeaTypesMask |= NMEA_TYPE_RMC;
+    }
+    if (pbNmeaTypesMask & PB_NMEA_TYPE_GSA) {
+        nmeaTypesMask |= NMEA_TYPE_GSA;
+    }
+    if (pbNmeaTypesMask & PB_NMEA_TYPE_VTG) {
+        nmeaTypesMask |= NMEA_TYPE_VTG;
+    }
+    if (pbNmeaTypesMask & PB_NMEA_TYPE_GNS) {
+        nmeaTypesMask |= NMEA_TYPE_GNS;
+    }
+    if (pbNmeaTypesMask & PB_NMEA_TYPE_DTM) {
+        nmeaTypesMask |= NMEA_TYPE_DTM;
+    }
+    if (pbNmeaTypesMask & PB_NMEA_TYPE_GPGSV) {
+        nmeaTypesMask |= NMEA_TYPE_GPGSV;
+    }
+    if (pbNmeaTypesMask & PB_NMEA_TYPE_GLGSV) {
+        nmeaTypesMask |= NMEA_TYPE_GLGSV;
+    }
+    if (pbNmeaTypesMask & PB_NMEA_TYPE_GAGSV) {
+        nmeaTypesMask |= NMEA_TYPE_GAGSV;
+    }
+    if (pbNmeaTypesMask & PB_NMEA_TYPE_GQGSV) {
+        nmeaTypesMask |= NMEA_TYPE_GQGSV;
+    }
+    if (pbNmeaTypesMask & PB_NMEA_TYPE_GBGSV) {
+        nmeaTypesMask |= NMEA_TYPE_GBGSV;
+    }
+    if (pbNmeaTypesMask & PB_NMEA_TYPE_GIGSV) {
+        nmeaTypesMask |= NMEA_TYPE_GIGSV;
+    }
+    return nmeaTypesMask;
+}
+
+// PB NMEA types mask from HAL format
+uint32_t LocationApiPbMsgConv::getPBMaskForNmeaTypesMask(
+        const uint32_t& nmeaTypesMask) const {
+    uint32_t pbNmeaTypesMask = PB_NMEA_TYPE_INVALID;
+
+    if (nmeaTypesMask & NMEA_TYPE_GGA) {
+        pbNmeaTypesMask |= PB_NMEA_TYPE_GGA;
+    }
+    if (nmeaTypesMask & NMEA_TYPE_RMC) {
+        pbNmeaTypesMask |= PB_NMEA_TYPE_RMC;
+    }
+    if (nmeaTypesMask & NMEA_TYPE_GSA) {
+        pbNmeaTypesMask |= PB_NMEA_TYPE_GSA;
+    }
+    if (nmeaTypesMask & NMEA_TYPE_VTG) {
+        pbNmeaTypesMask |= PB_NMEA_TYPE_VTG;
+    }
+    if (nmeaTypesMask & NMEA_TYPE_GNS) {
+        pbNmeaTypesMask |= PB_NMEA_TYPE_GNS;
+    }
+    if (nmeaTypesMask & NMEA_TYPE_DTM) {
+        pbNmeaTypesMask |= PB_NMEA_TYPE_DTM;
+    }
+    if (nmeaTypesMask & NMEA_TYPE_GPGSV) {
+        pbNmeaTypesMask |= PB_NMEA_TYPE_GPGSV;
+    }
+    if (nmeaTypesMask & NMEA_TYPE_GLGSV) {
+        pbNmeaTypesMask |= PB_NMEA_TYPE_GLGSV;
+    }
+    if (nmeaTypesMask & NMEA_TYPE_GAGSV) {
+        pbNmeaTypesMask |= PB_NMEA_TYPE_GAGSV;
+    }
+    if (nmeaTypesMask & NMEA_TYPE_GQGSV) {
+        pbNmeaTypesMask |= PB_NMEA_TYPE_GQGSV;
+    }
+    if (nmeaTypesMask & NMEA_TYPE_GBGSV) {
+        pbNmeaTypesMask |= PB_NMEA_TYPE_GBGSV;
+    }
+    if (nmeaTypesMask & NMEA_TYPE_GIGSV) {
+        pbNmeaTypesMask |= PB_NMEA_TYPE_GIGSV;
+    }
+    return pbNmeaTypesMask;
 }

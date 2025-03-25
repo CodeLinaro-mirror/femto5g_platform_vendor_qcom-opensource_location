@@ -617,11 +617,16 @@ uint32_t LocationIntegrationApiImpl::getConstellationSecondaryBandConfig() {
                 mApiImpl(apiImpl) {}
         virtual ~GetConstellationSecondaryBandConfigReq() {}
         void proc() const {
+            string pbStr;
             LocConfigGetConstellationSecondaryBandConfigReqMsg msg(mApiImpl->mSocketName,
                     &mApiImpl->mPbufMsgConv);
-            mApiImpl->sendConfigMsgToHalDaemon(GET_CONSTELLATION_SECONDARY_BAND_CONFIG,
-                                               reinterpret_cast<uint8_t*>(&msg),
-                                               sizeof(msg));
+            if (msg.serializeToProtobuf(pbStr)) {
+                mApiImpl->sendConfigMsgToHalDaemon(
+                        GET_CONSTELLATION_SECONDARY_BAND_CONFIG,
+                        reinterpret_cast<uint8_t*>((uint8_t *)pbStr.c_str()), pbStr.size());
+            } else {
+                LOC_LOGe("LocCgGetCnstlSecondaryBandConfigReqMsg serializeToProtobuf failed");
+            }
         }
         LocationIntegrationApiImpl* mApiImpl;
     };
@@ -997,14 +1002,20 @@ uint32_t LocationIntegrationApiImpl::configOutputNmeaTypes(
                 mNmeaDatumType(nmeaDatumType) {}
         virtual ~ConfigOutputNmeaReq() {}
         void proc() const {
-            LocConfigOutputNmeaTypesReqMsg msg(mApiImpl->mSocketName,
-                                               mEnabledNmeaTypes, mNmeaDatumType);
-            if (mApiImpl->sendConfigMsgToHalDaemon(CONFIG_OUTPUT_NMEA_TYPES,
-                                                   reinterpret_cast<uint8_t*>(&msg),
-                                                   sizeof(msg))) {
-                mApiImpl->mNmeaConfigInfo.isValid = true;
-                mApiImpl->mNmeaConfigInfo.enabledNmeaTypes = mEnabledNmeaTypes;
-                mApiImpl->mNmeaConfigInfo.nmeaDatumType = mNmeaDatumType;
+            string pbStr;
+            LocConfigOutputNmeaTypesReqMsg msg(
+                    mApiImpl->mSocketName, mEnabledNmeaTypes,
+                    mNmeaDatumType, &mApiImpl->mPbufMsgConv);
+            if (msg.serializeToProtobuf(pbStr)) {
+                if (mApiImpl->sendConfigMsgToHalDaemon(CONFIG_OUTPUT_NMEA_TYPES,
+                                            reinterpret_cast<uint8_t*>((uint8_t *)pbStr.c_str()),
+                                            pbStr.size())); {
+                    mApiImpl->mNmeaConfigInfo.isValid = true;
+                    mApiImpl->mNmeaConfigInfo.enabledNmeaTypes = mEnabledNmeaTypes;
+                    mApiImpl->mNmeaConfigInfo.nmeaDatumType = mNmeaDatumType;
+                }
+            } else {
+                LOC_LOGe("serializeToProtobuf failed");
             }
         }
 
@@ -1236,11 +1247,16 @@ void LocationIntegrationApiImpl::processHalReadyMsg() {
     }
 
     if (mNmeaConfigInfo.isValid) {
-         LocConfigOutputNmeaTypesReqMsg msg(mSocketName, mNmeaConfigInfo.enabledNmeaTypes,
-                                            mNmeaConfigInfo.nmeaDatumType);
-         sendConfigMsgToHalDaemon(CONFIG_OUTPUT_NMEA_TYPES,
-                                  reinterpret_cast<uint8_t*>(&msg),
-                                  sizeof(msg));
+        string pbStr;
+        LocConfigOutputNmeaTypesReqMsg msg(
+                    mSocketName, mNmeaConfigInfo.enabledNmeaTypes,
+                    mNmeaConfigInfo.nmeaDatumType, &mPbufMsgConv);
+        if (msg.serializeToProtobuf(pbStr)) {
+            sendConfigMsgToHalDaemon(CONFIG_OUTPUT_NMEA_TYPES,
+                    reinterpret_cast<uint8_t*>((uint8_t *)pbStr.c_str()), pbStr.size());
+        } else {
+            LOC_LOGe("serializeToProtobuf failed");
+        }
     }
 
     // resend integrity risk config request
