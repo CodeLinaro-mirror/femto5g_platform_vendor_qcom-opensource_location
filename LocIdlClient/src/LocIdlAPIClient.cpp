@@ -1234,6 +1234,9 @@ int main(int argc, char* argv[])
 {
     int delay;
 
+    setenv("VSOMEIP_CONFIGURATION", "/vendor/etc/vsomeip_vlan1500.json", 1);
+    setenv("COMMONAPI_CONFIG", "/vendor/etc/commonapi4someip.ini" ,1);
+
     /* Command Line parsing*/
     if (!parseCommandLine(argc, argv, delay)) {
         return 0;
