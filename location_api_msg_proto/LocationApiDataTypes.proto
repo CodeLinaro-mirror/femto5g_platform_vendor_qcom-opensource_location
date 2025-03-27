@@ -79,8 +79,8 @@ enum LocationApiDataTypesVersion {
     LOCAPI_DATA_TYPES_VER_MAJOR = 1;
     // Minor - New features / API addition, new message/elemtent addition.
     // Bump the last byte of version i.e. x.2 to x.3
-    // Minor version 51: Support Measurement Code Types
-    LOCAPI_DATA_TYPES_VER_MINOR = 51;
+    // Minor version 52: Support External connectivity for XTRA
+    LOCAPI_DATA_TYPES_VER_MINOR = 52;
 }
 
 // ============================================================================
@@ -2601,3 +2601,33 @@ message PBOdcpiRequestInfo {
     uint32 tbfMillis = 3;
     bool isEmergencyMode = 4;
 }
+
+enum PBNetworkConnection {
+    PB_NET_CONNECTION_UNKNOWN = 0;
+    PB_NET_CONNECTED = 1;
+    PB_NET_DISCONNECTED = 2;
+};
+
+enum PBNetworkType {
+    PB_TYPE_UNKNOWN = 0;
+    PB_TYPE_WWAN = 1;
+    PB_TYPE_WLAN = 2;
+};
+
+/** @brief
+    Always set a 2-byte country string, such as "cn","us","in"<br>
+
+    When networkType is TYPE_WWAN,
+    set Mobile Country Code and the Mobile Network Code to the networkInfo,
+    The MCC is a three-digit code representing the country,
+    while the MNC is a two or three-digit code representing
+    the specific mobile network within that country.
+    For example "405|854", for Indian mobile operator Andhra Pradesh <br/>
+*/
+message PBNetworkInfoData {
+    PBNetworkConnection connection = 1;
+    PBNetworkType networkType = 2;
+    string country = 3;
+    string mccmnc = 4;
+};
+

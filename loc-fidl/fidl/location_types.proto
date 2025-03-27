@@ -1,5 +1,7 @@
-/** Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
-    SPDX-License-Identifier: BSD-3-Clause-Clear */
+/*
+ Copyright (c) 2024-2025 Qualcomm Innovation Center, Inc. All rights reserved.
+    SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 
 syntax = "proto3";
 
@@ -1329,7 +1331,7 @@ message LocationReportT {
   uint32 loc_output_eng_mask = 34 [(sdv.sdvsidl.field_description) =
     "When loc output eng type is set to fused, \n"
     " this field indicates the set of engines contribute to the fix. \n"
-    " Contains PositioningEngineMaskT bits"];
+    " Contains PositioningEngineMaskT bits",
     (sdv.sdvsidl.bitmask_enum_link) = "PositioningEngineMaskT"];
 
   float conformity_index = 35 [(sdv.sdvsidl.field_description) =
@@ -1573,7 +1575,53 @@ enum GnssMeasurementsDataFlagsMaskT {
     "GnssMeasurementsDataT has valid GnssMeasurementsData::gnssSignalType"];
   GMDFMT_BASEBAND_CARRIER_TO_NOISE_BIT = 0x00400000 [(sdv.sdvsidl.litteral_description) =
     "GnssMeasurementsDataT has valid GnssMeasurementsData::gnssSignalType"];
+  GMDFMT_CODE_TYPE_BIT = 0x00800000 [(sdv.sdvsidl.litteral_description) =
+    "GnssMeasurementsDataT has valid GnssMeasurementsData::measCodeType"];
+  GMDFMT_OTHER_MEAS_CODE_TYPE_BIT = 0x01000000 [(sdv.sdvsidl.litteral_description) =
+    "GnssMeasurementsDataT has valid GnssMeasurementsData::otherCodeType"];
 }
+
+/** Specify GNSS measurement code type in
+ *  GnssMeasurementsData::codetype.     */
+enum GnssMeasCodeTypeT {
+  option (sdv.sdvsidl.enum_byte_size) = PBS_ONE;
+  GNSS_MEAS_CODE_TYPE_UNKNOWN  = 0 [(sdv.sdvsidl.litteral_description) =
+    "Measurement code type not known "];
+  GNSS_MEAS_CODE_TYPE_A       = 1 [(sdv.sdvsidl.litteral_description) =
+    "Measurement code type is A "];
+  GNSS_MEAS_CODE_TYPE_B       = 2 [(sdv.sdvsidl.litteral_description) =
+    "Measurement code type is B "];
+  GNSS_MEAS_CODE_TYPE_C       = 3 [(sdv.sdvsidl.litteral_description) =
+    "Measurement code type is C "];
+  GNSS_MEAS_CODE_TYPE_I       = 4 [(sdv.sdvsidl.litteral_description) =
+    "Measurement code type is I "];
+  GNSS_MEAS_CODE_TYPE_L       = 5 [(sdv.sdvsidl.litteral_description) =
+    "Measurement code type is L "];
+  GNSS_MEAS_CODE_TYPE_M       = 6 [(sdv.sdvsidl.litteral_description) =
+    "Measurement code type is M "];
+  GNSS_MEAS_CODE_TYPE_P       = 7 [(sdv.sdvsidl.litteral_description) =
+    "Measurement code type is P "];
+  GNSS_MEAS_CODE_TYPE_Q       = 8 [(sdv.sdvsidl.litteral_description) =
+    "Measurement code type is Q "];
+  GNSS_MEAS_CODE_TYPE_S       = 9 [(sdv.sdvsidl.litteral_description) =
+    "Measurement code type is S "];
+  GNSS_MEAS_CODE_TYPE_W       = 10 [(sdv.sdvsidl.litteral_description) =
+    "Measurement code type is W "];
+  GNSS_MEAS_CODE_TYPE_X       = 11 [(sdv.sdvsidl.litteral_description) =
+    "Measurement code type is X "];
+  GNSS_MEAS_CODE_TYPE_Y       = 12 [(sdv.sdvsidl.litteral_description) =
+    "Measurement code type is Y "];
+  GNSS_MEAS_CODE_TYPE_Z       = 13 [(sdv.sdvsidl.litteral_description) =
+    "Measurement code type is Z "];
+  GNSS_MEAS_CODE_TYPE_N       = 14 [(sdv.sdvsidl.litteral_description) =
+    "Measurement code type is N "];
+  GNSS_MEAS_CODE_TYPE_D       = 15 [(sdv.sdvsidl.litteral_description) =
+    "Measurement code type is D "];
+  GNSS_MEAS_CODE_TYPE_E       = 16 [(sdv.sdvsidl.litteral_description) =
+    "Measurement code type is E "];
+  GNSS_MEAS_CODE_TYPE_OTHER   = 255 [(sdv.sdvsidl.litteral_description) =
+    "Measurement code type is Other "];
+};
 
 /** Specify GNSS measurement state in
  *  GnssMeasurementsData::stateMask.     */
@@ -1756,6 +1804,10 @@ message GnssMeasurementsDataT {
     "1-sigma uncertainty associated with the full inter-signal bias in nanoseconds"];
   uint32 cycle_slip_count = 26 [(sdv.sdvsidl.field_description) =
     "Increments when a cycle slip is detected."];
+  GnssMeasCodeTypeT meas_code_type = 27 [(sdv.sdvsidl.field_description) =
+    "GNSS Measurement Code Type"];
+  string other_code_type_name = 28 [(sdv.vsidl.variable_type_max_size) = 255,
+    (sdv.sdvsidl.field_description) = "GNSS Measurement other Code Type"];
 }
 
 message GnssMeasurementsClockT {

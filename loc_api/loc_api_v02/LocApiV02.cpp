@@ -2435,6 +2435,44 @@ qmiLocLockEnumT_v02 LocApiV02 ::convertGpsLockFromAPItoQMI(GnssConfigGpsLock loc
     }
 }
 
+qmiLocClientsMaskT_v02 LocApiV02::convertGpsLock(GnssConfigGpsLock lock) {
+    qmiLocClientsMaskT_v02 nfwControlBits = 0;
+    if (lock & GNSS_CONFIG_GPS_LOCK_NFW_IMS) {
+        nfwControlBits |= QMI_LOC_MASK_UTH_CLIENT_IMS_V02;
+    }
+    if (lock & GNSS_CONFIG_GPS_LOCK_NFW_SIM) {
+        nfwControlBits |= QMI_LOC_MASK_UTH_CLIENT_SIM_V02;
+    }
+    if (lock & GNSS_CONFIG_GPS_LOCK_NFW_MDT) {
+        nfwControlBits |= QMI_LOC_MASK_UTH_CLIENT_MDT_V02;
+    }
+    if (lock & GNSS_CONFIG_GPS_LOCK_NFW_TLOC) {
+        nfwControlBits |= QMI_LOC_MASK_UTH_CLIENT_TLOC_V02;
+    }
+    if (lock & GNSS_CONFIG_GPS_LOCK_NFW_RLOC) {
+        nfwControlBits |= QMI_LOC_MASK_UTH_CLIENT_RLOC_V02;
+    }
+    if (lock & GNSS_CONFIG_GPS_LOCK_NFW_V2X) {
+        nfwControlBits |= QMI_LOC_MASK_UTH_CLIENT_V2X_V02;
+    }
+    if (lock & GNSS_CONFIG_GPS_LOCK_NFW_R1) {
+        nfwControlBits |= QMI_LOC_MASK_OEM_CLIENT_R1_V02;
+    }
+    if (lock & GNSS_CONFIG_GPS_LOCK_NFW_R2) {
+        nfwControlBits |= QMI_LOC_MASK_OEM_CLIENT_R2_V02;
+    }
+    if (lock & GNSS_CONFIG_GPS_LOCK_NFW_R3) {
+        nfwControlBits |= QMI_LOC_MASK_OEM_CLIENT_R3_V02;
+    }
+    if (lock & GNSS_CONFIG_GPS_LOCK_NFW_NTN) {
+        nfwControlBits |= QMI_LOC_MASK_UTH_CLIENT_NTN_V02;
+    }
+    if (lock & GNSS_CONFIG_GPS_LOCK_NFW_ECALL) {
+        nfwControlBits |= QMI_LOC_MASK_UTH_CLIENT_ECALL_V02;
+    }
+    return nfwControlBits;
+}
+
 EngineLockState LocApiV02::convertEngineLockState(qmiLocEngineLockStateEnumT_v02 LockState)
 {
     switch (LockState) {
@@ -5083,13 +5121,14 @@ void LocApiV02::reportLocationRequestNotification(
         const char* nfwClient[] = { "NFW_CLIENT_CP", "NFW_CLIENT_SUPL", "NFW_CLIENT_IMS",
                                     "NFW_CLIENT_SIM", "NFW_CLIENT_MDT", "NFW_CLIENT_TLOC",
                                     "NFW_CLIENT_OTHER", "NFW_CLIENT_RLOC", "NFW_CLIENT_V2X",
-                                    "NFW_CLIENT_R1", "NFW_CLIENT_R2", "NFW_CLIENT_R3" };
+                                    "NFW_CLIENT_R1", "NFW_CLIENT_R2", "NFW_CLIENT_R3",
+                                    "NFW_CLIENT_NTN", "NFW_CLIENT_ECALL" };
         char packageName[LOC_MAX_PARAM_STRING];
 
         // proxyAppPackageName is "" for emergency
         if (ContextBase::isFeatureSupported(LOC_SUPPORTED_FEATURE_MULTIPLE_ATTRIBUTION_APPS) &&
             loc_req_notif->protocolStack >= eQMI_LOC_CTRL_PLANE_V02 &&
-            loc_req_notif->protocolStack <= eQMI_LOC_R3_V02 &&
+            loc_req_notif->protocolStack <= eQMI_LOC_ECALL_V02 &&
             eQMI_LOC_OTHER_V02 != loc_req_notif->protocolStack) {
 
             if (mPackageName[loc_req_notif->protocolStack].empty()) {
@@ -8045,7 +8084,7 @@ LocationError LocApiV02 :: setGpsLockSync(GnssConfigGpsLock lock)
     qmiLocSetEngineLockIndMsgT_v02 setEngineLockInd;
     locClientStatusEnumType status;
     locClientReqUnionType req_union;
-    uint32_t nfwControlBits = lock >> 1;
+    qmiLocClientsMaskT_v02 nfwControlBits = convertGpsLock(lock);
 
     memset(&setEngineLockReq, 0, sizeof(setEngineLockReq));
     setEngineLockReq.lockType = convertGpsLockFromAPItoQMI((GnssConfigGpsLock)lock);
@@ -8053,11 +8092,11 @@ LocationError LocApiV02 :: setGpsLockSync(GnssConfigGpsLock lock)
     setEngineLockReq.subType = eQMI_LOC_LOCK_ALL_SUB_V02;
     setEngineLockReq.lockClient_valid = false;
     setEngineLockReq.clientsConfig_valid = true;
-    setEngineLockReq.clientsConfig = (uint64_t)nfwControlBits;
+    setEngineLockReq.clientsConfig = nfwControlBits;
     req_union.pSetEngineLockReq = &setEngineLockReq;
 
     LOC_LOGd("API lock type = 0x%X QMI lockType = %d "
-             "nfwControlBits = 0x%X clientsConfig = 0x%" PRIx64"",
+             "nfwControlBits = 0x%" PRIx64 "clientsConfig = 0x%" PRIx64"",
              lock, setEngineLockReq.lockType, nfwControlBits,
              setEngineLockReq.clientsConfig);
     memset(&setEngineLockInd, 0, sizeof(setEngineLockInd));
