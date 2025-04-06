@@ -6,7 +6,7 @@
  This declares the public interface of storage manager for
  permanent parameters.
 
- Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ Copyright (c) 2024-2025 Qualcomm Innovation Center, Inc. All rights reserved.
  SPDX-License-Identifier: BSD-3-Clause-Clear
  =============================================================================*/
 #ifndef __XTRAT_WIFI_NVPARAM_MGR_H__
@@ -63,30 +63,12 @@ public:
   // is locked and operation can not be performed now,
   // if the operation is critical, suggest application to
   // wait a few seconds and try again.
-  virtual nv_param_err_code saveInt32Param (const char* param_name,
-                                            const int param_value) = 0;
+  nv_param_err_code saveUInt64Param (const char* param_name,
+                                     uint64_t param_value);
 
-  virtual nv_param_err_code saveBoolParam (const char* param_name,
-                                           const bool param_value) = 0;
-
-  virtual nv_param_err_code saveFloatParam (const char* param_name,
-                                            const float param_value) = 0;
-
-  virtual nv_param_err_code saveUInt32Param (const char* param_name,
-                                             const unsigned int param_value) = 0;
-
-  virtual nv_param_err_code saveInt64Param (const char* param_name,
-                                            const long long param_value) = 0;
-
-  virtual nv_param_err_code saveUInt64Param (const char* param_name,
-                                             const unsigned long long param_value) = 0;
-
-  virtual nv_param_err_code saveStringParam (const char* param_name,
-                                             const char* param_value) = 0;
-
-  virtual nv_param_err_code saveBlobParam (const char* param_name,
-                                           const unsigned char* param_value,
-                                           unsigned int param_size_in_bytes) = 0;
+  nv_param_err_code saveBlobParam (const char* param_name,
+                                   const unsigned char* param_value,
+                                   unsigned int param_size_in_bytes);
 
   // Below APIs are thread safe with current sqlite based implementation.
   //
@@ -100,45 +82,56 @@ public:
   // the sqlite file is locked and operation can not be performed now,
   // if the operation is critical, suggest application to
   // wait a few seconds and try again.
-  virtual nv_param_err_code getInt32Param (const char* param_name,
-                                           int & param_value) = 0;
-
-  virtual nv_param_err_code getBoolParam (const char* param_name,
-                                          bool & param_value) = 0;
-
-  virtual nv_param_err_code getFloatParam (const char* param_name,
-                                           float & param_value) = 0;
-
-  virtual nv_param_err_code getUInt32Param (const char* param_name,
-                                            unsigned int & param_value) = 0;
-
-  virtual nv_param_err_code getInt64Param (const char* param_name,
-                                           long long & param_value) = 0;
-
-  virtual nv_param_err_code getUInt64Param (const char* param_name,
-                                            unsigned long long & param_value) = 0;
+  nv_param_err_code getUInt64Param (const char* param_name,
+                                    uint64_t & param_value);
 
   // 0 or NV_PARAM_ERR_NO_ERR: when successful
   // NOTE: memory returned via param_value need to be freed by caller
   // via delete [] when return code is 0 (NV_PARAM_ERR_NO_ERROR)
-  virtual nv_param_err_code getStringParam (const char* param_name,
-                                            char* &param_value,
-                                            unsigned int &param_size_in_bytes) = 0;
-
-  // 0 or NV_PARAM_ERR_NO_ERR: when successful
-  // NOTE: memory returned via param_value need to be freed by caller
-  // via delete [] when return code is 0 (NV_PARAM_ERR_NO_ERROR)
-  virtual nv_param_err_code getBlobParam (const char* param_name,
-                                          unsigned char* &param_value,
-                                          unsigned int &param_size_in_bytes) = 0;
+  nv_param_err_code getBlobParam (const char* param_name,
+                                  unsigned char* &param_value,
+                                  unsigned int &param_size_in_bytes);
 
 protected:
+  NvParamMgr (const char* const filename);
+
   // allow constructor to be made only via getInstance
   NvParamMgr() {};
 
   // prohibit calling delete on the pointer returned from
   // NvParamMgr::getInstance()
   virtual ~NvParamMgr() {};
+
+private:
+  nv_param_err_code init();
+  nv_param_err_code deinit();
+  nv_param_err_code openDB ();
+
+  nv_param_err_code saveNvDataBlob (const char* param_name,
+                                    const void* data,
+                                    uint32_t data_len);
+
+  nv_param_err_code getNvDataBlob (const char* param_name,
+                                   void* data,
+                                   int &data_len);
+
+  // internal functions
+  int generatePseudoClientIdIfNeeded ();
+
+  // internal functions
+  int wrapper_mprintf (char* &output_buf, unsigned int &output_size,
+                       const char *sentence, ...);
+
+  // Variables
+  // sqlite file and etc
+  const char* m_filename;
+  void*    m_db;
+
+  char*        m_sqlite_sentence;
+  unsigned int m_sqlite_sentence_size;
+
+  bool     m_pseudo_client_id_exist;
+  uint64_t m_pseudo_client_id_64;
 };
 
 } // namespace qc_loc_fw
