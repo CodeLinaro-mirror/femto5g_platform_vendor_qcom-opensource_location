@@ -8279,12 +8279,6 @@ void LocApiV02::configRobustLocation
     req.enable = enable;
     req.enableForE911_valid = enableForE911Valid;
     req.enableForE911 = enableForE911;
-    if (enable == false && enableForE911 == true) {
-        LOC_LOGI("configRobustLocation: enableForE911 is not allowed when "
-                 "enable is set to false");
-        // change enableForE911 to false to simplify processing
-        req.enableForE911 = false;
-    }
 
     req_union.pSetRobustLocationReq = &req;
     status = locSyncSendReq(QMI_LOC_SET_ROBUST_LOCATION_CONFIG_REQ_V02,
