@@ -2011,10 +2011,8 @@ LocationClientApiImpl::~LocationClientApiImpl() {
 void LocationClientApiImpl::destroy(locationApiDestroyCompleteCallback destroyCompleteCb) {
 
     struct DestroyReq : public LocMsg {
-        DestroyReq(LocationClientApiImpl* apiImpl,
-                locationApiDestroyCompleteCallback destroyCompleteCb) :
-                mApiImpl(apiImpl),
-                mDestroyCompleteCb(destroyCompleteCb) {}
+        DestroyReq(LocationClientApiImpl* apiImpl) :
+                mApiImpl(apiImpl) {}
         virtual ~DestroyReq() {}
         void proc() const {
             // deregister
@@ -2040,19 +2038,17 @@ void LocationClientApiImpl::destroy(locationApiDestroyCompleteCallback destroyCo
                          mApiImpl->mClientIdGenerator, mApiImpl->mClientId);
             }
 #endif //FEATURE_EXTERNAL_AP
-            if (mDestroyCompleteCb) {
-                (mDestroyCompleteCb) ();
-            }
-            usleep(50000); //give 50ms for socket clean up
-
-            delete mApiImpl;
         }
         LocationClientApiImpl* mApiImpl;
-        locationApiDestroyCompleteCallback mDestroyCompleteCb;
     };
 
-    mMsgTask.sendMsg(new (nothrow) DestroyReq(this, destroyCompleteCb));
-    usleep(100000); //100ms for handling onReceive() messages
+    mMsgTask.sendMsg(new (nothrow) DestroyReq(this));
+    wait(500); //500ms
+    LOC_LOGw("wait deregister received");
+    if (destroyCompleteCb) {
+        destroyCompleteCb();
+    }
+    delete this;
 }
 
 /******************************************************************************
@@ -3518,6 +3514,7 @@ void IpcListener::onReceive(const char* data, uint32_t length,
             case E_LOCAPI_START_BATCHING_MSG_ID:
             case E_LOCAPI_STOP_BATCHING_MSG_ID:
             case E_LOCAPI_UPDATE_BATCHING_OPTIONS_MSG_ID:
+            case E_LOCAPI_CLIENT_DEREGISTER_MSG_ID:
             {
                 LOC_LOGd("<<< response message %d\n", locApiMsg.msgId);
                 PBLocAPIGenericRespMsg pbLocApiGenericRsp;
@@ -3525,6 +3522,11 @@ void IpcListener::onReceive(const char* data, uint32_t length,
                     LOC_LOGe("Failed to parse pbLocApiGenericRsp from payload!!");
                     return;
                 }
+                if (locApiMsg.msgId == E_LOCAPI_CLIENT_DEREGISTER_MSG_ID) {
+                    mApiImpl.notify(); //for the wait in destroy()
+                    return;
+                }
+
                 if (locApiMsg.msgId != E_LOCAPI_STOP_TRACKING_MSG_ID) {
                     LocAPIGenericRespMsg respMsg(sockName.c_str(), eLocMsgid, pbLocApiGenericRsp,
                             &mApiImpl.mPbufMsgConv);
