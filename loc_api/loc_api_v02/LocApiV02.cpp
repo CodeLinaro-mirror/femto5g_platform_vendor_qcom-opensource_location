@@ -10154,11 +10154,6 @@ LocApiV02::startTimeBasedTracking(const TrackingOptions& options, LocApiResponse
     start_msg.fixRecurrence_valid = 1;
     start_msg.fixRecurrence = eQMI_LOC_RECURRENCE_PERIODIC_V02;
 
-    // altitude assumed
-    start_msg.configAltitudeAssumed_valid = 1;
-    start_msg.configAltitudeAssumed =
-        eQMI_LOC_ALTITUDE_ASSUMED_IN_GNSS_SV_INFO_DISABLED_V02;
-
     // power mode
     mPowerMode = options.powerMode;
 
