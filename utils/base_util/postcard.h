@@ -5,7 +5,7 @@
  GENERAL DESCRIPTION
  This header declares two IPC messages, one for input and one for output
 
- Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ Copyright (c) 2024-2025 Qualcomm Innovation Center, Inc. All rights reserved.
  SPDX-License-Identifier: BSD-3-Clause-Clear
  =============================================================================*/
 #ifndef __XTRAT_WIFI_POSTCARD_H__
@@ -151,6 +151,7 @@ public:
   virtual int getArrayBool(const char * const name, int * const pNumElem, BOOL * const array = 0) = 0;
   virtual int getArrayPtr (const char * const name, int * const pNumElem, PTR * const array = 0) = 0;
 
+  static int copyInCard(InPostcard * const inCardIn, InPostcard * const inCardOut);
 };
 
 } // namespace qc_loc_fw

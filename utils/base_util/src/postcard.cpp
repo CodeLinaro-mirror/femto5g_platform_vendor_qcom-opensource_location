@@ -6,7 +6,7 @@
  This component implements two IPC message holders, one for input and one
  for output
 
- Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ Copyright (c) 2024-2025 Qualcomm Innovation Center, Inc. All rights reserved.
  SPDX-License-Identifier: BSD-3-Clause-Clear
  =============================================================================*/
 #include <new>
@@ -1477,6 +1477,35 @@ InPostcard * InPostcard::createInstance(InMemoryStream * const pInMem)
 InPostcard * InPostcard::createInstance(OutPostcard * const pCard)
 {
   return new (std::nothrow) InPostcardImpl(pCard);
+}
+
+int InPostcard::copyInCard(InPostcard * const inCardIn, InPostcard * const inCardOut) {
+    int result = 0;
+    do {
+        BREAK_IF_ZERO(1, inCardOut);
+        // Make a copy of the incoming postcard
+        unsigned char * inCardBufferPtr = const_cast<unsigned char *>(
+                inCardIn->getBuffer()->getBuffer());
+        BREAK_IF_ZERO(2, inCardBufferPtr);
+        size_t inCardBufferSize = inCardIn->getBuffer()->getSize();
+        BREAK_IF_ZERO(3, inCardBufferSize);
+        unsigned char * copyBufferPtr = new unsigned char[inCardBufferSize];
+        BREAK_IF_ZERO(4, copyBufferPtr);
+        memcpy(static_cast<void *>(copyBufferPtr),
+               static_cast<void *>(inCardBufferPtr),
+               inCardBufferSize);
+
+        if (inCardOut->init(
+                static_cast<const void *>(copyBufferPtr),
+                inCardBufferSize, true) != 0){
+            // Free allocated memory
+            log_error(IN_TAG, "copyInCard(): inCardOut->init() failed");
+            delete[] copyBufferPtr;
+        }
+
+    } while (0);
+    log_debug(IN_TAG, "%d", result);
+    return result;
 }
 
 } // namespace qc_loc_fw
