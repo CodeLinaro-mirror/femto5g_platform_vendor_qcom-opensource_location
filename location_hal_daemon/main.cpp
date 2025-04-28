@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023, 2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -96,9 +96,12 @@ int main(int argc, char *argv[])
         {"POSITION_MODE", &configParamRead.positionMode, NULL, 'n'},
     };
 
-    // read default configuration paramters
-    UTIL_READ_CONF_DEFAULT(LOC_PATH_GPS_CONF);
+    // read a copy of gps conf and izat.conf and cache them for future use
+    UTIL_CACHE_CONF_FILE(LOC_PATH_GPS_CONF);
+    UTIL_CACHE_CONF_FILE(LOC_PATH_IZAT_CONF);
+
     // read configuration file
+    UTIL_READ_CONF_DEFAULT(LOC_PATH_GPS_CONF);
     UTIL_READ_CONF(LOC_PATH_GPS_CONF, configTable);
     if (configParamRead.positionMode != GNSS_SUPL_MODE_MSB) {
         configParamRead.positionMode = GNSS_SUPL_MODE_STANDALONE;
