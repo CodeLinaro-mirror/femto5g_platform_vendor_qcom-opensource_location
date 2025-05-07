@@ -298,7 +298,7 @@ private:
     void configMerkleTree(const LocConfigMerkleTreeReqMsg* pMsg);
     void configOsnmaEnablement(const LocConfigOsnmaEnablementReqMsg* pMsg);
     void registerGnssSignalTypesUpdate(const LocConfigRegisterGnssSignalTypesUpdateReqMsg* pReqMsg);
-
+    void registerLocApiForGnssSignalTypesUpdates (bool registerForUpdate);
     // Location configuration API get/read requests
     void getGnssConfig(const LocAPIMsgHeader* pReqMsg,
                        GnssConfigFlagsBits configFlag);
@@ -401,6 +401,7 @@ private:
     // Location api interface to register Gnss signal types callback
     ILocationAPI* mSignalTypesLocationApi;
     LocationCallbacks mSignalTypesLocationApiCallbacks;
+    uint32_t mLocHalSignalTypeMask;
 };
 
 #endif //LOCATIONAPISERVICE_H
