@@ -30,7 +30,8 @@ cc_defaults {
         "-fexceptions",
         "-Wno-attributes",
         "-Wno-unused-variable",
-        "-Wno-unused-parameter"
+        "-Wno-unused-parameter",
+        "-Wno-missing-template-arg-list-after-template-kw"
     ],
 
     shared_libs: [
