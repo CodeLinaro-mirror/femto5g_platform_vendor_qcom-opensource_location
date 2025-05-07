@@ -31,6 +31,7 @@ Changes from Qualcomm Technologies, Inc. are provided under the following licens
 Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
 SPDX-License-Identifier: BSD-3-Clause-Clear
 */
+
 #ifndef LOCATIONAPISERVICE_H
 #define LOCATIONAPISERVICE_H
 
@@ -269,6 +270,7 @@ private:
     void configOsnmaEnablement(const LocConfigOsnmaEnablementReqMsg* pMsg);
     void registerGnssSignalTypesUpdate(const LocConfigRegisterGnssSignalTypesUpdateReqMsg* pReqMsg);
     void configMmfData(const LocInjectMmfDataReqMsg* pMsg);
+    void registerLocApiForGnssSignalTypesUpdates (bool registerForUpdate);
 
     // Location configuration API get/read requests
     void getGnssConfig(const LocAPIMsgHeader* pReqMsg,
@@ -372,6 +374,7 @@ private:
     LocationCallbacks mSignalTypesLocationApiCallbacks;
 
     GnssInterface* mGnssInterface;
+    uint32_t mLocHalSignalTypeMask;
 };
 
 #endif //LOCATIONAPISERVICE_H

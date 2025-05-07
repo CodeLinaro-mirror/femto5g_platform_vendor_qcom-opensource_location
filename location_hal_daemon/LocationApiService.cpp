@@ -166,6 +166,7 @@ LocationApiService::LocationApiService(const configParamToRead & configParamRead
     mSingleFixLocationApiCallbacks{},
     mSingleFixLastLocation{},
     mSignalTypesLocationApi(nullptr),
+    mLocHalSignalTypeMask(0),
     mSignalTypesLocationApiCallbacks{}
     {
 
@@ -244,6 +245,8 @@ LocationApiService::LocationApiService(const configParamToRead & configParamRead
         pClient->mPendingMessages.push(E_LOCAPI_START_TRACKING_MSG_ID);
     }
 
+    registerLocApiForGnssSignalTypesUpdates(true);
+
     // start receiver - never return
     LOC_LOGd("Ready, start Ipc Receivers");
     auto recver = LocIpc::getLocIpcLocalRecver(make_shared<LocHaldLocalIpcListener>(*this),
@@ -260,6 +263,7 @@ LocationApiService::LocationApiService(const configParamToRead & configParamRead
 }
 
 LocationApiService::~LocationApiService() {
+    registerLocApiForGnssSignalTypesUpdates(false);
     mIpc.stopNonBlockingListening();
     mIpc.stopBlockingListening(*mBlockingRecver);
 
@@ -1073,13 +1077,9 @@ void LocationApiService::deregisterXtraStatusUpdate(
     }
 }
 
-void LocationApiService::registerGnssSignalTypesUpdate(
-            const LocConfigRegisterGnssSignalTypesUpdateReqMsg * pReqMsg) {
-    LOC_LOGi(">--registerGnssSignalTypesUpdate, client %s, registerUpdate %d",
-            pReqMsg->mSocketName, pReqMsg->mRegisterUpdate);
-
+void LocationApiService::registerLocApiForGnssSignalTypesUpdates (bool registerForUpdate) {
     std::lock_guard<std::recursive_mutex> lock(mMutex);
-    if (pReqMsg->mRegisterUpdate) { // register
+    if (registerForUpdate) { // register
         if (mSignalTypesLocationApi == nullptr) {
             // mandatory callback
             mSignalTypesLocationApiCallbacks.capabilitiesCb = [this](
@@ -1111,9 +1111,20 @@ void LocationApiService::registerGnssSignalTypesUpdate(
             mSignalTypesLocationApi->updateCallbacks(mSignalTypesLocationApiCallbacks);
         }
     }
+}
+
+void LocationApiService::registerGnssSignalTypesUpdate(
+            const LocConfigRegisterGnssSignalTypesUpdateReqMsg * pReqMsg) {
+    LOC_LOGi(">--registerGnssSignalTypesUpdate, client %s, registerUpdate %d",
+            pReqMsg->mSocketName, pReqMsg->mRegisterUpdate);
+
+    std::lock_guard<std::recursive_mutex> lock(mMutex);
     // trigger LocConfigCb to conform with LIA API uniform
     std::shared_ptr<LocHalDaemonClientHandler> pClient = getClient(pReqMsg->mSocketName);
     if (pClient) {
+        if (pReqMsg->mRegisterUpdate && mLocHalSignalTypeMask) {
+            pClient->onGnssSignalTypesCb(mLocHalSignalTypeMask);
+        }
         pClient->onControlResponseCb(LOCATION_ERROR_SUCCESS, pReqMsg->msgId);
     }
 }
@@ -1783,11 +1794,11 @@ void LocationApiService::onCollectiveResponseCallback(
 
 void LocationApiService::onGnssSignalTypesCb(const GnssCapabNotification& gnssCapabNotification) {
     std::lock_guard<std::recursive_mutex> lock(mMutex);
-    uint32_t signalType = gnssCapabNotification.gnssSupportedSignals;
-    LOC_LOGd("--< supported GNSS signal types: 0x%x", signalType);
+    mLocHalSignalTypeMask = gnssCapabNotification.gnssSupportedSignals;
+    LOC_LOGd("--< supported GNSS signal types: 0x%x", mLocHalSignalTypeMask);
     for (auto each : mClients) {
         // deliver the GNSS signal types to registered client
-        each.second->onGnssSignalTypesCb(signalType);
+        each.second->onGnssSignalTypesCb(mLocHalSignalTypeMask);
     }
 }
 
