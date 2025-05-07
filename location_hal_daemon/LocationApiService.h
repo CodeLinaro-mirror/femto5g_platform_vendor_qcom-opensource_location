@@ -305,6 +305,7 @@ private:
     void configOdcpiInit(const LocConfigOdcpiInitReqMsg* pMsg);
     void configOdcpiInject(const LocConfigOdcpiInjectReqMsg* pMsg);
     void registerGnssSignalTypesUpdate(const LocConfigRegisterGnssSignalTypesUpdateReqMsg* pReqMsg);
+    void registerLocApiForGnssSignalTypesUpdates (bool registerForUpdate);
 
     // Location configuration API get/read requests
     void getGnssConfig(const LocAPIMsgHeader* pReqMsg,
@@ -422,6 +423,7 @@ private:
     // Location api interface to register Gnss signal types callback
     ILocationAPI* mSignalTypesLocationApi;
     LocationCallbacks mSignalTypesLocationApiCallbacks;
+    uint32_t mLocHalSignalTypeMask;
 };
 
 #endif //LOCATIONAPISERVICE_H
