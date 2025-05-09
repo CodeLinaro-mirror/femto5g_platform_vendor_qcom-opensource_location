@@ -25,7 +25,6 @@ cc_library_shared {
     ],
 
     srcs: [
-        "src/config_file.cpp",
         "src/log.cpp",
         "src/memorystream.cpp",
         "src/nvparam_mgr.cpp",

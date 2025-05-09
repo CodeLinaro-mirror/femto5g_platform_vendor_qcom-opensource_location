@@ -6,7 +6,6 @@ AM_CFLAGS = \
      -fno-short-enums
 
 h_sources = \
-        ../config_file.h \
         ../log.h \
         ../postcard.h \
         ../sync.h \
@@ -21,7 +20,6 @@ h_sources = \
         ../shutdown_timer.h
 
 libloc_base_util_la_SOURCES = \
-        config_file.cpp \
         log.cpp \
         memorystream.cpp \
         nvparam_mgr.cpp \
