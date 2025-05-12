@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -732,6 +732,10 @@ locClientEventMaskType LocApiV02 :: adjustLocClientEventMask(locClientEventMaskT
                                            QMI_LOC_EVENT_MASK_EPHEMERIS_REPORT_V02 |
                                            QMI_LOC_EVENT_MASK_NEXT_LS_INFO_REPORT_V02 |
                                            QMI_LOC_EVENT_MASK_LATENCY_INFORMATION_REPORT_V02;
+
+#ifdef FEATURE_AUTOMOTIVE
+        clearMask |= QMI_LOC_EVENT_MASK_GNSS_BANDS_SUPPORTED_V02;
+#endif
         // clear GNSS_EVENT_REPORT mask because QMI_LOC_EVENT_MASK_FEATURE_STATUS_V02 is set
         // when LOC_SUPPORTED_FEATURE_DYNAMIC_FEATURE_STATUS is supported
         if (ContextBase::isFeatureSupported(LOC_SUPPORTED_FEATURE_DYNAMIC_FEATURE_STATUS)) {
@@ -9214,6 +9218,11 @@ LocApiV02::setBlacklistSvSync(const GnssSvIdConfig& config)
        setBlacklistSvMsg.gps_persist_blacklist_sv = config.gpsBlacklistSvMask,
        setBlacklistSvMsg.gps_clear_persist_blacklist_sv_valid = true;
        setBlacklistSvMsg.gps_clear_persist_blacklist_sv = ~config.gpsBlacklistSvMask;
+    } else {
+        if (config.gpsBlacklistSvMask) {
+            LOC_LOGd("Preferred System %d, SV Blacklisting NOT SUPPORTED !!", mPreferredSvSystemType);
+            return LOCATION_ERROR_NOT_SUPPORTED;
+        }
     }
 
     if (mPreferredSvSystemType != GNSS_SV_TYPE_GLONASS) {
@@ -9228,6 +9237,11 @@ LocApiV02::setBlacklistSvSync(const GnssSvIdConfig& config)
        setBlacklistSvMsg.bds_persist_blacklist_sv = config.bdsBlacklistSvMask;
        setBlacklistSvMsg.bds_clear_persist_blacklist_sv_valid = true;
        setBlacklistSvMsg.bds_clear_persist_blacklist_sv = ~config.bdsBlacklistSvMask;
+    } else {
+        if (config.bdsBlacklistSvMask) {
+            LOC_LOGd("Preferred System %d, SV Blacklisting NOT SUPPORTED !!", mPreferredSvSystemType);
+            return LOCATION_ERROR_NOT_SUPPORTED;
+        }
     }
 
     if (mPreferredSvSystemType != GNSS_SV_TYPE_QZSS) {
