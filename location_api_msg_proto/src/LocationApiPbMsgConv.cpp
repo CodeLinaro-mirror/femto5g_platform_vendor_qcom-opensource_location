@@ -322,6 +322,12 @@ ELocMsgID LocationApiPbMsgConv::getEnumForPBELocMsgID(const PBELocMsgID &pbLocMs
         case PB_E_INTAPI_CONFIG_ODCPI_INJECT_MSG_ID:
             eLocMsgId = E_INTAPI_CONFIG_ODCPI_INJECT_MSG_ID;
             break;
+        case PB_E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_REQ_MSG_ID:
+            eLocMsgId = E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_REQ_MSG_ID;
+            break;
+        case PB_E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_RESP_MSG_ID:
+            eLocMsgId = E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_RESP_MSG_ID;
+            break;
         default:
             break;
     }
@@ -1092,6 +1098,12 @@ PBELocMsgID LocationApiPbMsgConv::getPBEnumForELocMsgID(const ELocMsgID &eLocMsg
             break;
         case E_INTAPI_CONFIG_ODCPI_INJECT_MSG_ID:
             pbLocMsgId = PB_E_INTAPI_CONFIG_ODCPI_INJECT_MSG_ID;
+            break;
+        case E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_REQ_MSG_ID:
+            pbLocMsgId = PB_E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_REQ_MSG_ID;
+            break;
+        case E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_RESP_MSG_ID:
+            pbLocMsgId = PB_E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_RESP_MSG_ID;
             break;
         default:
             break;
@@ -2051,7 +2063,12 @@ uint32_t LocationApiPbMsgConv::getPBMaskForGnssMeasurementsAdrStateMask(
         pbGnssMeasAdrStateMask |= PB_GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_RESET_BIT;
     }
     if (gnssMeasAdrStateMask & GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_CYCLE_SLIP_BIT) {
-       pbGnssMeasAdrStateMask |= PB_GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_CYCLE_SLIP_BIT;
+        pbGnssMeasAdrStateMask |= PB_GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_CYCLE_SLIP_BIT;
+    }
+    if (gnssMeasAdrStateMask &
+            GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_HALF_CYCLE_RESOLVED_BIT) {
+        pbGnssMeasAdrStateMask |=
+            PB_GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_HALF_CYCLE_RESOLVED_BIT;
     }
     LocApiPb_LOGv("LocApiPB: gnssMeasAdrStateMask:%x, pbGnssMeasAdrStateMask:%x",
             gnssMeasAdrStateMask, pbGnssMeasAdrStateMask);
@@ -2983,6 +3000,11 @@ uint32_t LocationApiPbMsgConv::getGnssMeasurementsAdrStateMaskFromPB(
     if (pbGnssMeasAdrStateMask &
             PB_GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_CYCLE_SLIP_BIT) {
         gnssMeasAdrStateMask |= GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_CYCLE_SLIP_BIT;
+    }
+    if (pbGnssMeasAdrStateMask &
+            PB_GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_HALF_CYCLE_RESOLVED_BIT) {
+        gnssMeasAdrStateMask |=
+            GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_HALF_CYCLE_RESOLVED_BIT;
     }
     LocApiPb_LOGv("LocApiPB: pbGnssMeasAdrStateMask:%x, gnssMeasAdrStateMask:%x",
             pbGnssMeasAdrStateMask, gnssMeasAdrStateMask);

@@ -107,6 +107,9 @@ static int autoTestTimeoutSec = 0x7FFFFFFF;
 static uint32_t gtpFixCnt = 0;
 static uint32_t singleShotFixCnt = 0;
 
+static char NMEA_PORT[] = "/dev/at_usb1";
+static int ttyFd = -1;
+static int routeToNMEAPort = 0;
 enum ReportType {
     POSITION_REPORT = 1 << 0,
     NMEA_REPORT     = 1 << 1,
@@ -160,6 +163,57 @@ enum TrackingSessionType {
 #define GET_XTRA_STATUS             "getXtraStatus"
 #define REGISTER_XTRA_STATUS_UPDATE "registerXtraUpdateStatus"
 #define ENABLE_XTRA_ON_DEMAND_DOWNLOAD "enableXtraOnDemandDownload"
+#define REGISTER_SIGNAL_TYPES_UPDATE "registerGnssSignalTypesUpdate"
+
+
+static bool openPort(void)
+{
+    bool retVal = true;
+
+    if (ttyFd == -1) {
+        printf("opening NMEA port %s ", NMEA_PORT);
+        ttyFd = open(NMEA_PORT, O_RDWR | O_NOCTTY | O_NDELAY);
+        if (ttyFd == -1) {
+            /* Could not open the port. */
+            printf("Unable to open %s \n", NMEA_PORT);
+            retVal = false;
+        } else {
+            printf("openPort success ttyFd: %d\n", ttyFd);
+        }
+    }
+    return retVal;
+}
+
+static bool sendNMEAToTty(const std::string& nmea)
+{
+    int n;
+    char buffer[201] = { 0 };
+    bool retVal = true;
+    strlcpy(buffer, nmea.c_str(), sizeof(buffer));
+    if (1 < nmea.length() && sizeof(buffer) > nmea.length()) {
+        n = write(ttyFd, buffer, nmea.length());
+        if (n < 0) {
+            printf("write() of %d bytes failed!\n", n);
+            retVal = false;
+        } else if (0 == n) {
+            printf("write() of %d bytes returned 0, errno:%d [%s]\n",
+                nmea.length(), errno, strerror(errno));
+            /* Sleep of 0.1 msec and reattempt to write*/
+            usleep(100);
+            n = write(ttyFd, buffer, nmea.length() - 1);
+            if (n < 0) {
+                printf("reattempt write() failed! errno:%d [%s] \n", errno, strerror(errno));
+                retVal = false;
+            } else if (0 == n) {
+                printf("reattempt write() of %d bytes returned 0, errno:%d [%s]\n",
+                    nmea.length(), errno, strerror(errno));
+            }
+        }
+    } else {
+        printf("Failed to write Len: %d %s \n", nmea.length(), nmea.c_str());
+    }
+    return true;
+}
 
 // debug utility
 static uint64_t getTimestampMs() {
@@ -376,6 +430,9 @@ static void onGnssNmeaCb(uint64_t timestamp, const std::string& nmea) {
     }
     printf("<<< onGnssNmeaCb cnt=%u time=%" PRIu64" nmea=%s",
             numGnssNmeaCb, timestamp, nmea.c_str());
+    if (routeToNMEAPort && openPort()) {
+                sendNMEAToTty(nmea);
+    }
 }
 
 static void onGnssDataCb(const location_client::GnssData& gnssData) {
@@ -455,6 +512,10 @@ static void onGetXtraStatusCb(XtraStatusUpdateTrigger updateTrigger, const XtraS
            xtraStatus.xtraValidForHours);
 }
 
+static void onGnssSignalTypesCb(GnssSignalTypeMask signalType) {
+    printf("<<< onGnssSignalTypesCb, supported signalType mask %x \n", signalType);
+}
+
 static void printHelp() {
     printf("\n************* options *************\n");
     printf("e reprottype tbf: Concurrent engine report session with 100 ms interval\n");
@@ -500,6 +561,7 @@ static void printHelp() {
     printf("%s: get xtra status \n", GET_XTRA_STATUS);
     printf("%s: register xtra status update \n", REGISTER_XTRA_STATUS_UPDATE);
     printf("%s: enable xtra on demand download \n", ENABLE_XTRA_ON_DEMAND_DOWNLOAD);
+    printf("%s: register GNSS signal types update \n", REGISTER_SIGNAL_TYPES_UPDATE);
 }
 
 void setRequiredPermToRunAsLocClient() {
@@ -1059,7 +1121,7 @@ static bool checkForAutoStart(int argc, char *argv[]) {
 
     int long_index =0;
     int opt = -1;
-    while ((opt = getopt_long(argc, argv, "aVNDd:s:e:i:t:l:r:",
+    while ((opt = getopt_long(argc, argv, "aVNDd:s:e:i:t:l:r:U:z",
                    long_options, &long_index)) != -1) {
         switch (opt) {
              case 'a' :
@@ -1112,6 +1174,10 @@ static bool checkForAutoStart(int argc, char *argv[]) {
                  printf("report type: %s\n", optarg);
                  reportType = atoi(optarg);
                  break;
+             case 'U' :
+                 printf("route to NMEA port: %s\n", optarg);
+                 routeToNMEAPort = atoi(optarg);
+                 break;
              default:
                  printf("unsupported args provided\n");
                  break;
@@ -1119,9 +1185,9 @@ static bool checkForAutoStart(int argc, char *argv[]) {
     }
 
     printf("auto run %d, deleteAll %d, delete mask 0x%x, session type %d,"
-           "outputEnabled %d, detailedOutputEnabled %d",
+           "outputEnabled %d, detailedOutputEnabled %d routeToNMEAPort %d",
            autoRun, deleteAll, aidingDataMask, trackingType,
-           outputEnabled, detailedOutputEnabled);
+           outputEnabled, detailedOutputEnabled, routeToNMEAPort);
 
     // check for auto-start option
     if (autoRun) {
@@ -1233,6 +1299,7 @@ int main(int argc, char *argv[]) {
     intCbs.getConstellationSecondaryBandConfigCb =
             LocConfigGetConstellationSecondaryBandConfigCb(onGetSecondaryBandConfigCb);
     intCbs.getXtraStatusCb = LocConfigGetXtraStatusCb(onGetXtraStatusCb);
+    intCbs.gnssSignalTypesCb = LocConfigGnssSignalTypesCb(onGnssSignalTypesCb);
 
     LocConfigPriorityMap priorityMap;
     pIntClient = new LocationIntegrationApi(priorityMap, intCbs);
@@ -1567,6 +1634,18 @@ int main(int argc, char *argv[]) {
             }
             printf("register update %d\n", registerUpdate);
             pIntClient->registerXtraStatusUpdate(registerUpdate);
+
+        } else if (strncmp(buf, REGISTER_SIGNAL_TYPES_UPDATE,
+                           strlen(REGISTER_SIGNAL_TYPES_UPDATE)) == 0) {
+            bool registerUpdate = false;;
+            static char *save = nullptr;
+            char* token = strtok_r(buf, " ", &save);
+            token = strtok_r(NULL, " ", &save);
+            if (token != NULL) {
+                registerUpdate = (atoi(token) != 0);
+            }
+            printf("register GNSS signal types update %d\n", registerUpdate);
+            pIntClient->registerGnssSignalTypesUpdate(registerUpdate);
         } else {
             int command = buf[0];
             switch(command) {

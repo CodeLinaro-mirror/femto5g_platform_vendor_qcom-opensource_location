@@ -28,7 +28,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -96,17 +96,6 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 using Resender = std::function<void()>;
 using namespace loc_core;
-
-typedef struct
-{
-    uint32_t counter;
-    qmiLocSvSystemEnumT_v02 system;
-    qmiLocGnssSignalTypeMaskT_v02 gnssSignalType;
-    uint16_t gnssSvId;
-    qmiLocMeasFieldsValidMaskT_v02 validMask;
-    uint8_t cycleSlipCount;
-    uint8_t nHzMeasurement;
-} adrData;
 
 typedef uint64_t GpsSvMeasHeaderFlags;
 #define BIAS_GPSL1_VALID                0x00000001
@@ -185,6 +174,32 @@ typedef struct {
     GnssMeasurementsCodeType codeType;
 } referenceSignalTypeForIsb;
 
+typedef struct {
+    /* bitwise OR of GnssMeasurementsClockFlagsBits */
+    GnssMeasurementsClockFlagsMask flags;
+    int64_t timeNs;
+    int64_t fullBiasNs;
+} GnssBasicClockInfo;
+
+typedef struct {
+    int16_t svId;
+    GnssSignalTypeMask gnssSignalType;
+} GnssBasicMeasurementsData;
+
+typedef struct {
+    /* clock info */
+    GnssBasicClockInfo clock;
+    std::vector<GnssBasicMeasurementsData> measurements;
+} GnssBasicMeasurementsInfo;
+
+struct MeasCacheInfo {
+    uint8_t  cycleSlipCount;
+    uint32_t refFCount;
+};
+
+typedef std::unordered_map<std::string, MeasCacheInfo> CycleSlipCountMap;
+typedef CycleSlipCountMap::iterator CycleSlipCountMapItr;
+
 /* This class derives from the LocApiBase class.
    The members of this class are responsible for converting
    the Loc API V02 data structures into Loc Adapter data structures.
@@ -205,9 +220,13 @@ private:
   bool mMasterRegisterNotSupported;
   uint32_t mCounter;
   uint32_t mMinInterval;
-  std::vector<adrData>  mADRdata;
+
+  CycleSlipCountMap mPrev1HzSlipCountMap;
+  CycleSlipCountMap mPrevNhzSlipCountMap;
+  CycleSlipCountMap mCurrentCycleSlipCountMap1Hz;
+  CycleSlipCountMap mCurrentCycleSlipCountMapNHz;
+
   GnssMeasurements*  mGnssMeasurements;
-  bool mPreferredSignalTypeReceived;
   int  mMsInWeek;
   bool mAgcIsPresent;
   timeBiases mTimeBiases;
@@ -222,14 +241,15 @@ private:
   uint64_t mHlosQtimer1, mHlosQtimer2;
   uint32_t mRefFCount;
   std::string mPackageName[eQMI_LOC_R3_V02+1];
+  GnssSvType mPreferredSvSystemType;
   bool mIsFullTracking;
 
   qmiLocGnssSignalTypeMaskT_v02 mPreferredSignalType;
-  referenceSignalTypeForIsb mReferenceSignalTypeForIsb;
 
   // Below two member variables are for elapsedRealTime calculation
   ElapsedRealtimeEstimator mMeasElapsedRealTimeCal;
   GnssMeasurementsNotification m1HzMeasurementsNotify;
+  GnssBasicMeasurementsInfo m1HzMeasurementsInfo;
 
   /* Convert event mask from loc eng to loc_api_v02 format */
   static locClientEventMaskType convertLocClientEventMask(LOC_API_ADAPTER_EVENT_MASK_T mask);
@@ -363,20 +383,20 @@ private:
   void reportSvMeasurementInternal();
 
   inline void resetSvMeasurementReport(){
-      memset(mGnssMeasurements, 0, sizeof(GnssMeasurements));
-      mGnssMeasurements->size = sizeof(GnssMeasurements);
-      mGnssMeasurements->gnssSvMeasurementSet.size = sizeof(GnssSvMeasurementSet);
-      mGnssMeasurements->gnssSvMeasurementSet.isNhz = false;
-      mGnssMeasurements->gnssSvMeasurementSet.svMeasSetHeader.size =
-          sizeof(GnssSvMeasurementHeader);
+      if (mGnssMeasurements) {
+          memset(mGnssMeasurements, 0, sizeof(GnssMeasurements));
+          mGnssMeasurements->size = sizeof(GnssMeasurements);
+          mGnssMeasurements->gnssSvMeasurementSet.size = sizeof(GnssSvMeasurementSet);
+          mGnssMeasurements->gnssSvMeasurementSet.isNhz = false;
+          mGnssMeasurements->gnssSvMeasurementSet.svMeasSetHeader.size =
+              sizeof(GnssSvMeasurementHeader);
+      }
       memset(&mTimeBiases, 0, sizeof(mTimeBiases));
-      mPreferredSignalTypeReceived = false;
       mMsInWeek = -1;
       mAgcIsPresent = false;
   }
 
   void setGnssBiasesForL1CA();
-  void setGnssBiasesForB1I();
 
   /* convert and report ODCPI request */
   void requestOdcpi(
@@ -429,12 +449,13 @@ private:
                                  GnssSignalTypeMask gnssSignalTypeMask);
 
   bool isTOAValid(const qmiLocEventPositionReportIndMsgT_v02 *location_report_ptr,
-          const GnssMeasurementsNotification *pOneHzMeasurements);
+          const GnssBasicMeasurementsInfo *pOneHzMeasurements);
 
   void processGnssBandsSupportedInd(
             const qmiLocGnssBandsSupportedIndMsgT_v02* pGnssBandsSupportedIndMsg);
 
   GnssMeasurementsCodeType getCodeType(qmiLocGnssSignalTypeMaskT_v02 gnssSignalType);
+  GnssSvType getSvTypeFromSignalType(qmiLocGnssSignalTypeMaskT_v02 gnssSignalType);
   void updateGnssCapabNotification(GnssCapabNotification& gnssCapabNotification,
                                    qmiLocGnssSignalTypeMaskT_v02 gnssSignalType);
 

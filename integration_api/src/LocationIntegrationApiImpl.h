@@ -197,9 +197,9 @@ public:
     uint32_t configXtraParams(bool enable, const ::XtraConfigParams& configParams);
     uint32_t getXtraStatus();
     uint32_t registerXtraStatusUpdate(bool registerUpdate);
-
     uint32_t registerLocationInjector(
             LocRequestLocationInjectionCb requestLocationInjectionCb);
+    uint32_t registerGnssSignalTypesUpdate(bool registerUpdate);
 
 private:
     ~LocationIntegrationApiImpl();
@@ -221,6 +221,8 @@ private:
             const LocConfigGetConstellationSecondaryBandConfigRespMsg* pRespMsg);
     void processGetXtraStatusRespCb(
             const LocConfigGetXtraStatusRespMsg* pRespMsg);
+    void processRegisterGnssSignalTypesRespCb(
+            const LocConfigRegisterGnssSignalTypesUpdateRespMsg* msg);
 
     // protobuf conversion util class
     LocationApiPbMsgConv mPbufMsgConv;
