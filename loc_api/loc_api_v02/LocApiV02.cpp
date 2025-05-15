@@ -5440,9 +5440,13 @@ void LocApiV02 :: reportNiRequest(
         (qmiLocEventNiNotifyVerifyReqIndMsgT_v02 *)malloc(sizeof(*ni_req_copy_ptr));
 
     LocInEmergency emergencyState = LOC_IN_EMERGENCY_UNKNOWN;
-    if ((ni_req_ptr->isInEmergencySession_valid && ni_req_ptr->isInEmergencySession) ||
-        ni_req_ptr->suplEmergencyNotification_valid) {
-        emergencyState = LOC_IN_EMERGENCY_SET;
+
+    if (ni_req_ptr->isInEmergencySession_valid) {
+        emergencyState =
+            ni_req_ptr->isInEmergencySession ? LOC_IN_EMERGENCY_SET : LOC_IN_EMERGENCY_NOT_SET;
+    } else {
+        emergencyState = ni_req_ptr->suplEmergencyNotification_valid ?
+                LOC_IN_EMERGENCY_SET : LOC_IN_EMERGENCY_UNKNOWN;
     }
 
     if (NULL != ni_req_copy_ptr) {
