@@ -27,7 +27,7 @@
  */
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
-Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -568,6 +568,12 @@ typedef std::function<void(
 typedef std::function<void(
    uint8_t minSvElevation
 )> LocConfigGetMinSvElevationCb;
+
+/** @brief Callback to confirm the the LocationIntegrationApi
+           instance is destroyed.<br/>
+*/
+typedef std::function<void(
+)> LocIntegrationDestroyCb;
 
 /** @brief
     LocConfigGetConstellationSecondaryBandConfigCb is for
@@ -2060,6 +2066,15 @@ public:
                 <br/>
     */
     bool setUserConsentForXtra(bool userConsent);
+
+    /** @brief
+       Destroy/cleans up the instance of LocationIntegrationApi object,
+       which should be called when LocationIntegrationApi object is
+       no longer needed.
+       The caller shall not destruct LocationIntegrationApi object before
+       destroyCompleteCb is invoked
+    */
+    void destroy(LocIntegrationDestroyCb destroyCompleteCb);
 
     /** @example example1:testGetConfigApi
     * <pre>
