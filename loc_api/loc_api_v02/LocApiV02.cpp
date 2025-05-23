@@ -5101,9 +5101,13 @@ void LocApiV02 :: reportNiRequest(
         (qmiLocEventNiNotifyVerifyReqIndMsgT_v02 *)malloc(sizeof(*ni_req_copy_ptr));
 
     LocInEmergency emergencyState = LOC_IN_EMERGENCY_UNKNOWN;
-    if ((ni_req_ptr->isInEmergencySession_valid && ni_req_ptr->isInEmergencySession) ||
-        ni_req_ptr->suplEmergencyNotification_valid) {
-        emergencyState = LOC_IN_EMERGENCY_SET;
+
+    if (ni_req_ptr->isInEmergencySession_valid) {
+        emergencyState =
+            ni_req_ptr->isInEmergencySession ? LOC_IN_EMERGENCY_SET : LOC_IN_EMERGENCY_NOT_SET;
+    } else {
+        emergencyState = ni_req_ptr->suplEmergencyNotification_valid ?
+                LOC_IN_EMERGENCY_SET : LOC_IN_EMERGENCY_UNKNOWN;
     }
 
     if (NULL != ni_req_copy_ptr) {
@@ -8279,12 +8283,6 @@ void LocApiV02::configRobustLocation
     req.enable = enable;
     req.enableForE911_valid = enableForE911Valid;
     req.enableForE911 = enableForE911;
-    if (enable == false && enableForE911 == true) {
-        LOC_LOGI("configRobustLocation: enableForE911 is not allowed when "
-                 "enable is set to false");
-        // change enableForE911 to false to simplify processing
-        req.enableForE911 = false;
-    }
 
     req_union.pSetRobustLocationReq = &req;
     status = locSyncSendReq(QMI_LOC_SET_ROBUST_LOCATION_CONFIG_REQ_V02,
