@@ -28,7 +28,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -364,10 +364,20 @@ LocationClientApi::LocationClientApi(CapabilitiesCb capaCb) {
 }
 
 LocationClientApi::~LocationClientApi() {
+}
+
+void LocationClientApi::destroy(LocClientDestroyCb destroyCompleteCb) {
+    locationApiDestroyCompleteCallback destroyCb = nullptr;
+    if (destroyCompleteCb) {
+        destroyCb = [destroyCompleteCb] () {
+            LOC_LOGw("call destroyCompleteCb");
+            destroyCompleteCb();
+        };
+    }
+
     if (mApiImpl) {
         // two steps processes due to asynchronous message processing
-        mApiImpl->destroy();
-        // deletion of mApiImpl will be done after messages in the queue are processed
+        mApiImpl->destroy(destroyCb);
     }
 }
 
