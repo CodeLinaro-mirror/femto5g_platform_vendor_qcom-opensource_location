@@ -9860,6 +9860,12 @@ LocApiV02::setBlacklistSvSync(const GnssSvIdConfig& config)
        setBlacklistSvMsg.gps_persist_blacklist_sv = config.gpsBlacklistSvMask,
        setBlacklistSvMsg.gps_clear_persist_blacklist_sv_valid = true;
        setBlacklistSvMsg.gps_clear_persist_blacklist_sv = ~config.gpsBlacklistSvMask;
+    } else {
+        if (config.gpsBlacklistSvMask) {
+            LOC_LOGd("Preferred System %d, SV Blacklisting NOT SUPPORTED !!",
+                    mPreferredSvSystemType);
+            return LOCATION_ERROR_NOT_SUPPORTED;
+        }
     }
 
     if (mPreferredSvSystemType != GNSS_SV_TYPE_GLONASS) {
@@ -9874,6 +9880,12 @@ LocApiV02::setBlacklistSvSync(const GnssSvIdConfig& config)
        setBlacklistSvMsg.bds_persist_blacklist_sv = config.bdsBlacklistSvMask;
        setBlacklistSvMsg.bds_clear_persist_blacklist_sv_valid = true;
        setBlacklistSvMsg.bds_clear_persist_blacklist_sv = ~config.bdsBlacklistSvMask;
+    } else {
+        if (config.bdsBlacklistSvMask) {
+            LOC_LOGd("Preferred System %d, SV Blacklisting NOT SUPPORTED !!",
+                    mPreferredSvSystemType);
+            return LOCATION_ERROR_NOT_SUPPORTED;
+        }
     }
 
     if (mPreferredSvSystemType != GNSS_SV_TYPE_QZSS) {
