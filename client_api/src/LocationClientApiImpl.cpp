@@ -108,7 +108,7 @@ Utilities
 GnssMeasurementsDataFlagsMask LocationClientApiImpl::parseMeasurementsDataMask(
         ::GnssMeasurementsDataFlagsMask in) {
     uint32_t out = 0;
-    LOC_LOGd("Hal GnssMeasurementsDataFlagsMask =0x%x ", in);
+    LOC_LOGa("Hal GnssMeasurementsDataFlagsMask =0x%x ", in);
 
     if (::GNSS_MEASUREMENTS_DATA_SV_ID_BIT & in) {
         out |= GNSS_MEASUREMENTS_DATA_SV_ID_BIT;
@@ -185,7 +185,7 @@ GnssMeasurementsDataFlagsMask LocationClientApiImpl::parseMeasurementsDataMask(
     if (::GNSS_MEASUREMENTS_DATA_OTHER_MEAS_CODE_TYPE_BIT & in) {
         out |= GNSS_MEASUREMENTS_DATA_OTHER_MEAS_CODE_TYPE_BIT;
     }
-    LOC_LOGd("LCA GnssMeasurementsDataFlagsMask =0x%x ", out);
+    LOC_LOGa("LCA GnssMeasurementsDataFlagsMask =0x%x ", out);
     return static_cast<GnssMeasurementsDataFlagsMask>(out);
 }
 
@@ -1102,9 +1102,9 @@ GnssData LocationClientApiImpl::parseGnssData(const ::GnssDataNotification &halG
         gnssData.jammerInd[sig] = halGnssData.jammerInd[sig];
         gnssData.agc[sig] = halGnssData.agc[sig];
         if (0 != gnssData.gnssDataMask[sig]) {
-            LOC_LOGv("gnssDataMask[%d]=0x%X", sig, gnssData.gnssDataMask[sig]);
-            LOC_LOGv("jammerInd[%d]=%f", sig, gnssData.jammerInd[sig]);
-            LOC_LOGv("agc[%d]=%f", sig, gnssData.agc[sig]);
+            LOC_LOGa("gnssDataMask[%d]=0x%X", sig, gnssData.gnssDataMask[sig]);
+            LOC_LOGa("jammerInd[%d]=%f", sig, gnssData.jammerInd[sig]);
+            LOC_LOGa("agc[%d]=%f", sig, gnssData.agc[sig]);
         }
     }
     gnssData.agcStatusL1 = parseAgcStatus(halGnssData.agcStatusL1);
@@ -1485,7 +1485,7 @@ void LocationClientApiImpl::parseEphSrcAndAction(const ::GnssEphAction& halEphAc
             break;
 
         default:
-            LOC_LOGe(" Source and Action on Ephemeris cannot be identified ");
+            LOC_LOGa(" Source and Action on Ephemeris cannot be identified ");
             break;
     }
 }
@@ -1784,7 +1784,7 @@ GnssEphemeris LocationClientApiImpl::parseGnssEphemerisInfo(
                     gnssEphInfo.navicEphemerisData);
             break;
         default:
-            LOC_LOGe("Unknown System Type for Ephemeris ");
+            LOC_LOGa("Unknown System Type for Ephemeris ");
             break;
    }
    if (halGnssEphemeris.isSystemTimeValid) {

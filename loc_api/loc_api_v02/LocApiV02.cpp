@@ -4471,7 +4471,7 @@ void LocApiV02::populateGpsTimeOfReport(const qmiLocGnssTimeStructT_v02 &inGpsSy
 void LocApiV02::populateCommonEphemeris(const qmiLocEphGnssDataStructT_v02 &receivedEph,
         GnssEphCommon &ephToFill)
 {
-    LOC_LOGv("Eph received for sv-id: %d action:%d", receivedEph.gnssSvId,
+    LOC_LOGa("Eph received for sv-id: %d action:%d", receivedEph.gnssSvId,
             receivedEph.updateAction);
 
     ephToFill.gnssSvId = receivedEph.gnssSvId;
@@ -4525,7 +4525,7 @@ void LocApiV02::populateGpsEphemeris(
         const qmiLocGpsEphemerisReportIndMsgT_v02 *gpsEphemeris,
         GnssSvEphemerisReport &svEphemeris)
 {
-    LOC_LOGv("GPS Ephemeris Received: Len= %d: systemTime_valid%d Ext eph Len %d",
+    LOC_LOGa("GPS Ephemeris Received: Len= %d: systemTime_valid%d Ext eph Len %d",
             gpsEphemeris->gpsEphemerisList_len, gpsEphemeris->gpsSystemTime_valid,
             gpsEphemeris->gpsEphemerisListExt_len);
     svEphemeris.ephInfo.gpsEphemeris.numOfEphemeris = gpsEphemeris->gpsEphemerisList_len;
@@ -4630,7 +4630,7 @@ void LocApiV02::populateGpsEphemeris(
 void LocApiV02::populateGlonassEphemeris(const qmiLocGloEphemerisReportIndMsgT_v02 *gloEphemeris,
         GnssSvEphemerisReport &svEphemeris)
 {
-    LOC_LOGv("GLO Ephemeris Received: Len= %d: systemTime_valid%d",
+    LOC_LOGa("GLO Ephemeris Received: Len= %d: systemTime_valid%d",
              gloEphemeris->gloEphemerisList_len, gloEphemeris->gpsSystemTime_valid);
     svEphemeris.ephInfo.glonassEphemeris.numOfEphemeris = gloEphemeris->gloEphemerisList_len;
 
@@ -4644,7 +4644,7 @@ void LocApiV02::populateGlonassEphemeris(const qmiLocGloEphemerisReportIndMsgT_v
         GlonassEphemeris &gloEphemerisToFill =
                  svEphemeris.ephInfo.glonassEphemeris.gloEphemerisData[i];
 
-        LOC_LOGv("Eph received for sv-id: %d action:%d", receivedGloEphemeris.gnssSvId,
+        LOC_LOGa("Eph received for sv-id: %d action:%d", receivedGloEphemeris.gnssSvId,
                  receivedGloEphemeris.updateAction);
 
         gloEphemerisToFill.gnssSvId = receivedGloEphemeris.gnssSvId;
@@ -4697,7 +4697,7 @@ void LocApiV02::populateGlonassEphemeris(const qmiLocGloEphemerisReportIndMsgT_v
 void LocApiV02::populateBdsEphemeris(const qmiLocBdsEphemerisReportIndMsgT_v02 *bdsEphemeris,
         GnssSvEphemerisReport &svEphemeris)
 {
-    LOC_LOGv("BDS Ephemeris Received: Len= %d: systemTime_valid%d",
+    LOC_LOGa("BDS Ephemeris Received: Len= %d: systemTime_valid%d",
             bdsEphemeris->bdsEphemerisList_len, bdsEphemeris->gpsSystemTime_valid);
     svEphemeris.ephInfo.bdsEphemeris.numOfEphemeris = bdsEphemeris->bdsEphemerisList_len;
     svEphemeris.ephInfo.bdsEphemeris.numOfExtendedEphemeris =
@@ -4786,7 +4786,7 @@ void LocApiV02::populateBdsEphemeris(const qmiLocBdsEphemerisReportIndMsgT_v02 *
 void LocApiV02::populateGalEphemeris(const qmiLocGalEphemerisReportIndMsgT_v02 *galEphemeris,
         GnssSvEphemerisReport &svEphemeris)
 {
-    LOC_LOGv("GAL Ephemeris Received: Len= %d: systemTime_valid%d",
+    LOC_LOGa("GAL Ephemeris Received: Len= %d: systemTime_valid%d",
             galEphemeris->galEphemerisList_len, galEphemeris->gpsSystemTime_valid);
     svEphemeris.ephInfo.galileoEphemeris.numOfEphemeris = galEphemeris->galEphemerisList_len;
 
@@ -4831,7 +4831,7 @@ void LocApiV02::populateGalEphemeris(const qmiLocGalEphemerisReportIndMsgT_v02 *
 void LocApiV02::populateQzssEphemeris(const qmiLocQzssEphemerisReportIndMsgT_v02 *qzssEphemeris,
         GnssSvEphemerisReport &svEphemeris)
 {
-    LOC_LOGv("QZSS Ephemeris Received: Len= %d: systemTime_valid%d",
+    LOC_LOGa("QZSS Ephemeris Received: Len= %d: systemTime_valid%d",
             qzssEphemeris->qzssEphemerisList_len, qzssEphemeris->gpsSystemTime_valid);
     svEphemeris.ephInfo.qzssEphemeris.numOfEphemeris = qzssEphemeris->qzssEphemerisList_len;
     svEphemeris.ephInfo.qzssEphemeris.numOfExtendedEphemeris =
@@ -5922,7 +5922,7 @@ void LocApiV02::reportGnssMeasurementData(
                     break;
             }
         }
-        LOC_LOGv("agcStatusL1: %d, agcStatusL2: %d, agcStatusL5: %d",
+        LOC_LOGa("agcStatusL1: %d, agcStatusL2: %d, agcStatusL5: %d",
                 measurementsNotify.agcStatusL1, measurementsNotify.agcStatusL2,
                 measurementsNotify.agcStatusL5);
 
@@ -6809,7 +6809,7 @@ void LocApiV02 :: reportDcMessage(const qmiLocEventDcReportIndMsgT_v02* pDcRepor
             pDcReportIndMsg->numValidBits_valid && (pDcReportIndMsg->numValidBits > 0) &&
             pDcReportIndMsg->dcReportData_valid && (pDcReportIndMsg->dcReportData_len > 0)) {
         GnssDcReportInfo dcReportInfo = {};
-        LOC_LOGi("dc report type %d, num bits %d, num bytes %d",
+        LOC_LOGa("dc report type %d, num bits %d, num bytes %d",
                  pDcReportIndMsg->msgType, (uint32_t)pDcReportIndMsg->numValidBits,
                  pDcReportIndMsg->dcReportData_len);
 
@@ -9688,7 +9688,7 @@ LocApiV02::setMeasurementCorrections(const GnssMeasurementCorrections& gnssMeasu
              gnssMeasurementCorrections.toaGpsNanosecondsOfWeek);
 
     for (int i = 0; i < gnssMeasurementCorrections.satCorrections.size(); i++) {
-        LOC_LOGV("gnssMeasurementCorrections.satCorrections:\n"
+        LOC_LOGa("gnssMeasurementCorrections.satCorrections:\n"
             "satCorrections[%d].svType = %d "
             "satCorrections[%d].svId = %d "
             "satCorrections[%d].carrierFrequencyHz = %.2f "

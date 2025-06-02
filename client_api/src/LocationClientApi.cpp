@@ -119,7 +119,7 @@ class TrackingSessCbHandler {
                     uint64_t timestamp = n.timestamp;
                     LocOutputEngineType locOutputEngType = (LocOutputEngineType)n.locOutputEngType;
                     std::string nmea(n.nmea);
-                    LOC_LOGv("<<< message = nmea[%s]", nmea.c_str());
+                    LOC_LOGa("<<< message = nmea[%s]", nmea.c_str());
                     nmeaSentencesCallback(locOutputEngType, timestamp, nmea);
                     pClientApiImpl->getLogger().log(
                             timestamp, nmea.size(), nmea.c_str(), locOutputEngType);
@@ -204,7 +204,7 @@ class TrackingSessCbHandler {
                     uint64_t timestamp = n.timestamp;
                     LocOutputEngineType locOutputEngType = (LocOutputEngineType)n.locOutputEngType;
                     std::string nmea(n.nmea);
-                    LOC_LOGv("<<< message = nmea[%s] locOutputEngType = %d", nmea.c_str(),
+                    LOC_LOGa("<<< message = nmea[%s] locOutputEngType = %d", nmea.c_str(),
                         locOutputEngType);
                     std::stringstream ss(nmea);
                     std::string each;
@@ -223,7 +223,7 @@ class TrackingSessCbHandler {
                     uint64_t timestamp = n.timestamp;
                     LocOutputEngineType locOutputEngType = (LocOutputEngineType)n.locOutputEngType;
                     std::string nmea(n.nmea);
-                    LOC_LOGv("<<< message = nmea[%s] locOutputEngType = %d", nmea.c_str(),
+                    LOC_LOGa("<<< message = nmea[%s] locOutputEngType = %d", nmea.c_str(),
                         locOutputEngType);
                     nmeaSentencesCallback(locOutputEngType, timestamp, nmea);
                     pClientApiImpl->getLogger().log(timestamp, nmea.size(), nmea.c_str(),
@@ -281,7 +281,7 @@ void TrackingSessCbHandler::initializeCommonCbs(LocationClientApiImpl *pClientAp
             uint64_t timestamp = n.timestamp;
             LocOutputEngineType locOutputEngType = (LocOutputEngineType)n.locOutputEngType;
             std::string nmea(n.nmea);
-            LOC_LOGv("<<< message = nmea[%s]", nmea.c_str());
+            LOC_LOGa("<<< message = nmea[%s]", nmea.c_str());
             std::stringstream ss(nmea);
             std::string each;
             while (std::getline(ss, each, '\n')) {
