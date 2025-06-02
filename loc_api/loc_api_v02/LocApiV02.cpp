@@ -311,7 +311,7 @@ static void getInterSystemTimeBias(const char* interSystem,
 LocApiV02 :: LocApiV02(LOC_API_ADAPTER_EVENT_MASK_T exMask,
                        ContextBase* context):
     LocApiBase(exMask, context),
-    clientHandle(LOC_CLIENT_INVALID_HANDLE_VALUE),
+    mClientHandle(LOC_CLIENT_INVALID_HANDLE_VALUE),
     mQmiMask(0), mInSession(false), mPowerMode(GNSS_POWER_MODE_DEFAULT),
     mEngineOn(false), mFirstMeasurementOfSessionReceived(false),
     mMasterRegisterNotSupported(false),
@@ -384,13 +384,13 @@ LocApiV02 :: open(LOC_API_ADAPTER_EVENT_MASK_T mask)
   syslog(LOG_INFO, "%p loc_open: pid %d, enter mask 0x%" PRIx64 ", "
          "mExcludedMask: 0x%" PRIx64", current mMask: 0x%" PRIx64 ", "
          "newMask: 0x%" PRIx64 ",  mQmiMask: 0x%" PRIx64"",
-         clientHandle, (uint32_t)getpid(), mask, mExcludedMask, mMask, newMask, mQmiMask);
+         mClientHandle, (uint32_t)getpid(), mask, mExcludedMask, mMask, newMask, mQmiMask);
   LOC_LOGi("%p Enter mask 0x%" PRIx64 ", mExcludedMask: 0x%" PRIx64","
            "mMask: 0x%" PRIx64 ", newMask: 0x%" PRIx64 ",  mQmiMask: 0x%" PRIx64"",
-           clientHandle, mask, mExcludedMask, mMask, newMask, mQmiMask);
+           mClientHandle, mask, mExcludedMask, mMask, newMask, mQmiMask);
 
   /* If the client is not already open, create one */
-  if(LOC_CLIENT_INVALID_HANDLE_VALUE == clientHandle)
+  if(LOC_CLIENT_INVALID_HANDLE_VALUE == mClientHandle)
   {
     /* initialize the loc api v02 interface, note that
        the locClientOpen() function will block if the
@@ -398,9 +398,9 @@ LocApiV02 :: open(LOC_API_ADAPTER_EVENT_MASK_T mask)
 
     // it is important to cap the mask here, because not all LocApi's
     // can enable the same bits, e.g. foreground and bckground.
-    status = locClientOpen(0, &globalCallbacks, &clientHandle, (void *)this);
+    status = locClientOpen(0, &globalCallbacks, &mClientHandle, (void *)this);
     if (eLOC_CLIENT_SUCCESS != status ||
-        clientHandle == LOC_CLIENT_INVALID_HANDLE_VALUE )
+        mClientHandle == LOC_CLIENT_INVALID_HANDLE_VALUE )
     {
       mMask = 0;
       mQmiMask = 0;
@@ -416,8 +416,8 @@ LocApiV02 :: open(LOC_API_ADAPTER_EVENT_MASK_T mask)
         }
 
         // Query for supported feature list
+        LocationError err = LOCATION_ERROR_SUCCESS;
         locClientReqUnionType req_union;
-        locClientStatusEnumType status = eLOC_CLIENT_SUCCESS;
         qmiLocGetSupportedFeatureReqMsgT_v02 getSupportedFeatureList_req;
         qmiLocGetSupportedFeatureIndMsgT_v02 getSupportedFeatureList_ind;
 
@@ -425,20 +425,18 @@ LocApiV02 :: open(LOC_API_ADAPTER_EVENT_MASK_T mask)
         memset(&getSupportedFeatureList_ind, 0, sizeof(getSupportedFeatureList_ind));
 
         req_union.pGetSupportedFeatureReq = &getSupportedFeatureList_req;
-        status = locSyncSendReq(QMI_LOC_GET_SUPPORTED_FEATURE_REQ_V02,
-                                req_union,
-                                LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
-                                QMI_LOC_GET_SUPPORTED_FEATURE_IND_V02,
-                                &getSupportedFeatureList_ind);
-        IF_LOC_LOGD {
-            if (eLOC_CLIENT_SUCCESS == status) {
-                LOC_LOGd("Got list of features supported of length:%d ",
-                         getSupportedFeatureList_ind.feature_len);
-                for (uint32_t i = 0; i < getSupportedFeatureList_ind.feature_len; i++) {
-                    LOC_LOGd("Bit-mask of supported features at index:%d is %d", i,
-                             getSupportedFeatureList_ind.feature[i]);
-                }
-            }
+        err = locSyncSendReq(QMI_LOC_GET_SUPPORTED_FEATURE_REQ_V02,
+                             req_union,
+                             LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
+                             QMI_LOC_GET_SUPPORTED_FEATURE_IND_V02,
+                             &getSupportedFeatureList_ind);
+        if (LOCATION_ERROR_SUCCESS == err) {
+           LOC_LOGi("Got list of features supported of length:%d ",
+                     getSupportedFeatureList_ind.feature_len);
+           for (uint32_t i = 0; i < getSupportedFeatureList_ind.feature_len; i++) {
+              LOC_LOGi("Bit-mask of supported features at index:%d is %d", i,
+                       getSupportedFeatureList_ind.feature[i]);
+           }
         }
         // cache the mpss engine capabilities
         mContext->setEngineCapabilities(
@@ -458,12 +456,12 @@ LocApiV02 :: open(LOC_API_ADAPTER_EVENT_MASK_T mask)
     }
   }
 
-  if ((eLOC_CLIENT_SUCCESS == status) && (LOC_CLIENT_INVALID_HANDLE_VALUE != clientHandle)) {
+  if ((eLOC_CLIENT_SUCCESS == status) && (LOC_CLIENT_INVALID_HANDLE_VALUE != mClientHandle)) {
     mMask = newMask;
     registerEventMask();
   }
-  LOC_LOGd("clientHandle = %p Exit mMask: 0x%" PRIx64 " mQmiMask: 0x%" PRIx64 "",
-           clientHandle, mMask, mQmiMask);
+  LOC_LOGd("mClientHandle = %p Exit mMask: 0x%" PRIx64 " mQmiMask: 0x%" PRIx64 "",
+           mClientHandle, mMask, mQmiMask);
 
   return rtv;
 }
@@ -473,7 +471,7 @@ void LocApiV02 :: registerEventMask()
   locClientEventMaskType qmiMask = adjustLocClientEventMask(convertLocClientEventMask(mMask));
 
   if ((qmiMask != mQmiMask) &&
-      (locClientRegisterEventMask(clientHandle, qmiMask, isMaster()))) {
+      (locClientRegisterEventMask(mClientHandle, qmiMask, isMaster()))) {
     locClientEventMaskType maskDiff = qmiMask ^ mQmiMask;
     if (maskDiff & qmiMask & QMI_LOC_EVENT_MASK_WIFI_REQ_V02) {
       wifiStatusInformSync();
@@ -488,8 +486,8 @@ void LocApiV02 :: registerEventMask()
          enabled and those clients cannot set the SV Measurement Constellation since they are
          not master */
       locClientEventMaskType measOrSvPoly = QMI_LOC_EVENT_MASK_GNSS_SV_POLYNOMIAL_REPORT_V02;
-      LOC_LOGd("clientHandle: %p isMaster: %d measOrSvPoly: 0x%" PRIx64 " maskDiff: 0x%" PRIx64 "",
-               clientHandle, isMaster(), measOrSvPoly, maskDiff);
+      LOC_LOGd("mClientHandle: %p isMaster: %d measOrSvPoly: 0x%" PRIx64 " maskDiff: 0x%" PRIx64 "",
+               mClientHandle, isMaster(), measOrSvPoly, maskDiff);
       if (((maskDiff & measOrSvPoly) != 0)) {
         locClientEventMaskType measMask = QMI_LOC_EVENT_MASK_GNSS_MEASUREMENT_REPORT_V02 |
                                           QMI_LOC_EVENT_MASK_GNSS_NHZ_MEASUREMENT_REPORT_V02;
@@ -515,7 +513,7 @@ bool LocApiV02::sendRequestForAidingData(locClientEventMaskType qmiMask) {
 
     qmiLocSetGNSSConstRepConfigReqMsgT_v02 aidingDataReq;
     qmiLocSetGNSSConstRepConfigIndMsgT_v02 aidingDataReqInd;
-    locClientStatusEnumType status;
+    LocationError err = LOCATION_ERROR_SUCCESS;
     locClientReqUnionType req_union;
 
     LOC_LOGd("qmiMask = 0x%" PRIx64 "\n", qmiMask);
@@ -543,14 +541,13 @@ bool LocApiV02::sendRequestForAidingData(locClientEventMaskType qmiMask) {
     req_union.pSetGNSSConstRepConfigReq = &aidingDataReq;
     memset(&aidingDataReqInd, 0, sizeof(aidingDataReqInd));
 
-    status = locSyncSendReq(QMI_LOC_SET_GNSS_CONSTELL_REPORT_CONFIG_V02,
-        req_union,
-        LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
-        QMI_LOC_SET_GNSS_CONSTELL_REPORT_CONFIG_IND_V02,
-        &aidingDataReqInd);
+    err = locSyncSendReq(QMI_LOC_SET_GNSS_CONSTELL_REPORT_CONFIG_V02,
+                         req_union,
+                         LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
+                         QMI_LOC_SET_GNSS_CONSTELL_REPORT_CONFIG_IND_V02,
+                         &aidingDataReqInd);
 
-    return true;
-
+    return (err == LOCATION_ERROR_SUCCESS);
 }
 
 locClientEventMaskType LocApiV02 :: adjustLocClientEventMask(locClientEventMaskType qmiMask)
@@ -619,17 +616,18 @@ locClientEventMaskType LocApiV02 :: adjustLocClientEventMask(locClientEventMaskT
 
 enum loc_api_adapter_err LocApiV02 :: close()
 {
-  enum loc_api_adapter_err rtv =
-      // success if either client is already invalid, or
-      // we successfully close the handle
-      (LOC_CLIENT_INVALID_HANDLE_VALUE == clientHandle ||
-       eLOC_CLIENT_SUCCESS == locClientClose(&clientHandle)) ?
-      LOC_API_ADAPTER_ERR_SUCCESS : LOC_API_ADAPTER_ERR_FAILURE;
+  enum loc_api_adapter_err rtv = LOC_API_ADAPTER_ERR_SUCCESS;
+
+  if (LOC_CLIENT_INVALID_HANDLE_VALUE != mClientHandle) {
+     if (eLOC_CLIENT_SUCCESS != locClientClose(&mClientHandle)) {
+        rtv = LOC_API_ADAPTER_ERR_FAILURE;;
+     }
+  }
 
   mMask = 0;
   mQmiMask = 0;
   mInSession = false;
-  clientHandle = LOC_CLIENT_INVALID_HANDLE_VALUE;
+  mClientHandle = LOC_CLIENT_INVALID_HANDLE_VALUE;
 
   return rtv;
 }
@@ -641,7 +639,6 @@ void LocApiV02 ::
   sendMsg(new LocApiMsg([this, time, timeReference, uncertainty] () {
 
   locClientReqUnionType req_union;
-  locClientStatusEnumType status;
   qmiLocInjectUtcTimeReqMsgT_v02  inject_time_msg;
   qmiLocInjectUtcTimeIndMsgT_v02 inject_time_ind;
 
@@ -657,10 +654,10 @@ void LocApiV02 ::
 
   req_union.pInjectUtcTimeReq = &inject_time_msg;
 
-  status = locSyncSendReq(QMI_LOC_INJECT_UTC_TIME_REQ_V02,
-                          req_union, LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
-                          QMI_LOC_INJECT_UTC_TIME_IND_V02,
-                          &inject_time_ind);
+  locSyncSendReq(QMI_LOC_INJECT_UTC_TIME_REQ_V02,
+                 req_union, LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
+                 QMI_LOC_INJECT_UTC_TIME_IND_V02,
+                 &inject_time_ind);
   }));
 }
 
@@ -936,7 +933,6 @@ void LocApiV02::injectPosition(const GnssLocationInfoNotification &locationInfo,
 void LocApiV02::injectPositionAndCivicAddress(const Location& location,
           const GnssCivicAddress& addr) {
     sendMsg(new LocApiMsg([this, location, addr] () {
-    locClientStatusEnumType status = eLOC_CLIENT_FAILURE_GENERAL;
     locClientReqUnionType req_union = {};
 
     qmiLocInjectLocationCivicAddressReqMsgT_v02 injectPosAndAddrReq;
@@ -1050,19 +1046,11 @@ void LocApiV02::injectPositionAndCivicAddress(const Location& location,
 
     req_union.pInjectLocationCivicAddressReq = &injectPosAndAddrReq;
 
-    status = loc_sync_send_req(clientHandle,
-                               QMI_LOC_INJECT_LOCATION_CIVIC_ADDRESS_REQ_V02,
-                               req_union,
-                               LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
-                               QMI_LOC_INJECT_LOCATION_CIVIC_ADDRESS_IND_V02,
-                               &genReqStatusIndMsg);
-
-    if (status != eLOC_CLIENT_SUCCESS ||
-            genReqStatusIndMsg.status != eQMI_LOC_SUCCESS_V02) {
-        LOC_LOGe("Inject Civic address failed. status: %s ind status %s",
-                loc_get_v02_client_status_name(status),
-                loc_get_v02_qmi_status_name(genReqStatusIndMsg.status));
-    }
+    locSyncSendReq(QMI_LOC_INJECT_LOCATION_CIVIC_ADDRESS_REQ_V02,
+                   req_union,
+                   LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
+                   QMI_LOC_INJECT_LOCATION_CIVIC_ADDRESS_IND_V02,
+                   &genReqStatusIndMsg);
 
     }));
 
@@ -1075,7 +1063,6 @@ LocApiV02::deleteAidingData(const GnssAidingData& data, LocApiResponse *adapterR
   sendMsg(new LocApiMsg([this, data, adapterResponse] () {
 
   locClientReqUnionType req_union;
-  locClientStatusEnumType status = eLOC_CLIENT_FAILURE_UNSUPPORTED;
   LocationError err = LOCATION_ERROR_SUCCESS;
 
   // Use the new API first
@@ -1207,14 +1194,10 @@ LocApiV02::deleteAidingData(const GnssAidingData& data, LocApiResponse *adapterR
 
   req_union.pDeleteGNSSServiceDataReq = &delete_gnss_req;
 
-  status = locSyncSendReq(QMI_LOC_DELETE_GNSS_SERVICE_DATA_REQ_V02,
-          req_union, LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
-          QMI_LOC_DELETE_GNSS_SERVICE_DATA_IND_V02,
-          &delete_gnss_resp);
-  if (status != eLOC_CLIENT_SUCCESS || eQMI_LOC_SUCCESS_V02 != delete_gnss_resp.status) {
-      err = LOCATION_ERROR_GENERAL_FAILURE;
-  }
-
+  err = locSyncSendReq(QMI_LOC_DELETE_GNSS_SERVICE_DATA_REQ_V02,
+                       req_union, LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
+                       QMI_LOC_DELETE_GNSS_SERVICE_DATA_IND_V02,
+                       &delete_gnss_resp);
 
   if (adapterResponse != NULL) {
       adapterResponse->returnToSender(err);
@@ -1228,9 +1211,7 @@ LocApiV02::informNiResponse(GnssNiResponse userResponse, const void* passThrough
 {
     sendMsg(new LocApiMsg([this, userResponse, passThroughData] () {
 
-        LocationError err = LOCATION_ERROR_SUCCESS;
         locClientReqUnionType req_union;
-        locClientStatusEnumType status;
         qmiLocNiUserRespReqMsgT_v02 ni_resp;
         qmiLocNiUserRespIndMsgT_v02 ni_resp_ind;
 
@@ -1252,7 +1233,6 @@ LocApiV02::informNiResponse(GnssNiResponse userResponse, const void* passThrough
             ni_resp.userResp = eQMI_LOC_NI_LCS_NOTIFY_VERIFY_NORESP_V02;
             break;
         default:
-            err = LOCATION_ERROR_INVALID_PARAMETER;
             free((void *)passThroughData);
             return;
         }
@@ -1312,15 +1292,10 @@ LocApiV02::informNiResponse(GnssNiResponse userResponse, const void* passThrough
 
         req_union.pNiUserRespReq = &ni_resp;
 
-        status = locSyncSendReq(QMI_LOC_NI_USER_RESPONSE_REQ_V02,
-                                req_union, LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
-                                QMI_LOC_NI_USER_RESPONSE_IND_V02,
-                                &ni_resp_ind);
-
-        if (status != eLOC_CLIENT_SUCCESS ||
-                eQMI_LOC_SUCCESS_V02 != ni_resp_ind.status) {
-            err = LOCATION_ERROR_GENERAL_FAILURE;
-        }
+        locSyncSendReq(QMI_LOC_NI_USER_RESPONSE_REQ_V02,
+                       req_union, LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
+                       QMI_LOC_NI_USER_RESPONSE_IND_V02,
+                       &ni_resp_ind);
 
         free((void *)passThroughData);
     }));
@@ -1331,7 +1306,6 @@ LocApiV02::registerMasterClient()
 {
   LocationError err = LOCATION_ERROR_SUCCESS;
   locClientReqUnionType req_union;
-  locClientStatusEnumType status;
   qmiLocRegisterMasterClientReqMsgT_v02 reg_master_client_req;
   qmiLocRegisterMasterClientIndMsgT_v02 reg_master_client_ind;
 
@@ -1342,31 +1316,24 @@ LocApiV02::registerMasterClient()
 
   req_union.pRegisterMasterClientReq = &reg_master_client_req;
 
-  status = locSyncSendReq(QMI_LOC_REGISTER_MASTER_CLIENT_REQ_V02,
-                          req_union, LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
-                          QMI_LOC_REGISTER_MASTER_CLIENT_IND_V02,
-                          &reg_master_client_ind);
+  err = locSyncSendReq(QMI_LOC_REGISTER_MASTER_CLIENT_REQ_V02,
+                       req_union, LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
+                       QMI_LOC_REGISTER_MASTER_CLIENT_IND_V02,
+                       &reg_master_client_ind);
 
-  if (eLOC_CLIENT_SUCCESS != status ||
-        eQMI_LOC_REGISTER_MASTER_CLIENT_SUCCESS_V02 != reg_master_client_ind.status) {
-    if (eLOC_CLIENT_FAILURE_INVALID_MESSAGE_ID == status ||
-        eLOC_CLIENT_FAILURE_UNSUPPORTED == status) {
-      mMasterRegisterNotSupported = true;
-    } else {
-      mMasterRegisterNotSupported = false;
-    }
-    LOC_LOGv("mMasterRegisterNotSupported = %d", mMasterRegisterNotSupported);
-    err = LOCATION_ERROR_GENERAL_FAILURE;
+  mMasterRegisterNotSupported = false;
+  if (LOCATION_ERROR_SUCCESS != err) {
+    mMasterRegisterNotSupported = true;
   }
+
+  LOC_LOGv("mMasterRegisterNotSupported = %d", mMasterRegisterNotSupported);
 }
 
 /* Set UMTs SLP server URL */
 LocationError
 LocApiV02::setServerSync(const char* url, int len, LocServerType type)
 {
-  LocationError err = LOCATION_ERROR_SUCCESS;
   locClientReqUnionType req_union;
-  locClientStatusEnumType status;
   qmiLocSetServerReqMsgT_v02 set_server_req;
   qmiLocSetServerIndMsgT_v02 set_server_ind;
 
@@ -1394,26 +1361,16 @@ LocApiV02::setServerSync(const char* url, int len, LocServerType type)
 
   req_union.pSetServerReq = &set_server_req;
 
-  status = locSyncSendReq(QMI_LOC_SET_SERVER_REQ_V02,
-                          req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
-                          QMI_LOC_SET_SERVER_IND_V02,
-                          &set_server_ind);
-
-  if (status != eLOC_CLIENT_SUCCESS ||
-         eQMI_LOC_SUCCESS_V02 != set_server_ind.status)
-  {
-    err = LOCATION_ERROR_GENERAL_FAILURE;
-  }
-
-  return err;
+  return locSyncSendReq(QMI_LOC_SET_SERVER_REQ_V02,
+                       req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
+                       QMI_LOC_SET_SERVER_IND_V02,
+                       &set_server_ind);
 }
 
 LocationError
 LocApiV02::setServerSync(unsigned int ip, int port, LocServerType type)
 {
-  LocationError err = LOCATION_ERROR_SUCCESS;
   locClientReqUnionType req_union;
-  locClientStatusEnumType status;
   qmiLocSetServerReqMsgT_v02 set_server_req;
   qmiLocSetServerIndMsgT_v02 set_server_ind;
   qmiLocServerTypeEnumT_v02 set_server_cmd;
@@ -1442,18 +1399,10 @@ LocApiV02::setServerSync(unsigned int ip, int port, LocServerType type)
 
   req_union.pSetServerReq = &set_server_req;
 
-  status = locSyncSendReq(QMI_LOC_SET_SERVER_REQ_V02,
-                          req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
-                          QMI_LOC_SET_SERVER_IND_V02,
-                          &set_server_ind);
-
-  if (status != eLOC_CLIENT_SUCCESS ||
-      eQMI_LOC_SUCCESS_V02 != set_server_ind.status)
-  {
-    err = LOCATION_ERROR_GENERAL_FAILURE;
-  }
-
-  return err;
+  return locSyncSendReq(QMI_LOC_SET_SERVER_REQ_V02,
+                        req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
+                        QMI_LOC_SET_SERVER_IND_V02,
+                        &set_server_ind);
 }
 
 void LocApiV02 :: atlOpenStatus(
@@ -1464,7 +1413,6 @@ void LocApiV02 :: atlOpenStatus(
                         apnStr=std::string(apn, apnLen),
                         bear, apnTypeMask] () {
 
-  locClientStatusEnumType result = eLOC_CLIENT_SUCCESS;
   locClientReqUnionType req_union;
   qmiLocInformLocationServerConnStatusReqMsgT_v02 conn_status_req;
   qmiLocInformLocationServerConnStatusIndMsgT_v02 conn_status_ind;
@@ -1534,10 +1482,10 @@ void LocApiV02 :: atlOpenStatus(
 
   req_union.pInformLocationServerConnStatusReq = &conn_status_req;
 
-  result = locSyncSendReq(QMI_LOC_INFORM_LOCATION_SERVER_CONN_STATUS_REQ_V02,
-                          req_union, LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
-                          QMI_LOC_INFORM_LOCATION_SERVER_CONN_STATUS_IND_V02,
-                          &conn_status_ind);
+  locSyncSendReq(QMI_LOC_INFORM_LOCATION_SERVER_CONN_STATUS_REQ_V02,
+                 req_union, LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
+                 QMI_LOC_INFORM_LOCATION_SERVER_CONN_STATUS_IND_V02,
+                 &conn_status_ind);
   }));
 }
 
@@ -1547,7 +1495,6 @@ void LocApiV02 :: atlCloseStatus(int handle, int is_succ)
 {
   sendMsg(new LocApiMsg([this, handle, is_succ] () {
 
-  locClientStatusEnumType result = eLOC_CLIENT_SUCCESS;
   locClientReqUnionType req_union;
   qmiLocInformLocationServerConnStatusReqMsgT_v02 conn_status_req;
   qmiLocInformLocationServerConnStatusIndMsgT_v02 conn_status_ind;
@@ -1573,10 +1520,10 @@ void LocApiV02 :: atlCloseStatus(int handle, int is_succ)
 
   req_union.pInformLocationServerConnStatusReq = &conn_status_req;
 
-  result = locSyncSendReq(QMI_LOC_INFORM_LOCATION_SERVER_CONN_STATUS_REQ_V02,
-                          req_union, LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
-                          QMI_LOC_INFORM_LOCATION_SERVER_CONN_STATUS_IND_V02,
-                          &conn_status_ind);
+  locSyncSendReq(QMI_LOC_INFORM_LOCATION_SERVER_CONN_STATUS_REQ_V02,
+                 req_union, LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
+                 QMI_LOC_INFORM_LOCATION_SERVER_CONN_STATUS_IND_V02,
+                 &conn_status_ind);
   }));
 }
 
@@ -1584,10 +1531,7 @@ void LocApiV02 :: atlCloseStatus(int handle, int is_succ)
 LocationError
 LocApiV02::setSUPLVersionSync(GnssConfigSuplVersion version)
 {
-  LocationError err = LOCATION_ERROR_SUCCESS;
-  locClientStatusEnumType result = eLOC_CLIENT_SUCCESS;
   locClientReqUnionType req_union;
-
   qmiLocSetProtocolConfigParametersReqMsgT_v02 supl_config_req;
   qmiLocSetProtocolConfigParametersIndMsgT_v02 supl_config_ind;
 
@@ -1616,26 +1560,16 @@ LocApiV02::setSUPLVersionSync(GnssConfigSuplVersion version)
 
   req_union.pSetProtocolConfigParametersReq = &supl_config_req;
 
-  result = locSyncSendReq(QMI_LOC_SET_PROTOCOL_CONFIG_PARAMETERS_REQ_V02,
-                          req_union, LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
-                          QMI_LOC_SET_PROTOCOL_CONFIG_PARAMETERS_IND_V02,
-                          &supl_config_ind);
-
-  if(result != eLOC_CLIENT_SUCCESS ||
-     eQMI_LOC_SUCCESS_V02 != supl_config_ind.status)
-  {
-     err = LOCATION_ERROR_GENERAL_FAILURE;
-  }
-
-  return err;
+  return locSyncSendReq(QMI_LOC_SET_PROTOCOL_CONFIG_PARAMETERS_REQ_V02,
+                       req_union, LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
+                       QMI_LOC_SET_PROTOCOL_CONFIG_PARAMETERS_IND_V02,
+                       &supl_config_ind);
 }
 
 /* set the configuration for LTE positioning profile (LPP) */
 LocationError
 LocApiV02::setLPPConfigSync(GnssConfigLppProfileMask profileMask)
 {
-  LocationError err = LOCATION_ERROR_SUCCESS;
-  locClientStatusEnumType result = eLOC_CLIENT_SUCCESS;
   locClientReqUnionType req_union;
   qmiLocSetProtocolConfigParametersReqMsgT_v02 lpp_config_req;
   qmiLocSetProtocolConfigParametersIndMsgT_v02 lpp_config_ind;
@@ -1661,18 +1595,10 @@ LocApiV02::setLPPConfigSync(GnssConfigLppProfileMask profileMask)
 
   req_union.pSetProtocolConfigParametersReq = &lpp_config_req;
 
-  result = locSyncSendReq(QMI_LOC_SET_PROTOCOL_CONFIG_PARAMETERS_REQ_V02,
-                          req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
-                          QMI_LOC_SET_PROTOCOL_CONFIG_PARAMETERS_IND_V02,
-                          &lpp_config_ind);
-
-  if(result != eLOC_CLIENT_SUCCESS ||
-     eQMI_LOC_SUCCESS_V02 != lpp_config_ind.status)
-  {
-     err = LOCATION_ERROR_GENERAL_FAILURE;
-  }
-
-  return err;
+  return locSyncSendReq(QMI_LOC_SET_PROTOCOL_CONFIG_PARAMETERS_REQ_V02,
+                        req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
+                        QMI_LOC_SET_PROTOCOL_CONFIG_PARAMETERS_IND_V02,
+                        &lpp_config_ind);
 }
 
 
@@ -1684,9 +1610,8 @@ enum loc_api_adapter_err LocApiV02 :: setSensorPropertiesSync(
         bool rateBiasVarianceRandomWalk_valid, float rateBiasVarianceRandomWalk,
         bool velocityBiasVarianceRandomWalk_valid, float velocityBiasVarianceRandomWalk)
 {
-  locClientStatusEnumType result = eLOC_CLIENT_SUCCESS;
-  locClientReqUnionType req_union;
-
+  LocationError err = LOCATION_ERROR_SUCCESS;
+  locClientReqUnionType req_union = {};
   qmiLocSetSensorPropertiesReqMsgT_v02 sensor_prop_req;
   qmiLocSetSensorPropertiesIndMsgT_v02 sensor_prop_ind;
 
@@ -1716,12 +1641,15 @@ enum loc_api_adapter_err LocApiV02 :: setSensorPropertiesSync(
 
   req_union.pSetSensorPropertiesReq = &sensor_prop_req;
 
-  result = locSyncSendReq(QMI_LOC_SET_SENSOR_PROPERTIES_REQ_V02,
-                          req_union, LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
-                          QMI_LOC_SET_SENSOR_PROPERTIES_IND_V02,
-                          &sensor_prop_ind);
-
-  return convertErr(result);
+  err = locSyncSendReq(QMI_LOC_SET_SENSOR_PROPERTIES_REQ_V02,
+                       req_union, LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
+                       QMI_LOC_SET_SENSOR_PROPERTIES_IND_V02,
+                       &sensor_prop_ind);
+  if (LOCATION_ERROR_SUCCESS == err) {
+    return LOC_API_ADAPTER_ERR_SUCCESS;
+  } else {
+    return LOC_API_ADAPTER_ERR_GENERAL_FAILURE;
+  }
 }
 
 /* set the Sensor Performance Config */
@@ -1732,9 +1660,8 @@ enum loc_api_adapter_err LocApiV02 :: setSensorPerfControlConfigSync(int control
         int gyroSamplesPerBatchHigh, int gyroBatchesPerSecHigh,
         int algorithmConfig)
 {
-  locClientStatusEnumType result = eLOC_CLIENT_SUCCESS;
-  locClientReqUnionType req_union;
-
+  LocationError err = LOCATION_ERROR_SUCCESS;
+  locClientReqUnionType req_union = {};
   qmiLocSetSensorPerformanceControlConfigReqMsgT_v02 sensor_perf_config_req;
   qmiLocSetSensorPerformanceControlConfigIndMsgT_v02 sensor_perf_config_ind;
 
@@ -1775,20 +1702,21 @@ enum loc_api_adapter_err LocApiV02 :: setSensorPerfControlConfigSync(int control
 
   req_union.pSetSensorPerformanceControlConfigReq = &sensor_perf_config_req;
 
-  result = locSyncSendReq(QMI_LOC_SET_SENSOR_PERFORMANCE_CONTROL_CONFIGURATION_REQ_V02,
-                          req_union, LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
-                          QMI_LOC_SET_SENSOR_PERFORMANCE_CONTROL_CONFIGURATION_IND_V02,
-                          &sensor_perf_config_ind);
-
-  return convertErr(result);
+  err = locSyncSendReq(QMI_LOC_SET_SENSOR_PERFORMANCE_CONTROL_CONFIGURATION_REQ_V02,
+                      req_union, LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
+                      QMI_LOC_SET_SENSOR_PERFORMANCE_CONTROL_CONFIGURATION_IND_V02,
+                      &sensor_perf_config_ind);
+  if (LOCATION_ERROR_SUCCESS == err) {
+    return LOC_API_ADAPTER_ERR_SUCCESS;
+  } else {
+    return LOC_API_ADAPTER_ERR_GENERAL_FAILURE;
+  }
 }
 
 /* set the Positioning Protocol on A-GLONASS system */
 LocationError
 LocApiV02::setAGLONASSProtocolSync(GnssConfigAGlonassPositionProtocolMask aGlonassProtocol)
 {
-  LocationError err = LOCATION_ERROR_SUCCESS;
-  locClientStatusEnumType result = eLOC_CLIENT_SUCCESS;
   locClientReqUnionType req_union;
   qmiLocSetProtocolConfigParametersReqMsgT_v02 aGlonassProtocol_req;
   qmiLocSetProtocolConfigParametersIndMsgT_v02 aGlonassProtocol_ind;
@@ -1819,25 +1747,15 @@ LocApiV02::setAGLONASSProtocolSync(GnssConfigAGlonassPositionProtocolMask aGlona
   LOC_LOGd("aGlonassProtocolMask = 0x%x",
            aGlonassProtocol_req.assistedGlonassProtocolMask);
 
-  result = locSyncSendReq(QMI_LOC_SET_PROTOCOL_CONFIG_PARAMETERS_REQ_V02,
-                          req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
-                          QMI_LOC_SET_PROTOCOL_CONFIG_PARAMETERS_IND_V02,
-                          &aGlonassProtocol_ind);
-
-  if(result != eLOC_CLIENT_SUCCESS ||
-     eQMI_LOC_SUCCESS_V02 != aGlonassProtocol_ind.status)
-  {
-    err = LOCATION_ERROR_GENERAL_FAILURE;
-  }
-
-  return err;
+  return locSyncSendReq(QMI_LOC_SET_PROTOCOL_CONFIG_PARAMETERS_REQ_V02,
+                        req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
+                        QMI_LOC_SET_PROTOCOL_CONFIG_PARAMETERS_IND_V02,
+                        &aGlonassProtocol_ind);
 }
 
 LocationError
 LocApiV02::setLPPeProtocolCpSync(GnssConfigLppeControlPlaneMask lppeCP)
 {
-  LocationError err = LOCATION_ERROR_SUCCESS;
-  locClientStatusEnumType result = eLOC_CLIENT_SUCCESS;
   locClientReqUnionType req_union;
   qmiLocSetProtocolConfigParametersReqMsgT_v02 lppe_req;
   qmiLocSetProtocolConfigParametersIndMsgT_v02 lppe_ind;
@@ -1866,25 +1784,15 @@ LocApiV02::setLPPeProtocolCpSync(GnssConfigLppeControlPlaneMask lppeCP)
 
   LOC_LOGd("lppeCpConfig = 0x%" PRIx64, lppe_req.lppeCpConfig);
 
-  result = locSyncSendReq(QMI_LOC_SET_PROTOCOL_CONFIG_PARAMETERS_REQ_V02,
-                          req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
-                          QMI_LOC_SET_PROTOCOL_CONFIG_PARAMETERS_IND_V02,
-                          &lppe_ind);
-
-  if(result != eLOC_CLIENT_SUCCESS ||
-     eQMI_LOC_SUCCESS_V02 != lppe_ind.status)
-  {
-    err = LOCATION_ERROR_GENERAL_FAILURE;
-  }
-
-  return err;
+  return locSyncSendReq(QMI_LOC_SET_PROTOCOL_CONFIG_PARAMETERS_REQ_V02,
+                        req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
+                        QMI_LOC_SET_PROTOCOL_CONFIG_PARAMETERS_IND_V02,
+                        &lppe_ind);
 }
 
 LocationError
 LocApiV02::setLPPeProtocolUpSync(GnssConfigLppeUserPlaneMask lppeUP)
 {
-  LocationError err = LOCATION_ERROR_SUCCESS;
-  locClientStatusEnumType result = eLOC_CLIENT_SUCCESS;
   locClientReqUnionType req_union;
   qmiLocSetProtocolConfigParametersReqMsgT_v02 lppe_req;
   qmiLocSetProtocolConfigParametersIndMsgT_v02 lppe_ind;
@@ -1915,18 +1823,10 @@ LocApiV02::setLPPeProtocolUpSync(GnssConfigLppeUserPlaneMask lppeUP)
 
   LOC_LOGd("lppeUpConfig = 0x%" PRIx64, lppe_req.lppeUpConfig);
 
-  result = locSyncSendReq(QMI_LOC_SET_PROTOCOL_CONFIG_PARAMETERS_REQ_V02,
-                          req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
-                          QMI_LOC_SET_PROTOCOL_CONFIG_PARAMETERS_IND_V02,
-                          &lppe_ind);
-
-  if(result != eLOC_CLIENT_SUCCESS ||
-     eQMI_LOC_SUCCESS_V02 != lppe_ind.status)
-  {
-    err = LOCATION_ERROR_GENERAL_FAILURE;
-  }
-
-  return err;
+  return locSyncSendReq(QMI_LOC_SET_PROTOCOL_CONFIG_PARAMETERS_REQ_V02,
+                        req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
+                        QMI_LOC_SET_PROTOCOL_CONFIG_PARAMETERS_IND_V02,
+                        &lppe_ind);
 }
 
 /* Convert event mask from loc eng to loc_api_v02 format */
@@ -2155,44 +2055,27 @@ EngineLockState LocApiV02::convertEngineLockState(qmiLocEngineLockStateEnumT_v02
     }
 }
 
-/* Convert error from loc_api_v02 to loc eng format*/
-enum loc_api_adapter_err LocApiV02 :: convertErr(
+// Convert error from loc_api_v02 to LocationError
+LocationError LocApiV02 :: convertErr(
   locClientStatusEnumType status)
 {
+
   switch( status)
   {
     case eLOC_CLIENT_SUCCESS:
-      return LOC_API_ADAPTER_ERR_SUCCESS;
-
-    case eLOC_CLIENT_FAILURE_GENERAL:
-      return LOC_API_ADAPTER_ERR_GENERAL_FAILURE;
+      return LOCATION_ERROR_SUCCESS;
 
     case eLOC_CLIENT_FAILURE_UNSUPPORTED:
-      return LOC_API_ADAPTER_ERR_UNSUPPORTED;
+      return LOCATION_ERROR_NOT_SUPPORTED;
 
     case eLOC_CLIENT_FAILURE_INVALID_PARAMETER:
-      return LOC_API_ADAPTER_ERR_INVALID_PARAMETER;
-
-    case eLOC_CLIENT_FAILURE_ENGINE_BUSY:
-      return LOC_API_ADAPTER_ERR_ENGINE_BUSY;
-
-    case eLOC_CLIENT_FAILURE_PHONE_OFFLINE:
-      return LOC_API_ADAPTER_ERR_PHONE_OFFLINE;
+      return LOCATION_ERROR_INVALID_PARAMETER;
 
     case eLOC_CLIENT_FAILURE_TIMEOUT:
-      return LOC_API_ADAPTER_ERR_TIMEOUT;
-
-    case eLOC_CLIENT_FAILURE_INVALID_HANDLE:
-      return LOC_API_ADAPTER_ERR_INVALID_HANDLE;
-
-    case eLOC_CLIENT_FAILURE_SERVICE_NOT_PRESENT:
-      return LOC_API_ADAPTER_ERR_SERVICE_NOT_PRESENT;
-
-    case eLOC_CLIENT_FAILURE_INTERNAL:
-      return LOC_API_ADAPTER_ERR_INTERNAL;
+      return LOCATION_ERROR_TIMEOUT;
 
     default:
-      return LOC_API_ADAPTER_ERR_FAILURE;
+      return LOCATION_ERROR_GENERAL_FAILURE;
   }
 }
 
@@ -7499,81 +7382,70 @@ void LocApiV02 :: errorCb(locClientHandleType /*handle*/,
 bool LocApiV02::getBestAvailableZppFixSync(LocGpsLocation &zppLoc,
         LocPosTechMask &tech_mask) {
 
-    qmiLocGetBestAvailablePositionReqMsgT_v02 zpp_req;
-    qmiLocGetBestAvailablePositionIndMsgT_v02 zpp_ind;
-    locClientReqUnionType req_union;
-    locClientStatusEnumType status;
+   LocationError err = LOCATION_ERROR_SUCCESS;
+   qmiLocGetBestAvailablePositionReqMsgT_v02 zpp_req;
+   qmiLocGetBestAvailablePositionIndMsgT_v02 zpp_ind;
+   locClientReqUnionType req_union;
 
-    LOC_LOGd("Get ZPP Fix from best available source\n");
-    memset(&zpp_req, 0, sizeof(zpp_req));
-    memset(&zpp_ind, 0, sizeof(zpp_ind));
-    memset(&zppLoc, 0, sizeof(zppLoc));
-    zppLoc.size = sizeof(zppLoc);
-    tech_mask = 0;
+   LOC_LOGd("Get ZPP Fix from best available source\n");
+   memset(&zpp_req, 0, sizeof(zpp_req));
+   memset(&zpp_ind, 0, sizeof(zpp_ind));
+   memset(&zppLoc, 0, sizeof(zppLoc));
+   zppLoc.size = sizeof(zppLoc);
+   tech_mask = 0;
 
-    req_union.pGetBestAvailablePositionReq = &zpp_req;
-    zpp_req.transactionId = 1;
-    status = locSyncSendReq(QMI_LOC_GET_BEST_AVAILABLE_POSITION_REQ_V02,
-                            req_union,
-                            LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
-                            QMI_LOC_GET_BEST_AVAILABLE_POSITION_IND_V02,
-                            &zpp_ind);
+   req_union.pGetBestAvailablePositionReq = &zpp_req;
+   zpp_req.transactionId = 1;
+   err = locSyncSendReq(QMI_LOC_GET_BEST_AVAILABLE_POSITION_REQ_V02,
+                        req_union, LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
+                        QMI_LOC_GET_BEST_AVAILABLE_POSITION_IND_V02, &zpp_ind);
 
-    if ((eLOC_CLIENT_SUCCESS != status) ||
-        (eQMI_LOC_SUCCESS_V02 != zpp_ind.status))
-    {
-        LOC_LOGe("error! status = %d, zpp_ind.status = %d\n",
-                  (status),
-                  (zpp_ind.status));
-        return false;
-    } else {
-        if (zpp_ind.timestampUtc_valid) {
-            zppLoc.timestamp = zpp_ind.timestampUtc;
-        } else {
-            /* The UTC time from modem is not valid.
-                    In this case, we use current system time instead.*/
+   if (LOCATION_ERROR_SUCCESS == err) {
+      if (zpp_ind.timestampUtc_valid) {
+         zppLoc.timestamp = zpp_ind.timestampUtc;
+      } else {
+         // The UTC time from modem is not valid.
+         // In this case, we use current system time instead.
+         struct timespec time_info_current = {};
+         clock_gettime(CLOCK_REALTIME, &time_info_current);
+         zppLoc.timestamp = (time_info_current.tv_sec)*1e3 +
+            (time_info_current.tv_nsec)/1e6;
+         LOC_LOGd("zpp timestamp got from system: %" PRIu64, zppLoc.timestamp);
+      }
 
-          struct timespec time_info_current = {};
-          clock_gettime(CLOCK_REALTIME, &time_info_current);
-          zppLoc.timestamp = (time_info_current.tv_sec)*1e3 +
-                  (time_info_current.tv_nsec)/1e6;
-          LOC_LOGd("zpp timestamp got from system: %" PRIu64, zppLoc.timestamp);
-        }
+      if (zpp_ind.latitude_valid && zpp_ind.longitude_valid &&
+            zpp_ind.horUncCircular_valid ) {
+         zppLoc.flags = LOC_GPS_LOCATION_HAS_LAT_LONG | LOC_GPS_LOCATION_HAS_ACCURACY;
+         zppLoc.latitude = zpp_ind.latitude;
+         zppLoc.longitude = zpp_ind.longitude;
+         zppLoc.accuracy = zpp_ind.horUncCircular;
 
-        if (zpp_ind.latitude_valid && zpp_ind.longitude_valid &&
-                zpp_ind.horUncCircular_valid ) {
-            zppLoc.flags = LOC_GPS_LOCATION_HAS_LAT_LONG | LOC_GPS_LOCATION_HAS_ACCURACY;
-            zppLoc.latitude = zpp_ind.latitude;
-            zppLoc.longitude = zpp_ind.longitude;
-            zppLoc.accuracy = zpp_ind.horUncCircular;
+         // If horCircularConfidence_valid is true, and horCircularConfidence value
+         // is less than 68%, then scale the accuracy value to 68% confidence.
+         if (zpp_ind.horCircularConfidence_valid) {
+            scaleAccuracyTo68PercentConfidence(zpp_ind.horCircularConfidence,
+                                               zppLoc, true);
+         }
 
-            // If horCircularConfidence_valid is true, and horCircularConfidence value
-            // is less than 68%, then scale the accuracy value to 68% confidence.
-            if (zpp_ind.horCircularConfidence_valid)
-            {
-                scaleAccuracyTo68PercentConfidence(zpp_ind.horCircularConfidence,
-                                                   zppLoc, true);
-            }
+         if (zpp_ind.altitudeWrtEllipsoid_valid) {
+            zppLoc.flags |= LOC_GPS_LOCATION_HAS_ALTITUDE;
+            zppLoc.altitude = zpp_ind.altitudeWrtEllipsoid;
+         }
 
-            if (zpp_ind.altitudeWrtEllipsoid_valid) {
-                zppLoc.flags |= LOC_GPS_LOCATION_HAS_ALTITUDE;
-                zppLoc.altitude = zpp_ind.altitudeWrtEllipsoid;
-            }
-
-            if (zpp_ind.technologyMask_valid) {
-                tech_mask = zpp_ind.technologyMask;
-            }
-        }
-        return true;
-    }
+         if (zpp_ind.technologyMask_valid) {
+            tech_mask = zpp_ind.technologyMask;
+         }
+      }
+      return true;
+   } else {
+      return false;
+   }
 }
 
 LocationError LocApiV02 :: setGpsLockSync(GnssConfigGpsLock lock)
 {
-    LocationError err = LOCATION_ERROR_SUCCESS;
     qmiLocSetEngineLockReqMsgT_v02 setEngineLockReq;
     qmiLocSetEngineLockIndMsgT_v02 setEngineLockInd;
-    locClientStatusEnumType status;
     locClientReqUnionType req_union;
     qmiLocClientsMaskT_v02 nfwControlBits = convertGpsLock(lock);
 
@@ -7591,14 +7463,10 @@ LocationError LocApiV02 :: setGpsLockSync(GnssConfigGpsLock lock)
              lock, setEngineLockReq.lockType, nfwControlBits,
              setEngineLockReq.clientsConfig);
     memset(&setEngineLockInd, 0, sizeof(setEngineLockInd));
-    status = locSyncSendReq(QMI_LOC_SET_ENGINE_LOCK_REQ_V02,
-                            req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
-                            QMI_LOC_SET_ENGINE_LOCK_IND_V02,
-                            &setEngineLockInd);
-    if (eLOC_CLIENT_SUCCESS != status || eQMI_LOC_SUCCESS_V02 != setEngineLockInd.status) {
-        err = LOCATION_ERROR_GENERAL_FAILURE;
-    }
-    return err;
+    return locSyncSendReq(QMI_LOC_SET_ENGINE_LOCK_REQ_V02,
+                          req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
+                          QMI_LOC_SET_ENGINE_LOCK_IND_V02,
+                          &setEngineLockInd);
 }
 
 void LocApiV02::requestForAidingData(GnssAidingDataSvMask svDataMask)
@@ -7623,7 +7491,6 @@ void LocApiV02 :: getEngineLockStateSync() {
 
     qmiLocGetEngineLockReqMsgT_v02 getEngineLockReq;
     qmiLocGetEngineLockIndMsgT_v02 getEngineLockInd;
-    locClientStatusEnumType status;
     locClientReqUnionType req_union;
     qmiLocEngineLockStateEnumT_v02 ret = QMILOCENGINELOCKSTATEENUMT_MIN_ENUM_VAL_V02;
     LocationError err = LOCATION_ERROR_SUCCESS;
@@ -7636,20 +7503,14 @@ void LocApiV02 :: getEngineLockStateSync() {
     getEngineLockReq.subType = eQMI_LOC_LOCK_ALL_SUB_V02;
     req_union.pGetEngineLockReq = &getEngineLockReq;
 
-    status = locSyncSendReq(QMI_LOC_GET_ENGINE_LOCK_REQ_V02,
+    err = locSyncSendReq(QMI_LOC_GET_ENGINE_LOCK_REQ_V02,
                             req_union, LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
                             QMI_LOC_GET_ENGINE_LOCK_IND_V02,
                             &getEngineLockInd);
 
-    if (status != eLOC_CLIENT_SUCCESS || getEngineLockInd.status != eQMI_LOC_SUCCESS_V02) {
-        ret = QMILOCENGINELOCKSTATEENUMT_MIN_ENUM_VAL_V02;
-        err = LOCATION_ERROR_GENERAL_FAILURE;
-    } else {
+    if (LOCATION_ERROR_SUCCESS == err) {
         if (getEngineLockInd.engineLockState_valid) {
             ret = getEngineLockInd.engineLockState;
-        } else {
-            LOC_LOGe("Engine Lock State not valid");
-            ret = QMILOCENGINELOCKSTATEENUMT_MIN_ENUM_VAL_V02;
         }
     }
     EngineLockState lockState = convertEngineLockState(ret);
@@ -7657,12 +7518,10 @@ void LocApiV02 :: getEngineLockStateSync() {
     LocApiBase::reportEngineLockStatus(lockState);
 }
 
-int LocApiV02::setSvMeasurementConstellation(const locClientEventMaskType mask)
+LocationError LocApiV02::setSvMeasurementConstellation(const locClientEventMaskType mask)
 {
-    enum loc_api_adapter_err ret_val = LOC_API_ADAPTER_ERR_SUCCESS;
     qmiLocSetGNSSConstRepConfigReqMsgT_v02 setGNSSConstRepConfigReq;
     qmiLocSetGNSSConstRepConfigIndMsgT_v02 setGNSSConstRepConfigInd;
-    locClientStatusEnumType status;
     locClientReqUnionType req_union;
 
     qmiLocGNSSConstellEnumT_v02 svConstellation = eQMI_SYSTEM_GPS_V02 |
@@ -7690,22 +7549,10 @@ int LocApiV02::setSvMeasurementConstellation(const locClientEventMaskType mask)
     req_union.pSetGNSSConstRepConfigReq = &setGNSSConstRepConfigReq;
     memset(&setGNSSConstRepConfigInd, 0, sizeof(setGNSSConstRepConfigInd));
 
-    status = locSyncSendReq(QMI_LOC_SET_GNSS_CONSTELL_REPORT_CONFIG_V02,
-        req_union,
-        LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
-        QMI_LOC_SET_GNSS_CONSTELL_REPORT_CONFIG_IND_V02,
-        &setGNSSConstRepConfigInd);
-
-    if (status != eLOC_CLIENT_SUCCESS ||
-        (setGNSSConstRepConfigInd.status != eQMI_LOC_SUCCESS_V02 &&
-            setGNSSConstRepConfigInd.status != eQMI_LOC_ENGINE_BUSY_V02)) {
-        ret_val = LOC_API_ADAPTER_ERR_GENERAL_FAILURE;
-    }
-    else {
-        LOC_LOGd("Set GNSS constellation succeeded.");
-    }
-
-    return ret_val;
+    return locSyncSendReq(QMI_LOC_SET_GNSS_CONSTELL_REPORT_CONFIG_V02,
+                          req_union, LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
+                          QMI_LOC_SET_GNSS_CONSTELL_REPORT_CONFIG_IND_V02,
+                          &setGNSSConstRepConfigInd);
 }
 
 void LocApiV02::setConstrainedTuncMode(bool enabled,
@@ -7717,7 +7564,6 @@ void LocApiV02::setConstrainedTuncMode(bool enabled,
     LocationError err = LOCATION_ERROR_SUCCESS;
     qmiLocSetConstrainedTuncModeReqMsgT_v02 req;
     qmiLocSetConstrainedTuncModeIndMsgT_v02 ind;
-    locClientStatusEnumType status;
     locClientReqUnionType req_union;
 
     memset(&req, 0, sizeof(req));
@@ -7738,13 +7584,10 @@ void LocApiV02::setConstrainedTuncMode(bool enabled,
              req.energyBudget_valid, req.energyBudget);
 
     req_union.pSetConstrainedTuncModeReq = &req;
-    status = locSyncSendReq(QMI_LOC_SET_CONSTRAINED_TUNC_MODE_REQ_V02,
-                            req_union, LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
-                            QMI_LOC_SET_CONSTRAINED_TUNC_MODE_IND_V02,
-                            &ind);
-    if(status != eLOC_CLIENT_SUCCESS || ind.status != eQMI_LOC_SUCCESS_V02) {
-        err = LOCATION_ERROR_GENERAL_FAILURE;
-    }
+    err = locSyncSendReq(QMI_LOC_SET_CONSTRAINED_TUNC_MODE_REQ_V02,
+                         req_union, LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
+                         QMI_LOC_SET_CONSTRAINED_TUNC_MODE_IND_V02,
+                         &ind);
 
     if (adapterResponse) {
         adapterResponse->returnToSender(err);
@@ -7760,7 +7603,6 @@ void LocApiV02::setPositionAssistedClockEstimatorMode
     LocationError err = LOCATION_ERROR_SUCCESS;
     qmiLocEnablePositionAssistedClockEstReqMsgT_v02 req;
     qmiLocEnablePositionAssistedClockEstIndMsgT_v02 ind;
-    locClientStatusEnumType status;
     locClientReqUnionType req_union;
 
     LOC_LOGD("setPositionAssistedClockEstimatorMode: enabled %d", enabled);
@@ -7769,13 +7611,10 @@ void LocApiV02::setPositionAssistedClockEstimatorMode
     req.enablePositionAssistedClockEst = enabled;
 
     req_union.pSetEnablePositionAssistedClockEstReq = &req;
-    status = locSyncSendReq(QMI_LOC_ENABLE_POSITION_ASSISTED_CLOCK_EST_REQ_V02,
-                            req_union, LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
-                            QMI_LOC_ENABLE_POSITION_ASSISTED_CLOCK_EST_IND_V02,
-                            &ind);
-    if(status != eLOC_CLIENT_SUCCESS || ind.status != eQMI_LOC_SUCCESS_V02) {
-        err = LOCATION_ERROR_GENERAL_FAILURE;
-    }
+    err = locSyncSendReq(QMI_LOC_ENABLE_POSITION_ASSISTED_CLOCK_EST_REQ_V02,
+                         req_union, LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
+                         QMI_LOC_ENABLE_POSITION_ASSISTED_CLOCK_EST_IND_V02,
+                         &ind);
     if (adapterResponse) {
         adapterResponse->returnToSender(err);
     }
@@ -7789,22 +7628,20 @@ void LocApiV02::getGnssEnergyConsumed() {
 
     qmiLocQueryGNSSEnergyConsumedReqMsgT_v02 req;
     qmiLocQueryGNSSEnergyConsumedIndMsgT_v02 ind;
-    locClientStatusEnumType status;
     locClientReqUnionType req_union;
 
     memset(&req, 0, sizeof(req));
     memset(&ind, 0, sizeof(ind));
 
     req_union.pQueryGNSSEnergyConsumedReq = &req;
-    status = locSyncSendReq(QMI_LOC_QUERY_GNSS_ENERGY_CONSUMED_REQ_V02,
+    err = locSyncSendReq(QMI_LOC_QUERY_GNSS_ENERGY_CONSUMED_REQ_V02,
                             req_union, LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
                             QMI_LOC_QUERY_GNSS_ENERGY_CONSUMED_IND_V02,
                             &ind);
 
-    if(status != eLOC_CLIENT_SUCCESS) {
+    if (LOCATION_ERROR_SUCCESS != err) {
         // report invalid read to indicate error (based on QMI message)
         LocApiBase::reportGnssEngEnergyConsumedEvent(0xffffffffffffffff);
-        err = LOCATION_ERROR_GENERAL_FAILURE;
     } else {
         LocApiBase::reportGnssEngEnergyConsumedEvent(ind.energyConsumedSinceFirstBoot);
     }
@@ -7815,11 +7652,8 @@ void LocApiV02::getGnssEnergyConsumed() {
 void LocApiV02 :: updateSystemPowerState(PowerStateType powerState){
     sendMsg(new LocApiMsg([this, powerState] () {
 
-    LocationError err = LOCATION_ERROR_SUCCESS;
     qmiLocInjectPlatformPowerStateReqMsgT_v02 req;
     qmiLocInjectPlatformPowerStateIndMsgT_v02 ind;
-
-    locClientStatusEnumType status;
     locClientReqUnionType req_union;
 
     syslog(LOG_INFO, "updatePowerState: power state %d", powerState);
@@ -7851,15 +7685,11 @@ void LocApiV02 :: updateSystemPowerState(PowerStateType powerState){
         req.powerState = qmiPowerState;
         req_union.pInjectPowerStateReq = &req;
 
-        status = locSyncSendReq(QMI_LOC_INJECT_PLATFORM_POWER_STATE_REQ_V02,
-                                req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
-                                QMI_LOC_INJECT_PLATFORM_POWER_STATE_IND_V02,
-                                &ind);
-        if (status != eLOC_CLIENT_SUCCESS || ind.status != eQMI_LOC_SUCCESS_V02) {
-             err = LOCATION_ERROR_GENERAL_FAILURE;
-        }
+        locSyncSendReq(QMI_LOC_INJECT_PLATFORM_POWER_STATE_REQ_V02,
+                       req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
+                       QMI_LOC_INJECT_PLATFORM_POWER_STATE_IND_V02,
+                       &ind);
     }
-
     }));
 }
 
@@ -8244,7 +8074,6 @@ void LocApiV02::configRobustLocation
     LocationError err = LOCATION_ERROR_SUCCESS;
     qmiLocSetRobustLocationReqMsgT_v02 req;
     qmiLocGenReqStatusIndMsgT_v02 ind;
-    locClientStatusEnumType status;
     locClientReqUnionType req_union;
 
     LOC_LOGD("configRobustLocation: enabled %d, enableForE911 %d", enable, enableForE911);
@@ -8255,18 +8084,10 @@ void LocApiV02::configRobustLocation
     req.enableForE911 = enableForE911;
 
     req_union.pSetRobustLocationReq = &req;
-    status = locSyncSendReq(QMI_LOC_SET_ROBUST_LOCATION_CONFIG_REQ_V02,
-                            req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
-                            QMI_LOC_SET_ROBUST_LOCATION_CONFIG_IND_V02,
-                            &ind);
-    if (status != eLOC_CLIENT_SUCCESS || ind.status != eQMI_LOC_SUCCESS_V02) {
-        if (status == eLOC_CLIENT_FAILURE_UNSUPPORTED ||
-                status == eLOC_CLIENT_FAILURE_INVALID_MESSAGE_ID) {
-            err = LOCATION_ERROR_NOT_SUPPORTED;
-        } else {
-            err = LOCATION_ERROR_GENERAL_FAILURE;
-        }
-    }
+    err = locSyncSendReq(QMI_LOC_SET_ROBUST_LOCATION_CONFIG_REQ_V02,
+                         req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
+                         QMI_LOC_SET_ROBUST_LOCATION_CONFIG_IND_V02,
+                         &ind);
     if (adapterResponse) {
         adapterResponse->returnToSender(err);
     }
@@ -8278,26 +8099,13 @@ void LocApiV02 :: getRobustLocationConfig(uint32_t sessionId, LocApiResponse *ad
     sendMsg(new LocApiMsg([this, sessionId, adapterResponse] () {
 
     LocationError err = LOCATION_ERROR_SUCCESS;
-    locClientStatusEnumType status = eLOC_CLIENT_FAILURE_GENERAL;
     locClientReqUnionType req_union = {};
     qmiLocGetRobustLocationConfigIndMsgT_v02 getRobustLocationConfigInd = {};
 
-    status = locSyncSendReq(QMI_LOC_GET_ROBUST_LOCATION_CONFIG_REQ_V02,
-                            req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
-                            QMI_LOC_GET_ROBUST_LOCATION_CONFIG_IND_V02,
-                            &getRobustLocationConfigInd);
-
-    if ((status == eLOC_CLIENT_SUCCESS) &&
-        (getRobustLocationConfigInd.status == eQMI_LOC_SUCCESS_V02)) {
-        err = LOCATION_ERROR_SUCCESS;
-    }else {
-        if (status == eLOC_CLIENT_FAILURE_UNSUPPORTED ||
-                status == eLOC_CLIENT_FAILURE_INVALID_MESSAGE_ID) {
-            err = LOCATION_ERROR_NOT_SUPPORTED;
-        } else {
-            err = LOCATION_ERROR_GENERAL_FAILURE;
-        }
-    }
+    err = locSyncSendReq(QMI_LOC_GET_ROBUST_LOCATION_CONFIG_REQ_V02,
+                         req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
+                         QMI_LOC_GET_ROBUST_LOCATION_CONFIG_IND_V02,
+                         &getRobustLocationConfigInd);
 
     if (LOCATION_ERROR_SUCCESS != err) {
         adapterResponse->returnToSender(err);
@@ -8345,24 +8153,15 @@ void LocApiV02::configMinGpsWeek(uint16_t minGpsWeek, LocApiResponse *adapterRes
     LocationError err = LOCATION_ERROR_SUCCESS;
     qmiLocSetMinGpsWeekNumberReqMsgT_v02 req = {};
     qmiLocGenReqStatusIndMsgT_v02 ind = {};
-    locClientStatusEnumType status;
     locClientReqUnionType req_union = {};
 
     req.minGpsWeekNumber = minGpsWeek;
     req_union.pSetMinGpsWeekReq = &req;
 
-    status = locSyncSendReq(QMI_LOC_SET_MIN_GPS_WEEK_NUMBER_REQ_V02,
-                            req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
-                            QMI_LOC_SET_MIN_GPS_WEEK_NUMBER_IND_V02,
-                            &ind);
-    if (status != eLOC_CLIENT_SUCCESS || ind.status != eQMI_LOC_SUCCESS_V02) {
-        if (status == eLOC_CLIENT_FAILURE_UNSUPPORTED ||
-                status == eLOC_CLIENT_FAILURE_INVALID_MESSAGE_ID) {
-            err = LOCATION_ERROR_NOT_SUPPORTED;
-        } else {
-            err = LOCATION_ERROR_GENERAL_FAILURE;
-        }
-    }
+    err = locSyncSendReq(QMI_LOC_SET_MIN_GPS_WEEK_NUMBER_REQ_V02,
+                         req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
+                         QMI_LOC_SET_MIN_GPS_WEEK_NUMBER_IND_V02,
+                         &ind);
     if (adapterResponse) {
         adapterResponse->returnToSender(err);
     }
@@ -8374,38 +8173,25 @@ void LocApiV02 :: getMinGpsWeek(uint32_t sessionId, LocApiResponse *adapterRespo
     sendMsg(new LocApiMsg([this, sessionId, adapterResponse] () {
 
     LocationError err = LOCATION_ERROR_SUCCESS;
-    locClientStatusEnumType status = eLOC_CLIENT_FAILURE_GENERAL;
     locClientReqUnionType req_union = {};
     qmiLocGetMinGpsWeekNumberIndMsgT_v02 getInd = {};
     uint16_t minGpsWeek = 0;
 
-    status = locSyncSendReq(QMI_LOC_GET_MIN_GPS_WEEK_NUMBER_REQ_V02,
-                            req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
-                            QMI_LOC_GET_MIN_GPS_WEEK_NUMBER_IND_V02,
-                            &getInd);
+    err = locSyncSendReq(QMI_LOC_GET_MIN_GPS_WEEK_NUMBER_REQ_V02,
+                         req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
+                         QMI_LOC_GET_MIN_GPS_WEEK_NUMBER_IND_V02,
+                         &getInd);
 
-    if ((status == eLOC_CLIENT_SUCCESS) && (getInd.status == eQMI_LOC_SUCCESS_V02) &&
-            getInd.minGpsWeekNumber_valid) {
+    if (LOCATION_ERROR_SUCCESS == err) {
         minGpsWeek = getInd.minGpsWeekNumber;
-        err = LOCATION_ERROR_SUCCESS;
-    }else {
-        if (status == eLOC_CLIENT_FAILURE_UNSUPPORTED ||
-                status == eLOC_CLIENT_FAILURE_INVALID_MESSAGE_ID) {
-            err = LOCATION_ERROR_NOT_SUPPORTED;
-        } else {
-            err = LOCATION_ERROR_GENERAL_FAILURE;
-        }
-    }
-
-    if (LOCATION_ERROR_SUCCESS != err) {
-        adapterResponse->returnToSender(err);
-    } else {
         GnssConfig config = {};
         config.flags |= GNSS_CONFIG_FLAGS_MIN_GPS_WEEK_BIT;
         config.minGpsWeek = minGpsWeek;
         LOC_LOGD("getMinGpsWeek: session id %d, minGpsWeek %d",
                  sessionId, minGpsWeek);
         LocApiBase::reportGnssConfig(sessionId, config);
+    } else {
+        adapterResponse->returnToSender(err);
     }
 
     }));
@@ -8415,7 +8201,6 @@ LocationError LocApiV02::setParameterSync(const GnssConfig & gnssConfig) {
     LocationError err = LOCATION_ERROR_NOT_SUPPORTED;
     qmiLocSetParameterReqMsgT_v02 req = {};
     qmiLocGenReqStatusIndMsgT_v02 ind = {};
-    locClientStatusEnumType status = eLOC_CLIENT_FAILURE_GENERAL;
     locClientReqUnionType req_union = {};
 
     req.paramType = eQMI_LOC_PARAMETER_TYPE_RESERVED_V02;
@@ -8428,20 +8213,10 @@ LocationError LocApiV02::setParameterSync(const GnssConfig & gnssConfig) {
 
     if (req.paramType != eQMI_LOC_PARAMETER_TYPE_RESERVED_V02) {
         req_union.pSetParameterReq = &req;
-        status = locSyncSendReq(QMI_LOC_SET_PARAMETER_REQ_V02,
-                                req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
-                                QMI_LOC_SET_PARAMETER_IND_V02,
-                                &ind);
-        if (status != eLOC_CLIENT_SUCCESS || ind.status != eQMI_LOC_SUCCESS_V02) {
-            if (status == eLOC_CLIENT_FAILURE_UNSUPPORTED ||
-                    status == eLOC_CLIENT_FAILURE_INVALID_MESSAGE_ID) {
-                err = LOCATION_ERROR_NOT_SUPPORTED;
-            } else {
-                err = LOCATION_ERROR_GENERAL_FAILURE;
-            }
-        } else {
-            err = LOCATION_ERROR_SUCCESS;
-        }
+        err = locSyncSendReq(QMI_LOC_SET_PARAMETER_REQ_V02,
+                             req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
+                             QMI_LOC_SET_PARAMETER_IND_V02,
+                             &ind);
     }
 
     return err;
@@ -8454,7 +8229,6 @@ void LocApiV02 :: getParameter(uint32_t sessionId, GnssConfigFlagsMask flags,
     sendMsg(new LocApiMsg([this, sessionId, flags, adapterResponse] () {
 
     LocationError err = LOCATION_ERROR_GENERAL_FAILURE;
-    locClientStatusEnumType status = eLOC_CLIENT_FAILURE_GENERAL;
     locClientReqUnionType req_union = {};
     qmiLocGetParameterReqMsgT_v02 getParameterReq = {};
     qmiLocGetParameterIndMsgT_v02 getParameterInd = {};
@@ -8476,19 +8250,12 @@ void LocApiV02 :: getParameter(uint32_t sessionId, GnssConfigFlagsMask flags,
         }
 
         req_union.pGetParameterReq = &getParameterReq;
-        status = locSyncSendReq(QMI_LOC_GET_PARAMETER_REQ_V02,
-                                req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
-                                QMI_LOC_GET_PARAMETER_IND_V02,
-                                &getParameterInd);
+        err = locSyncSendReq(QMI_LOC_GET_PARAMETER_REQ_V02,
+                             req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
+                             QMI_LOC_GET_PARAMETER_IND_V02,
+                             &getParameterInd);
 
-        if (!((status == eLOC_CLIENT_SUCCESS) &&
-              (getParameterInd.status == eQMI_LOC_SUCCESS_V02))) {
-            if (status == eLOC_CLIENT_FAILURE_UNSUPPORTED ||
-                    status == eLOC_CLIENT_FAILURE_INVALID_MESSAGE_ID) {
-                err = LOCATION_ERROR_NOT_SUPPORTED;
-            } else {
-                err = LOCATION_ERROR_GENERAL_FAILURE;
-            }
+        if (LOCATION_ERROR_SUCCESS != err) {
             break;
         }
 
@@ -8514,13 +8281,11 @@ void LocApiV02 :: getParameter(uint32_t sessionId, GnssConfigFlagsMask flags,
             adapterResponse->returnToSender(err);
         }
     }
-
     }));
 }
 
 void LocApiV02 :: setTribandState(bool enabled) {
     sendMsg(new LocApiMsg([this, enabled] () {
-    locClientStatusEnumType result = eLOC_CLIENT_SUCCESS;
     locClientReqUnionType req_union;
 
     qmiLocSetTribandStateReqMsgT_v02 triband_set_req;
@@ -8534,10 +8299,10 @@ void LocApiV02 :: setTribandState(bool enabled) {
     triband_set_req.activate = enabled;
 
     req_union.pSetTribandStateReq = &triband_set_req;
-    result = locSyncSendReq(QMI_LOC_SET_TRIBAND_STATE_REQ_V02,
-                          req_union, LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
-                          QMI_LOC_SET_TRIBAND_STATE_IND_V02,
-                          &triband_set_ind);
+    locSyncSendReq(QMI_LOC_SET_TRIBAND_STATE_REQ_V02,
+                   req_union, LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
+                   QMI_LOC_SET_TRIBAND_STATE_IND_V02,
+                   &triband_set_ind);
     }));
 }
 
@@ -8549,7 +8314,7 @@ bool LocApiV02 :: cacheGnssMeasurementSupport()
       QMI_LOC_SET_GNSS_CONSTELL_REPORT_CONFIG_V02
       to check if modem support this feature or not*/
 
-    if (LOC_API_ADAPTER_ERR_SUCCESS ==
+    if (LOCATION_ERROR_SUCCESS ==
         setSvMeasurementConstellation(QMI_LOC_EVENT_MASK_GNSS_MEASUREMENT_REPORT_V02 |
                                       QMI_LOC_EVENT_MASK_GNSS_NHZ_MEASUREMENT_REPORT_V02)) {
         gnssMeasurementSupported = true;
@@ -8560,17 +8325,20 @@ bool LocApiV02 :: cacheGnssMeasurementSupport()
     return gnssMeasurementSupported;
 }
 
-locClientStatusEnumType LocApiV02::locSyncSendReq(uint32_t req_id,
+LocationError LocApiV02::locSyncSendReq(uint32_t req_id,
         locClientReqUnionType req_payload, uint32_t timeout_msec,
         uint32_t ind_id, void* ind_payload_ptr) {
+
+    qmiLocStatusEnumT_v02 ind_status = eQMI_LOC_SUCCESS_V02;
+    locClientStatusEnumType status =  eLOC_CLIENT_SUCCESS;
+    LocationError err = LOCATION_ERROR_SUCCESS;;
 
     LOC_LOGd("send req: %s, timeout msec %d", loc_get_v02_event_name(req_id),
              timeout_msec);
 
-    locClientStatusEnumType status = loc_sync_send_req(clientHandle, req_id, req_payload,
-            timeout_msec, ind_id, ind_payload_ptr);
+    status = loc_sync_send_req(mClientHandle, req_id, req_payload,
+                               timeout_msec, ind_id, ind_payload_ptr);
 
-    qmiLocStatusEnumT_v02 ind_status = eQMI_LOC_SUCCESS_V02;
     if (nullptr != ind_payload_ptr) {
         ind_status = *(qmiLocStatusEnumT_v02*)ind_payload_ptr;
     }
@@ -8580,7 +8348,7 @@ locClientStatusEnumType LocApiV02::locSyncSendReq(uint32_t req_id,
         if (((eQMI_LOC_POWER_STATE_RESUME_V02 == mPlatformPowerState) ||
                 (eQMI_LOC_POWER_STATE_DEEP_SLEEP_EXIT_V02 == mPlatformPowerState)) &&
                 mResenders.empty() && ((mQmiMask & QMI_LOC_EVENT_MASK_ENGINE_STATE_V02) == 0)) {
-            locClientRegisterEventMask(clientHandle,
+            locClientRegisterEventMask(mClientHandle,
                                        mQmiMask | QMI_LOC_EVENT_MASK_ENGINE_STATE_V02, isMaster());
         }
         LOC_LOGd("Engine busy, cache req: %d", req_id);
@@ -8598,7 +8366,7 @@ locClientStatusEnumType LocApiV02::locSyncSendReq(uint32_t req_id,
         if (nullptr == pReqData || nullptr != req_payload_copy.pReqData) {
             mResenders.push_back([=](){
                     // ignore indicator, we use nullptr as the last parameter
-                    loc_sync_send_req(clientHandle, req_id, req_payload_copy,
+                    loc_sync_send_req(mClientHandle, req_id, req_payload_copy,
                                       timeout_msec, ind_id, nullptr);
                     if (nullptr != req_payload_copy.pReqData) {
                         free(req_payload_copy.pReqData);
@@ -8608,12 +8376,20 @@ locClientStatusEnumType LocApiV02::locSyncSendReq(uint32_t req_id,
     }
 
     if (status != eLOC_CLIENT_SUCCESS || eQMI_LOC_SUCCESS_V02 != ind_status) {
-        LOC_LOGe("req %s, status %s, qmi ind status %s",
-                 loc_get_v02_event_name(req_id),
-                 loc_get_v02_client_status_name(status),
-                 loc_get_v02_qmi_status_name(ind_status));
+        if (status == eLOC_CLIENT_FAILURE_UNSUPPORTED ||
+               status == eLOC_CLIENT_FAILURE_INVALID_MESSAGE_ID) {
+          err = LOCATION_ERROR_NOT_SUPPORTED;
+       } else {
+          err = convertErr(status);
+       }
+
+       LOC_LOGe("req %s, status %s, qmi ind status %s, err %d",
+                loc_get_v02_event_name(req_id),
+                loc_get_v02_client_status_name(status),
+                loc_get_v02_qmi_status_name(ind_status), err);
     }
-    return status;
+
+    return err;
 }
 
 LocPosTechMask LocApiV02 :: convertPosTechMask(
@@ -8825,8 +8601,6 @@ LocApiV02::convertLppeUp(const uint32_t lppeUserPlaneMask)
 LocationError
 LocApiV02::setEmergencyExtensionWindowSync(const uint32_t emergencyExtensionSeconds)
 {
-    LocationError err = LOCATION_ERROR_SUCCESS;
-    locClientStatusEnumType result = eLOC_CLIENT_SUCCESS;
     locClientReqUnionType req_union;
     qmiLocSetProtocolConfigParametersReqMsgT_v02 eCbW_req;
     qmiLocSetProtocolConfigParametersIndMsgT_v02 eCbW_ind;
@@ -8841,18 +8615,10 @@ LocApiV02::setEmergencyExtensionWindowSync(const uint32_t emergencyExtensionSeco
 
     LOC_LOGd("emergencyCallbackWindow = %d", emergencyExtensionSeconds);
 
-    result = locSyncSendReq(QMI_LOC_SET_PROTOCOL_CONFIG_PARAMETERS_REQ_V02,
-        req_union, LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
-        QMI_LOC_SET_PROTOCOL_CONFIG_PARAMETERS_IND_V02,
-        &eCbW_ind);
-
-    if (result != eLOC_CLIENT_SUCCESS ||
-        eQMI_LOC_SUCCESS_V02 != eCbW_ind.status)
-    {
-        err = LOCATION_ERROR_GENERAL_FAILURE;
-    }
-
-    return err;
+    return locSyncSendReq(QMI_LOC_SET_PROTOCOL_CONFIG_PARAMETERS_REQ_V02,
+                         req_union, LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
+                         QMI_LOC_SET_PROTOCOL_CONFIG_PARAMETERS_IND_V02,
+                         &eCbW_ind);
 }
 
 void
@@ -8860,7 +8626,6 @@ LocApiV02::setMeasurementCorrections(const GnssMeasurementCorrections& gnssMeasu
 {
     sendMsg(new LocApiMsg([this, gnssMeasurementCorrections] {
 
-    locClientStatusEnumType result = eLOC_CLIENT_SUCCESS;
     locClientReqUnionType req_union = {};
 
     qmiLocEventInjectEnvAidingReqMsgT_v02 setEnvAidingReqMsg;
@@ -9038,10 +8803,10 @@ LocApiV02::setMeasurementCorrections(const GnssMeasurementCorrections& gnssMeasu
 
     req_union.pEnvAidingReqMsg = &setEnvAidingReqMsg;
 
-    result = locSyncSendReq(QMI_LOC_INJECT_ENV_AIDING_REQ_V02,
-                            req_union, LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
-                            QMI_LOC_INJECT_ENV_AIDING_IND_V02,
-                            &genReqStatusIndMsg);
+    locSyncSendReq(QMI_LOC_INJECT_ENV_AIDING_REQ_V02,
+                   req_union, LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
+                   QMI_LOC_INJECT_ENV_AIDING_IND_V02,
+                   &genReqStatusIndMsg);
 
     }));
 }
@@ -9049,7 +8814,6 @@ LocApiV02::setMeasurementCorrections(const GnssMeasurementCorrections& gnssMeasu
 LocationError
 LocApiV02::setBlacklistSvSync(const GnssSvIdConfig& config)
 {
-    locClientStatusEnumType status = eLOC_CLIENT_FAILURE_GENERAL;
     locClientReqUnionType req_union = {};
 
     qmiLocSetBlacklistSvReqMsgT_v02 setBlacklistSvMsg;
@@ -9129,21 +8893,11 @@ LocApiV02::setBlacklistSvSync(const GnssSvIdConfig& config)
     req_union.pSetBlacklistSvReq = &setBlacklistSvMsg;
 
     // Send the request
-    status = loc_sync_send_req(clientHandle,
-                               QMI_LOC_SET_BLACKLIST_SV_REQ_V02,
-                               req_union,
-                               LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
-                               QMI_LOC_SET_BLACKLIST_SV_IND_V02,
-                               &genReqStatusIndMsg);
-    if(status != eLOC_CLIENT_SUCCESS ||
-            genReqStatusIndMsg.status != eQMI_LOC_SUCCESS_V02) {
-        LOC_LOGe("Set Blacklist SV failed. status: %s ind status %s",
-                 loc_get_v02_client_status_name(status),
-                 loc_get_v02_qmi_status_name(genReqStatusIndMsg.status));
-        return LOCATION_ERROR_GENERAL_FAILURE;
-    }
-
-    return LOCATION_ERROR_SUCCESS;
+    return locSyncSendReq(QMI_LOC_SET_BLACKLIST_SV_REQ_V02,
+                          req_union,
+                          LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
+                          QMI_LOC_SET_BLACKLIST_SV_IND_V02,
+                          &genReqStatusIndMsg);
 }
 
 void
@@ -9161,12 +8915,9 @@ void LocApiV02::getBlacklistSv()
 {
     sendMsg(new LocApiMsg([this] () {
 
-    locClientStatusEnumType status = eLOC_CLIENT_FAILURE_GENERAL;
     locClientReqUnionType req_union = {};
-
     // Send the request
-    status = locClientSendReq(QMI_LOC_GET_BLACKLIST_SV_REQ_V02, req_union);
-
+    locClientSendReq(QMI_LOC_GET_BLACKLIST_SV_REQ_V02, req_union);
     }));
 }
 
@@ -9176,9 +8927,8 @@ LocApiV02::setConstellationControl(const GnssSvTypeConfig& config,
 {
     sendMsg(new LocApiMsg([this, config, adapterResponse] () {
 
-    locClientStatusEnumType status = eLOC_CLIENT_FAILURE_GENERAL;
     locClientReqUnionType req_union = {};
-
+    LocationError err = LOCATION_ERROR_SUCCESS;
     qmiLocSetConstellationConfigReqMsgT_v02 setConstellationConfigMsg;
     qmiLocGenReqStatusIndMsgT_v02 genReqStatusIndMsg;
 
@@ -9248,22 +8998,15 @@ LocApiV02::setConstellationControl(const GnssSvTypeConfig& config,
     req_union.pSetConstellationConfigReq = &setConstellationConfigMsg;
 
     // Send the request
-    status = loc_sync_send_req(clientHandle,
-                               QMI_LOC_SET_CONSTELLATION_CONTROL_REQ_V02,
-                               req_union,
-                               LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
-                               QMI_LOC_SET_CONSTELLATION_CONTROL_IND_V02,
-                               &genReqStatusIndMsg);
-
-    LocationError err = LOCATION_ERROR_GENERAL_FAILURE;
-    if (eLOC_CLIENT_SUCCESS == status) {
-        err = LOCATION_ERROR_SUCCESS;
-    }
+    err = locSyncSendReq(QMI_LOC_SET_CONSTELLATION_CONTROL_REQ_V02,
+                         req_union,
+                         LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
+                          QMI_LOC_SET_CONSTELLATION_CONTROL_IND_V02,
+                          &genReqStatusIndMsg);
 
     if (adapterResponse != NULL) {
         adapterResponse->returnToSender(err);
     }
-
     }));
 }
 
@@ -9272,9 +9015,8 @@ LocApiV02::resetConstellationControl(LocApiResponse *adapterResponse)
 {
     sendMsg(new LocApiMsg([this, adapterResponse] () {
 
-    locClientStatusEnumType status = eLOC_CLIENT_FAILURE_GENERAL;
     locClientReqUnionType req_union = {};
-
+    LocationError err = LOCATION_ERROR_SUCCESS;
     qmiLocSetConstellationConfigReqMsgT_v02 setConstellationConfigMsg;
     qmiLocGenReqStatusIndMsgT_v02 genReqStatusIndMsg;
 
@@ -9289,24 +9031,11 @@ LocApiV02::resetConstellationControl(LocApiResponse *adapterResponse)
     req_union.pSetConstellationConfigReq = &setConstellationConfigMsg;
 
     // Send the request
-    status = loc_sync_send_req(clientHandle,
-                               QMI_LOC_SET_CONSTELLATION_CONTROL_REQ_V02,
-                               req_union,
-                               LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
-                               QMI_LOC_SET_CONSTELLATION_CONTROL_IND_V02,
-                               &genReqStatusIndMsg);
-    if(status != eLOC_CLIENT_SUCCESS ||
-            genReqStatusIndMsg.status != eQMI_LOC_SUCCESS_V02) {
-        LOC_LOGe("Reset Constellation Config failed. "
-                 "status: %s ind status %s",
-                 loc_get_v02_client_status_name(status),
-                 loc_get_v02_qmi_status_name(genReqStatusIndMsg.status));
-    }
-
-    LocationError err = LOCATION_ERROR_GENERAL_FAILURE;
-    if (eLOC_CLIENT_SUCCESS == status) {
-        err = LOCATION_ERROR_SUCCESS;
-    }
+    err = locSyncSendReq(QMI_LOC_SET_CONSTELLATION_CONTROL_REQ_V02,
+                         req_union,
+                         LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
+                         QMI_LOC_SET_CONSTELLATION_CONTROL_IND_V02,
+                         &genReqStatusIndMsg);
     if (adapterResponse) {
         adapterResponse->returnToSender(err);
     }
@@ -9779,7 +9508,6 @@ LocApiV02::addGeofence(uint32_t clientId,
     LOC_LOGD("addGeofence: lat=%8.2f long=%8.2f radius %8.2f breach=%u respon=%u dwell=%u",
              info.latitude, info.longitude, info.radius,
              options.breachTypeMask, options.responsiveness, options.dwellTime);
-    LocationError err = LOCATION_ERROR_GENERAL_FAILURE;
 
     qmiLocAddCircularGeofenceReqMsgT_v02 addReq;
     memset(&addReq, 0, sizeof(addReq));
@@ -9833,15 +9561,15 @@ LocApiV02::addGeofence(uint32_t clientId,
     LOC_SEND_SYNC_REQ(AddCircularGeofence, ADD_CIRCULAR_GEOFENCE, addReq);
 
     LocApiGeofenceData data;
-    if (rv && ind.geofenceId_valid != 0) {
+    if ((LOCATION_ERROR_SUCCESS == err) && (ind.geofenceId_valid != 0)) {
         data.hwId = ind.geofenceId;
-        err = LOCATION_ERROR_SUCCESS;
     } else {
+        // special error mapping
         if (eQMI_LOC_MAX_GEOFENCE_PROGRAMMED_V02 == ind.status) {
             err = LOCATION_ERROR_GEOFENCES_AT_MAX;
         }
-        LOC_LOGE("addGeofence: failed! rv is %d, ind.geofenceId_valid is %d",
-                 rv, ind.geofenceId_valid);
+        LOC_LOGE("addGeofence: err is %d, ind.geofenceId_valid is %d",
+                 err, ind.geofenceId_valid);
     }
 
     if (adapterResponseData != NULL) {
@@ -9856,7 +9584,6 @@ LocApiV02::removeGeofence(uint32_t hwId, uint32_t clientId, LocApiResponse* adap
     sendMsg(new LocApiMsg([this, hwId, clientId, adapterResponse] () {
 
     LOC_LOGD("removeGeofence: hwId %u", hwId);
-    LocationError err = LOCATION_ERROR_GENERAL_FAILURE;
 
     qmiLocDeleteGeofenceReqMsgT_v02 deleteReq;
     memset(&deleteReq, 0, sizeof(deleteReq));
@@ -9865,12 +9592,6 @@ LocApiV02::removeGeofence(uint32_t hwId, uint32_t clientId, LocApiResponse* adap
     deleteReq.transactionId = clientId;
 
     LOC_SEND_SYNC_REQ(DeleteGeofence, DELETE_GEOFENCE, deleteReq);
-
-    if (rv) {
-        err = LOCATION_ERROR_SUCCESS;
-    } else {
-        LOC_LOGE("removeGeofence: failed! rv is %d", rv);
-    }
 
     if (adapterResponse != NULL) {
         adapterResponse->returnToSender(err);
@@ -9884,8 +9605,6 @@ LocApiV02::pauseGeofence(uint32_t hwId, uint32_t clientId, LocApiResponse* adapt
     sendMsg(new LocApiMsg([this, hwId, clientId, adapterResponse] () {
 
     LOC_LOGD("pauseGeofence: hwId %u", hwId);
-    LocationError err = LOCATION_ERROR_GENERAL_FAILURE;
-
     qmiLocEditGeofenceReqMsgT_v02 editReq;
     memset(&editReq, 0, sizeof(editReq));
 
@@ -9895,12 +9614,6 @@ LocApiV02::pauseGeofence(uint32_t hwId, uint32_t clientId, LocApiResponse* adapt
     editReq.geofenceState = eQMI_LOC_GEOFENCE_STATE_SUSPEND_V02;
 
     LOC_SEND_SYNC_REQ(EditGeofence, EDIT_GEOFENCE, editReq);
-
-    if (rv) {
-        err = LOCATION_ERROR_SUCCESS;
-    } else {
-        LOC_LOGE("pauseGeofence: failed! rv is %d", rv);
-    }
 
     if (adapterResponse != NULL) {
         adapterResponse->returnToSender(err);
@@ -9914,8 +9627,6 @@ LocApiV02::resumeGeofence(uint32_t hwId, uint32_t clientId, LocApiResponse* adap
     sendMsg(new LocApiMsg([this, hwId, clientId, adapterResponse] () {
 
     LOC_LOGD("resumeGeofence: hwId %u",  hwId);
-    LocationError err = LOCATION_ERROR_GENERAL_FAILURE;
-
     qmiLocEditGeofenceReqMsgT_v02 editReq;
     memset(&editReq, 0, sizeof(editReq));
 
@@ -9925,12 +9636,6 @@ LocApiV02::resumeGeofence(uint32_t hwId, uint32_t clientId, LocApiResponse* adap
     editReq.geofenceState = eQMI_LOC_GEOFENCE_STATE_ACTIVE_V02;
 
     LOC_SEND_SYNC_REQ(EditGeofence, EDIT_GEOFENCE, editReq);
-
-    if (rv) {
-        err = LOCATION_ERROR_SUCCESS;
-    } else {
-        LOC_LOGE("resumeGeofence: failed! rv is %d", rv);
-    }
 
     if (adapterResponse != NULL) {
         adapterResponse->returnToSender(err);
@@ -9947,7 +9652,6 @@ LocApiV02::modifyGeofence(uint32_t hwId,
 
     LOC_LOGD("modifyGeofence: breach=%u respon=%u dwell=%u",
              options.breachTypeMask, options.responsiveness, options.dwellTime);
-    LocationError err = LOCATION_ERROR_GENERAL_FAILURE;
 
     qmiLocEditGeofenceReqMsgT_v02 editReq;
     memset(&editReq, 0, sizeof(editReq));
@@ -9973,12 +9677,6 @@ LocApiV02::modifyGeofence(uint32_t hwId,
     }
 
     LOC_SEND_SYNC_REQ(EditGeofence, EDIT_GEOFENCE, editReq);
-
-    if (rv) {
-        err = LOCATION_ERROR_SUCCESS;
-    } else {
-        LOC_LOGE("modifyGeofence: failed! rv is %d", rv);
-    }
     if (adapterResponse != NULL) {
         adapterResponse->returnToSender(err);
     }
@@ -9998,7 +9696,6 @@ LocationError
 LocApiV02::queryBatchBuffer(size_t desiredSize,
         size_t &allocatedSize, BatchingMode batchMode)
 {
-    LocationError err = LOCATION_ERROR_GENERAL_FAILURE;
     qmiLocGetBatchSizeReqMsgT_v02 batchSizeReq;
 
     memset(&batchSizeReq, 0, sizeof(batchSizeReq));
@@ -10009,53 +9706,36 @@ LocApiV02::queryBatchBuffer(size_t desiredSize,
     batchSizeReq.batchType = eQMI_LOC_LOCATION_BATCHING_V02;
     LOC_SEND_SYNC_REQ(GetBatchSize, GET_BATCH_SIZE, batchSizeReq);
 
-    if (rv) {
-        allocatedSize = ind.batchSize;
-        LOC_LOGv("get batching size succeeded. The modem batch size for"
-                " batch mode %u is %zu. Desired batch size : %zu.",
-                batchMode, allocatedSize, desiredSize);
-        if (allocatedSize != 0) {
-            err = LOCATION_ERROR_SUCCESS;
-        }
-    } else {
-        if (
-            (ind.status == eQMI_LOC_INVALID_PARAMETER_V02) &&
-            (ind.batchSize > 0)) {
-
+    if (LOCATION_ERROR_SUCCESS != err) {
+        if ((ind.status == eQMI_LOC_INVALID_PARAMETER_V02) && (ind.batchSize > 0)) {
             LOC_LOGw("get batching size failed. The modem max threshold batch size "
                     "for batch mode %u is %u. Desired batch size : %zu. "
-                    "Retrying with max threshold size ...",
-                    batchMode, ind.batchSize, desiredSize);
-
-            desiredSize = ind.batchSize;
+                    "Retrying with max threshold size %d",
+                    batchMode, ind.batchSize, desiredSize, ind.batchSize);
             batchSizeReq.batchSize = ind.batchSize;
             LOC_SEND_SYNC_REQ(GetBatchSize, GET_BATCH_SIZE, batchSizeReq);
-
-            if (rv) {
-                allocatedSize = ind.batchSize;
-                LOC_LOGv("get batching size succeeded. The modem batch size for"
-                        " batch mode %u is %zu. Desired batch size : %zu.",
-                        batchMode, allocatedSize, desiredSize);
-                if (allocatedSize != 0) {
-                    err = LOCATION_ERROR_SUCCESS;
-                }
-                return err;
-            }
         }
-
-        allocatedSize = 0;
-        LOC_LOGe("get batching size failed for batch mode %u and desired batch size %zu"
-                 "Or modem does not support batching",
-                 batchMode, desiredSize);
     }
 
+    if (LOCATION_ERROR_SUCCESS == err) {
+        allocatedSize = ind.batchSize;
+        LOC_LOGv("get batching size succeeded. The modem batch size for"
+                " batch mode %u is %zu. Desired batch size requested : %zu.",
+                batchMode, allocatedSize, desiredSize);
+        if (allocatedSize == 0) {
+            err = LOCATION_ERROR_GENERAL_FAILURE;
+        }
+    } else {
+       allocatedSize = 0;
+       LOC_LOGe("get batching size failed for batch mode %u and desired batch size %zu"
+                "Or modem does not support batching", batchMode, desiredSize);
+    }
     return err;
 }
 
 void
 LocApiV02::setOperationMode(GnssSuplMode mode)
 {
-    locClientStatusEnumType status;
     locClientReqUnionType req_union;
 
     qmiLocSetOperationModeReqMsgT_v02 set_mode_msg;
@@ -10074,10 +9754,10 @@ LocApiV02::setOperationMode(GnssSuplMode mode)
 
     req_union.pSetOperationModeReq = &set_mode_msg;
 
-    status = locSyncSendReq(QMI_LOC_SET_OPERATION_MODE_REQ_V02,
-                            req_union, LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
-                            QMI_LOC_SET_OPERATION_MODE_IND_V02,
-                            &set_mode_ind);
+    locSyncSendReq(QMI_LOC_SET_OPERATION_MODE_REQ_V02,
+                   req_union, LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
+                   QMI_LOC_SET_OPERATION_MODE_IND_V02,
+                   &set_mode_ind);
 }
 
 void
@@ -10181,7 +9861,6 @@ void LocApiV02::configConstellationMultiBand(const GnssSvTypeConfig& secondaryBa
     sendMsg(new LocApiMsg([this, secondaryBandConfig, adapterResponse] () {
 
     LocationError err = LOCATION_ERROR_SUCCESS;
-    locClientStatusEnumType status = eLOC_CLIENT_FAILURE_GENERAL;
     locClientReqUnionType req_union = {};
 
     qmiLocSetMultibandConfigReqMsgT_v02 reqMsg = {};
@@ -10216,25 +9895,11 @@ void LocApiV02::configConstellationMultiBand(const GnssSvTypeConfig& secondaryBa
     req_union.pSetMultibandConfigReq = &reqMsg;
 
     // Send the request
-    status = loc_sync_send_req(clientHandle,
-                               QMI_LOC_SET_MULTIBAND_CONFIG_REQ_V02,
-                               req_union,
-                               LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
-                               QMI_LOC_SET_MULTIBAND_CONFIG_IND_V02,
-                               &genReqStatusIndMsg);
-    if (status != eLOC_CLIENT_SUCCESS ||
-            genReqStatusIndMsg.status != eQMI_LOC_SUCCESS_V02) {
-        LOC_LOGe("Config multiband failed. status: %s ind status %s",
-                 loc_get_v02_client_status_name(status),
-                 loc_get_v02_qmi_status_name(genReqStatusIndMsg.status));
-
-        if (status == eLOC_CLIENT_FAILURE_UNSUPPORTED ||
-                status == eLOC_CLIENT_FAILURE_INVALID_MESSAGE_ID) {
-            err = LOCATION_ERROR_NOT_SUPPORTED;
-        } else {
-            err = LOCATION_ERROR_GENERAL_FAILURE;
-        }
-    }
+    err = locSyncSendReq(QMI_LOC_SET_MULTIBAND_CONFIG_REQ_V02,
+                         req_union,
+                         LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
+                         QMI_LOC_SET_MULTIBAND_CONFIG_IND_V02,
+                         &genReqStatusIndMsg);
 
     if (adapterResponse) {
         adapterResponse->returnToSender(err);
@@ -10248,37 +9913,25 @@ void LocApiV02::getConstellationMultiBandConfig(
     sendMsg(new LocApiMsg([this, sessionId, adapterResponse] () {
 
     LocationError err = LOCATION_ERROR_SUCCESS;
-    locClientStatusEnumType status = eLOC_CLIENT_FAILURE_GENERAL;
     locClientReqUnionType req_union = {};
 
     qmiLocGetMultibandConfigIndMsgT_v02 getMultibandConfigInd = {};
     GnssConfig gnssConfig = {};
 
     // get multiband config
-    status = locSyncSendReq(QMI_LOC_GET_MULTIBAND_CONFIG_REQ_V02,
-                            req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
-                            QMI_LOC_GET_MULTIBAND_CONFIG_IND_V02,
-                            &getMultibandConfigInd);
-    if ((status == eLOC_CLIENT_SUCCESS) && (getMultibandConfigInd.status == eQMI_LOC_SUCCESS_V02) &&
-            getMultibandConfigInd.secondaryGnssConfig_valid) {
+    err = locSyncSendReq(QMI_LOC_GET_MULTIBAND_CONFIG_REQ_V02,
+                         req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
+                         QMI_LOC_GET_MULTIBAND_CONFIG_IND_V02,
+                         &getMultibandConfigInd);
+    if (LOCATION_ERROR_SUCCESS == err) {
         convertQmiSecondaryConfigToGnssConfig(getMultibandConfigInd.secondaryGnssConfig,
                                               gnssConfig.secondaryBandConfig);
         gnssConfig.flags |= GNSS_CONFIG_FLAGS_CONSTELLATION_SECONDARY_BAND_BIT;
-    } else {
-        if (status == eLOC_CLIENT_FAILURE_UNSUPPORTED ||
-                status == eLOC_CLIENT_FAILURE_INVALID_MESSAGE_ID) {
-            err = LOCATION_ERROR_NOT_SUPPORTED;
-        } else {
-            err = LOCATION_ERROR_GENERAL_FAILURE;
-        }
     }
 
     if (gnssConfig.flags) {
         LocApiBase::reportGnssConfig(sessionId, gnssConfig);
     } else {
-        if (err != LOCATION_ERROR_NOT_SUPPORTED) {
-            err = LOCATION_ERROR_GENERAL_FAILURE;
-        }
         adapterResponse->returnToSender(err);
     }
     }));
@@ -10318,10 +9971,8 @@ void LocApiV02::configMerkleTree(mgpOsnmaPublicKeyAndMerkleTreeStruct* merkleTre
             LocApiResponse* adapterResponse) {
     sendMsg(new LocApiMsg([this, merkleTree, adapterResponse] () {
     LocationError err = LOCATION_ERROR_SUCCESS;
-
     qmiLocOsnmaPublicKeyMerkleTreeReqMsgT_v02 req;
     qmiLocGenReqStatusIndMsgT_v02 ind;
-    locClientStatusEnumType status;
     locClientReqUnionType req_union;
 
     memset(&req, 0, sizeof(req));
@@ -10329,18 +9980,11 @@ void LocApiV02::configMerkleTree(mgpOsnmaPublicKeyAndMerkleTreeStruct* merkleTre
     convertPublicKeyAndMerkleTreeStruct(req, *merkleTree);
 
     req_union.pOsnmaPublicKeyMerkleTreeReq = &req;
-    status = locSyncSendReq(QMI_LOC_OSNMA_PUBLIC_KEY_MERKLE_TREE_REQ_V02,
-                            req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
-                            QMI_LOC_OSNMA_PUBLIC_KEY_MERKLE_TREE_IND_V02,
-                            &ind);
-    if (status != eLOC_CLIENT_SUCCESS || ind.status != eQMI_LOC_SUCCESS_V02) {
-        if (status == eLOC_CLIENT_FAILURE_UNSUPPORTED ||
-                status == eLOC_CLIENT_FAILURE_INVALID_MESSAGE_ID) {
-            err = LOCATION_ERROR_NOT_SUPPORTED;
-        } else {
-            err = LOCATION_ERROR_GENERAL_FAILURE;
-        }
-    }
+    err = locSyncSendReq(QMI_LOC_OSNMA_PUBLIC_KEY_MERKLE_TREE_REQ_V02,
+                         req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
+                         QMI_LOC_OSNMA_PUBLIC_KEY_MERKLE_TREE_IND_V02,
+                         &ind);
+
     if (adapterResponse) {
         adapterResponse->returnToSender(err);
     }
@@ -10349,11 +9993,10 @@ void LocApiV02::configMerkleTree(mgpOsnmaPublicKeyAndMerkleTreeStruct* merkleTre
 
 void LocApiV02::configOsnmaEnablement(bool enable, LocApiResponse* adapterResponse) {
     sendMsg(new LocApiMsg([this, enable, adapterResponse] () {
-    LocationError err = LOCATION_ERROR_SUCCESS;
 
+    LocationError err = LOCATION_ERROR_SUCCESS;
     qmiLocSetOsnmaStateReqMsgT_v02 req;
     qmiLocGenReqStatusIndMsgT_v02 ind;
-    locClientStatusEnumType status;
     locClientReqUnionType req_union;
 
     memset(&req, 0, sizeof(req));
@@ -10361,18 +10004,10 @@ void LocApiV02::configOsnmaEnablement(bool enable, LocApiResponse* adapterRespon
     req.enable = enable;
 
     req_union.pOsnmaEnablementReq = &req;
-    status = locSyncSendReq(QMI_LOC_SET_OSNMA_STATE_REQ_V02,
-                            req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
-                            QMI_LOC_SET_OSNMA_STATE_IND_V02,
-                            &ind);
-    if (status != eLOC_CLIENT_SUCCESS || ind.status != eQMI_LOC_SUCCESS_V02) {
-        if (status == eLOC_CLIENT_FAILURE_UNSUPPORTED ||
-                status == eLOC_CLIENT_FAILURE_INVALID_MESSAGE_ID) {
-            err = LOCATION_ERROR_NOT_SUPPORTED;
-        } else {
-            err = LOCATION_ERROR_GENERAL_FAILURE;
-        }
-    }
+    err = locSyncSendReq(QMI_LOC_SET_OSNMA_STATE_REQ_V02,
+                         req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
+                         QMI_LOC_SET_OSNMA_STATE_IND_V02,
+                         &ind);
     if (adapterResponse) {
         adapterResponse->returnToSender(err);
     }
@@ -10382,24 +10017,17 @@ void LocApiV02::configOsnmaEnablement(bool enable, LocApiResponse* adapterRespon
 void LocApiV02::getNtnConfigSignalMask(LocApiResponse* adapterResponse) {
     sendMsg(new LocApiMsg([this, adapterResponse] () {
     LocationError err = LOCATION_ERROR_SUCCESS;
-    locClientStatusEnumType status = eLOC_CLIENT_FAILURE_GENERAL;
     locClientReqUnionType req_union = {};
     qmiLocGetNtnStatusIndMsgT_v02 getNtnStatusInd = {};
 
-    status = locSyncSendReq(QMI_LOC_GET_NTN_STATUS_REQ_V02,
-                            req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
-                            QMI_LOC_GET_NTN_STATUS_IND_V02,
-                            &getNtnStatusInd);
+    err = locSyncSendReq(QMI_LOC_GET_NTN_STATUS_REQ_V02,
+                         req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
+                         QMI_LOC_GET_NTN_STATUS_IND_V02,
+                         &getNtnStatusInd);
 
     GnssSignalTypeMask returnedMask = 0;
-    if ((status == eLOC_CLIENT_SUCCESS) &&
-        (getNtnStatusInd.status == eQMI_LOC_SUCCESS_V02)) {
-        // Modem return NTN status successfully
-        err = LOCATION_ERROR_SUCCESS;
+    if (LOCATION_ERROR_SUCCESS == err) {
         returnedMask = getNtnStatusInd.signalType;
-    } else {
-        // Modem doesn't response this QMI for some reason
-        err = LOCATION_ERROR_NOT_SUPPORTED;
     }
 
     LocApiBase::reportNtnStatusEvent(err, returnedMask, false);
@@ -10412,35 +10040,27 @@ void LocApiV02::getNtnConfigSignalMask(LocApiResponse* adapterResponse) {
 void LocApiV02::setNtnConfigSignalMask(GnssSignalTypeMask gpsSignalTypeConfigMask,
         LocApiResponse* adapterResponse) {
     sendMsg(new LocApiMsg([this, gpsSignalTypeConfigMask, adapterResponse] () {
-    LOC_LOGd("gpsSignalTypeConfigMask = %d", gpsSignalTypeConfigMask);
+
     LocationError err = LOCATION_ERROR_SUCCESS;
-    locClientStatusEnumType status = eLOC_CLIENT_FAILURE_GENERAL;
     locClientReqUnionType req_union = {};
     qmiLocSetNtnStatusReqMsgT_v02 setNtnStatusReq = {};
     qmiLocSetNtnStatusIndMsgT_v02 setNtnStatusInd = {};
 
+    LOC_LOGd("gpsSignalTypeConfigMask = %d", gpsSignalTypeConfigMask);
     setNtnStatusReq.signalType = gpsSignalTypeConfigMask;
     req_union.pSetNtnStatusReq = &setNtnStatusReq;
 
-    status = locSyncSendReq(QMI_LOC_SET_NTN_STATUS_REQ_V02,
-                            req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
-                            QMI_LOC_SET_NTN_STATUS_IND_V02,
-                            &setNtnStatusInd);
+    err = locSyncSendReq(QMI_LOC_SET_NTN_STATUS_REQ_V02,
+                         req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
+                         QMI_LOC_SET_NTN_STATUS_IND_V02,
+                         &setNtnStatusInd);
 
     GnssSignalTypeMask returnedMask = 0;
-    if ((status == eLOC_CLIENT_SUCCESS) &&
-        (setNtnStatusInd.status == eQMI_LOC_SUCCESS_V02)) {
+    if (LOCATION_ERROR_SUCCESS == err) {
         // Modem set NTN status successfully
         returnedMask = setNtnStatusInd.signalType;
-        err = LOCATION_ERROR_SUCCESS;
-    } else if (setNtnStatusInd.status == eQMI_LOC_GENERAL_FAILURE_V02) {
-        // Modem cannot set NTN status exactly folllow gpsSignalTypeConfigMask
-        err = LOCATION_ERROR_GENERAL_FAILURE;
-        returnedMask = setNtnStatusInd.signalType;
-    } else {
-        //Modem doesn't response this QMI for some reason
-        err = LOCATION_ERROR_NOT_SUPPORTED;
     }
+
     LocApiBase::reportNtnStatusEvent(err, returnedMask, true);
     if (adapterResponse != NULL) {
         adapterResponse->returnToSender(err);
@@ -10453,7 +10073,6 @@ void LocApiV02::injectSuplCert(int32_t suplCertId, const std::vector<uint8_t>& s
     sendMsg(new LocApiMsg([this, suplCertId, suplCertData, adapterResponse] () {
     LOC_LOGd("suplCertId: %d, suplCert size: %zu", suplCertId, suplCertData.size())
     LocationError err = LOCATION_ERROR_SUCCESS;
-    locClientStatusEnumType status = eLOC_CLIENT_FAILURE_GENERAL;
     locClientReqUnionType req_union = {};
     qmiLocInjectSuplCertificateReqMsgT_v02 certReq;
     qmiLocInjectSuplCertificateIndMsgT_v02 certInd;
@@ -10467,17 +10086,11 @@ void LocApiV02::injectSuplCert(int32_t suplCertId, const std::vector<uint8_t>& s
     memcpy(certReq.suplCertData, suplCertData.data(), std::min((int)suplCertData.size(), 2000));
     req_union.pInjectSuplCertificateReq = &certReq;
 
-    status = locSyncSendReq(QMI_LOC_INJECT_SUPL_CERTIFICATE_REQ_V02,
-                            req_union, 5000,
-                            QMI_LOC_INJECT_SUPL_CERTIFICATE_IND_V02,
-                            &certInd);
+    err = locSyncSendReq(QMI_LOC_INJECT_SUPL_CERTIFICATE_REQ_V02,
+                         req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
+                         QMI_LOC_INJECT_SUPL_CERTIFICATE_IND_V02,
+                         &certInd);
 
-    if (status == eLOC_CLIENT_SUCCESS) {
-        err = LOCATION_ERROR_SUCCESS;
-        LOC_LOGd("successful cert injection")
-    } else {
-        err = LOCATION_ERROR_GENERAL_FAILURE;
-    }
     if (adapterResponse != NULL) {
         adapterResponse->returnToSender(err);
     }
@@ -10572,7 +10185,6 @@ void LocApiV02::configPrecisePositioning(uint32_t featureId, bool enable,
 
         qmiLocSetSdkFeatureConfigReqMsgT_v02 req;
         qmiLocSetSdkFeatureConfigIndMsgT_v02 ind;
-        locClientStatusEnumType status;
         locClientReqUnionType req_union;
 
         LOC_LOGD("configPrecisePositioning: featureId %d, enable %d, app hash: %s",
@@ -10615,21 +10227,14 @@ void LocApiV02::configPrecisePositioning(uint32_t featureId, bool enable,
         }
 
         req_union.pLocSetSdkFeatureConfigReq = &req;
-        status = locSyncSendReq(QMI_LOC_SET_SDK_FEATURE_CONFIG_REQ_V02,
-                                req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
-                                QMI_LOC_SET_SDK_FEATURE_CONFIG_IND_V02,
-                                &ind);
-        LOC_LOGD("configPrecisePositioning: Ind. featureStatusReport_valid %d, "
-                "featureStatusReport %" PRIx64"", ind.featureStatusReport_valid,
-                ind.featureStatusReport);
-        if (status != eLOC_CLIENT_SUCCESS || ind.status != eQMI_LOC_SUCCESS_V02) {
-            if (status == eLOC_CLIENT_FAILURE_UNSUPPORTED ||
-                    status == eLOC_CLIENT_FAILURE_INVALID_MESSAGE_ID) {
-                err = LOCATION_ERROR_NOT_SUPPORTED;
-            } else {
-                err = LOCATION_ERROR_GENERAL_FAILURE;
-            }
-        } else if (ind.featureStatusReport_valid) {
+        err = locSyncSendReq(QMI_LOC_SET_SDK_FEATURE_CONFIG_REQ_V02,
+                             req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
+                             QMI_LOC_SET_SDK_FEATURE_CONFIG_IND_V02,
+                             &ind);
+        LOC_LOGd("featureStatusReport_valid %d, featureStatusReport %" PRIx64"",
+                 ind.featureStatusReport_valid, ind.featureStatusReport);
+
+        if (LOCATION_ERROR_SUCCESS == err && ind.featureStatusReport_valid) {
             //Report Modem side QESDK feature status to Adapters
             if (featureId == QESDK_FEATURE_ID_EDGNSS || featureId == QESDK_FEATURE_ID_RTK) {
                 if (ind.featureStatusReport & QMI_LOC_FEATURE_STATUS_DGNSS_V02) {
@@ -10659,7 +10264,6 @@ void LocApiV02::configPrecisePositioning(PreciseType preciseType, bool enable,
         LocationError err = LOCATION_ERROR_SUCCESS;
         qmiLocSetPreciseSessionConfigReqMsgT_v02 req;
         qmiLocGenReqStatusIndMsgT_v02 ind;
-        locClientStatusEnumType status;
         locClientReqUnionType req_union;
 
         LOC_LOGD("configPrecisePositioning: preciseType %d, enable %d", preciseType, enable);
@@ -10689,20 +10293,11 @@ void LocApiV02::configPrecisePositioning(PreciseType preciseType, bool enable,
         }
 
         req_union.pSetPreciseSessionConfigReq = &req;
-        status = locSyncSendReq(QMI_LOC_SET_PRECISE_SESSION_CONFIG_REQ_V02,
-                                req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
-                                QMI_LOC_SET_PRECISE_SESSION_CONFIG_IND_V02,
-                                &ind);
-        LOC_LOGd("configPrecisePositioning: Ind. status 0x%x", ind.status);
+        err = locSyncSendReq(QMI_LOC_SET_PRECISE_SESSION_CONFIG_REQ_V02,
+                             req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
+                             QMI_LOC_SET_PRECISE_SESSION_CONFIG_IND_V02,
+                             &ind);
 
-        if (status != eLOC_CLIENT_SUCCESS || ind.status != eQMI_LOC_SUCCESS_V02) {
-            if (status == eLOC_CLIENT_FAILURE_UNSUPPORTED ||
-                    status == eLOC_CLIENT_FAILURE_INVALID_MESSAGE_ID) {
-                err = LOCATION_ERROR_NOT_SUPPORTED;
-            } else {
-                err = LOCATION_ERROR_GENERAL_FAILURE;
-            }
-        }
         if (adapterResponse) {
             adapterResponse->returnToSender(err);
         }
@@ -10775,7 +10370,6 @@ LocApiV02::startBatching(uint32_t sessionId,
 
     LOC_LOGD("startBatching: session id %u minInterval %u "
              "accuracy %u timeout %u", sessionId, options.minInterval, accuracy, timeout);
-    LocationError err = LOCATION_ERROR_SUCCESS;
 
     setOperationMode(options.mode);
 
@@ -10836,7 +10430,7 @@ LocApiV02::startBatching(uint32_t sessionId,
 
     LOC_SEND_SYNC_REQ(StartBatching, START_BATCHING, startBatchReq);
 
-    if (!rv) {
+    if (LOCATION_ERROR_SUCCESS != err) {
         if (ENGINE_LOCK_STATE_DISABLED == getEngineLockState()) {
             err = LOCATION_ERROR_TZ_LOCKED;
         } else {
@@ -10858,7 +10452,6 @@ LocApiV02::stopBatching(uint32_t sessionId, LocApiResponse* adapterResponse)
     sendMsg(new LocApiMsg([this, sessionId, adapterResponse] () {
 
     LOC_LOGD("stopBatching: session id %u", sessionId);
-    LocationError err = LOCATION_ERROR_SUCCESS;
 
     qmiLocStopBatchingReqMsgT_v02 stopBatchingReq;
     memset(&stopBatchingReq, 0, sizeof(stopBatchingReq));
@@ -10871,10 +10464,6 @@ LocApiV02::stopBatching(uint32_t sessionId, LocApiResponse* adapterResponse)
 
     LOC_SEND_SYNC_REQ(StopBatching, STOP_BATCHING, stopBatchingReq);
 
-    if (!rv) {
-        LOC_LOGe("failed, rv =%d", rv);
-        err = LOCATION_ERROR_GENERAL_FAILURE;
-    }
     if (adapterResponse != NULL) {
         adapterResponse->returnToSender(err);
     }
@@ -10994,11 +10583,11 @@ LocApiV02::readModemLocations(Location* pLocationPiece,
                               BatchingMode batchingMode,
                               size_t& numbOfEntries)
 {
-    LOC_LOGd("count %zu.", count);
-    numbOfEntries = 0;
     qmiLocReadFromBatchReqMsgT_v02 getBatchLocatonReq;
     memset(&getBatchLocatonReq, 0, sizeof(getBatchLocatonReq));
 
+    LOC_LOGd("count %zu.", count);
+    numbOfEntries = 0;
     if (count != 0) {
         getBatchLocatonReq.numberOfEntries = count;
         getBatchLocatonReq.transactionId = 1;
@@ -11009,7 +10598,7 @@ LocApiV02::readModemLocations(Location* pLocationPiece,
 
     LOC_SEND_SYNC_REQ(ReadFromBatch, READ_FROM_BATCH, getBatchLocatonReq);
 
-    if (!rv) {
+    if (LOCATION_ERROR_SUCCESS != err) {
         return;
     }
     if (ind.numberOfEntries_valid != 0 &&

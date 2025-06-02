@@ -44,24 +44,18 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #include <unordered_map>
 
 #define LOC_SEND_SYNC_REQ(NAME, ID, REQ)  \
-    int rv = true; \
-    locClientStatusEnumType st; \
+    LocationError err = LOCATION_ERROR_SUCCESS; \
     locClientReqUnionType reqUnion; \
     qmiLoc##NAME##IndMsgT_v02 ind; \
 \
     memset(&ind, 0, sizeof(ind)); \
     reqUnion.p##NAME##Req = &REQ; \
 \
-    st = locSyncSendReq(QMI_LOC_##ID##_REQ_V02,          \
-                        reqUnion,                        \
-                        LOC_ENGINE_SYNC_REQUEST_TIMEOUT, \
-                        QMI_LOC_##ID##_IND_V02,          \
-                        &ind);                           \
-\
-    if (st != eLOC_CLIENT_SUCCESS || \
-        eQMI_LOC_SUCCESS_V02 != ind.status) { \
-        rv = false; \
-    }
+    err = locSyncSendReq(QMI_LOC_##ID##_REQ_V02,          \
+                         reqUnion,                        \
+                         LOC_ENGINE_SYNC_REQUEST_TIMEOUT, \
+                         QMI_LOC_##ID##_IND_V02,          \
+                         &ind);                           \
 
 using Resender = std::function<void()>;
 using namespace loc_core;
@@ -195,7 +189,7 @@ typedef CycleSlipCountMap::iterator CycleSlipCountMapItr;
 class LocApiV02 : public LocApiBase {
 protected:
   /* loc api v02 handle*/
-  locClientHandleType clientHandle;
+  locClientHandleType mClientHandle;
 
 private:
   locClientEventMaskType mQmiMask;
@@ -249,7 +243,7 @@ private:
   static EngineLockState convertEngineLockState(qmiLocEngineLockStateEnumT_v02 LockState);
 
   /* Convert error from loc_api_v02 to loc eng format*/
-  static enum loc_api_adapter_err convertErr(locClientStatusEnumType status);
+  static LocationError convertErr(locClientStatusEnumType status);
 
   /* convert Ni Encoding type from QMI_LOC to loc eng format */
   static GnssNiEncodingType convertNiEncoding(
@@ -520,13 +514,17 @@ public:
   virtual LocationError setSUPLVersionSync(GnssConfigSuplVersion version);
   virtual LocationError setLPPConfigSync(GnssConfigLppProfileMask profileMask);
 
-
   virtual enum loc_api_adapter_err
-    setSensorPropertiesSync(bool gyroBiasVarianceRandomWalk_valid, float gyroBiasVarianceRandomWalk,
-                            bool accelBiasVarianceRandomWalk_valid, float accelBiasVarianceRandomWalk,
-                            bool angleBiasVarianceRandomWalk_valid, float angleBiasVarianceRandomWalk,
-                            bool rateBiasVarianceRandomWalk_valid, float rateBiasVarianceRandomWalk,
-                            bool velocityBiasVarianceRandomWalk_valid, float velocityBiasVarianceRandomWalk);
+    setSensorPropertiesSync(bool gyroBiasVarianceRandomWalk_valid,
+                            float gyroBiasVarianceRandomWalk,
+                            bool accelBiasVarianceRandomWalk_valid,
+                            float accelBiasVarianceRandomWalk,
+                            bool angleBiasVarianceRandomWalk_valid,
+                            float angleBiasVarianceRandomWalk,
+                            bool rateBiasVarianceRandomWalk_valid,
+                            float rateBiasVarianceRandomWalk,
+                            bool velocityBiasVarianceRandomWalk_valid,
+                            float velocityBiasVarianceRandomWalk);
 
   virtual enum loc_api_adapter_err
     setSensorPerfControlConfigSync(int controlMode, int accelSamplesPerBatch,
@@ -565,7 +563,7 @@ public:
   Current value of GPS Lock on success
   -1 on failure
   */
-  virtual int setSvMeasurementConstellation(const locClientEventMaskType mask);
+  virtual LocationError setSvMeasurementConstellation(const locClientEventMaskType mask);
 
   virtual LocPosTechMask convertPosTechMask(qmiLocPosTechMaskT_v02 mask);
   virtual LocNavSolutionMask convertNavSolutionMask(qmiLocNavSolutionMaskT_v02 mask);
@@ -615,12 +613,12 @@ public:
   virtual void injectSuplCert(int32_t suplCertId, const std::vector<uint8_t>& suplCertData,
             LocApiResponse* adapterResponse=nullptr);
 
-  locClientStatusEnumType locSyncSendReq(uint32_t req_id, locClientReqUnionType req_payload,
+  LocationError locSyncSendReq(uint32_t req_id, locClientReqUnionType req_payload,
           uint32_t timeout_msec, uint32_t ind_id, void* ind_payload_ptr);
 
   inline locClientStatusEnumType locClientSendReq(uint32_t req_id,
           locClientReqUnionType req_payload) {
-      return ::locClientSendReq(clientHandle, req_id, req_payload);
+      return ::locClientSendReq(mClientHandle, req_id, req_payload);
   }
 };
 
