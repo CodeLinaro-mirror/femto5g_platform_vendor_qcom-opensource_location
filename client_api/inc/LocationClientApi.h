@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -3432,6 +3432,12 @@ typedef std::function<void(
     const GnssEnergyConsumedInfo& gnssEneryConsumed
 )> GnssEnergyConsumedCb;
 
+/** @brief Callback to confirm the the LocationClientApi
+           instance is destroyed.<br/>
+*/
+typedef std::function<void(
+)> LocClientDestroyCb;
+
 class LocationClientApiImpl;
 class LocationClientApi
 {
@@ -3452,6 +3458,15 @@ public:
 
     /** @brief Default destructor */
     virtual ~LocationClientApi();
+
+    /** @brief
+       Destroy/cleans up the instance of LocationClientApi object,
+       which should be called when LocationClientApi object is
+       no longer needed.
+       The caller shall not destruct LocationClientApi object before
+       destroyCompleteCb is invoked
+    */
+    void destroy(LocClientDestroyCb destroyCompleteCb);
 
     /* ================================== POSITIONING ================================== */
 
