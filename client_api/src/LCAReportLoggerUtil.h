@@ -1,4 +1,4 @@
-/* Copyright (c) 2020-2021, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2020-2021 The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2024, 2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -65,12 +65,9 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef LOCATION_CLIENT_API_DIAG_BASE
 #define LOCATION_CLIENT_API_DIAG_BASE
 
-#include "LocLoggerBase.h"
 #include <LocationDataTypes.h>
 #include "LocationClientApi.h"
 #include <loc_misc_utils.h>
-
-using namespace loc_util;
 
 namespace location_client {
 
