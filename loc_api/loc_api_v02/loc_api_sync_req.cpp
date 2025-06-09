@@ -25,6 +25,12 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
+/*
+Changes from Qualcomm Technologies, Inc. are provided under the following license:
+Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 #include <stdio.h>
 #include <assert.h>
 #include <errno.h>
@@ -102,7 +108,6 @@ SIDE EFFECTS
 ===========================================================================*/
 void loc_sync_req_init()
 {
-   UTIL_READ_CONF_DEFAULT(LOC_PATH_GPS_CONF);
    pthread_mutex_lock(&loc_sync_call_mutex);
    if(true == loc_sync_call_initialized)
    {

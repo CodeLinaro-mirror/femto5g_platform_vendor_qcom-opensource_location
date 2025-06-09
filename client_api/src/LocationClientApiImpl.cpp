@@ -49,14 +49,7 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #include <sys/types.h>
 #include <pwd.h>
 
-static uint32_t gDebug = 0;
 static uint32_t gSleepTime = 800000;
-
-static const loc_param_s_type gConfigTable[] =
-{
-    {"DEBUG_LEVEL", &gDebug, NULL, 'n'},
-    {"QRTRWATCHER_DELAY_MICROSECOND", &gSleepTime, NULL, 'n'}
-};
 
 namespace location_client {
 
@@ -1869,9 +1862,12 @@ LocationClientApiImpl::LocationClientApiImpl(capabilitiesCallback capabilitiescb
         mLogger(),
         mpAntennaInfoCb(nullptr)
 {
+    const loc_param_s_type configTable[] =
+    {
+       {"QRTRWATCHER_DELAY_MICROSECOND", &gSleepTime, NULL, 'n'}
+    };
     // read configuration file
-    UTIL_READ_CONF(LOC_PATH_GPS_CONF, gConfigTable);
-    LOC_LOGd("gDebug=%u", gDebug);
+    UTIL_READ_CONF(LOC_PATH_GPS_CONF, configTable);
 
     // get pid to generate sokect name
     uint32_t pid = (uint32_t)getpid();
