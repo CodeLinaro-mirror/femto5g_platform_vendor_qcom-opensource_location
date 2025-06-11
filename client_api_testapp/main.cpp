@@ -28,6 +28,7 @@
  */
 
 /*
+Changes from Qualcomm Innovation Center are provided under the following license:
 Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
 SPDX-License-Identifier: BSD-3-Clause-Clear
 */
@@ -76,6 +77,9 @@ static location_integration::LocationIntegrationApi* pIntClient = nullptr;
 static sem_t semCompleted;
 static sem_t semGfCompleted;
 static sem_t semBatchingCompleted;
+static sem_t semLcaDestroyCompleted;
+static sem_t semLiaDestroyCompleted;
+
 static int fixCnt = 0x7fffffff;
 static uint64_t autoTestStartTimeMs = 0;
 static uint64_t autoTestStartGfTimeMs = 0;
@@ -2055,6 +2059,29 @@ void geofenceTestMenu() {
     }
 }
 
+// Callback function to be called when destroy is complete
+void lcaDestroyCompleteCb() {
+    printf("<<< LCA destroyCompleteCb");
+    if (pLcaClient) {
+        delete pLcaClient;
+        pLcaClient = nullptr;
+    }
+
+    // Send a signal to indicate destroy is complete
+    sem_post(&semLcaDestroyCompleted);
+}
+
+void liaDestroyCompleteCb() {
+    printf("<<< LIA destroyCompleteCb");
+    if (pIntClient) {
+        delete pIntClient;
+        pIntClient = nullptr;
+    }
+
+    // Send a signal to indicate destroy is complete
+    sem_post(&semLiaDestroyCompleted);
+}
+
 /******************************************************************************
 Main function
 ******************************************************************************/
@@ -2671,13 +2698,13 @@ int main(int argc, char *argv[]) {
 EXIT:
     if (nullptr != pLcaClient) {
         pLcaClient->stopPositionSession();
-        delete pLcaClient;
-        pLcaClient = nullptr;
+        pLcaClient->destroy(lcaDestroyCompleteCb);
+        sem_wait(&semLcaDestroyCompleted);
     }
 
     if (nullptr != pIntClient) {
-        delete pIntClient;
-        pIntClient = nullptr;
+        pIntClient->destroy(liaDestroyCompleteCb);
+        sem_wait(&semLiaDestroyCompleted);
     }
 
     printf("Done\n");

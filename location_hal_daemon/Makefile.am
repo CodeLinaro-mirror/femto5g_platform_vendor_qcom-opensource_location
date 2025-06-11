@@ -4,7 +4,7 @@ AM_CFLAGS = \
     $(LOCCORE_CFLAGS) \
     $(GPSUTILS_CFLAGS) \
     $(LOCAPIMSGPROTO_CFLAGS) \
-     -std=c++11
+     -std=c++17
 
 if USE_SYSTEMD
 AM_CFLAGS += -DINIT_SYSTEM_SYSTEMD

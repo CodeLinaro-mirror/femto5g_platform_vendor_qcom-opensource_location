@@ -5,6 +5,10 @@ AM_CFLAGS = \
      -D__func__=__PRETTY_FUNCTION__ \
      -fno-short-enums
 
+if USE_G_STRLCPY
+    AM_CFLAGS += -Dstrlcpy=g_strlcpy -Dstrlcat=g_strlcat
+endif
+
 h_sources = \
         ../config_file.h \
         ../log.h \
@@ -33,9 +37,9 @@ library_includedir = $(pkgincludedir)
 library_include_HEADERS = $(h_sources)
 
 if USE_GLIB
-libloc_base_util_la_CFLAGS = -DUSE_GLIB $(AM_CFLAGS) @GLIB_CFLAGS@ -Dstrlcat=g_strlcat -Dstrlcpy=g_strlcpy -include glib.h
+libloc_base_util_la_CFLAGS = -DUSE_GLIB $(AM_CFLAGS) @GLIB_CFLAGS@ -include glib.h
 libloc_base_util_la_LDFLAGS = -lstdc++ -Wl,-z,defs -lpthread @GLIB_LIBS@ -shared -version-info 1:0:0
-libloc_base_util_la_CPPFLAGS = -DUSE_GLIB $(AM_CFLAGS) $(AM_CPPFLAGS) @GLIB_CFLAGS@ -Dstrlcat=g_strlcat -Dstrlcpy=g_strlcpy -include glib.h
+libloc_base_util_la_CPPFLAGS = -DUSE_GLIB $(AM_CFLAGS) $(AM_CPPFLAGS) @GLIB_CFLAGS@  -include glib.h
 else
 libloc_base_util_la_CFLAGS = $(AM_CFLAGS)
 libloc_base_util_la_LDFLAGS = -Wl,-z,defs -lpthread -shared -version-info 1:0:0
