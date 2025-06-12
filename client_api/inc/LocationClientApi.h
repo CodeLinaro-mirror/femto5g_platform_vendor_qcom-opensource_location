@@ -2321,11 +2321,10 @@ struct LocationSystemInfo {
 
 /** Specify the set of terrestrial technologies to be used when
  *  invoking getSingleTerrestrialPosition(). <br/>
- *
- *  Currently, only TERRESTRIAL_TECH_GTP_WWAN is supported.
- *  <br/> */
+**/
 enum TerrestrialTechnologyMask {
     TERRESTRIAL_TECH_GTP_WWAN = 1 << 0,
+    TERRESTRIAL_TECH_GTP_WIFI = 1 << 1,
 };
 
 /** Specify the batching status in BatchingCb. <br/> */
