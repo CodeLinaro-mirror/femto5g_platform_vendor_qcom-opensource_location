@@ -158,9 +158,9 @@ LocationApiService::LocationApiService(const configParamToRead & configParamRead
     mPositionMode((GnssSuplMode)configParamRead.positionMode),
     mMsgTask("HalMaintMsgTask"),
     mMaintTimer(this),
-    mGtpWwanSsLocationApi(nullptr),
+    mGtpTerrestrialSsLocationApi(nullptr),
     mOptInTerrestrialService(-1),
-    mGtpWwanSsLocationApiCallbacks{},
+    mGtpTerrestrialSsLocationApiCallbacks{},
     mSingleFixLocationApi(nullptr),
     mSingleFixTrackingSessionId(0),
     mSingleFixLocationApiCallbacks{},
@@ -843,7 +843,7 @@ void LocationApiService::deleteClientbyName(const std::string clientname, bool f
     // if client is requesting terrestrial fix, stop it
     if (mTerrestrialFixTimeoutMap.erase(clientname) != 0) {
         if (mTerrestrialFixTimeoutMap.size() == 0) {
-            mGtpWwanSsLocationApi->stopNetworkLocation(&mGtpWwanPosCallback);
+            mGtpTerrestrialSsLocationApi->stopNetworkLocation(&mGtpTerrestrialPosCallback);
         }
     }
 
@@ -1490,24 +1490,26 @@ void LocationApiService::configUserConsentTerrestrialPositioning(
              pMsg->mSocketName, mOptInTerrestrialService, pMsg->mUserConsent);
 
     mOptInTerrestrialService = pMsg->mUserConsent;
-    if ((mOptInTerrestrialService == 1) && (mGtpWwanSsLocationApi == nullptr)) {
+    if ((mOptInTerrestrialService == 1) && (mGtpTerrestrialSsLocationApi == nullptr)) {
         // mandatory callback
-        mGtpWwanSsLocationApiCallbacks.capabilitiesCb = [this](LocationCapabilitiesMask mask) {
+        mGtpTerrestrialSsLocationApiCallbacks.capabilitiesCb =
+                [this](LocationCapabilitiesMask mask) {
             onCapabilitiesCallback(mask);
         };
-        mGtpWwanSsLocationApiCallbacks.responseCb = [this](LocationError err, uint32_t id) {
+        mGtpTerrestrialSsLocationApiCallbacks.responseCb = [this](LocationError err, uint32_t id) {
             onResponseCb(err, id);
         };
-        mGtpWwanSsLocationApiCallbacks.collectiveResponseCb =
+        mGtpTerrestrialSsLocationApiCallbacks.collectiveResponseCb =
                 [this](size_t count, LocationError* errs, uint32_t* ids) {
             onCollectiveResponseCallback(count, errs, ids);
         };
 
-        mGtpWwanPosCallback = [this](Location location) {
+        mGtpTerrestrialPosCallback = [this](Location location) {
             onGtpWwanTrackingCallback(location);
         };
 
-        mGtpWwanSsLocationApi = LocationAPI::createInstance(mGtpWwanSsLocationApiCallbacks);
+        mGtpTerrestrialSsLocationApi =
+            LocationAPI::createInstance(mGtpTerrestrialSsLocationApiCallbacks);
     }
 
     uint32_t sessionId = mLocationControlApi->setOptInStatus(pMsg->mUserConsent);
@@ -1804,7 +1806,7 @@ void LocationApiService::onGtpWwanTrackingCallback(Location location) {
             ++it;
         }
         mTerrestrialFixTimeoutMap.clear();
-        mGtpWwanSsLocationApi->stopNetworkLocation(&mGtpWwanPosCallback);
+        mGtpTerrestrialSsLocationApi->stopNetworkLocation(&mGtpTerrestrialPosCallback);
     }
 }
 
@@ -1978,7 +1980,7 @@ void LocationApiService::getSingleTerrestrialPos(
         }
 
         if (terrestrialSessionStarted == false) {
-            mGtpWwanSsLocationApi->startNetworkLocation(&mGtpWwanPosCallback);
+            mGtpTerrestrialSsLocationApi->startNetworkLocation(&mGtpTerrestrialPosCallback);
         }
     }
 }
@@ -1998,7 +2000,7 @@ void LocationApiService::gtpFixRequestTimeout(const std::string& clientName) {
         mTerrestrialFixTimeoutMap.erase(clientName);
         // stop tracking if there is no more request
         if (mTerrestrialFixTimeoutMap.size() == 0) {
-            mGtpWwanSsLocationApi->stopNetworkLocation(&mGtpWwanPosCallback);
+            mGtpTerrestrialSsLocationApi->stopNetworkLocation(&mGtpTerrestrialPosCallback);
         }
     }
 }
