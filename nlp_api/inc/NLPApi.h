@@ -207,6 +207,47 @@ typedef struct {
             const AltitudeReceiverResponseListener* listener);
 } NLPApi;
 
+#define MAX_NUM_NLP_EXT_API 32
+#define CURRENT_NUM_NLP_EXT_API 2
+
+typedef struct {
+    /** @brief
+        Provides an instance of WiFiDBProvider object with
+        the specified listener and clientData. Only one valid
+        registration at a given time.
+
+        @param
+        listener: instance of WiFiDBProviderResponseListener,
+        implementing the required callback functions.
+        Should be valid until disconnect function is called.
+
+        @param
+        clientData: opaque client data bundle, will be passed
+        back to client with all the callbacks.
+
+        @return WiFiDBProvider*. False if listener is nullptr;
+        or if one instance has already registered.
+    */
+    const WiFiDBProvider* (*connectToWiFiDBProviderExt)(
+            const WiFiDBProviderResponseListenerExt* listener,
+            const void* clientData);
+
+    /** @brief
+        Disconnect the WiFiDBProvider associated with the provided listener.
+        {listener, clientData} must match the pair given to the connectToSystemStatus call
+
+        @param
+        listener: instance of WiFiDBProviderResponseListener, previously provided
+        in the connectToWiFiDBProvider call.
+    */
+    void (*disconnectFromWiFiDBProviderExt)(const WiFiDBProviderResponseListenerExt* listener);
+
+    /** reserve some APIs for future extension */
+    void* reserved[MAX_NUM_NLP_EXT_API - CURRENT_NUM_NLP_EXT_API];
+
+} NLPApiExt;
+
+
 /** @brief
     Provides a C pointer to an instance of NLPApi struct after dynamic linking to lobnlp_api.so.
 */
@@ -221,6 +262,18 @@ inline const NLPApi* linkGetNLPApi() {
 
     // increment this version number when aboe NLPApi changes
     return (const NLPApi*)(nullptr != getter) ? (NLPApi*)(*getter)(CURRENT_VERSION) : nullptr;
+}
+
+inline const NLPApiExt* linkGetNLPApiExt() {
+    typedef const void* (getNLPApiExt)();
+
+    getNLPApiExt* getter = nullptr;
+    void *handle = dlopen("libnlp_client_api.so", RTLD_NOW);
+    if (nullptr != handle) {
+        getter = (getNLPApiExt*)dlsym(handle, "getNLPApiExt");
+    }
+
+    return (const NLPApiExt*)(nullptr != getter) ? (NLPApiExt*)(*getter)() : nullptr;
 }
 
 #ifdef __cplusplus
