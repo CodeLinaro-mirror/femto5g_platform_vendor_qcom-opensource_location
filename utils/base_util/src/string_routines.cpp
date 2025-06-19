@@ -16,9 +16,7 @@
 #define HAS_STRLCPY 1
 #endif // #ifndef IZAT_OFFLINE
 
-#define BREAK_IF_ZERO(ERR,X) if(0==(X)) {result = (ERR); break;}
-#define BREAK_IF_NON_ZERO(ERR,X) if(0!=(X)) {result = (ERR); break;}
-#define BREAK_IF_NON_ZERO_RC(ERR,RC,X) if(0!=(RC=(X))) {result = (ERR); break;}
+#include "log_util.h"
 
 namespace qc_loc_fw
 {

@@ -20,6 +20,7 @@
 #include <base_util/list.h>
 #include <base_util/string_routines.h>
 #include <base_util/time_routines.h>
+#include "log_util.h"
 
 #define DEFAULT_ERROR_OUTPUT EO_STDOUT
 
@@ -54,10 +55,6 @@
 #undef DEFAULT_ERROR_OUTPUT
 #define DEFAULT_ERROR_OUTPUT EO_ANDROID
 #endif // #if defined (USE_ANDROID_LOGGING)  || defined (__ANDROID__)
-
-#define BREAK_IF_ZERO(ERR,X) if(0==(X)) {result = (ERR); break;}
-#define BREAK_IF_NON_ZERO(ERR,X) if(0!=(X)) {result = (ERR); break;}
-#define BREAK_IF_NON_ZERO_RC(ERR,RC,X) if(0!=(RC=(X))) {result = (ERR); break;}
 
 namespace qc_loc_fw
 {

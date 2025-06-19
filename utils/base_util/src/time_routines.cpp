@@ -16,10 +16,7 @@
 #include <sys/time.h>
 #include <base_util/time_routines.h>
 #include <base_util/log.h>
-
-#define BREAK_IF_ZERO(ERR,X) if(0==(X)) {result = (ERR); break;}
-#define BREAK_IF_NON_ZERO(ERR,X) if(0!=(X)) {result = (ERR); break;}
-#define BREAK_IF_NON_ZERO_RC(ERR,RC,X) if(0!=(RC=(X))) {result = (ERR); break;}
+#include "log_util.h"
 
 #ifdef CLOCK_BOOTTIME
 #define ENABLED_BOOTTIME_SUPPORT 1

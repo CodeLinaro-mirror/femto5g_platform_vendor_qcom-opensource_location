@@ -17,6 +17,8 @@ cc_library_shared {
     header_libs: [
         "libutils_headers",
         "libloc_base_util_headers",
+        "libgps.utils_headers",
+        "libloc_pla_headers",
     ],
 
     shared_libs: [
