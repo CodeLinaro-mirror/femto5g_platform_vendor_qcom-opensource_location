@@ -381,10 +381,10 @@ private:
     const MsgTask   mMsgTask;
 
     // Terrestrial service related APIs
-    // Location api interface for single short wwan fix
-    ILocationAPI* mGtpWwanSsLocationApi;
-    LocationCallbacks mGtpWwanSsLocationApiCallbacks;
-    trackingCallback mGtpWwanPosCallback;
+    // Location api interface for single short terrestrial fix
+    ILocationAPI* mGtpTerrestrialSsLocationApi;
+    LocationCallbacks mGtpTerrestrialSsLocationApiCallbacks;
+    trackingCallback mGtpTerrestrialPosCallback;
     // -1: not set, 0: user not opt-in, 1: user opt in
     int mOptInTerrestrialService;
     // LIA clients that register for xtra status update
