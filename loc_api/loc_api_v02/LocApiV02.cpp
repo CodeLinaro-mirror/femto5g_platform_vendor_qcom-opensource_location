@@ -25,12 +25,11 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
 /*
-Changes from Qualcomm Technologies, Inc. are provided under the following license:
-Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
-SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
 
 #define LOG_NDEBUG 0
 #define LOG_TAG "LocSvc_ApiV02"
@@ -3949,6 +3948,11 @@ void LocApiV02::populateFeatureStatusReport
         featureMap[LOCATION_QWES_FEATURE_TYPE_WOCS] = true;
     } else {
         featureMap[LOCATION_QWES_FEATURE_TYPE_WOCS] = false;
+    }
+    if (featureStatusReport & QMI_LOC_FEATURE_STATUS_QPPE_V02) {
+        featureMap[LOCATION_QWES_FEATURE_TYPE_PPE] = true;
+    } else {
+        featureMap[LOCATION_QWES_FEATURE_TYPE_PPE] = false;
     }
 }
 
