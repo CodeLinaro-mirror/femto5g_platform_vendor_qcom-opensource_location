@@ -1140,6 +1140,11 @@ static bool checkForAutoStart(int argc, char *argv[]) {
     LocReqEngineTypeMask reqEngMask = (LocReqEngineTypeMask) 0x7;
     uint32_t reportType = 0xff;
     TrackingSessionType trackingType = NO_TRACKING;
+    //<2bytes Engine Type><2byte DATUM TYPE><4bytes NMEA MASK>
+    uint64_t nmeaOptions = 0x0000000000000000;
+    NmeaTypesMask nmeaMask = NMEA_TYPE_ALL;
+    GeodeticDatumType datumType = GEODETIC_TYPE_WGS_84;
+    LocReqEngineTypeMask engineMask = LOC_REQ_ENGINE_FUSED_BIT;
 
     //Specifying the expected options
     //The two options l and b expect numbers as argument
@@ -1155,12 +1160,13 @@ static bool checkForAutoStart(int argc, char *argv[]) {
         {"timeout", required_argument,   0,  't' },
         {"fixcnt",   required_argument,  0,  'l' },
         {"reportType", required_argument, 0,  'r' },
+        {"NmeaOpt", required_argument, 0,  'n' },
         {0,           0,                 0,   0  }
     };
 
     int long_index =0;
     int opt = -1;
-    while ((opt = getopt_long(argc, argv, "aVNDd:s:e:i:t:l:r:U:z",
+    while ((opt = getopt_long(argc, argv, "aVNDd:s:e:i:t:l:r:U:n:z",
                    long_options, &long_index)) != -1) {
         switch (opt) {
              case 'a' :
@@ -1216,7 +1222,25 @@ static bool checkForAutoStart(int argc, char *argv[]) {
              case 'U' :
                  printf("route to NMEA port: %s\n", optarg);
                  routeToNMEAPort = atoi(optarg);
+                 if (routeToNMEAPort && !mMsgTask) {
+                     mMsgTask = new MsgTask("LcaTestApp");
+                 }
                  break;
+             case 'n': {
+                 // Extracting the NMEA Mask (last 4 bytes)
+                 printf("NMEA options: %s\n", optarg);
+                 nmeaOptions = strtoull(optarg, NULL, 16);
+                 nmeaMask = (NmeaTypesMask)(nmeaOptions & 0xFFFFFFFF);
+                 // Extracting the Datum Type (next 2 bytes)
+                 uint16_t nmeaDatumType = ((nmeaOptions >> 32) & 0xFFFF);
+                 // Extracting the Engine Type (first 2 bytes)
+                 uint16_t engTypeMask = ((nmeaOptions >> 48) & 0xFFFF);
+
+                 if (nmeaDatumType == 1) {
+                     datumType = GEODETIC_TYPE_PZ_90;
+                 }
+                 break;
+             }
              default:
                  printf("unsupported args provided\n");
                  break;
@@ -1224,9 +1248,11 @@ static bool checkForAutoStart(int argc, char *argv[]) {
     }
 
     printf("auto run %d, deleteAll %d, delete mask 0x%x, session type %d,"
-           "outputEnabled %d, detailedOutputEnabled %d routeToNMEAPort %d",
+           "outputEnabled %d, detailedOutputEnabled %d routeToNMEAPort %d,"
+           "nmeaTypes 0x%x, geodetic type %d engineTypeMask 0x%x\n",
            autoRun, deleteAll, aidingDataMask, trackingType,
-           outputEnabled, detailedOutputEnabled, routeToNMEAPort);
+           outputEnabled, detailedOutputEnabled, routeToNMEAPort,
+           nmeaMask, datumType, engineMask);
 
     // check for auto-start option
     if (autoRun) {
@@ -1251,7 +1277,21 @@ static bool checkForAutoStart(int argc, char *argv[]) {
             // wait for config response callback to be received
             sleep(1);
         }
-
+        if (nmeaOptions) {
+            // create location integratin API
+            LocIntegrationCbs intCbs;
+            intCbs.configCb = LocConfigCb(onConfigResponseCb);
+            LocConfigPriorityMap priorityMap;
+            pIntClient = new LocationIntegrationApi(priorityMap, intCbs);
+            if (!pIntClient) {
+                printf("can not create Location integration API");
+                exit(1);
+            }
+            sleep(1); // wait for capability callback
+            printf("nmeaTypes 0x%x, geodetic type %d engineTypeMask 0x%x\n", nmeaMask,
+                    datumType, engineMask);
+            pIntClient->configOutputNmeaTypes(nmeaMask, datumType);
+        }
         if (trackingType != NO_TRACKING) {
             pLcaClient = new LocationClientApi(onCapabilitiesCb);
             if (nullptr == pLcaClient) {
@@ -1328,10 +1368,6 @@ int main(int argc, char *argv[]) {
     setRequiredPermToRunAsLocClient();
     registerSignalHandler();
     checkForAutoStart(argc, argv);
-
-    if (routeToNMEAPort && !mMsgTask) {
-        mMsgTask = new MsgTask("LcaTestApp");
-    }
 
     // create Location client API
     pLcaClient = new LocationClientApi(onCapabilitiesCb);
