@@ -4627,9 +4627,10 @@ int LocationApiPbMsgConv::convertGnssMeasNotifToPB(
     }
 
     // repeated PBGnssMeasurementsData measurements = 1; Max array len - GNSS_MEASUREMENTS_MAX
-    uint32_t count = gnssMeasNotif.count;
+    uint32_t count = (gnssMeasNotif.count >
+            GNSS_MEASUREMENTS_MAX) ? GNSS_MEASUREMENTS_MAX : gnssMeasNotif.count;
     LOC_LOGv("LocApiPB: gnssMeasNotif - MeasNotif count:%d, isNhz:%d", count, gnssMeasNotif.isNhz);
-    for (int i=0; i < count; i++) {
+    for (int i=0; i < count && i < GNSS_MEASUREMENTS_MAX; i++) {
         PBGnssMeasurementsData* gnssMeasData = pbGnssMeasNotif->add_measurements();
         if (nullptr != gnssMeasData) {
             if (convertGnssMeasDataToPB(gnssMeasNotif.measurements[i], gnssMeasData)) {
@@ -5961,7 +5962,7 @@ int LocationApiPbMsgConv::pbConvertToGnssMeasNotification(
     // repeated PBGnssMeasurementsData measurements = 1; - Max array len - GNSS_MEASUREMENTS_MAX
     uint32_t count = pbGnssMeasNotif.measurements_size();
     gnssMeasNotif.count = count;
-    for (int i=0; i < count; i++) {
+    for (int i=0; i < count && i < GNSS_MEASUREMENTS_MAX; i++) {
         pbConvertToGnssMeasurementsData(pbGnssMeasNotif.measurements(i),
                 gnssMeasNotif.measurements[i]);
     }
