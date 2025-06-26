@@ -5,7 +5,7 @@
  GENERAL DESCRIPTION
  This component provides utilities used for synchronization among threads
 
- Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  SPDX-License-Identifier: BSD-3-Clause-Clear
  =============================================================================*/
 #include <pthread.h>
@@ -13,13 +13,15 @@
 #include <errno.h>
 #include <new>
 
-#include <base_util/queue.h>
+#include <queue>
 #include <base_util/log.h>
 #include <base_util/sync.h>
 #include "log_util.h"
 
 namespace qc_loc_fw
 {
+
+using std::queue;
 
 // non-thread safe version, to be used only in threading related code
 void log_error_no_lock(const char * const local_log_tag, const char * const format, ...);
@@ -523,7 +525,7 @@ public:
 
   virtual int ZeroIfShouldWaitAgain_locked();
 
-  Queue<void *> m_queue;
+  queue<void *> m_queue;
   const char * m_tag;
   bool m_isClosed;
   bool m_verboseLog;
@@ -543,7 +545,7 @@ BlockingQueueImpl::BlockingQueueImpl(const char * tag, const bool verboseLog) :
 
 BlockingQueueImpl::~BlockingQueueImpl()
 {
-  if(m_queue.getSize() > 0)
+  if (m_queue.size() > 0)
   {
     log_warning(m_tag, "~BlockingQueueImpl: memory leak");
   }
@@ -557,7 +559,7 @@ int BlockingQueueImpl::ZeroIfShouldWaitAgain_locked()
   }
   else
   {
-    return m_queue.getSize();
+    return m_queue.size();
   }
 }
 
@@ -575,11 +577,7 @@ int BlockingQueueImpl::push(void * const ptr)
     else
     {
       result = 100;
-      if(0 != m_queue.push(ptr))
-      {
-        // something is wrong, but we cannot leave just now
-        result = 101;
-      }
+      m_queue.push(ptr);
     }
 
     BREAK_IF_NON_ZERO(4, signal_one_and_then_unlock());
@@ -696,19 +694,10 @@ int BlockingQueueImpl::pop(void ** const pptr, const TimeDiff & timeout, bool * 
       }
     }
 
-    if(m_queue.getSize() > 0)
-    {
-      if(0 != m_queue.pop(pptr))
-      {
-        // something is wrong, but we cannot leave just now
-        result = 5;
-      }
+    if (m_queue.size()>0) {
+      *pptr = m_queue.front();
+      m_queue.pop();
     }
-    else
-    {
-      // timeout or queue closed
-    }
-
     BREAK_IF_NON_ZERO(5, unlock());
 
     result = 0;

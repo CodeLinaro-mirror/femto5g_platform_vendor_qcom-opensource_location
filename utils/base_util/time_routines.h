@@ -5,7 +5,7 @@
  GENERAL DESCRIPTION
  This component implements portable time related routines
 
- Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  SPDX-License-Identifier: BSD-3-Clause-Clear
  =============================================================================*/
 
@@ -14,10 +14,11 @@
 
 #include <time.h>
 #include <base_util/postcard.h>
+#include <list>
 
 namespace qc_loc_fw
 {
-
+using std::list;
 class TimeDiff
 {
 public:
