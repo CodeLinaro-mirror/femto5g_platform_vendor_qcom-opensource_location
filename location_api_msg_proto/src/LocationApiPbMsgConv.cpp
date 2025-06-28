@@ -4000,8 +4000,8 @@ int LocationApiPbMsgConv::convertXtraStatusToPB(
     if (xtraStatus.featureEnabled == true) {
         pbXtraStatus->set_xtradatastatus(getPBEnumForXtraDataStatus(xtraStatus.xtraDataStatus));
         pbXtraStatus->set_xtravalidforhours(xtraStatus.xtraValidForHours);
-        pbXtraStatus->set_userconsentstatus(xtraStatus.userConsentStatus);
     }
+    pbXtraStatus->set_userconsentstatus(xtraStatus.userConsentStatus);
     LOC_LOGv("pb xtra status %d %d %d %d", pbXtraStatus->featureenabled(),
             pbXtraStatus->xtradatastatus(), pbXtraStatus->xtravalidforhours(),
             pbXtraStatus->userconsentstatus());
