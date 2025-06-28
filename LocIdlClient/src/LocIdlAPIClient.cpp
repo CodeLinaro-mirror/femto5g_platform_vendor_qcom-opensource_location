@@ -30,6 +30,7 @@ using namespace v1::com::qualcomm::qti::location;
 using namespace std;
 #define NSEC_IN_ONE_SEC       (1000000000ULL)   /* nanosec in a sec */
 #define GPTP_IF_LIB_NAME      "libgptp.so"
+#define IDLTESTCLIENT_NAME    "LocIdlAPIClient"
 
 void gptpUpdateNotification(struct gptp_update update);
 const char * libName = GPTP_IF_LIB_NAME;
@@ -45,7 +46,7 @@ static const char MMF_TRUTH_FILE[] = "/data/vendor/location/";
 uint32_t readThreadSleep = 25;
 
 CommonAPI::CallInfo info(1000);
-bool     sessionStarted;
+bool     sessionStarted = false;
 uint32_t mask;
 uint32_t pvtSubscription;
 uint32_t svSubscription;
@@ -132,6 +133,51 @@ const static gPTPLibInterfaceReq  *gPTPReqIf = nullptr;
 void gptpUpdateNotification(struct gptp_update update)
 {
     cout << "GPTP Update Notification" << endl;
+}
+
+uint64_t getSystemTimeInmSecFromBoot(void)
+{
+   struct timespec curt_ts;
+   uint64_t curt_time_ms = 0;
+
+   memset(&curt_ts, 0x00, sizeof(struct timespec));
+   clock_gettime(CLOCK_BOOTTIME, &curt_ts);
+   curt_time_ms = (curt_ts.tv_sec * 1000LL);
+   curt_time_ms += (curt_ts.tv_nsec / 1000000LL);
+   return curt_time_ms;
+}
+
+bool isIdlTestClientRunning(void)
+{
+   bool isIdlTestPrst = false;
+   FILE *fptr = NULL;
+   char processName[1024];
+   char *ptrPresent = NULL;
+   char *nxtPresent = NULL;
+   unsigned int count = 0;
+
+   fptr = popen("ps -A |grep LocIdlAPIClient", "r");
+   if (NULL == fptr) {
+       printf("pgrep is NULL");
+       return isIdlTestPrst;
+   }
+
+   memset(&processName, 0x00, (1024 * sizeof(char)));
+   while (fgets(processName, (1024 * sizeof(char)), fptr) != NULL) {
+       std::string buff(processName);
+       std::string subs(IDLTESTCLIENT_NAME);
+       cout << "Output:" << buff << endl;
+       auto pos = buff.find(subs);
+       if (pos != std::string::npos) {
+           if (0 == count) {
+               count++;
+           } else {
+               isIdlTestPrst = true;
+           }
+       }
+   }
+
+   return isIdlTestPrst;
 }
 
 void loadGptpLibFile(void)
@@ -621,13 +667,14 @@ void printPosResport(const LocationTypes::LocationReportT &_locationReport)
 
     static unsigned int posCount;
     uint64_t gptp_time_ns = 0;
+    bool retSyncStatus = false;
     bool retPtp = false;
     static bool printPvtHeader = true;
 
     if (printPvtHeader) {
-        cout << "Type, UTCTimestamp(ms), Latitude, Longitude, RxTimeStampPTP(ns),"
+        cout << "Type, UTCTimestamp(ms), Latitude, Longitude, RxTimeStampPTP(ns), "
                 "TxTimestampPTP(ns), Latency(ms), Latency@Source(ms), LocationTechMask, "
-                "NavSolutionMask" << endl;
+                "NavSolutionMask, gPTPSyncStatus, Boot Time(ms) " << endl;
         printPvtHeader = false;
     }
 
@@ -674,8 +721,12 @@ void printPosResport(const LocationTypes::LocationReportT &_locationReport)
 
     uint64_t lFlags = _locationReport.getLocationInfoFlags();
     if (lFlags &  LocationTypes::LocationReportExtendedFlagMaskT::LREFMT_GPTP_TIME_BIT){
-        if ((nullptr != gPTPReqIf) && (nullptr != gPTPReqIf->gptpGetCurPtpTimeIf))
+        if ((nullptr != gPTPReqIf) && (nullptr != gPTPReqIf->gptpGetCurPtpTimeIf)) {
             retPtp = gPTPReqIf->gptpGetCurPtpTimeIf(&gptp_time_ns);
+            if (nullptr != gPTPReqIf->gptpGetSyncStatusIf) {
+               retSyncStatus = gPTPReqIf->gptpGetSyncStatusIf();
+            }
+        }
         if     (retPtp) {
             cout <<"PVT, "
                 "" << location.getTimestamp()<< ", "
@@ -688,6 +739,8 @@ void printPosResport(const LocationTypes::LocationReportT &_locationReport)
                 "" << _locationReport.getReportingLatency()<<","
                 "" << navTechMaskToString(location.getTechMask())  <<","
                 "" << (_locationReport.getNavSolutionMask()) <<","
+                "" << retSyncStatus <<","
+                "" << getSystemTimeInmSecFromBoot() << ","
                 ""  << endl;
         } else {
             cout <<"PVT, "
@@ -700,6 +753,8 @@ void printPosResport(const LocationTypes::LocationReportT &_locationReport)
                 "" << _locationReport.getReportingLatency()<<","
                 "" << navTechMaskToString(location.getTechMask())  <<","
                 "" << (_locationReport.getNavSolutionMask())<<","
+                "" << retSyncStatus <<","
+                "" << getSystemTimeInmSecFromBoot() << ","
                 ""  << endl;
         }
     } else {
@@ -713,6 +768,8 @@ void printPosResport(const LocationTypes::LocationReportT &_locationReport)
                 "" <<"NA" <<","
                 "" << navTechMaskToString(location.getTechMask())  <<","
                 "" << (_locationReport.getNavSolutionMask()) <<","
+                "" << retSyncStatus <<","
+                "" << getSystemTimeInmSecFromBoot() << ","
                 ""  << endl;
     }
 
@@ -1236,6 +1293,11 @@ int main(int argc, char* argv[])
 
     setenv("VSOMEIP_CONFIGURATION", "/vendor/etc/vsomeip_vlan1500.json", 1);
     setenv("COMMONAPI_CONFIG", "/vendor/etc/commonapi4someip.ini" ,1);
+
+    if (isIdlTestClientRunning()) {
+        cout<<"previous LocIdlAPIClient is Running, Closing this one!!!!"<<endl;
+        return 0;
+    }
 
     /* Command Line parsing*/
     if (!parseCommandLine(argc, argv, delay)) {
