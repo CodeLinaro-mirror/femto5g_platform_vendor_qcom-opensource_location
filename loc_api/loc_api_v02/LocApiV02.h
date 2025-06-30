@@ -403,10 +403,8 @@ private:
   void wifiStatusInformSync();
 
   void sendNfwNotification(GnssNfwNotification& notification);
-  LocationError queryBatchBuffer(size_t desiredSize,
-          size_t &allocatedSize, BatchingMode batchMode);
-  void readModemLocations(Location* pLocationPiece, size_t count,
-          BatchingMode batchingMode, size_t& numbOfEntries);
+  LocationError queryBatchBuffer(size_t desiredSize, size_t &allocatedSize);
+  void readModemLocations(Location* pLocationPiece, size_t count, size_t& numbOfEntries);
   void setOperationMode(GnssSuplMode mode);
   void batchFullEvent(const qmiLocEventBatchFullIndMsgT_v02* batchFullInfo);
   void batchStatusEvent(const qmiLocEventBatchingStatusIndMsgT_v02* batchStatusInfo);

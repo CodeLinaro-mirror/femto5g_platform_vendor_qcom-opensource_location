@@ -9696,8 +9696,7 @@ void LocApiV02::setBatchSize(size_t size)
 }
 
 LocationError
-LocApiV02::queryBatchBuffer(size_t desiredSize,
-        size_t &allocatedSize, BatchingMode batchMode)
+LocApiV02::queryBatchBuffer(size_t desiredSize, size_t &allocatedSize)
 {
     qmiLocGetBatchSizeReqMsgT_v02 batchSizeReq;
 
@@ -9712,9 +9711,9 @@ LocApiV02::queryBatchBuffer(size_t desiredSize,
     if (LOCATION_ERROR_SUCCESS != err) {
         if ((ind.status == eQMI_LOC_INVALID_PARAMETER_V02) && (ind.batchSize > 0)) {
             LOC_LOGw("get batching size failed. The modem max threshold batch size "
-                    "for batch mode %u is %u. Desired batch size : %zu. "
+                    "is %u. Desired batch size : %zu. "
                     "Retrying with max threshold size %d",
-                    batchMode, ind.batchSize, desiredSize, ind.batchSize);
+                    ind.batchSize, desiredSize, ind.batchSize);
             batchSizeReq.batchSize = ind.batchSize;
             LOC_SEND_SYNC_REQ(GetBatchSize, GET_BATCH_SIZE, batchSizeReq);
         }
@@ -9723,15 +9722,15 @@ LocApiV02::queryBatchBuffer(size_t desiredSize,
     if (LOCATION_ERROR_SUCCESS == err) {
         allocatedSize = ind.batchSize;
         LOC_LOGv("get batching size succeeded. The modem batch size for"
-                " batch mode %u is %zu. Desired batch size requested : %zu.",
-                batchMode, allocatedSize, desiredSize);
+                " is %zu. Desired batch size requested : %zu.",
+                allocatedSize, desiredSize);
         if (allocatedSize == 0) {
             err = LOCATION_ERROR_GENERAL_FAILURE;
         }
     } else {
        allocatedSize = 0;
-       LOC_LOGe("get batching size failed for batch mode %u and desired batch size %zu"
-                "Or modem does not support batching", batchMode, desiredSize);
+       LOC_LOGe("get batching size failed and desired batch size %zu"
+                "Or modem does not support batching", desiredSize);
     }
     return err;
 }
@@ -10378,8 +10377,7 @@ LocApiV02::startBatching(uint32_t sessionId,
 
     //get batch size if needs
     if (mBatchSize == 0) {
-        if (LOCATION_ERROR_SUCCESS != queryBatchBuffer(mDesiredBatchSize,
-                mBatchSize, BATCHING_MODE_ROUTINE)) {
+        if (LOCATION_ERROR_SUCCESS != queryBatchBuffer(mDesiredBatchSize, mBatchSize)) {
             if (adapterResponse != NULL) {
                 adapterResponse->returnToSender(LOCATION_ERROR_GENERAL_FAILURE);
             }
@@ -10483,7 +10481,7 @@ LocApiV02::getBatchedLocationsSync(size_t count)
     if (entriesToReadInTotal == 0) {
         LOC_LOGd("No batching memory allocated in modem or nothing to read");
         // calling the base class
-        reportLocations(NULL, 0, BATCHING_MODE_ROUTINE);
+        reportLocations(NULL, 0);
     } else {
         size_t entriesToRead =
             std::min(entriesToReadInTotal, (size_t)QMI_LOC_READ_FROM_BATCH_MAX_SIZE_V02);
@@ -10505,7 +10503,6 @@ LocApiV02::getBatchedLocationsSync(size_t count)
             memset(tempLocationP, 0, QMI_LOC_READ_FROM_BATCH_MAX_SIZE_V02*sizeof(Location));
             readModemLocations(tempLocationP,
                                entriesToRead,
-                               BATCHING_MODE_ROUTINE,
                                entriesGotInEachTime);
             for (size_t i = 0; i<entriesGotInEachTime; i++) {
                 size_t index = entriesToReadInTotal-entriesGotInTotal-i;
@@ -10563,7 +10560,7 @@ LocApiV02::getBatchedLocationsSync(size_t count)
                  count, entriesGotInTotal);
 
         // calling the base class
-        reportLocations(pLocationsFromModem+offset, entriesGotInTotal, BATCHING_MODE_ROUTINE);
+        reportLocations(pLocationsFromModem+offset, entriesGotInTotal);
         delete[] pLocationsFromModem;
     }
     return err;
@@ -10583,7 +10580,6 @@ LocApiV02::getBatchedLocations(size_t count, LocApiResponse* adapterResponse)
 void
 LocApiV02::readModemLocations(Location* pLocationPiece,
                               size_t count,
-                              BatchingMode batchingMode,
                               size_t& numbOfEntries)
 {
     qmiLocReadFromBatchReqMsgT_v02 getBatchLocatonReq;
