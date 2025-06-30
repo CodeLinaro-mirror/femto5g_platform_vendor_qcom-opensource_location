@@ -45,10 +45,6 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 
 static uint32_t sXtraTestEnabled = 0;
 static uint32_t sSleepTime = 800000;
-static const loc_param_s_type gConfigTable[] = {
-    {"XTRA_TEST_ENABLED", &sXtraTestEnabled, NULL, 'n'},
-    {"QRTRWATCHER_DELAY_MICROSECOND", &sSleepTime, NULL, 'n'}
-};
 
 namespace location_integration {
 
@@ -273,6 +269,10 @@ LocationIntegrationApiImpl::LocationIntegrationApiImpl(LocIntegrationCbs& integr
     if (integrationClientAllowed() == false) {
         return;
     }
+    const loc_param_s_type gConfigTable[] = {
+       {"XTRA_TEST_ENABLED", &sXtraTestEnabled, NULL, 'n'},
+       {"QRTRWATCHER_DELAY_MICROSECOND", &sSleepTime, NULL, 'n'}
+    };
 
     // read configuration file
     UTIL_READ_CONF(LOC_PATH_GPS_CONF, gConfigTable);

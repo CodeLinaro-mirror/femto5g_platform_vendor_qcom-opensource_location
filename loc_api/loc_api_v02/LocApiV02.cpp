@@ -178,26 +178,6 @@ typedef enum {
 
 static uint32_t rfLossNV[RF_LOSS_MAX_CONF] = { 0 };
 
-static loc_param_s_type gps_conf_param_table[] =
-{
-    { "RF_LOSS_GPS",                &rfLossNV[RF_LOSS_GPS_CONF],        NULL, 'n' },
-    { "RF_LOSS_GPS_L5",             &rfLossNV[RF_LOSS_GPS_L5_CONF],     NULL, 'n' },
-    { "RF_LOSS_GLO_LEFT",           &rfLossNV[RF_LOSS_GLO_LEFT_CONF],   NULL, 'n' },
-    { "RF_LOSS_GLO_CENTER",         &rfLossNV[RF_LOSS_GLO_CENTER_CONF], NULL, 'n' },
-    { "RF_LOSS_GLO_RIGHT",          &rfLossNV[RF_LOSS_GLO_RIGHT_CONF],  NULL, 'n' },
-    { "RF_LOSS_BDS",                &rfLossNV[RF_LOSS_BDS_CONF],        NULL, 'n' },
-    { "RF_LOSS_BDS_B2A",            &rfLossNV[RF_LOSS_BDS_B2A_CONF],    NULL, 'n' },
-    { "RF_LOSS_GAL",                &rfLossNV[RF_LOSS_GAL_CONF],        NULL, 'n' },
-    { "RF_LOSS_GAL_E5",             &rfLossNV[RF_LOSS_GAL_E5_CONF],     NULL, 'n' },
-    { "RF_LOSS_NAVIC",              &rfLossNV[RF_LOSS_NAVIC_CONF],      NULL, 'n' },
-    { "RF_LOSS_BDS_B2B",            &rfLossNV[RF_LOSS_BDS_B2B_CONF],    NULL, 'n' },
-};
-
-static loc_param_s_type izat_conf_param_table[] =
-{
-    { "AP_TIMESTAMP_UNCERTAINTY",   &ap_timestamp_uncertainty,          NULL, 'n' },
-};
-
 /* static event callbacks that call the LocApiV02 callbacks*/
 
 /* global event callback, call the eventCb function in loc api adapter v02
@@ -337,7 +317,28 @@ LocApiV02 :: LocApiV02(LOC_API_ADAPTER_EVENT_MASK_T exMask,
   mCurrentCycleSlipCountMap1Hz.clear();
   mCurrentCycleSlipCountMapNHz.clear();
 
+  const loc_param_s_type gps_conf_param_table[] =
+  {
+    { "RF_LOSS_GPS",                &rfLossNV[RF_LOSS_GPS_CONF],        NULL, 'n' },
+    { "RF_LOSS_GPS_L5",             &rfLossNV[RF_LOSS_GPS_L5_CONF],     NULL, 'n' },
+    { "RF_LOSS_GLO_LEFT",           &rfLossNV[RF_LOSS_GLO_LEFT_CONF],   NULL, 'n' },
+    { "RF_LOSS_GLO_CENTER",         &rfLossNV[RF_LOSS_GLO_CENTER_CONF], NULL, 'n' },
+    { "RF_LOSS_GLO_RIGHT",          &rfLossNV[RF_LOSS_GLO_RIGHT_CONF],  NULL, 'n' },
+    { "RF_LOSS_BDS",                &rfLossNV[RF_LOSS_BDS_CONF],        NULL, 'n' },
+    { "RF_LOSS_BDS_B2A",            &rfLossNV[RF_LOSS_BDS_B2A_CONF],    NULL, 'n' },
+    { "RF_LOSS_GAL",                &rfLossNV[RF_LOSS_GAL_CONF],        NULL, 'n' },
+    { "RF_LOSS_GAL_E5",             &rfLossNV[RF_LOSS_GAL_E5_CONF],     NULL, 'n' },
+    { "RF_LOSS_NAVIC",              &rfLossNV[RF_LOSS_NAVIC_CONF],      NULL, 'n' },
+    { "RF_LOSS_BDS_B2B",            &rfLossNV[RF_LOSS_BDS_B2B_CONF],    NULL, 'n' },
+    { "AP_TIMESTAMP_UNCERTAINTY",   &ap_timestamp_uncertainty,          NULL, 'n' },
+  };
   UTIL_READ_CONF(LOC_PATH_GPS_CONF, gps_conf_param_table);
+
+  loc_param_s_type izat_conf_param_table[] =
+  {
+    { "AP_TIMESTAMP_UNCERTAINTY",   &ap_timestamp_uncertainty,          NULL, 'n' },
+  };
+  UTIL_READ_CONF(LOC_PATH_IZAT_CONF, izat_conf_param_table);
 }
 
 /* Destructor for LocApiV02 */
@@ -765,10 +766,12 @@ void LocApiV02::injectPosition(const Location& location, bool onDemandCpi)
     }
 
     LOC_LOGv("Lat=%lf, Lon=%lf, Acc=%.2lf rawAcc=%.2lf horConfidence=%d"
-             "rawHorConfidence=%d onDemandCpi=%d, positionSrc: %d, location.techMask: %u",
+             "rawHorConfidence=%d, altitude=(%d,%.2lf) onDemandCpi=%d, "
+             "positionSrc: %d, location.techMask: %u",
              injectPositionReq.latitude, injectPositionReq.longitude,
              injectPositionReq.horUncCircular, injectPositionReq.rawHorUncCircular,
              injectPositionReq.horConfidence, injectPositionReq.rawHorConfidence,
+             injectPositionReq.altitudeWrtEllipsoid_valid, injectPositionReq.altitudeWrtEllipsoid,
              injectPositionReq.onDemandCpi, injectPositionReq.positionSrc, location.techMask);
 
     LOC_SEND_SYNC_REQ(InjectPosition, INJECT_POSITION, injectPositionReq);

@@ -26,7 +26,7 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
- /*
+/*
 Changes from Qualcomm Technologies, Inc. are provided under the following license:
 Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
 SPDX-License-Identifier: BSD-3-Clause-Clear
@@ -543,15 +543,15 @@ struct locClientCbDataStructT
 };
 
 static uint32_t LOC_MODEM_EMULATOR = 0;
-static const loc_param_s_type loc_cfgs[] =
-{
-    {"LOC_MODEM_EMULATOR", &LOC_MODEM_EMULATOR, NULL,    'n'},
-};
 
 static int getEmulatorCfg() {
     static bool getEmulatorCfg_called = false;
+
     if (!getEmulatorCfg_called) {
         getEmulatorCfg_called = true;
+        const loc_param_s_type loc_cfgs[] = {
+           {"LOC_MODEM_EMULATOR", &LOC_MODEM_EMULATOR, NULL,    'n'},
+        };
         UTIL_READ_CONF(LOC_PATH_GPS_CONF, loc_cfgs);
     }
     return LOC_MODEM_EMULATOR;
