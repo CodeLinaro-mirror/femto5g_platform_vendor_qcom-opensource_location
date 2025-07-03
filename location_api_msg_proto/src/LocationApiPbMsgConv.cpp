@@ -3622,11 +3622,15 @@ int LocationApiPbMsgConv::convertGnssSvIdConfigToPB(const GnssSvIdConfig &gnssSv
     // uint64_t navicBlacklistSvMask = 6;
     pbGnssSvIdCfg->set_navicblacklistsvmask(gnssSvIdCfg.navicBlacklistSvMask);
 
+    // uint64_t gpsBlacklistSvMask = 7;
+    pbGnssSvIdCfg->set_gpsblacklistsvmask(gnssSvIdCfg.gpsBlacklistSvMask);
+
     LocApiPb_LOGd("LocApiPB: gnssSvIdCfg - Glo: %" PRIu64 ",Bds: %" PRIu64 ",Qzss: %" PRIu64 \
-            ",Gal: %" PRIu64 ",Sbas: %" PRIu64",Nav: %" PRIu64, gnssSvIdCfg.gloBlacklistSvMask,
+            ",Gal: %" PRIu64 ",Sbas: %" PRIu64",Nav: %" PRIu64", GPS: %" PRIu64 " ",
+            gnssSvIdCfg.gloBlacklistSvMask,
             gnssSvIdCfg.bdsBlacklistSvMask, gnssSvIdCfg.qzssBlacklistSvMask,
             gnssSvIdCfg.galBlacklistSvMask, gnssSvIdCfg.sbasBlacklistSvMask,
-            gnssSvIdCfg.navicBlacklistSvMask);
+            gnssSvIdCfg.navicBlacklistSvMask, gnssSvIdCfg.gpsBlacklistSvMask);
     return 0;
 }
 
@@ -5794,11 +5798,15 @@ int LocationApiPbMsgConv::pbConvertToGnssSvIdConfig(const PBGnssSvIdConfig &pbGn
     // uint64_t navicBlacklistSvMask = 6;
     gnssSvIdConfig.navicBlacklistSvMask = pbGnssSvIdConfig.navicblacklistsvmask();
 
+    // uint64_t gpsBlacklistSvMask = 7;
+    gnssSvIdConfig.gpsBlacklistSvMask = pbGnssSvIdConfig.gpsblacklistsvmask();
+
     LOC_LOGv("LocApiPB: BlackListSvMask - Glo: %" PRIu64 ",Bds: %" PRIu64 ",Qzss: %" PRIu64 \
-            ",Gal: %" PRIu64 ",Sbas: %" PRIu64",Nav: %" PRIu64, gnssSvIdConfig.gloBlacklistSvMask,
+            ",Gal: %" PRIu64 ",Sbas: %" PRIu64",Nav: %" PRIu64 " GPS: %" PRIu64 " ",
+            gnssSvIdConfig.gloBlacklistSvMask,
             gnssSvIdConfig.bdsBlacklistSvMask, gnssSvIdConfig.qzssBlacklistSvMask,
             gnssSvIdConfig.galBlacklistSvMask, gnssSvIdConfig.sbasBlacklistSvMask,
-            gnssSvIdConfig.navicBlacklistSvMask);
+            gnssSvIdConfig.navicBlacklistSvMask, gnssSvIdConfig.gpsBlacklistSvMask);
     return 0;
 }
 
