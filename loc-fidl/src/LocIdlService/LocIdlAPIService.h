@@ -160,6 +160,8 @@ public:
     /**Keeps track of latest caps recieved */
     uint32_t mGnssCapabilites;
 
+    /** Configuration varaible to control Stop session execution by LocIdlService */
+    bool mEnableStopSession = false;
 private:
     static LocIdlAPIService *mInstance;
     LocationClientApi* mLcaInstance;
