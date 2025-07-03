@@ -229,7 +229,6 @@ private:
   CycleSlipCountMap mCurrentCycleSlipCountMapNHz;
 
   GnssMeasurements*  mGnssMeasurements;
-  bool mPreferredSignalTypeReceived;
   int  mMsInWeek;
   bool mAgcIsPresent;
   timeBiases mTimeBiases;
@@ -248,7 +247,6 @@ private:
   bool mIsFullTracking;
 
   qmiLocGnssSignalTypeMaskT_v02 mPreferredSignalType;
-  referenceSignalTypeForIsb mReferenceSignalTypeForIsb;
 
   // Below two member variables are for elapsedRealTime calculation
   ElapsedRealtimeEstimator mMeasElapsedRealTimeCal;
@@ -405,7 +403,6 @@ private:
               sizeof(GnssSvMeasurementHeader);
       }
       memset(&mTimeBiases, 0, sizeof(mTimeBiases));
-      mPreferredSignalTypeReceived = false;
       mMsInWeek = -1;
       mAgcIsPresent = false;
   }
@@ -421,8 +418,6 @@ private:
         GnssSvType& svType);
 
   void setGnssBiasesForL1CA();
-  void setGnssBiasesForB1I();
-  void setGnssBiases();
 
   /* convert and report ODCPI request */
   void requestOdcpi(
