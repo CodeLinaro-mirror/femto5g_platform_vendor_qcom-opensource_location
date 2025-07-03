@@ -30,7 +30,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -80,6 +80,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <loc_misc_utils.h>
 #include <thread>
 #include <unordered_map>
+#include <iostream>
 #include <algorithm>
 
 #include <LocationClientApi.h>
@@ -107,6 +108,9 @@ static location_integration::LocationIntegrationApi* pIntClient = nullptr;
 static sem_t semCompleted;
 static sem_t semGfCompleted;
 static sem_t semBatchingCompleted;
+static sem_t semLcaDestroyCompleted;
+static sem_t semLiaDestroyCompleted;
+
 static int fixCnt = 0x7fffffff;
 static uint64_t autoTestStartTimeMs = 0;
 static uint64_t autoTestStartGfTimeMs = 0;
@@ -187,7 +191,7 @@ enum TrackingSessionType {
 #define MODIFY_GEOFENCES            "modifyGeofences"
 #define REMOVE_GEOFENCES            "removeGeofences"
 #define SET_XTRA_END_USER_CONSENT   "setXtraEndUserConsent"
-
+#define SET_NETWORK_INFO            "setNetworkInfo"
 
 static bool openPort(void)
 {
@@ -689,6 +693,7 @@ static void printHelp() {
             MODIFY_GEOFENCES );
     printf("%s: remove geofences with indexes\n", REMOVE_GEOFENCES );
     printf("%s: Set xtra end user consent \n", SET_XTRA_END_USER_CONSENT);
+    printf("%s: set external network info \n", SET_NETWORK_INFO );
 }
 
 void setRequiredPermToRunAsLocClient() {
@@ -2086,6 +2091,29 @@ void geofenceTestMenu() {
     }
 }
 
+// Callback function to be called when destroy is complete
+void lcaDestroyCompleteCb() {
+    printf("<<< LCA destroyCompleteCb");
+    if (pLcaClient) {
+        delete pLcaClient;
+        pLcaClient = nullptr;
+    }
+
+    // Send a signal to indicate destroy is complete
+    sem_post(&semLcaDestroyCompleted);
+}
+
+void liaDestroyCompleteCb() {
+    printf("<<< LIA destroyCompleteCb");
+    if (pIntClient) {
+        delete pIntClient;
+        pIntClient = nullptr;
+    }
+
+    // Send a signal to indicate destroy is complete
+    sem_post(&semLiaDestroyCompleted);
+}
+
 /******************************************************************************
 Main function
 ******************************************************************************/
@@ -2572,6 +2600,55 @@ int main(int argc, char *argv[]) {
             if (pIntClient) {
                 pIntClient->setUserConsentForXtra(xtraUserConsent);
             }
+        } else if (strncmp(buf, SET_NETWORK_INFO,
+                           strlen(SET_NETWORK_INFO)) == 0) {
+            if (pIntClient) {
+                NetworkInfoData nwData = {};
+                int32_t nwStatus = 0, nwType = 0;
+                std::cout << "Enter Connection Status  " << std::endl;
+                std::cout << "0 for Unknown, 1 for CONNECTED, 2 for DISCONNECTED: ";
+                std::cin >> nwStatus;
+                if (std::cin.fail()) {
+                    std::cerr << "Invalid input for Connection Status" << std::endl;
+                }
+                nwData.connection = static_cast<NetworkConnection>(nwStatus);
+
+                std::cout << "Enter Country: ";
+                std::cin.ignore(); // To ignore the newline character left in the buffer
+                std::getline(std::cin, nwData.country);
+                if (nwData.country.empty()) {
+                    std::cerr << "Invalid input for Country" << std::endl;
+                    nwData.country = " ";
+                }
+
+                std::cout << "Enter MccMnc: ";
+                std::getline(std::cin, nwData.mccmnc);
+                if (nwData.mccmnc.empty()) {
+                     std::cerr << "Invalid input for MccMnc" << std::endl;
+                     nwData.mccmnc = " ";
+                }
+
+                std::cout << "Enter Network Type (0 for UNKNOWN, 1 for WWAN, 2 for WLAN): ";
+                std::cin >> nwType;
+                if (std::cin.fail()) {
+                     std::cerr << "Invalid input for Network Type" << std::endl;
+                }
+                nwData.networkType = static_cast<NetworkType>(nwType);
+
+                // Output the collected data
+                std::cout << "Network Info:" << std::endl;
+                std::cout << "Connection Status: "
+                        << (nwData.connection == NET_CONNECTED ? "Connected"
+                        : (nwData.connection == NET_DISCONNECTED ? "Disconnected" : "Unknown"))
+                        << std::endl;
+                std::cout << "Country: " << nwData.country << std::endl;
+                std::cout << "MccMnc: " << nwData.mccmnc << std::endl;
+                std::cout << "Network Type: "
+                        << (nwData.networkType == TYPE_WWAN ? "WWAN"
+                        : (nwData.networkType == TYPE_WLAN ? "WLAN": "Unknown")) << std::endl;
+
+                pIntClient->updateNetworkInfo(nwData);
+            }
         } else {
             int command = buf[0];
             switch(command) {
@@ -2702,13 +2779,13 @@ int main(int argc, char *argv[]) {
 EXIT:
     if (nullptr != pLcaClient) {
         pLcaClient->stopPositionSession();
-        delete pLcaClient;
-        pLcaClient = nullptr;
+        pLcaClient->destroy(lcaDestroyCompleteCb);
+        sem_wait(&semLcaDestroyCompleted);
     }
 
     if (nullptr != pIntClient) {
-        delete pIntClient;
-        pIntClient = nullptr;
+        pIntClient->destroy(liaDestroyCompleteCb);
+        sem_wait(&semLiaDestroyCompleted);
     }
 
     printf("Done\n");

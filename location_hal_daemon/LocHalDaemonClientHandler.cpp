@@ -461,10 +461,6 @@ void LocHalDaemonClientHandler::cleanup(bool forceRemove) {
     // please do not attempt to hold the lock, as the caller of this function
     // already holds the lock
 
-    // set the ptr to null to prevent further sending out message to the
-    // remote client that is no longer reachable
-    mIpcSender = nullptr;
-
     if (forceRemove && 0 != remove(mName.c_str())) {
         LOC_LOGw("<-- failed to remove file %s error %s", mName.c_str(), strerror(errno));
     }
@@ -1303,6 +1299,21 @@ void LocHalDaemonClientHandler::onLocationApiDestroyCompleteCb() {
     std::lock_guard<std::recursive_mutex> lock(LocationApiService::mMutex);
 
     LOC_LOGe("delete LocHalDaemonClientHandler, client name %s", mName.c_str());
+    if (nullptr != mIpcSender) {
+        string pbStr;
+
+        LocAPIGenericRespMsg msg(SERVICE_NAME, E_LOCAPI_CLIENT_DEREGISTER_MSG_ID,
+                LOCATION_ERROR_SUCCESS, &mService->mPbufMsgConv);
+        if (msg.serializeToProtobuf(pbStr)) {
+            bool rc= sendMessage(pbStr.c_str(), pbStr.size(), msg.msgId);
+            if (rc) {
+                LOC_LOGi("E_LOCAPI_CLIENT_DEREGISTER_MSG_ID is sent");
+            }
+        } else {
+            LOC_LOGe("LocAPIGenericRespMsg serializeToProtobuf failed");
+        }
+    }
+
     delete this;
     // PLEASE NOTE: no more code after this, including print for class variable
 }

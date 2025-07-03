@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -170,6 +170,9 @@ static LocConfigTypeEnum getLocConfigTypeFromMsgId(ELocMsgID  msgId) {
         break;
     case E_INTAPI_CONFIG_XTRA_USER_CONSENT_MSG_ID:
         configType = CONFIG_XTRA_USER_CONSENT;
+        break;
+    case E_INTAPI_NETWORK_UPDATE_INFO_MSG_ID:
+        configType = NETWORK_INFO_UPDATE;
         break;
     default:
         break;
@@ -362,7 +365,7 @@ LocationIntegrationApiImpl::LocationIntegrationApiImpl(LocIntegrationCbs& integr
 LocationIntegrationApiImpl::~LocationIntegrationApiImpl() {
 }
 
-void LocationIntegrationApiImpl::destroy() {
+void LocationIntegrationApiImpl::destroyMe(locationApiDestroyCompleteCallback destroyCompleteCb) {
 
     struct DestroyReq : public LocMsg {
         DestroyReq(LocationIntegrationApiImpl* apiImpl) :
@@ -389,15 +392,18 @@ void LocationIntegrationApiImpl::destroy() {
                 lock_guard<mutex> lock(mMutex);
                 mApiImpl->mClientRunning = false;
             }
-            usleep(50000); //give 50ms for socket clean up
-
-            delete mApiImpl;
         }
         LocationIntegrationApiImpl* mApiImpl;
     };
 
     mMsgTask.sendMsg(new (nothrow) DestroyReq(this));
-    usleep(100000); //100ms for handling onReceive() messages
+    wait(500); //500ms
+    LOC_LOGw("wait deregister received");
+    if (destroyCompleteCb) {
+        destroyCompleteCb();
+    }
+    delete this;
+
 }
 
 bool LocationIntegrationApiImpl::integrationClientAllowed() {
@@ -502,12 +508,19 @@ void IpcListener::onReceive(const char* data, uint32_t length,
             case E_INTAPI_DEREGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID:
             case E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_REQ_MSG_ID:
             case E_INTAPI_CONFIG_MAP_MATCHED_FEEDBACK_MSG_ID:
+            case E_INTAPI_NETWORK_UPDATE_INFO_MSG_ID:
+            case E_LOCAPI_CLIENT_DEREGISTER_MSG_ID:
             {
                 PBLocAPIGenericRespMsg pbLocApiGenericRsp;
                 if (0 == pbLocApiGenericRsp.ParseFromString(pbLocApiMsg.payload())) {
                     LOC_LOGe("Failed to parse pbLocApiGenericRsp from payload!!");
                     return;
                 }
+                if (locApiMsg.msgId == E_LOCAPI_CLIENT_DEREGISTER_MSG_ID) {
+                    mApiImpl.notify(); //for the wait in destroy()
+                    return;
+                }
+
                 LocAPIGenericRespMsg msg(sockName.c_str(), eLocMsgid, pbLocApiGenericRsp,
                         &mApiImpl.mPbufMsgConv);
                 mApiImpl.processConfigRespCb((LocAPIGenericRespMsg*)&msg);
@@ -1438,6 +1451,29 @@ uint32_t LocationIntegrationApiImpl::registerGnssSignalTypesUpdate(bool register
     return 0;
 }
 
+uint32_t LocationIntegrationApiImpl::updateNetworkInfo(const NetworkInfo& data) {
+    struct UpdateNetworkInfoReqMsg : public LocMsg {
+        UpdateNetworkInfoReqMsg(LocationIntegrationApiImpl* apiImpl,
+                const NetworkInfo& data) : mApiImpl(apiImpl), mNwData(data) {}
+        virtual ~UpdateNetworkInfoReqMsg() {}
+        void proc() const {
+            string pbStr;
+            UpdateNetworkInfoReq msg(mApiImpl->mSocketName, const_cast<NetworkInfo&>(mNwData),
+                    &mApiImpl->mPbufMsgConv);
+            if (msg.serializeToProtobuf(pbStr)) {
+                mApiImpl->sendConfigMsgToHalDaemon(NETWORK_INFO_UPDATE, pbStr);
+            } else {
+                LOC_LOGe("serializeToProtobuf failed");
+            }
+        }
+
+        LocationIntegrationApiImpl* mApiImpl;
+        const NetworkInfo mNwData;
+    };
+
+    mMsgTask.sendMsg(new (nothrow) UpdateNetworkInfoReqMsg(this, data));
+    return 0;
+}
 
 bool LocationIntegrationApiImpl::sendConfigMsgToHalDaemon(
         LocConfigTypeEnum configType, const string& pbStr, bool invokeResponseCb) {

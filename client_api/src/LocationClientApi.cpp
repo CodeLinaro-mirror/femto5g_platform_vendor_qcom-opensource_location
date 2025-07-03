@@ -364,10 +364,20 @@ LocationClientApi::LocationClientApi(CapabilitiesCb capaCb) {
 }
 
 LocationClientApi::~LocationClientApi() {
+}
+
+void LocationClientApi::destroy(LocClientDestroyCb destroyCompleteCb) {
+    locationApiDestroyCompleteCallback destroyCb = nullptr;
+    if (destroyCompleteCb) {
+        destroyCb = [destroyCompleteCb] () {
+            LOC_LOGw("call destroyCompleteCb");
+            destroyCompleteCb();
+        };
+    }
+
     if (mApiImpl) {
         // two steps processes due to asynchronous message processing
-        mApiImpl->destroy();
-        // deletion of mApiImpl will be done after messages in the queue are processed
+        mApiImpl->destroy(destroyCb);
     }
 }
 
@@ -771,12 +781,6 @@ void LocationClientApi::resumeGeofences(std::vector<Geofence>& geofences) {
             LOC_LOGd("resumeGeofences id : %d", gfIds[i]);
         }
         mApiImpl->resumeGeofences(count, gfIds);
-    }
-}
-
-void LocationClientApi::updateNetworkAvailability(bool available) {
-    if (mApiImpl) {
-        mApiImpl->updateNetworkAvailability(available);
     }
 }
 

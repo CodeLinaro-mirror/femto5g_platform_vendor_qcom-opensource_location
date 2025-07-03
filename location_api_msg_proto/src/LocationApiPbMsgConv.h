@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -159,6 +159,12 @@ public:
     // GnssMapMatchedData to PBGnssMapMatchedData
     int convertGnssMmfDataToPB(const GnssMapMatchedData mmfData,
            PBGnssMapMatchedData* pbMmfData) const;
+
+    NetworkConnectionStatus getConnectionStatusEnum (PBNetworkConnection pbNwConn) const;
+    NetworkTypeInfo getNwTypeEnum(PBNetworkType pbNwType) const;
+
+    int convertNetworkInfoMsgToPB(const NetworkInfo& nwInfo,
+            PBNetworkInfoData* pbNwInfo) const;
 
     // Memory cleanup - Free up memory after PB conversion and serializing data
     inline void freeUpPBLocAPIStartTrackingReqMsg(PBLocAPIStartTrackingReqMsg &pbLocApiStartTrack)
@@ -571,6 +577,10 @@ public:
         pbLocApiEphInd.clear_gnssephemerisnotification();
     }
 
+    inline void freeUpPBNetworkInfoMsg(PBUpdateNetworkInfoReq &pbNetworkInfo) const {
+        pbNetworkInfo.clear_data();
+    }
+
     // **** helper function to convert from protobuf struct to normal struct.
     // PBCollectiveResPayload to CollectiveResPayload
     int pbConvertToCollectiveResPayload(const PBCollectiveResPayload &pbClctResPayload,
@@ -644,6 +654,10 @@ public:
             XtraStatus& xtraStatus) const;
     int pbConvertToGnssMmfData(const PBGnssMapMatchedData& pbMmfData,
             GnssMapMatchedData& mmfData) const;
+    PBNetworkConnection getPBConnectionStatusEnum(NetworkConnectionStatus nwConn) const;
+    PBNetworkType getPBNwTypeEnum (NetworkTypeInfo nwType) const;
+    int pbConvertToNetworkDataInfo(const PBNetworkInfoData& pbNwInfo,
+            NetworkInfo& nwInfo) const;
 
     // MASK CONVERSION
     // ***************

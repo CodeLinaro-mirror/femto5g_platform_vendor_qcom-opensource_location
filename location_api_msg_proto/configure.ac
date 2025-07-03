@@ -70,6 +70,24 @@ AC_ARG_WITH([glib],
       AC_HELP_STRING([--with-glib],
          [enable glib, building HLOS systems which use glib]))
 
+AC_CHECK_FUNCS([strlcpy strlcat])
+
+if test "x$ac_cv_func_strlcpy" = "xno"; then
+    AC_DEFINE([USE_G_STRLCPY], [1], [use G LIB Strcpy])
+    AM_CONDITIONAL([USE_G_STRLCPY], [true])
+else
+    AC_DEFINE([USE_G_STRLCPY], [0], [Do not use G LIB Strcpy])
+    AM_CONDITIONAL([USE_G_STRLCPY], [false])
+fi
+
+if test "x$ac_cv_func_strlcat" = "xno"; then
+    AC_DEFINE([USE_G_STRLCAT], [1], [use G LIB Strcat])
+    AM_CONDITIONAL([USE_G_STRLCAT], [true])
+else
+    AC_DEFINE([USE_G_STRLCAT], [0], [Do not use G LIB Strcat])
+    AM_CONDITIONAL([USE_G_STRLCAT], [false])
+fi
+
 if (test "x${with_glib}" = "xyes"); then
         AC_DEFINE(ENABLE_USEGLIB, 1, [Define if HLOS systems uses glib])
         PKG_CHECK_MODULES(GTHREAD, gthread-2.0 >= 2.16, dummy=yes,
@@ -94,6 +112,11 @@ AC_ARG_WITH([core_includes],
 if (test "x$with_core_includes" != "xno"); then
    CPPFLAGS="${CPPFLAGS} -I${core_incdir}"
 fi
+PKG_CHECK_MODULES([PROTOBUF], [protobuf >= 25.3],
+        [protobuf_update=yes], [protobuf_update=no])
+
+AC_MSG_NOTICE([Have updated protobuf version - ${protobuf_update}])
+AM_CONDITIONAL([PROTOBUF_INC_LIBS], [test "${protobuf_update}" = "yes"])
 
 AC_CONFIG_FILES([ \
         Makefile \
