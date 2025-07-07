@@ -62,6 +62,11 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/******************************************************************************
+Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+SPDX-License-Identifier: BSD-3-Clause-Clear
+*******************************************************************************/
+
 #define LOG_NDEBUG 0
 #define LOG_TAG "LocSvc_ApiV02"
 
@@ -5838,6 +5843,30 @@ void LocApiV02::reportGnssMeasurementData(
             m1HzMeasurementsInfo.measurements.push_back(std::move(measurement));
         }
     }
+
+    //AGC Status
+    GnssMeasurementsNotification& measurementsNotify = mGnssMeasurements->gnssMeasNotification;
+    if (gnss_measurement_report_ptr.agcStatus_valid) {
+        GnssRfBand bandType = getLocApiSvRfBand(gnss_measurement_report_ptr.gnssSignalType);
+        switch (bandType) {
+            case GNSS_RF_BAND_L1:
+                measurementsNotify.agcStatusL1 = convertQmiAgcStatusType(
+                        gnss_measurement_report_ptr.agcStatus);
+                break;
+            case GNSS_RF_BAND_L2:
+                measurementsNotify.agcStatusL2 = convertQmiAgcStatusType(
+                        gnss_measurement_report_ptr.agcStatus);
+                break;
+            case GNSS_RF_BAND_L5:
+                measurementsNotify.agcStatusL5 = convertQmiAgcStatusType(
+                        gnss_measurement_report_ptr.agcStatus);
+                break;
+        }
+    }
+    LOC_LOGa("agcStatusL1: %d, agcStatusL2: %d, agcStatusL5: %d",
+            measurementsNotify.agcStatusL1, measurementsNotify.agcStatusL2,
+            measurementsNotify.agcStatusL5);
+
     if (gnss_measurement_report_ptr.maxMessageNum == gnss_measurement_report_ptr.seqNum &&
         maxSubSeqNum == subSeqNum) {
         int64_t elapsedRealTime = -1;
@@ -5900,29 +5929,6 @@ void LocApiV02::reportGnssMeasurementData(
         mGnssMeasurements->gnssMeasNotification.clock.elapsedRealTimeUnc = unc;
 
         mGnssMeasurements->gnssMeasNotification.isFullTracking = mIsFullTracking;
-        //AGC Status
-        GnssMeasurementsNotification& measurementsNotify = mGnssMeasurements->gnssMeasNotification;
-        if (gnss_measurement_report_ptr.agcStatus_valid) {
-            GnssRfBand bandType = getLocApiSvRfBand(gnss_measurement_report_ptr.gnssSignalType);
-            switch (bandType) {
-                case GNSS_RF_BAND_L1:
-                    measurementsNotify.agcStatusL1 = convertQmiAgcStatusType(
-                            gnss_measurement_report_ptr.agcStatus);
-                    break;
-                case GNSS_RF_BAND_L2:
-                    measurementsNotify.agcStatusL2 = convertQmiAgcStatusType(
-                            gnss_measurement_report_ptr.agcStatus);
-                    break;
-                case GNSS_RF_BAND_L5:
-                    measurementsNotify.agcStatusL5 = convertQmiAgcStatusType(
-                            gnss_measurement_report_ptr.agcStatus);
-                    break;
-            }
-        }
-        LOC_LOGa("agcStatusL1: %d, agcStatusL2: %d, agcStatusL5: %d",
-                measurementsNotify.agcStatusL1, measurementsNotify.agcStatusL2,
-                measurementsNotify.agcStatusL5);
-
         reportSvMeasurementInternal();
         resetSvMeasurementReport();
         // set up flag to indicate that no new info in mGnssMeasurements
