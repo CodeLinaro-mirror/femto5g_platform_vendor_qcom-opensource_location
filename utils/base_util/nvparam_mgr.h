@@ -6,7 +6,7 @@
  This declares the public interface of storage manager for
  permanent parameters.
 
- Copyright (c) 2024-2025 Qualcomm Innovation Center, Inc. All rights reserved.
+ Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  SPDX-License-Identifier: BSD-3-Clause-Clear
  =============================================================================*/
 #ifndef __XTRAT_WIFI_NVPARAM_MGR_H__
@@ -20,6 +20,7 @@ namespace qc_loc_fw
 // for 64 bit  signed or unsigned
 #define PARAM_NAME_PSEUDO_CLIENT_ID       "PSEUDO_CLIENT_ID"
 #define PARAM_NAME_PSEUDO_CLIENT_ID_64BIT "PSEUDO_CLIENT_ID_64BIT"
+#define PARAM_NAME_LEVER_ARM_GNSS_TO_VRP  "LEVER_ARM_GNSS_TO_VRP"
 
 // list of error code currently supported by nv param manager
 // for saveXXXParam and getXXXParam
