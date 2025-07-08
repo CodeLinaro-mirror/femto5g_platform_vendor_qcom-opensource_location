@@ -5,7 +5,8 @@
  GENERAL DESCRIPTION
  This component provides logging service to all client side components
 
- Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  SPDX-License-Identifier: BSD-3-Clause-Clear
  =============================================================================*/
 #include <string.h>
@@ -18,7 +19,6 @@
 //#include <base_util/log.h>
 #include <base_util/sync.h>
 #include <base_util/list.h>
-#include <base_util/string_routines.h>
 #include <base_util/time_routines.h>
 #include "log_util.h"
 

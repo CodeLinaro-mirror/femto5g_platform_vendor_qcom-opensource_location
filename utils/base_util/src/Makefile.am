@@ -16,7 +16,6 @@ h_sources = \
         ../time_routines.h \
         ../vector.h \
         ../array.h \
-        ../string_routines.h \
         ../shutdown_timer.h
 
 libloc_base_util_la_SOURCES = \

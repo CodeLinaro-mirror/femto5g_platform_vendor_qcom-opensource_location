@@ -8,7 +8,7 @@
  module parameters coming from server that need to be persistent
  across bootup.
 
- Copyright (c) 2024-2025 Qualcomm Innovation Center, Inc. All rights reserved.
+ Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  SPDX-License-Identifier: BSD-3-Clause-Clear
  =============================================================================*/
 #include <stdio.h>
@@ -27,7 +27,6 @@
 
 #include <base_util/log.h>
 #include <base_util/sync.h>
-#include <base_util/string_routines.h>
 #include <base_util/nvparam_mgr.h>
 
 using namespace qc_loc_fw;
