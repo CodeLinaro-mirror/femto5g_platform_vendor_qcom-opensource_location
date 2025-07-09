@@ -62,6 +62,11 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/******************************************************************************
+Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+SPDX-License-Identifier: BSD-3-Clause-Clear
+*******************************************************************************/
+
 #include <stdint.h>
 #include <sys/stat.h>
 #include <dlfcn.h>
@@ -2029,6 +2034,7 @@ void LocationApiService::performMaintenance() {
         LOC_LOGd("send ping message returned %d for client %s",
                 messageSent, client.first.c_str());
         if (messageSent == false) {
+            std::lock_guard<std::recursive_mutex> lock(mMutex);
             LOC_LOGe("--< ping failed for client %s", client.first.c_str());
             deleteClientbyName(client.first);
         }
