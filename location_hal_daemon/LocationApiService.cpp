@@ -1969,6 +1969,7 @@ void LocationApiService::performMaintenance() {
         LOC_LOGd("send ping message returned %d for client %s",
                 messageSent, client.first.c_str());
         if (messageSent == false) {
+            std::lock_guard<std::recursive_mutex> lock(mMutex);
             LOC_LOGe("--< ping failed for client %s", client.first.c_str());
             deleteClientbyName(client.first);
         }

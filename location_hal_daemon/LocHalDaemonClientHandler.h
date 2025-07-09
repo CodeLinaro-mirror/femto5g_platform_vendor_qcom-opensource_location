@@ -214,16 +214,18 @@ private:
 
     // send ipc message to this client for serialized payload
     bool sendMessage(const char* msg, size_t msglen, ELocMsgID msg_id) {
-        bool retVal= LocIpc::send(*mIpcSender, reinterpret_cast<const uint8_t*>(msg), msglen);
-        if (retVal == false) {
-            struct timespec ts;
-            clock_gettime(CLOCK_BOOTTIME, &ts);
-            LOC_LOGe("failed: client %s, msg id: %d, msg size %d, err %s, "
-                     "boot timestamp %" PRIu64" msec",
-                     mName.c_str(), msg_id, msglen, strerror(errno),
-                     (ts.tv_sec * 1000ULL + ts.tv_nsec/1000000));
+        if (NULL != mIpcSender) {
+            bool retVal= LocIpc::send(*mIpcSender, reinterpret_cast<const uint8_t*>(msg), msglen);
+            if (retVal == false) {
+                struct timespec ts;
+                clock_gettime(CLOCK_BOOTTIME, &ts);
+                LOC_LOGe("failed: client %s, msg id: %d, msg size %d, err %s, "
+                         "boot timestamp %" PRIu64" msec",
+                         mName.c_str(), msg_id, msglen, strerror(errno),
+                         (ts.tv_sec * 1000ULL + ts.tv_nsec/1000000));
+            }
+            return retVal;
         }
-        return retVal;
     }
 
     uint32_t getSupportedTbf (uint32_t tbfMsec);
