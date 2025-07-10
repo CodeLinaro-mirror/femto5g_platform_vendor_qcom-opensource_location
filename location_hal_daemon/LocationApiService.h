@@ -239,7 +239,7 @@ private:
     void onCapabilitiesCallback(LocationCapabilitiesMask mask);
     void onResponseCb(LocationError err, uint32_t id);
     void onCollectiveResponseCallback(size_t count, LocationError *errs, uint32_t *ids);
-    void onGtpWwanTrackingCallback(Location location);
+    void onGtpTerrestrialTrackingCallback(Location location);
     void onGnssLocationInfoCb(const GnssLocationInfoNotification& notification);
 
     // Location configuration API requests
