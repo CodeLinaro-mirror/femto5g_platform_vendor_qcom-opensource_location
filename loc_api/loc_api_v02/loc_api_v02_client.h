@@ -103,64 +103,21 @@ typedef enum
   eLOC_CLIENT_FAILURE_TIMEOUT                      = 6,
   /**< Failed because of a timeout. */
 
-  eLOC_CLIENT_FAILURE_SERVICE_NOT_PRESENT          = 7,
-  /**< Failed because the service is not present. */
-
-  eLOC_CLIENT_FAILURE_SERVICE_VERSION_UNSUPPORTED  = 8,
-  /**< Failed because the service version is unsupported. */
-
-  eLOC_CLIENT_FAILURE_CLIENT_VERSION_UNSUPPORTED  =  9,
-  /**< Failed because the service does not support client version. */
-
-  eLOC_CLIENT_FAILURE_INVALID_HANDLE               = 10,
+  eLOC_CLIENT_FAILURE_INVALID_HANDLE               = 7,
   /**< Failed because an invalid handle was specified. */
 
-  eLOC_CLIENT_FAILURE_INTERNAL                     = 11,
+  eLOC_CLIENT_FAILURE_INTERNAL                     = 8,
   /**< Failed because of an internal error in the service. */
 
-  eLOC_CLIENT_FAILURE_NOT_INITIALIZED              = 12,
-  /**< Failed because the service has not been initialized. */
-
-  eLOC_CLIENT_FAILURE_NOT_ENOUGH_MEMORY             = 13,
-  /**< Failed because there is not enough memory to do the operation. */
-
-  eLOC_CLIENT_FAILURE_INVALID_MESSAGE_ID            = 14
+  eLOC_CLIENT_FAILURE_INVALID_MESSAGE_ID            = 9
   /**< Failed because there is not enough memory to do the operation. */
 
 }locClientStatusEnumType;
 
-/** Location client error values
-*/
-typedef enum
-{
-  eLOC_CLIENT_ERROR_SERVICE_UNAVAILABLE            = 1
-  /**< Service is no longer available. Upon getting this error, the client
-       must close the existing connection and reopen the connection. */
-
-}locClientErrorEnumType;
-
-
-/** Request messages the client can send to the location engine.
-
-  The following requests do not have any data associated, so they do not have a
-  payload structure defined:
-
-  - GetServiceRevision
-  - GetFixCriteria
-  - GetPredictedOrbitsDataSource
-  - GetPredictedOrbitsDataValidity
-  - GetEngineLock
-  - GetSbasConfigReq
-  - GetRegisteredEvents
-  - GetLowPowerMode
-  - GetXtraTSessionControl
-  - GetRegisteredEvents
-  - GetOperationMode
-  - GetCradleMountConfig
-  - GetExternalPowerConfig
-  - GetSensorControlConfig
-  - GetSensorPerformanceControlConfiguration
-  - WWANOutOfServiceNotification
+/** Request messages the client can send to the location engine,
+    only needed for requests that have data associated and not
+    needed for requests that do not have payload, e.g.:
+    GetEngineLock.
 */
 typedef union
 {
@@ -426,17 +383,6 @@ typedef union
         To send this request, set the reqId field in locClientSendReq() to
         QMI_LOC_GET_BEST_AVAILABLE_POSITION_REQ_V02. @newpagetable */
 
-    const qmiLocSecureGetAvailablePositionReqMsgT_v02*
-         pSecureGetBestAvailablePositionReq;
-       /**< Get the best available position from location engine
-
-           If the request is accepted by the service, the client receives the
-           following indication containing a response:
-           QMI_LOC_GET_BEST_AVAILABLE_POSITION_IND_V02
-
-           To send this request, set the reqId field in locClientSendReq() to
-           QMI_LOC_GET_BEST_AVAILABLE_POSITION_REQ_V02. @newpagetable */
-
     const qmiLocInjectMotionDataReqMsgT_v02* pInjectMotionDataReq;
     /**< Inject motion data in the location engine
 
@@ -476,8 +422,7 @@ typedef union
     /* QMI_LOC_RELEASE_BATCHING_REQ_V02 */
     const qmiLocSetPremiumServicesCfgReqMsgT_v02 *pSetPremiumServicesCfgReq;
     /*QMI_LOC_SET_PREMIUM_SERVICES_CONFIG_REQ_V02*/
-    const qmiLocSetXtraVersionCheckReqMsgT_v02 *pSetXtraVersionCheckReq;
-    /*  QMI_LOC_SET_XTRA_VERSION_CHECK_REQ_V02 */
+
     const qmiLocSetGNSSConstRepConfigReqMsgT_v02 *pSetGNSSConstRepConfigReq;
     /*QMI_LOC_SET_GNSS_CONSTELL_REPORT_CONFIG_V02*/
 
@@ -987,9 +932,6 @@ typedef union
     const qmiLocNotifyWifiEnabledStatusIndMsgT_v02 *pNotifyWifiEnabledStatusInd;
     /* QMI_LOC_NOTIFY_WIFI_ENABLED_STATUS_REQ_V02 */
 
-    const qmiLocSetXtraVersionCheckIndMsgT_v02 *pSetXtraVersionCheckInd;
-    /*QMI_LOC_SET_XTRA_VERSION_CHECK_IND_V02*/
-
     const qmiLocSetGNSSConstRepConfigIndMsgT_v02 *pSetGNSSConstRepConfigInd;
     /*QMI_LOC_SET_GNSS_CONSTELL_REPORT_CONFIG_IND_V02*/
 
@@ -1102,13 +1044,8 @@ typedef void  (*locClientRespIndCbType)(
   receives this callback, it must close the existing connection and reopen
   the client connection.
 
-  @datatypes
-  #locClientHandleType \n
-  #locClientErrorEnumType
-
   @param handle           Location client who sent the request for which this
                           error indication is generated.
-  @param errorId          Error ID.
   @param pClientCookie    Payload associated with the error indication.
 
   @return
@@ -1119,7 +1056,6 @@ typedef void  (*locClientRespIndCbType)(
 */
 typedef void  (*locClientErrorCbType)(
       locClientHandleType handle,
-      locClientErrorEnumType errorId,
       void* pClientCookie
  );
 /** @} */ /* end_addtogroup callback_functions */
