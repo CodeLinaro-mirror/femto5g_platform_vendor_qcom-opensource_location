@@ -6,7 +6,7 @@
  This component provides utilities used for timestamp and time
  difference processing
 
- Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  SPDX-License-Identifier: BSD-3-Clause-Clear
  =============================================================================*/
 #include <time.h>
@@ -219,11 +219,6 @@ Timestamp::Timestamp(const int clock_id)
   reset_to_clock_id(clock_id);
 }
 
-int Timestamp::get_clock_id() const
-{
-  return m_clock_id;
-}
-
 bool Timestamp::is_valid() const
 {
   return m_is_valid;
@@ -292,11 +287,6 @@ int Timestamp::reset_to_boottime()
   log_error(TAG, "reset_to_boottime not supported");
   return 2;
 #endif
-}
-
-int Timestamp::reset_to_realtime()
-{
-  return reset_to_clock_id(CLOCK_REALTIME);
 }
 
 int Timestamp::reset_to_clock_id(const int clock_id)
@@ -544,84 +534,6 @@ Timestamp & Timestamp::operator =(const Timestamp & rhs)
   return *this;
 }
 
-int Timestamp::insert_into_postcard(OutPostcard * const dest_card, const char * const name_str)
-{
-  OutPostcard * nest_card = 0;
-  int result = 1;
-  do
-  {
-    BREAK_IF_ZERO(2, name_str);
-
-    nest_card = OutPostcard::createInstance();
-    BREAK_IF_ZERO(3, nest_card);
-
-    if(!m_is_valid)
-    {
-      result = 4;
-      break;
-    }
-
-    BREAK_IF_NON_ZERO(10, nest_card->init());
-    // note that CLOCK_ID is system-specific. For example, you cannot find clock id concept in Java
-    // on Android, there is SystemClock.elapsedRealtimeNanos which seemingly returns CLOCK_BOOTTIME,
-    // but that is not really documented, so clock id becomes undefined in Java world anywhere
-    // so, timestamp doesn't really work if your message has any chance of being interpreted from
-    // the Java world (of Android)
-    BREAK_IF_NON_ZERO(11, nest_card->addInt32("CLOCK_ID", m_clock_id));
-    BREAK_IF_NON_ZERO(12, nest_card->addInt32("TS_SEC", (OutPostcard::INT32 )m_timestamp.tv_sec));
-    BREAK_IF_NON_ZERO(13, nest_card->addInt32("TS_NSEC", (OutPostcard::INT32 )m_timestamp.tv_nsec));
-    BREAK_IF_NON_ZERO(14, nest_card->finalize());
-    BREAK_IF_NON_ZERO(20, dest_card->addCard(name_str, nest_card));
-
-    result = 0;
-  } while (0);
-
-  delete nest_card;
-  nest_card = 0;
-
-  if(0 != result)
-  {
-    log_error(TAG, "insert_into_postcard failed %d", result);
-  }
-  return result;
-}
-
-int Timestamp::retrieve_from_postcard(InPostcard * const src_card, const char * const name_str)
-{
-  InPostcard * nest_card = 0;
-  int result = 1;
-  do
-  {
-    invalidate();
-
-    BREAK_IF_ZERO(2, name_str);
-    BREAK_IF_ZERO(3, src_card);
-
-    BREAK_IF_NON_ZERO(10, src_card->getCard(name_str, &nest_card));
-
-    BREAK_IF_NON_ZERO(10, nest_card->getInt32("CLOCK_ID", m_clock_id));
-    int ts_sec = 0;
-    BREAK_IF_NON_ZERO(11, nest_card->getInt32("TS_SEC", ts_sec));
-    m_timestamp.tv_sec = ts_sec;
-    int ts_nsec = 0;
-    BREAK_IF_NON_ZERO(12, nest_card->getInt32("TS_NSEC", ts_nsec));
-    m_timestamp.tv_nsec = ts_nsec;
-
-    m_is_valid = true;
-
-    result = 0;
-  } while (0);
-
-  delete nest_card;
-  nest_card = 0;
-
-  if(0 != result)
-  {
-    log_error(TAG, "retrieve_from_postcard failed %d", result);
-  }
-  return result;
-}
-
 long long get_time_rtc_ms()
 {
   struct timeval  present_time;
@@ -636,38 +548,6 @@ long long get_time_rtc_ms()
 
   current_time_msec += (present_time.tv_usec + 500) / 1000;
   return current_time_msec;
-}
-
-// Returns monotonic time
-long long get_time_monotonic_ms()
-{
-#ifndef IZAT_OFFLINE
-  uint64_t current_time_msec = 0;
-  struct timespec tp = {};
-
-  clock_gettime(CLOCK_MONOTONIC, &tp);
-
-  current_time_msec = tp.tv_sec;
-  current_time_msec *= 1000;  // convert to milli-seconds
-
-  current_time_msec += ((tp.tv_nsec + 500000) / 1000000);
-  return current_time_msec;
-#else
-  return get_time_rtc_ms();
-#endif
-}
-
-// Check if rtc time is valid or not
-bool is_time_rtc_ms_valid(long long rtc_time_ms)
-{
-  bool is_valid = false;
-
-  // Only if the timestamp is big enough, we consider it as valid
-  if (rtc_time_ms > TIME_RTC_MS_AS_OF_12_1_2014)
-  {
-    is_valid = true;
-  }
-  return is_valid;
 }
 
 // Returns monotonic time

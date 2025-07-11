@@ -69,13 +69,8 @@ public:
   // currently not supported
   int reset_to_boottime();
 
-  // CLOCK_REALTIME. wall clock, subject to system time change. normally you don't want this
-  // if you're looking for timers
-  int reset_to_realtime();
-
   int reset_to_clock_id(const int clock_id);
 
-  int get_clock_id() const;
   bool is_valid() const;
   bool is_valid_and_default() const;
   void invalidate();
@@ -86,10 +81,6 @@ public:
   bool operator < (const Timestamp & rhs) const;
   Timestamp & operator = (const Timestamp & rhs);
 
-  // timestamp is highly system-specific and doesn't translate into Java world well
-  // so, please use these functions with caution
-  int insert_into_postcard(OutPostcard * const dest_card, const char * const name_str);
-  int retrieve_from_postcard(InPostcard * const src_card, const char * const name_str);
 private:
   static const char * const TAG;
   bool m_is_valid;
@@ -107,17 +98,9 @@ extern "C"
 //                represents time since the Epoch
 long long get_time_rtc_ms();
 
-// Function Name: is_time_rtc_ms_valid
-// Description:   Check if rtc time is valid or not
-bool is_time_rtc_ms_valid(long long rtc_time_ms);
-
 // Function Name: get_time_boot_ms
 // Description:   Returns monotonic time from boot
 long long get_time_boot_ms();
-
-// Function Name: get_time_monotonic_ms
-// Description:   Returns monotonic time
-long long get_time_monotonic_ms();
 
 #ifdef __cplusplus
 }
