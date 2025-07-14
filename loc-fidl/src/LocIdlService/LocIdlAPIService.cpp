@@ -2,6 +2,11 @@
 Copyright (c) 2024-2025 Qualcomm Innovation Center, Inc. All rights reserved.
 SPDX-License-Identifier: BSD-3-Clause-Clear
 */
+/*
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
 
 #define LOG_TAG "LOC_IDL_SERVICE"
 #include <iostream>
@@ -36,6 +41,10 @@ static void onConfigResponseCb(location_integration::LocConfigTypeEnum      requ
      LOC_LOGd("<<< onConfigResponseCb, type %d, err %d\n", requestType, response);
 }
 
+static void onResponseCb(location_client::LocationResponse response) {
+    LOC_LOGd("<<< onResponseCb err=%u\n", response);
+}
+
 class LocationTrackingSessCbHandler {
     public:
         LocationTrackingSessCbHandler(const LocIdlAPIService *pClientApiService,
@@ -49,7 +58,7 @@ class LocationTrackingSessCbHandler {
                             [pClientApiService] (const ::GnssLocation n) {
                         //Convert Location report from LCA to FIDL format
                         if (pClientApiService) {
-                                    pClientApiService->handleGnssLocationReport(n);
+                            pClientApiService->handleGnssLocationReport(n);
                         }
                     };
                 }
@@ -626,9 +635,11 @@ bool LocIdlAPIService::createLocIdlService()
                     LocationClientApi::capabilitiesToString(mask).c_str());
             if (pClientApiService && mask) {
                 pClientApiService->processCapabilities(mask);
-                if (pClientApiService->mDiagLogIface)
+                pClientApiService->triggerAutoStartSession();
+                if (pClientApiService->mDiagLogIface) {
                     pClientApiService->mDiagLogIface->diagLogCapabilityInfo(
                             LocationClientApi::capabilitiesToString(mask));
+                }
             }
         };
         // Create LCA instance
@@ -843,12 +854,11 @@ void LocIdlAPIService::startPositionSession
                          mLCAService->numControlRequests);
                 LocationTrackingSessCbHandler cbHandler(mLCAService, mLCAService->mGnssReportMask);
                 ResponseCb rspCb = [client=mClient, reply=mReply] (::LocationResponse response) {
-                    LOC_LOGd("==== responseCb %d", response);
                     //convert response from LCA to FIDL format
                     LocationTypes::LocationStatusT resp =
                             mInstance->parseIDLResponse(response);
                     reply(resp);
-                    LOC_LOGe("==== Client %"PRIu64" response %d", client->hashCode(), resp);
+                    LOC_LOGe("==== Client %"PRIu64" response %d", client->hashCode(), response);
                 };
                 mLCAService->checkMinIntervalForUpdate(mIntervalInMs);
                 if (mLCAService->mLcaInstance) {
@@ -910,13 +920,12 @@ void LocIdlAPIService::startPositionSession
                 LocationTrackingSessCbHandler cbHandler(mLCAService, mLocReqEngMask,
                         mEngReportCallbackMask);
                 ResponseCb rspCb = [client=mClient, reply=mReply] (::LocationResponse response) {
-                    LOC_LOGd("==== responseCb %d", response);
                     //convert response from LCA to FIDL format
                     LocationTypes::LocationStatusT resp =
                             mInstance->parseIDLResponse(response);
                     reply(resp);
                     LOC_LOGi("==== Client %"PRIu64" response %d",
-                            client->hashCode(), resp);
+                            client->hashCode(), response);
                 };
                 mLCAService->checkMinIntervalForUpdate(mIntervalInMs);
                 if (mLCAService->mLcaInstance) {
@@ -1112,24 +1121,66 @@ void LocIdlAPIService::injectMapMatchedFeedbackData
     }
 }
 
+void LocIdlAPIService::triggerAutoStartSession() const {
+    struct AutoStartSession : public LocMsg {
+        const LocIdlAPIService* mLCAService;
+        inline AutoStartSession(const LocIdlAPIService* LCAService) :
+            LocMsg(),
+            mLCAService(LCAService){};
+        inline virtual void proc() const {
+            if (mLCAService) {
+                if (mLCAService->mEnableAutoStartSession && mLCAService->mGnssCapabilites &&
+                    !mLCAService->mAutoStartSessionTriggered && !mLCAService->numControlRequests) {
+                    mLCAService->mGnssReportMask |=
+                            LocationTypes::GnssReportCbInfoMaskT::GRCIMT_LOCATION_CB_INFO_BIT;
+                    LocationTrackingSessCbHandler cbHandler(mLCAService,
+                            mLCAService->mGnssReportMask);
+                    mLCAService->checkMinIntervalForUpdate(MIN_POS_REPORT_INTERVAL_MSEC);
+                    if (mLCAService->mLcaInstance) {
+                        mLCAService->mAutoStartSessionTriggered = true;
+                        LOC_LOGi(" Default startPositionSession intervalMs %u LCAReportMask 0X%X",
+                                mLCAService->mTimeBetweenFixes, mLCAService->mGnssReportMask);
+                        mLCAService->mLcaInstance->startPositionSession(
+                                mLCAService->mTimeBetweenFixes, cbHandler.getLocationCbs(),
+                                onResponseCb);
+                    }
+                } else {
+                    LOC_LOGi(" Auto START not triggered GnssCapabilities: %d ControlRequests: %d "
+                             " Config Enabled: %d AutoStart Session Triggered: %d ",
+                             mLCAService->mGnssCapabilites, mLCAService->numControlRequests,
+                             mLCAService->mEnableAutoStartSession,
+                             mLCAService->mAutoStartSessionTriggered);
+                }
+            }
+       }
+    };
+    mMsgTask->sendMsg(new AutoStartSession(this));
+}
+
 int main() {
-    LocIdlAPIService *pLCAService = LocIdlAPIService::getInstance();
-    if (pLCAService) {
-        pLCAService->init();
+    LocIdlAPIService *pLocIdlService = LocIdlAPIService::getInstance();
+    if (nullptr == pLocIdlService) {
+        LOC_LOGe("Failed to getInstance of LocIDLService !!");
+        return 0;
     }
 
     static loc_param_s_type locIdlServiceConfEntryTable[] = {
-        {"ENABLE_LOC_IDL_SERVICE_STOP_SESSION", &pLCAService->mEnableStopSession, NULL, 'n'}
+        {"ENABLE_LOC_IDL_SERVICE_STOP_SESSION", &pLocIdlService->mEnableStopSession, NULL, 'n'},
+        {"ENABLE_LOC_IDL_SERVICE_AUTO_START", &pLocIdlService->mEnableAutoStartSession, NULL, 'n'},
     };
+    UTIL_READ_CONF(LOC_PATH_GPS_CONF_STR, locIdlServiceConfEntryTable);
 
-    UTIL_READ_CONF(LOC_PATH_IZAT_CONF_STR, locIdlServiceConfEntryTable);
+    if (pLocIdlService) {
+        pLocIdlService->init();
+    }
 
     if (gptpInit()) {
-        pLCAService->mIsGptpInitialized = true;
+        pLocIdlService->mIsGptpInitialized = true;
         LOC_LOGd(" GPTP init success ");
     } else {
         LOC_LOGe(" GPTP init failed ");
     }
+
     // Waiting for calls
     int fd[2], n = 0;
     char buffer[10];

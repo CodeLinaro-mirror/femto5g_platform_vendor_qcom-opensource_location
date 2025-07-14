@@ -2,6 +2,11 @@
 Copyright (c) 2024-2025 Qualcomm Innovation Center, Inc. All rights reserved.
 SPDX-License-Identifier: BSD-3-Clause-Clear
 */
+/*
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
 
 #ifndef LOCATIOCLIENTAPI_SERVICE_H
 #define LOCATIOCLIENTAPI_SERVICE_H
@@ -150,6 +155,8 @@ public:
 
     void checkMinIntervalForUpdate(uint32_t clientRequestedTbf) const;
 
+    void triggerAutoStartSession() const;
+
 #ifdef POWER_DAEMON_MGR_ENABLED
     LocIdlPowerEvtHandler* mPowerEventObserver;
 #endif
@@ -162,6 +169,10 @@ public:
 
     /** Configuration varaible to control Stop session execution by LocIdlService */
     bool mEnableStopSession = false;
+
+    /** Configuration varaible for AUTO START by LocIdlService */
+    bool mEnableAutoStartSession = true;
+
 private:
     static LocIdlAPIService *mInstance;
     LocationClientApi* mLcaInstance;
@@ -184,6 +195,9 @@ private:
      *  True: Service registered Successfully
      *  False: Service not registered */
     mutable bool serviceRegisterationStatus;
+
+    /** Track if AUTO START session has been triggered once */
+    mutable bool mAutoStartSessionTriggered = false;
 
     LocIdlAPIService();
     ~LocIdlAPIService();

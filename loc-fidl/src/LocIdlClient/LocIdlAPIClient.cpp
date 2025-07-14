@@ -2,6 +2,11 @@
 Copyright (c) 2024-2025 Qualcomm Innovation Center, Inc. All rights reserved.
 SPDX-License-Identifier: BSD-3-Clause-Clear
 */
+/*
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
 
 #include <iostream>
 #include <string>
@@ -1360,7 +1365,12 @@ int main(int argc, char* argv[])
     regSigHandler();
 
     subscribeGnssResports();
-    sessionStart();
+    if (mask == LocationTypes::GnssReportCbInfoMaskT::GRCIMT_LOCATION_CB_INFO_BIT ||
+        mask == LocationTypes::EngineReportCbMaskT::ERCMT_LOCATION_CB_INFO_BIT) {
+        sessionStarted = true;
+    } else {
+       sessionStart();
+    }
 
     if (mmfON) {
         std::unique_lock<std::mutex> lock(cv_m_mmfTerminate);
