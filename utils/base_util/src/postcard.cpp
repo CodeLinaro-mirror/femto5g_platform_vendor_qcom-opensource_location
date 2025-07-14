@@ -56,17 +56,10 @@ enum eFieldType
   FtDouble = 21,
   FtFloat = 22,
 
-  FtArrayInt64 = 30,
-  FtArrayUInt64 = 31,
   FtArrayInt32 = 32,
   FtArrayUInt32 = 33,
-  FtArrayInt16 = 34,
-  FtArrayUInt16 = 35,
   FtArrayInt8 = 36,
   FtArrayUInt8 = 37,
-  FtArrayBool = 38,
-  FtArrayDouble = 39,
-  FtArrayFloat = 40,
 };
 
 typedef PostcardBase::UINT32 LengthType;
@@ -205,8 +198,6 @@ public:
   int addBlob(const char * const name, const void * const blob, const size_t length);
   int addCard(const char * const name, const OutPostcard * const pCard);
 
-  int addArrayDouble(const char * const name, const int num_element, const DOUBLE array[]);
-  int addArrayFloat(const char * const name, const int num_element, const FLOAT array[]);
   int addArrayInt64(const char * const name, const int num_element, const INT64 array[]);
   int addArrayUInt64(const char * const name, const int num_element, const UINT64 array[]);
   int addArrayInt32(const char * const name, const int num_element, const INT32 array[]);
@@ -459,25 +450,6 @@ int OutPostcardImpl::addArray(const char * const name, const eFieldType fieldTyp
   return result;
 }
 
-int OutPostcardImpl::addArrayBool(const char * const name, const int num_element, const BOOL array[])
-{
-  return addArray(name, FtArrayBool, num_element, array);
-}
-
-int OutPostcardImpl::addArrayPtr(const char * const name, const int num_element, const PTR array[])
-{
-  // 8-bytes ptr
-  if (sizeof (PTR) == 8)
-  {
-    return addArray(name, FtArrayInt64, num_element, array);
-  }
-  // 4-byte ptr
-  else
-  {
-    return addArray(name, FtArrayInt32, num_element, array);
-  }
-}
-
 int OutPostcardImpl::addArrayInt8(const char * const name, const int num_element, const INT8 array[])
 {
   return addArray(name, FtArrayInt8, num_element, array);
@@ -488,16 +460,6 @@ int OutPostcardImpl::addArrayUInt8(const char * const name, const int num_elemen
   return addArray(name, FtArrayUInt8, num_element, array);
 }
 
-int OutPostcardImpl::addArrayInt16(const char * const name, const int num_element, const INT16 array[])
-{
-  return addArray(name, FtArrayInt16, num_element, array);
-}
-
-int OutPostcardImpl::addArrayUInt16(const char * const name, const int num_element, const UINT16 array[])
-{
-  return addArray(name, FtArrayUInt16, num_element, array);
-}
-
 int OutPostcardImpl::addArrayInt32(const char * const name, const int num_element, const INT32 array[])
 {
   return addArray(name, FtArrayInt32, num_element, array);
@@ -506,26 +468,6 @@ int OutPostcardImpl::addArrayInt32(const char * const name, const int num_elemen
 int OutPostcardImpl::addArrayUInt32(const char * const name, const int num_element, const UINT32 array[])
 {
   return addArray(name, FtArrayUInt32, num_element, array);
-}
-
-int OutPostcardImpl::addArrayInt64(const char * const name, const int num_element, const INT64 array[])
-{
-  return addArray(name, FtArrayInt64, num_element, array);
-}
-
-int OutPostcardImpl::addArrayUInt64(const char * const name, const int num_element, const UINT64 array[])
-{
-  return addArray(name, FtArrayUInt64, num_element, array);
-}
-
-int OutPostcardImpl::addArrayFloat(const char * const name, const int num_element, const FLOAT array[])
-{
-  return addArray(name, FtArrayFloat, num_element, array);
-}
-
-int OutPostcardImpl::addArrayDouble(const char * const name, const int num_element, const DOUBLE array[])
-{
-  return addArray(name, FtArrayDouble, num_element, array);
 }
 
 int OutPostcardImpl::addString(const char * const name, const char * const str)
@@ -711,18 +653,10 @@ public:
 
   int getCard(const char * const name, InPostcard ** const ppCard, const int index);
 
-  int getArrayDouble(const char * const name, int * const pNumElem, DOUBLE * const array);
-  int getArrayFloat(const char * const name, int * const pNumElem, FLOAT * const array);
-  int getArrayInt64(const char * const name, int * const pNumElem, INT64 * const array);
-  int getArrayUInt64(const char * const name, int * const pNumElem, UINT64 * const array);
   int getArrayInt32(const char * const name, int * const pNumElem, INT32 * const array);
   int getArrayUInt32(const char * const name, int * const pNumElem, UINT32 * const array);
-  int getArrayInt16(const char * const name, int * const pNumElem, INT16 * const array);
-  int getArrayUInt16(const char * const name, int * const pNumElem, UINT16 * const array);
   int getArrayInt8(const char * const name, int * const pNumElem, INT8 * const array);
   int getArrayUInt8(const char * const name, int * const pNumElem, UINT8 * const array);
-  int getArrayBool(const char * const name, int * const pNumElem, BOOL * const array);
-  int getArrayPtr(const char * const name, int * const pNumElem, PTR * const array);
 
 private:
   enum eCardState
@@ -1017,17 +951,10 @@ int InPostcardImpl::skipValueByType(const MetaFieldType type)
       }
       break;
 
-    case FtArrayInt64:    // fall through to blob
-    case FtArrayUInt64:   // fall through to blob
     case FtArrayInt32:    // fall through to blob
     case FtArrayUInt32:   // fall through to blob
-    case FtArrayInt16:    // fall through to blob
-    case FtArrayUInt16:   // fall through to blob
     case FtArrayInt8:     // fall through to blob
     case FtArrayUInt8:    // fall through to blob
-    case FtArrayBool:     // fall through to blob
-    case FtArrayDouble:   // fall through to blob
-    case FtArrayFloat:    // fall through to blob
     case FtBlob:
       if(0 != m_pIn->extract(&value_size, sizeof(value_size)))
       {
@@ -1249,26 +1176,6 @@ int InPostcardImpl::getArray(const char * const name, const eFieldType fieldType
   return result;
 }
 
-int InPostcardImpl::getArrayDouble(const char * const name, int * const pNumElem, DOUBLE * const array)
-{
-  return getArray(name, FtArrayDouble, pNumElem, array);
-}
-
-int InPostcardImpl::getArrayFloat(const char * const name, int * const pNumElem, FLOAT * const array)
-{
-  return getArray(name, FtArrayFloat, pNumElem, array);
-}
-
-int InPostcardImpl::getArrayInt64(const char * const name, int * const pNumElem, INT64 * const array)
-{
-  return getArray(name, FtArrayInt64, pNumElem, array);
-}
-
-int InPostcardImpl::getArrayUInt64(const char * const name, int * const pNumElem, UINT64 * const array)
-{
-  return getArray(name, FtArrayUInt64, pNumElem, array);
-}
-
 int InPostcardImpl::getArrayInt32(const char * const name, int * const pNumElem, INT32 * const array)
 {
   return getArray(name, FtArrayInt32, pNumElem, array);
@@ -1279,16 +1186,6 @@ int InPostcardImpl::getArrayUInt32(const char * const name, int * const pNumElem
   return getArray(name, FtArrayUInt32, pNumElem, array);
 }
 
-int InPostcardImpl::getArrayInt16(const char * const name, int * const pNumElem, INT16 * const array)
-{
-  return getArray(name, FtArrayInt16, pNumElem, array);
-}
-
-int InPostcardImpl::getArrayUInt16(const char * const name, int * const pNumElem, UINT16 * const array)
-{
-  return getArray(name, FtArrayUInt16, pNumElem, array);
-}
-
 int InPostcardImpl::getArrayInt8(const char * const name, int * const pNumElem, INT8 * const array)
 {
   return getArray(name, FtArrayInt8, pNumElem, array);
@@ -1297,24 +1194,6 @@ int InPostcardImpl::getArrayInt8(const char * const name, int * const pNumElem, 
 int InPostcardImpl::getArrayUInt8(const char * const name, int * const pNumElem, UINT8 * const array)
 {
   return getArray(name, FtArrayUInt8, pNumElem, array);
-}
-
-int InPostcardImpl::getArrayBool(const char * const name, int * const pNumElem, BOOL * const array)
-{
-  return getArray(name, FtArrayBool, pNumElem, array);
-}
-
-int InPostcardImpl::getArrayPtr(const char * const name, int * const pNumElem, PTR * const array)
-{
-  // 8 bytes pointer
-  if (sizeof (PTR) == 8)
-  {
-    return getArray(name, FtArrayInt64, pNumElem, array);
-  }
-  else
-  {
-    return getArray(name, FtArrayInt32, pNumElem, array);
-  }
 }
 
 int InPostcardImpl::getString(const char * const name, const char ** const pStr)

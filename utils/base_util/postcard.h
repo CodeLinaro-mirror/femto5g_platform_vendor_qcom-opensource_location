@@ -66,18 +66,10 @@ public:
   virtual int addBlob(const char * const name, const void * const blob, const size_t length) = 0;
   virtual int addCard(const char * const name, const OutPostcard * const pCard) = 0;
 
-  virtual int addArrayDouble(const char * const name, const int num_element, const DOUBLE array[]) = 0;
-  virtual int addArrayFloat(const char * const name, const int num_element, const FLOAT array[]) = 0;
-  virtual int addArrayInt64(const char * const name, const int num_element, const INT64 array[]) = 0;
-  virtual int addArrayUInt64(const char * const name, const int num_element, const UINT64 array[]) = 0;
   virtual int addArrayInt32(const char * const name, const int num_element, const INT32 array[]) = 0;
   virtual int addArrayUInt32(const char * const name, const int num_element, const UINT32 array[]) = 0;
-  virtual int addArrayInt16(const char * const name, const int num_element, const INT16 array[]) = 0;
-  virtual int addArrayUInt16(const char * const name, const int num_element, const UINT16 array[]) = 0;
   virtual int addArrayInt8(const char * const name, const int num_element, const INT8 array[]) = 0;
   virtual int addArrayUInt8(const char * const name, const int num_element, const UINT8 array[]) = 0;
-  virtual int addArrayBool(const char * const name, const int num_element, const BOOL array[]) = 0;
-  virtual int addArrayPtr (const char * const name, const int num_element, const PTR array[]) = 0;
 };
 
 class InPostcard: public PostcardBase
@@ -113,7 +105,6 @@ public:
   virtual int getUInt16(const char * const name, UINT16 & value) = 0;
   virtual int getInt8(const char * const name, INT8 & value) = 0;
   virtual int getUInt8(const char * const name, UINT8 & value) = 0;
-  //virtual int getArrayUInt8(const char * const name, UINT8 array[]) = 0;
   virtual int getBool(const char * const name, BOOL & value) = 0;
   virtual int getString(const char * const name, const char ** pStr) = 0;
   virtual int getStringDup(const char * const name, const char ** pStr) = 0;
@@ -138,18 +129,10 @@ public:
   // Note for alignment issue, we cannot directly return a pointer pointing to internal buffer
   // so we have to explicitly allocate and de-allocate a memory block according to alignment rule
   // call these functions twice. first set array to 0 and get the number of elements
-  virtual int getArrayDouble(const char * const name, int * const pNumElem, DOUBLE * const array = 0) = 0;
-  virtual int getArrayFloat(const char * const name, int * const pNumElem, FLOAT * const array = 0) = 0;
-  virtual int getArrayInt64(const char * const name, int * const pNumElem, INT64 * const array = 0) = 0;
-  virtual int getArrayUInt64(const char * const name, int * const pNumElem, UINT64 * const array = 0) = 0;
   virtual int getArrayInt32(const char * const name, int * const pNumElem, INT32 * const array = 0) = 0;
   virtual int getArrayUInt32(const char * const name, int * const pNumElem, UINT32 * const array = 0) = 0;
-  virtual int getArrayInt16(const char * const name, int * const pNumElem, INT16 * const array = 0) = 0;
-  virtual int getArrayUInt16(const char * const name, int * const pNumElem, UINT16 * const array = 0) = 0;
   virtual int getArrayInt8(const char * const name, int * const pNumElem, INT8 * const array = 0) = 0;
   virtual int getArrayUInt8(const char * const name, int * const pNumElem, UINT8 * const array = 0) = 0;
-  virtual int getArrayBool(const char * const name, int * const pNumElem, BOOL * const array = 0) = 0;
-  virtual int getArrayPtr (const char * const name, int * const pNumElem, PTR * const array = 0) = 0;
 
   static int copyInCard(InPostcard * const inCardIn, InPostcard * const inCardOut);
 };
