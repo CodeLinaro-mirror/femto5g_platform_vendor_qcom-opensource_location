@@ -7788,12 +7788,6 @@ void LocApiV02::reportEngDebugDataInfo(const qmiLocEngineDebugDataIndMsgT_v02*
         }
     }
 
-    if (pLocEngDbgDataInfoIndMsg->epiTime_valid) {
-        gnssEngineDebugDataInfo.epiTime.hours = pLocEngDbgDataInfoIndMsg->epiTime.hours;
-        gnssEngineDebugDataInfo.epiTime.mins = pLocEngDbgDataInfoIndMsg->epiTime.mins;
-        gnssEngineDebugDataInfo.epiTime.secs = pLocEngDbgDataInfoIndMsg->epiTime.secs;
-    }
-
     if (pLocEngDbgDataInfoIndMsg->epiLat_valid && pLocEngDbgDataInfoIndMsg->epiLon_valid
             && pLocEngDbgDataInfoIndMsg->epiHepe_valid) {
         gnssEngineDebugDataInfo.epiValidity |= 1 << 0;
@@ -7811,12 +7805,6 @@ void LocApiV02::reportEngDebugDataInfo(const qmiLocEngineDebugDataIndMsgT_v02*
     if (pLocEngDbgDataInfoIndMsg->epiSrc_valid) {
         gnssEngineDebugDataInfo.epiValidity |= 1 << 2;
         gnssEngineDebugDataInfo.epiSrc = pLocEngDbgDataInfoIndMsg->epiSrc;
-    }
-
-    if (pLocEngDbgDataInfoIndMsg->bestPosTime_valid) {
-        gnssEngineDebugDataInfo.bestPosTime.hours = pLocEngDbgDataInfoIndMsg->bestPosTime.hours;
-        gnssEngineDebugDataInfo.bestPosTime.mins = pLocEngDbgDataInfoIndMsg->bestPosTime.mins;
-        gnssEngineDebugDataInfo.bestPosTime.secs = pLocEngDbgDataInfoIndMsg->bestPosTime.secs;
     }
 
     if (pLocEngDbgDataInfoIndMsg->bestPosLat_valid) {
@@ -7837,12 +7825,6 @@ void LocApiV02::reportEngDebugDataInfo(const qmiLocEngineDebugDataIndMsgT_v02*
 
     if (pLocEngDbgDataInfoIndMsg->bestPosAltUnc_valid) {
         gnssEngineDebugDataInfo.bestPosAltUnc = pLocEngDbgDataInfoIndMsg->bestPosAltUnc;
-    }
-
-    if (pLocEngDbgDataInfoIndMsg->xtraInfoTime_valid) {
-        gnssEngineDebugDataInfo.xtraInfoTime.hours = pLocEngDbgDataInfoIndMsg->xtraInfoTime.hours;
-        gnssEngineDebugDataInfo.xtraInfoTime.mins = pLocEngDbgDataInfoIndMsg->xtraInfoTime.mins;
-        gnssEngineDebugDataInfo.xtraInfoTime.secs = pLocEngDbgDataInfoIndMsg->xtraInfoTime.secs;
     }
 
     if (pLocEngDbgDataInfoIndMsg->gpsXtraAge_valid) {
@@ -7905,12 +7887,6 @@ void LocApiV02::reportEngDebugDataInfo(const qmiLocEngineDebugDataIndMsgT_v02*
         gnssEngineDebugDataInfo.navicXtraMask = pLocEngDbgDataInfoIndMsg->navicXtraMask;
     }
 
-    if (pLocEngDbgDataInfoIndMsg->ephInfoTime_valid) {
-        gnssEngineDebugDataInfo.ephInfoTime.hours = pLocEngDbgDataInfoIndMsg->ephInfoTime.hours;
-        gnssEngineDebugDataInfo.ephInfoTime.mins = pLocEngDbgDataInfoIndMsg->ephInfoTime.mins;
-        gnssEngineDebugDataInfo.ephInfoTime.secs = pLocEngDbgDataInfoIndMsg->ephInfoTime.secs;
-    }
-
     if (pLocEngDbgDataInfoIndMsg->gpsEphMask_valid) {
         gnssEngineDebugDataInfo.gpsEphMask = pLocEngDbgDataInfoIndMsg->gpsEphMask;
     }
@@ -7933,15 +7909,6 @@ void LocApiV02::reportEngDebugDataInfo(const qmiLocEngineDebugDataIndMsgT_v02*
 
     if (pLocEngDbgDataInfoIndMsg->navicEphMask_valid) {
         gnssEngineDebugDataInfo.navicEphMask = pLocEngDbgDataInfoIndMsg->navicEphMask;
-    }
-
-    if (pLocEngDbgDataInfoIndMsg->healthInfoTime_valid) {
-        gnssEngineDebugDataInfo.healthInfoTime.hours =
-            pLocEngDbgDataInfoIndMsg->healthInfoTime.hours;
-        gnssEngineDebugDataInfo.healthInfoTime.mins =
-            pLocEngDbgDataInfoIndMsg->healthInfoTime.mins;
-        gnssEngineDebugDataInfo.healthInfoTime.secs =
-            pLocEngDbgDataInfoIndMsg->healthInfoTime.secs;
     }
 
     if (pLocEngDbgDataInfoIndMsg->gpsHealthUnknownMask_valid) {
@@ -8023,20 +7990,8 @@ void LocApiV02::reportEngDebugDataInfo(const qmiLocEngineDebugDataIndMsgT_v02*
         gnssEngineDebugDataInfo.navicHealthBadMask = pLocEngDbgDataInfoIndMsg->navicHealthBadMask;
     }
 
-    if (pLocEngDbgDataInfoIndMsg->fixInfoTime_valid) {
-        gnssEngineDebugDataInfo.fixInfoTime.hours = pLocEngDbgDataInfoIndMsg->fixInfoTime.hours;
-        gnssEngineDebugDataInfo.fixInfoTime.mins = pLocEngDbgDataInfoIndMsg->fixInfoTime.mins;
-        gnssEngineDebugDataInfo.fixInfoTime.secs = pLocEngDbgDataInfoIndMsg->fixInfoTime.secs;
-    }
-
     if (pLocEngDbgDataInfoIndMsg->fixInfoMask_valid) {
         gnssEngineDebugDataInfo.fixInfoMask = pLocEngDbgDataInfoIndMsg->fixInfoMask;
-    }
-
-    if (pLocEngDbgDataInfoIndMsg->navDataTime_valid) {
-        gnssEngineDebugDataInfo.navDataTime.hours = pLocEngDbgDataInfoIndMsg->navDataTime.hours;
-        gnssEngineDebugDataInfo.navDataTime.mins = pLocEngDbgDataInfoIndMsg->navDataTime.mins;
-        gnssEngineDebugDataInfo.navDataTime.secs = pLocEngDbgDataInfoIndMsg->navDataTime.secs;
     }
 
     gnssEngineDebugDataInfo.navDataLen = 0;
@@ -8049,12 +8004,6 @@ void LocApiV02::reportEngDebugDataInfo(const qmiLocEngineDebugDataIndMsgT_v02*
             gnssEngineDebugDataInfo.navData[i].age = pLocEngDbgDataInfoIndMsg->navData[i].age;
         }
         gnssEngineDebugDataInfo.navDataLen = pLocEngDbgDataInfoIndMsg->navData_len;
-    }
-
-    if (pLocEngDbgDataInfoIndMsg->fixStatusTime_valid) {
-        gnssEngineDebugDataInfo.fixStatusTime.hours = pLocEngDbgDataInfoIndMsg->fixStatusTime.hours;
-        gnssEngineDebugDataInfo.fixStatusTime.mins = pLocEngDbgDataInfoIndMsg->fixStatusTime.mins;
-        gnssEngineDebugDataInfo.fixStatusTime.secs = pLocEngDbgDataInfoIndMsg->fixStatusTime.secs;
     }
 
     if (pLocEngDbgDataInfoIndMsg->fixStatusMask_valid) {
