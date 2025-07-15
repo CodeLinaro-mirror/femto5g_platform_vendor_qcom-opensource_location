@@ -1712,7 +1712,7 @@ void LocationClientApiImpl::startPositionSession(
         virtual ~StartPositionSessionReqMsg() {}
         void proc() const {
             if (mApiImpl->mPositionSessionResponseCbPending) {
-                mApiImpl->mLocationCbs.responseCb(::LOCATION_ERROR_ALREADY_STARTED, 0);
+                mCallbacksOption.responseCb(::LOCATION_ERROR_ALREADY_STARTED, 0);
                 return;
             }
             if (mApiImpl->isInBatching()) {
