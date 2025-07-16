@@ -535,7 +535,7 @@ public:
   virtual LocationError setLPPeProtocolCpSync(GnssConfigLppeControlPlaneMask lppeCP);
   virtual LocationError setLPPeProtocolUpSync(GnssConfigLppeUserPlaneMask lppeUP);
   virtual bool getBestAvailableZppFixSync(LocGpsLocation &zppLoc,
-          LocPosTechMask &tech_mask);
+          LocPosTechMask &tech_mask, float* vertUnc = nullptr);
   virtual LocationError setGpsLockSync(GnssConfigGpsLock lock);
   virtual void setConstrainedTuncMode(bool enabled, float tuncConstraint, uint32_t powerBudget,
                                       LocApiResponse *adapterResponse=nullptr);
