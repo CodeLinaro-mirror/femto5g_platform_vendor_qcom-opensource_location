@@ -7506,7 +7506,7 @@ void LocApiV02 :: errorCb(locClientHandleType /*handle*/,
 }
 
 bool LocApiV02::getBestAvailableZppFixSync(LocGpsLocation &zppLoc,
-        LocPosTechMask &tech_mask) {
+        LocPosTechMask &tech_mask, float* vertUnc) {
 
     qmiLocGetBestAvailablePositionReqMsgT_v02 zpp_req;
     qmiLocGetBestAvailablePositionIndMsgT_v02 zpp_ind;
@@ -7572,6 +7572,10 @@ bool LocApiV02::getBestAvailableZppFixSync(LocGpsLocation &zppLoc,
             if (zpp_ind.technologyMask_valid) {
                 tech_mask = zpp_ind.technologyMask;
             }
+        }
+
+        if (nullptr != vertUnc && zpp_ind.vertUnc_valid) {
+            *vertUnc = zpp_ind.vertUnc;
         }
         return true;
     }
