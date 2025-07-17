@@ -29,7 +29,7 @@
   =============================================================================
 
   Changes from Qualcomm Innovation Center are provided under the following license:
-  Copyright (c) 2023 Qualcomm Innovation Center, Inc. All rights reserved.
+  Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
   SPDX-License-Identifier: BSD-3-Clause-Clear
 
   =============================================================================*/
@@ -37,9 +37,9 @@
 #ifndef __IZATREMOTEAPIS_H__
 #define __IZATREMOTEAPIS_H__
 
-#include <izat_remote_api.h>
 #include <string>
 #include <stdio.h>
+#include <gps_extended.h>
 namespace qc_loc_fw {
     class InPostcard;
 }
@@ -59,6 +59,23 @@ protected:
 public:
     virtual void handleMsg(qc_loc_fw::InPostcard * const in_card) = 0;
 };
+
+typedef void (*locationUpdateCb)(UlpLocation *location,
+                                 GpsLocationExtended *locExtended,
+                                                                  void* clientData);
+
+typedef void (*svRptUpdateCb)(GnssSvNotification *svNotify,
+                                 void* clientData);
+
+typedef void (*nmeaUpdateCb)(UlpNmea *nmea,  void* clientData);
+
+typedef struct {
+
+        locationUpdateCb    locCb;
+            svRptUpdateCb       svReportCb;
+                nmeaUpdateCb        nmeaCb;
+
+}remoteClientInfo;
 
 } // izat_remote_api
 
