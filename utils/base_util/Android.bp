@@ -32,7 +32,6 @@ cc_library_shared {
         "src/nvparam_mgr.cpp",
         "src/postcard.cpp",
         "src/sync.cpp",
-        "src/string_routines.cpp",
         "src/time_routines.cpp",
     ],
 }
