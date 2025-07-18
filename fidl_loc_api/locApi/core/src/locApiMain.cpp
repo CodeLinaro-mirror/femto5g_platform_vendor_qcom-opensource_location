@@ -156,6 +156,8 @@ const FidlInterfaceReq* get_fidl_if_api(const FidlInterfaceEvent* eventCallback,
         mFidlContextThrd.isStartCommandInQ = false;
         mFidlContextThrd.fidlLocApiContext = context;
         mFidlContextThrd.fidlEngineState = FIDL_ENGINE_STATE_INIT;
+        mFidlContextThrd.currentGpsTimeOfWeekMs = 0;
+        mFidlContextThrd.systemTimeAtGpsTOW = 0;
         setInterfaceEvent(eventCallback);
         initFidlInterface(&mFidlContextThrd);
         usleep(100);

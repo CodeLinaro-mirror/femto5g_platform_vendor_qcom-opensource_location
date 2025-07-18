@@ -1672,7 +1672,7 @@ void LocIdlClientDevice::getMeasurementSet(const LocationTypes::GnssMeasurements
     }
     svMeasurementSet.gnssMeasNotification.agcCount = 0;
     for (uint32_t i = 1; i < (GNSS_SV_TYPE_NAVIC + 1); i++) {
-        if (measAgc[i].agcLevelDb && measAgc[i].carrierFrequencyHz) {
+        if (0 != measAgc[i].agcLevelDb && 0 != measAgc[i].carrierFrequencyHz) {
             uint32_t count = svMeasurementSet.gnssMeasNotification.agcCount;
             svMeasurementSet.gnssMeasNotification.gnssAgc[count].agcLevelDb =
                                                         measAgc[i].agcLevelDb;
@@ -1680,6 +1680,9 @@ void LocIdlClientDevice::getMeasurementSet(const LocationTypes::GnssMeasurements
             svMeasurementSet.gnssMeasNotification.gnssAgc[count].carrierFrequencyHz =
                                                         measAgc[i].carrierFrequencyHz;
             svMeasurementSet.gnssMeasNotification.agcCount += 1;
+        } else {
+            LOC_LOGD("%s]--> Measurement agcLevelDb: %f, carrierFrequencyHz: %f",__func__,
+                 measAgc[i].agcLevelDb, measAgc[i].carrierFrequencyHz);
         }
     }
 
@@ -1822,6 +1825,11 @@ void LocIdlClientDevice::getMeasurementSet(const LocationTypes::GnssMeasurements
                 LOC_IDL_CLIENT_DIAG_GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_GPTP_TIME_UNC_BIT;
         gnssMeasDiag.clock.elapsedgPTPTimeUnc = clk.getElapsedgPtpTimeUnc();
     }
+
+    LOC_LOGD("%s] --> Measurement count %d, elapsedRealtime: %" PRIi64 ", uncertainty: %" PRIi64 "",
+             __func__, svMeasurementSet.gnssMeasNotification.count,
+             svMeasurementSet.gnssMeasNotification.clock.elapsedRealTime,
+             svMeasurementSet.gnssMeasNotification.clock.elapsedRealTimeUnc);
 }
 
 void LocIdlClientDevice::getSvRpt(const vector<LocationTypes::GnssSvDataT> &gnssSvf,

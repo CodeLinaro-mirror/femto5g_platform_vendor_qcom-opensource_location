@@ -21,6 +21,20 @@
 
 #define LOC_CLIENT_FIDL_IF_LIB_NAME  "libLocationFidlV02.so"
 
+uint64_t getSystemTimeInmSecFromBoot(void);
+
+uint64_t getSystemTimeInmSecFromBoot(void)
+{
+   struct timespec curt_ts;
+   uint64_t curt_time_ms = 0;
+
+   memset(&curt_ts, 0x00, sizeof(struct timespec));
+   clock_gettime(CLOCK_BOOTTIME, &curt_ts);
+   curt_time_ms = (curt_ts.tv_sec * 1000LL);
+   curt_time_ms += (curt_ts.tv_nsec / 1000000LL);
+   return curt_time_ms;
+}
+
 void eventLocClientFidlReportPosition(UlpLocation& location,
                     GpsLocationExtended& locationExtended,
                     enum loc_sess_status status,
@@ -31,6 +45,8 @@ void eventLocClientFidlReportPosition(UlpLocation& location,
     fidlThreadContext *fidlContext = (fidlThreadContext *) context;
 
     if (NULL != fidlContext) {
+       fidlContext->currentGpsTimeOfWeekMs = locationExtended.gpsTime.gpsTimeOfWeekMs;
+       fidlContext->systemTimeAtGpsTOW = getSystemTimeInmSecFromBoot();
 
        if (fidlContext->startCommandInQ.min_interval > 1000) {
             if (0 == (((int64_t)location.gpsLocation.timestamp / 1000) %
@@ -86,11 +102,47 @@ void eventLocClientFidlReportSv(GnssSvNotification& svNotify, void *context) {
 
 void eventLocClientFidlReportSvMeasurement(GnssMeasurements &svMeasurementSet,
         void *context) {
-    fidlThreadContext *fidlContext = (fidlThreadContext *) context;
+   fidlThreadContext *fidlContext = (fidlThreadContext *) context;
 
-    if (NULL != fidlContext) {
-        fidlContext->eventCallback->fidlReportGnssMeasurementData (svMeasurementSet,
-           0, fidlContext->fidlLocApiContext);
+   if (NULL != fidlContext) {
+       double timeBetweenMeasurements
+             = static_cast<double> (fidlContext->startCommandInQ.timeBetweenMeasurements);
+       double currentSystemTime = static_cast<double> (getSystemTimeInmSecFromBoot());
+       int msrMsInWeek = fidlContext->currentGpsTimeOfWeekMs
+                         + (currentSystemTime - fidlContext->systemTimeAtGpsTOW);
+
+       if (timeBetweenMeasurements > 1000.0) {
+           if (0.0 == fmod((currentSystemTime / 1000.0), (timeBetweenMeasurements / 1000.0))) {
+               LOC_LOGD("[%s] min_interval %f timestamp %f ", __func__,
+                   timeBetweenMeasurements, currentSystemTime);
+
+               fidlContext->eventCallback->fidlReportGnssMeasurementData (svMeasurementSet,
+                   msrMsInWeek, fidlContext->fidlLocApiContext);
+           }
+
+       } else if (1000.0 == timeBetweenMeasurements) {
+           if (0.0 == fmod((currentSystemTime), 1000.0)) {
+               LOC_LOGD("[%s] min_interval %f timestamp %f ", __func__,
+                   timeBetweenMeasurements, currentSystemTime);
+
+               fidlContext->eventCallback->fidlReportGnssMeasurementData (svMeasurementSet,
+                   msrMsInWeek, fidlContext->fidlLocApiContext);
+           }
+       } else if (timeBetweenMeasurements > 100.0) {
+           if (0.0 == fmod((currentSystemTime / 100), (timeBetweenMeasurements / 100))) {
+               LOC_LOGD("[%s] min_interval %f timestamp %f ", __func__,
+                   timeBetweenMeasurements, currentSystemTime);
+
+               fidlContext->eventCallback->fidlReportGnssMeasurementData (svMeasurementSet,
+                   msrMsInWeek, fidlContext->fidlLocApiContext);
+           }
+        } else {
+           LOC_LOGD("[%s] min_interval %f timestamp %f ", __func__,
+               timeBetweenMeasurements, currentSystemTime);
+
+           fidlContext->eventCallback->fidlReportGnssMeasurementData (svMeasurementSet,
+               msrMsInWeek, fidlContext->fidlLocApiContext);
+       }
     }
 }
 
@@ -144,6 +196,8 @@ void eventLocClientFidlReportHardwareStatus(uint32_t hardwareStatus, void *conte
                            = fidlContext->startCommandInQ.min_interval;
                    sndMsg.u.msgStartFix.preferred_accuracy
                            = fidlContext->startCommandInQ.preferred_accuracy;
+                   sndMsg.u.msgStartFix.timeBetweenMeasurements
+                           = fidlContext->startCommandInQ.timeBetweenMeasurements;
                    sendMsg2FidlEngine(&sndMsg);
                    fidlContext->isStartCommandInQ = false;
                }
