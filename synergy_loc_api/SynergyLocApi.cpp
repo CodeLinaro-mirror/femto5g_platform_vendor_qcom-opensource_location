@@ -1341,9 +1341,6 @@ void SynergyLocApi::setPositionMode(const LocPosMode& posMode) {
             LocSlPosMode.recurrence = posMode.recurrence;
             LocSlPosMode.min_interval = posMode.min_interval;
             LocSlPosMode.preferred_accuracy = posMode.preferred_accuracy;
-            LocSlPosMode.preferred_time = posMode.preferred_time;
-            LocSlPosMode.share_position = posMode.share_position;
-            LocSlPosMode.powerMode = posMode.powerMode;
             LocSlPosMode.timeBetweenMeasurements = posMode.timeBetweenMeasurements;
 
             rtv = sllReqIf->sllSetPositionMode(LocSlPosMode, ((void *)this));
