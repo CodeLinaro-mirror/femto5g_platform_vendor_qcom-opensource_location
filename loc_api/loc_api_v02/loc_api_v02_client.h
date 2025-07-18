@@ -248,16 +248,6 @@ typedef union
         To send this request, set the reqId field in locClientSendReq() to
         QMI_LOC_SET_OPERATION_MODE_REQ_V02. */
 
-   const qmiLocSetSpiStatusReqMsgT_v02* pSetSpiStatusReq;
-   /**< Sends the stationary position status to the engine.
-
-        If the request is accepted by the service, the client receives the
-        following indication containing a response:
-        QMI_LOC_SET_SPI_STATUS_IND_V02.
-
-        To send this request, set the reqId field in locClientSendReq() to
-        QMI_LOC_SET_SPI_STATUS_REQ_V02. */
-
    const qmiLocInjectSensorDataReqMsgT_v02* pInjectSensorDataReq;
    /**< Injects sensor data into the engine.
 
@@ -827,12 +817,6 @@ typedef union
 
         The respIndId field in the response indication callback is set to
         QMI_LOC_SET_OPERATION_MODE_IND_V02. */
-
-   const qmiLocSetSpiStatusIndMsgT_v02* pSetSpiStatusInd;
-   /**< Response to the QMI_LOC_SET_SPI_STATUS_REQ_V02 request.
-
-        The respIndId field in the response indication callback is set to
-        QMI_LOC_SET_SPI_STATUS_IND_V02. */
 
    const qmiLocInjectSensorDataIndMsgT_v02* pInjectSensorDataInd;
    /**< Response to the QMI_LOC_INJECT_SENSOR_DATA_REQ_V02 request.

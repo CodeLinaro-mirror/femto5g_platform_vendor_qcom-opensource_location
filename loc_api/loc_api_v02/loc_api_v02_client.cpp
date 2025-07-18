@@ -148,10 +148,6 @@ static const locClientEventIndTableStructT locClientEventIndTable[]= {
   { QMI_LOC_EVENT_TIME_SYNC_REQ_IND_V02,
     sizeof(qmiLocEventTimeSyncReqIndMsgT_v02) },
 
-  //Set Spi Streaming Report Event
-  { QMI_LOC_EVENT_SET_SPI_STREAMING_REPORT_IND_V02,
-    sizeof(qmiLocEventSetSpiStreamingReportIndMsgT_v02) },
-
   //Location Server Connection Request event
   { QMI_LOC_EVENT_LOCATION_SERVER_CONNECTION_REQ_IND_V02,
     sizeof(qmiLocEventLocationServerConnectionReqIndMsgT_v02) },
@@ -314,10 +310,6 @@ static const locClientRespIndTableStructT locClientRespIndTable[]= {
    //Set Operation Mode Resp Ind
    { QMI_LOC_SET_OPERATION_MODE_IND_V02,
      sizeof(qmiLocSetOperationModeIndMsgT_v02)},
-
-   //Set SPI Status Resp Ind
-   { QMI_LOC_SET_SPI_STATUS_IND_V02,
-     sizeof(qmiLocSetSpiStatusIndMsgT_v02)},
 
    //Inject Sensor Data Resp Ind
    { QMI_LOC_INJECT_SENSOR_DATA_IND_V02,
@@ -978,12 +970,6 @@ bool validateRequest(
     case QMI_LOC_SET_OPERATION_MODE_REQ_V02:
     {
       *pOutLen = sizeof(qmiLocSetOperationModeReqMsgT_v02);
-      break;
-    }
-
-    case QMI_LOC_SET_SPI_STATUS_REQ_V02:
-    {
-      *pOutLen = sizeof(qmiLocSetSpiStatusReqMsgT_v02);
       break;
     }
 
