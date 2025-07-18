@@ -98,6 +98,7 @@ enum loc_api_adapter_err handleLocApiStartFix(fidlPosMode& fixCriteria, void *co
     sndMsg.u.msgStartFix.mode = fixCriteria.mode;
     sndMsg.u.msgStartFix.min_interval = fixCriteria.min_interval;
     sndMsg.u.msgStartFix.preferred_accuracy = fixCriteria.preferred_accuracy;
+    sndMsg.u.msgStartFix.timeBetweenMeasurements = fixCriteria.timeBetweenMeasurements;
     sendMsg2FidlEngine(&sndMsg);
     return LOC_API_ADAPTER_ERR_SUCCESS;
 }
