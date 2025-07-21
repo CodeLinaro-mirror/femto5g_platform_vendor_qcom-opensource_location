@@ -848,6 +848,7 @@ void LocIdlAPIService::startPositionSession
                     LocationTypes::LocationStatusT resp =
                             mInstance->parseIDLResponse(response);
                     reply(resp);
+                    LOC_LOGe("==== Client %"PRIu64" response %d", client->hashCode(), resp);
                 };
                 mLCAService->checkMinIntervalForUpdate(mIntervalInMs);
                 if (mLCAService->mLcaInstance) {
@@ -914,6 +915,8 @@ void LocIdlAPIService::startPositionSession
                     LocationTypes::LocationStatusT resp =
                             mInstance->parseIDLResponse(response);
                     reply(resp);
+                    LOC_LOGi("==== Client %"PRIu64" response %d",
+                            client->hashCode(), resp);
                 };
                 mLCAService->checkMinIntervalForUpdate(mIntervalInMs);
                 if (mLCAService->mLcaInstance) {
@@ -960,7 +963,8 @@ void LocIdlAPIService::stopPositionSession
                                 idlSessionInfo, mClient->hashCode());
                     }
                     if (!mLCAService->numControlRequests && mLCAService->mEnableStopSession) {
-                        LOC_LOGe(" Sending STOP Session request !!");
+                        LOC_LOGe(" Sending STOP Session request ClientID %"PRIu64" !!",
+                                mClient->hashCode());
                         mLCAService->mLcaInstance->stopPositionSession();
                         posCount = 0;
                         latentPosCount = 0;
@@ -1005,8 +1009,12 @@ void LocIdlAPIService::deleteAidingDataRequest
                     AidingDataDeletionMask)mask);
         if (ret) {
             reply(LocationTypes::LocationStatusT::LOCATION_STATUS_T_SUCCESS);
+            LOC_LOGi("==== Client %"PRIu64" response SUCCESS",
+                    client->hashCode());
         } else {
             reply(LocationTypes::LocationStatusT::LOCATION_STATUS_T_UNKOWN_FAILURE);
+            LOC_LOGi("==== Client %"PRIu64" response UNKOWN_FAILURE",
+                    client->hashCode());
         }
     }
     if (mDiagLogIface) {
@@ -1067,8 +1075,12 @@ void LocIdlAPIService::configConstellationsRequest
         bool retVal = mLIAInstance->configConstellations(&svList);
         if (retVal) {
             reply(LocationTypes::LocationStatusT::LOCATION_STATUS_T_SUCCESS);
+            LOC_LOGi("==== Client %"PRIu64" response SUCCESS",
+                    client->hashCode());
         } else {
             reply(LocationTypes::LocationStatusT::LOCATION_STATUS_T_UNKOWN_FAILURE);
+            LOC_LOGi("==== Client %"PRIu64" response UNKOWN_FAILURE",
+                    client->hashCode());
         }
     }
     if (mDiagLogIface) {

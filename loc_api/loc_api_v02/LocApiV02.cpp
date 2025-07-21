@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -62,6 +62,11 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/******************************************************************************
+Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+SPDX-License-Identifier: BSD-3-Clause-Clear
+*******************************************************************************/
+
 #define LOG_NDEBUG 0
 #define LOG_TAG "LocSvc_ApiV02"
 
@@ -93,6 +98,9 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 using namespace std;
 using namespace loc_core;
+
+/* convert time uncertainty from three sigma to one sigma */
+#define ONE_THIRD_SCALE_FACTOR (1.0/3.0)
 
 /* Doppler Conversion from M/S to NS/S */
 #define MPS_TO_NSPS         (1.0/0.299792458)
@@ -721,6 +729,7 @@ locClientEventMaskType LocApiV02 :: adjustLocClientEventMask(locClientEventMaskT
                                            QMI_LOC_EVENT_MASK_EPHEMERIS_REPORT_V02 |
                                            QMI_LOC_EVENT_MASK_LATENCY_INFORMATION_REPORT_V02 |
                                            QMI_LOC_EVENT_MASK_ENGINE_DEBUG_DATA_REPORT_V02;
+
         // clear GNSS_EVENT_REPORT mask because QMI_LOC_EVENT_MASK_FEATURE_STATUS_V02 is set
         // when LOC_SUPPORTED_FEATURE_DYNAMIC_FEATURE_STATUS is supported
         if (ContextBase::isFeatureSupported(LOC_SUPPORTED_FEATURE_DYNAMIC_FEATURE_STATUS)) {
@@ -5837,6 +5846,30 @@ void LocApiV02::reportGnssMeasurementData(
             m1HzMeasurementsInfo.measurements.push_back(std::move(measurement));
         }
     }
+
+    //AGC Status
+    GnssMeasurementsNotification& measurementsNotify = mGnssMeasurements->gnssMeasNotification;
+    if (gnss_measurement_report_ptr.agcStatus_valid) {
+        GnssRfBand bandType = getLocApiSvRfBand(gnss_measurement_report_ptr.gnssSignalType);
+        switch (bandType) {
+            case GNSS_RF_BAND_L1:
+                measurementsNotify.agcStatusL1 = convertQmiAgcStatusType(
+                        gnss_measurement_report_ptr.agcStatus);
+                break;
+            case GNSS_RF_BAND_L2:
+                measurementsNotify.agcStatusL2 = convertQmiAgcStatusType(
+                        gnss_measurement_report_ptr.agcStatus);
+                break;
+            case GNSS_RF_BAND_L5:
+                measurementsNotify.agcStatusL5 = convertQmiAgcStatusType(
+                        gnss_measurement_report_ptr.agcStatus);
+                break;
+        }
+    }
+    LOC_LOGa("agcStatusL1: %d, agcStatusL2: %d, agcStatusL5: %d",
+            measurementsNotify.agcStatusL1, measurementsNotify.agcStatusL2,
+            measurementsNotify.agcStatusL5);
+
     if (gnss_measurement_report_ptr.maxMessageNum == gnss_measurement_report_ptr.seqNum &&
         maxSubSeqNum == subSeqNum) {
         int64_t elapsedRealTime = -1;
@@ -5899,28 +5932,6 @@ void LocApiV02::reportGnssMeasurementData(
         mGnssMeasurements->gnssMeasNotification.clock.elapsedRealTimeUnc = unc;
 
         mGnssMeasurements->gnssMeasNotification.isFullTracking = mIsFullTracking;
-        //AGC Status
-        GnssMeasurementsNotification& measurementsNotify = mGnssMeasurements->gnssMeasNotification;
-        if (gnss_measurement_report_ptr.agcStatus_valid) {
-            GnssRfBand bandType = getLocApiSvRfBand(gnss_measurement_report_ptr.gnssSignalType);
-            switch (bandType) {
-                case GNSS_RF_BAND_L1:
-                    measurementsNotify.agcStatusL1 = convertQmiAgcStatusType(
-                            gnss_measurement_report_ptr.agcStatus);
-                    break;
-                case GNSS_RF_BAND_L2:
-                    measurementsNotify.agcStatusL2 = convertQmiAgcStatusType(
-                            gnss_measurement_report_ptr.agcStatus);
-                    break;
-                case GNSS_RF_BAND_L5:
-                    measurementsNotify.agcStatusL5 = convertQmiAgcStatusType(
-                            gnss_measurement_report_ptr.agcStatus);
-                    break;
-            }
-        }
-        LOC_LOGv("agcStatusL1: %d, agcStatusL2: %d, agcStatusL5: %d",
-                measurementsNotify.agcStatusL1, measurementsNotify.agcStatusL2,
-                measurementsNotify.agcStatusL5);
 
         reportSvMeasurementInternal();
         resetSvMeasurementReport();
@@ -6110,6 +6121,8 @@ void LocApiV02::setGnssBiasesForL1CA() {
         default:
             break;
         }
+        // timeBiasUnc is 3-sigma, convert to 1-sigma scale.
+        measData->fullInterSignalBiasUncertaintyNs *= ONE_THIRD_SCALE_FACTOR;
     }
 }
 
@@ -7771,7 +7784,7 @@ int LocApiV02 :: convertGnssClock (GnssMeasurementsClock& clock,
                }
                clock.fullBiasNs = clock.timeNs - gpsTimeNs;
                clock.biasNs = sysClkBiasMs * 1e6 - (double)((int64_t)(sysClkBiasMs * 1e6));
-               clock.biasUncertaintyNs = (double)sysClkUncMs * 1e6;
+               clock.biasUncertaintyNs = (double)sysClkUncMs * 1e6 * ONE_THIRD_SCALE_FACTOR;
                flags |= (GNSS_MEASUREMENTS_CLOCK_FLAGS_FULL_BIAS_BIT |
                          GNSS_MEASUREMENTS_CLOCK_FLAGS_BIAS_BIT |
                          GNSS_MEASUREMENTS_CLOCK_FLAGS_BIAS_UNCERTAINTY_BIT);
@@ -7801,7 +7814,7 @@ int LocApiV02 :: convertGnssClock (GnssMeasurementsClock& clock,
         double driftUncMPS = gnss_measurement_info.rcvrClockFrequencyInfo.clockDriftUnc;
 
         clock.driftNsps = driftMPS * MPS_TO_NSPS;
-        clock.driftUncertaintyNsps = driftUncMPS * MPS_TO_NSPS;
+        clock.driftUncertaintyNsps = driftUncMPS * MPS_TO_NSPS * ONE_THIRD_SCALE_FACTOR;
 
         flags |= (GNSS_MEASUREMENTS_CLOCK_FLAGS_DRIFT_BIT |
                   GNSS_MEASUREMENTS_CLOCK_FLAGS_DRIFT_UNCERTAINTY_BIT);
@@ -9859,6 +9872,12 @@ LocApiV02::setBlacklistSvSync(const GnssSvIdConfig& config)
        setBlacklistSvMsg.gps_persist_blacklist_sv = config.gpsBlacklistSvMask,
        setBlacklistSvMsg.gps_clear_persist_blacklist_sv_valid = true;
        setBlacklistSvMsg.gps_clear_persist_blacklist_sv = ~config.gpsBlacklistSvMask;
+    } else {
+        if (config.gpsBlacklistSvMask) {
+            LOC_LOGd("Preferred System %d, SV Blacklisting NOT SUPPORTED !!",
+                    mPreferredSvSystemType);
+            return LOCATION_ERROR_NOT_SUPPORTED;
+        }
     }
 
     if (mPreferredSvSystemType != GNSS_SV_TYPE_GLONASS) {
@@ -9873,6 +9892,12 @@ LocApiV02::setBlacklistSvSync(const GnssSvIdConfig& config)
        setBlacklistSvMsg.bds_persist_blacklist_sv = config.bdsBlacklistSvMask;
        setBlacklistSvMsg.bds_clear_persist_blacklist_sv_valid = true;
        setBlacklistSvMsg.bds_clear_persist_blacklist_sv = ~config.bdsBlacklistSvMask;
+    } else {
+        if (config.bdsBlacklistSvMask) {
+            LOC_LOGd("Preferred System %d, SV Blacklisting NOT SUPPORTED !!",
+                    mPreferredSvSystemType);
+            return LOCATION_ERROR_NOT_SUPPORTED;
+        }
     }
 
     if (mPreferredSvSystemType != GNSS_SV_TYPE_QZSS) {

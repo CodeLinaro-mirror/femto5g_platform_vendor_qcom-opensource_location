@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -269,7 +269,7 @@ private:
     void onCapabilitiesCallback(LocationCapabilitiesMask mask);
     void onResponseCb(LocationError err, uint32_t id);
     void onCollectiveResponseCallback(size_t count, LocationError *errs, uint32_t *ids);
-    void onGtpWwanTrackingCallback(Location location);
+    void onGtpTerrestrialTrackingCallback(Location location);
     void onGnssLocationInfoCb(const GnssLocationInfoNotification& notification);
 
     // Location configuration API requests
@@ -299,6 +299,7 @@ private:
     void configOsnmaEnablement(const LocConfigOsnmaEnablementReqMsg* pMsg);
     void registerGnssSignalTypesUpdate(const LocConfigRegisterGnssSignalTypesUpdateReqMsg* pReqMsg);
     void configMmfData(const LocInjectMmfDataReqMsg* pMsg);
+    void registerLocApiForGnssSignalTypesUpdates (bool registerForUpdate);
 
     // Location configuration API get/read requests
     void getGnssConfig(const LocAPIMsgHeader* pReqMsg,
@@ -380,10 +381,10 @@ private:
     const MsgTask   mMsgTask;
 
     // Terrestrial service related APIs
-    // Location api interface for single short wwan fix
-    ILocationAPI* mGtpWwanSsLocationApi;
-    LocationCallbacks mGtpWwanSsLocationApiCallbacks;
-    trackingCallback mGtpWwanPosCallback;
+    // Location api interface for single short terrestrial fix
+    ILocationAPI* mGtpTerrestrialSsLocationApi;
+    LocationCallbacks mGtpTerrestrialSsLocationApiCallbacks;
+    trackingCallback mGtpTerrestrialPosCallback;
     // -1: not set, 0: user not opt-in, 1: user opt in
     int mOptInTerrestrialService;
     // LIA clients that register for xtra status update
@@ -401,6 +402,7 @@ private:
     // Location api interface to register Gnss signal types callback
     ILocationAPI* mSignalTypesLocationApi;
     LocationCallbacks mSignalTypesLocationApiCallbacks;
+    uint32_t mLocHalSignalTypeMask;
 };
 
 #endif //LOCATIONAPISERVICE_H

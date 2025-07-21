@@ -77,6 +77,9 @@ static location_integration::LocationIntegrationApi* pIntClient = nullptr;
 static sem_t semCompleted;
 static sem_t semGfCompleted;
 static sem_t semBatchingCompleted;
+static sem_t semLcaDestroyCompleted;
+static sem_t semLiaDestroyCompleted;
+
 static int fixCnt = 0x7fffffff;
 static uint64_t autoTestStartTimeMs = 0;
 static uint64_t autoTestStartGfTimeMs = 0;
@@ -136,9 +139,9 @@ enum TrackingSessionType {
 #define CONFIG_ENGINE_RUN_STATE    "configEngineRunState"
 #define CONFIG_ENGINE_INTEGRITY_RISK "configEngineIntegrityRisk"
 #define SET_USER_CONSENT           "setUserConsentForTerrestrialPositioning"
-#define GET_SINGLE_GTP_WWAN_FIX    "getSingleGtpWwanFix"
-#define GET_MULTIPLE_GTP_WWAN_FIXES  "getMultipleGtpWwanFixes"
-#define CANCEL_SINGLE_GTP_WWAN_FIX "cancelSingleGtpWwanFix"
+#define GET_SINGLE_TERRESTRIAL_FIX "getSingleTerrestrialFix"
+#define GET_MULTIPLE_TERRESTRIAL_FIXES "getMultipleTerrestrialFixes"
+#define CANCEL_SINGLE_TERRESTRIAL_FIX "cancelSingleTerrestrialFix"
 #define CONFIG_NMEA_TYPES          "configOutputNmeaTypes"
 #define GET_ENERGY_CONSUMED        "getEnergyConsumed"
 #define INJECT_LOCATION            "injectLocation"
@@ -635,9 +638,9 @@ static void printHelp() {
     printf("%s: get min sv elevation angle\n", GET_MIN_SV_ELEVATION);
     printf("%s: config engine run state\n", CONFIG_ENGINE_RUN_STATE);
     printf("%s: set user consent for terrestrial positioning 0/1\n", SET_USER_CONSENT);
-    printf("%s: get single shot wwan fix, timeout_msec 0.0 1\n", GET_SINGLE_GTP_WWAN_FIX);
-    printf("%s: get multiple wan fix: numOfFixes tbfMsec timeout_msec 0.0 1\n",
-           GET_MULTIPLE_GTP_WWAN_FIXES);
+    printf("%s: get single terrestrial fix, timeout_msec 0.0 1\n", GET_SINGLE_TERRESTRIAL_FIX);
+    printf("%s: get multiple terrestrial fix: numOfFixes tbfMsec timeout_msec 0.0 1\n",
+           GET_MULTIPLE_TERRESTRIAL_FIXES);
     printf("%s: config nmea types \n", CONFIG_NMEA_TYPES);
     printf("%s: config engine integrity risk \n", CONFIG_ENGINE_INTEGRITY_RISK);
     printf("%s: get gnss energy consumed \n", GET_ENERGY_CONSUMED);
@@ -1072,7 +1075,7 @@ void parseXtraConfig(char* buf, bool &xtraEnabled, XtraConfigParams& oemConfig) 
     }
 }
 
-void getGtpWwanFixes (bool multipleFixes, char* buf) {
+void getTerrestrialFixes (bool multipleFixes, char* buf) {
     uint32_t gtpFixTbfMsec  = 0;
     uint32_t gtpTimeoutMsec = 0;
     float    gtpHorQoS      = 0.0;
@@ -2056,6 +2059,29 @@ void geofenceTestMenu() {
     }
 }
 
+// Callback function to be called when destroy is complete
+void lcaDestroyCompleteCb() {
+    printf("<<< LCA destroyCompleteCb");
+    if (pLcaClient) {
+        delete pLcaClient;
+        pLcaClient = nullptr;
+    }
+
+    // Send a signal to indicate destroy is complete
+    sem_post(&semLcaDestroyCompleted);
+}
+
+void liaDestroyCompleteCb() {
+    printf("<<< LIA destroyCompleteCb");
+    if (pIntClient) {
+        delete pIntClient;
+        pIntClient = nullptr;
+    }
+
+    // Send a signal to indicate destroy is complete
+    sem_post(&semLiaDestroyCompleted);
+}
+
 /******************************************************************************
 Main function
 ******************************************************************************/
@@ -2309,15 +2335,16 @@ int main(int argc, char *argv[]) {
             }
             printf("userConsent %d\n", userConsent);
             retVal = pIntClient->setUserConsentForTerrestrialPositioning(userConsent);
-        } else if (strncmp(buf, GET_SINGLE_GTP_WWAN_FIX, strlen(GET_SINGLE_GTP_WWAN_FIX)) == 0) {
+        } else if (strncmp(
+                    buf, GET_SINGLE_TERRESTRIAL_FIX, strlen(GET_SINGLE_TERRESTRIAL_FIX)) == 0) {
             // get single-shot gtp fixes
-            getGtpWwanFixes(false, buf);
-        } else if (strncmp(buf, GET_MULTIPLE_GTP_WWAN_FIXES,
-                           strlen(GET_MULTIPLE_GTP_WWAN_FIXES)) == 0) {
+            getTerrestrialFixes(false, buf);
+        } else if (strncmp(buf, GET_MULTIPLE_TERRESTRIAL_FIXES,
+                           strlen(GET_MULTIPLE_TERRESTRIAL_FIXES)) == 0) {
             // get multiple gtp fixes
-            getGtpWwanFixes(true, buf);
-        } else if (strncmp(buf, CANCEL_SINGLE_GTP_WWAN_FIX,
-                           strlen(CANCEL_SINGLE_GTP_WWAN_FIX)) == 0) {
+            getTerrestrialFixes(true, buf);
+        } else if (strncmp(buf, CANCEL_SINGLE_TERRESTRIAL_FIX,
+                           strlen(CANCEL_SINGLE_TERRESTRIAL_FIX)) == 0) {
             if (!pLcaClient) {
                 pLcaClient = new LocationClientApi(onCapabilitiesCb);
             }
@@ -2672,13 +2699,13 @@ int main(int argc, char *argv[]) {
 EXIT:
     if (nullptr != pLcaClient) {
         pLcaClient->stopPositionSession();
-        delete pLcaClient;
-        pLcaClient = nullptr;
+        pLcaClient->destroy(lcaDestroyCompleteCb);
+        sem_wait(&semLcaDestroyCompleted);
     }
 
     if (nullptr != pIntClient) {
-        delete pIntClient;
-        pIntClient = nullptr;
+        pIntClient->destroy(liaDestroyCompleteCb);
+        sem_wait(&semLiaDestroyCompleted);
     }
 
     printf("Done\n");

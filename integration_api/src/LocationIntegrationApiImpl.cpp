@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -61,6 +61,10 @@ IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+/******************************************************************************
+Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+SPDX-License-Identifier: BSD-3-Clause-Clear
+*******************************************************************************/
 
 #define LOG_TAG "LocSvc_LocationIntegrationApiImpl"
 
@@ -79,6 +83,9 @@ static const loc_param_s_type gConfigTable[] = {
     {"XTRA_TEST_ENABLED", &sXtraTestEnabled, NULL, 'n'},
     {"QRTRWATCHER_DELAY_MICROSECOND", &sSleepTime, NULL, 'n'}
 };
+
+// For HALD restart wait time for XTRA INIT to complete
+#define XTRA_INIT_WAIT_TIME_MSEC (200)
 
 namespace location_integration {
 
@@ -232,20 +239,20 @@ public:
             mMsgTask(msgTask), mKnownStatus(LocIpcQrtrWatcher::ServiceStatus::DOWN) {
     }
     inline virtual void onServiceStatusChange(int serviceId, int instanceId,
-            LocIpcQrtrWatcher::ServiceStatus status, const LocIpcSender& refSender) {
+            LocIpcQrtrWatcher::ServiceStatus status, uint32_t nodeId, uint32_t portId) {
 
         struct onHalServiceStatusChangeHandler : public LocMsg {
             onHalServiceStatusChangeHandler(HalDaemonQrtrWatcher& watcher,
                                             LocIpcQrtrWatcher::ServiceStatus status,
-                                            const LocIpcSender& refSender) :
-                mWatcher(watcher), mStatus(status), mRefSender(refSender) {}
+                                            uint32_t nodeId, uint32_t portId) :
+                mWatcher(watcher), mStatus(status), mNodeId(nodeId), mPortId(portId) {}
 
             virtual ~onHalServiceStatusChangeHandler() {}
             void proc() const {
                 if (LocIpcQrtrWatcher::ServiceStatus::UP == mStatus) {
                     LOC_LOGi("LocIpcQrtrWatcher:: HAL Daemon ServiceStatus::UP");
                     auto sender = mWatcher.mIpcSender.lock();
-                    if (nullptr != sender && sender->copyDestAddrFrom(mRefSender)) {
+                    if (nullptr != sender && sender->updateDestAddr(mNodeId, mPortId)) {
                         usleep(sSleepTime);
                         auto listener = mWatcher.mIpcListener.lock();
                         if (nullptr != listener) {
@@ -264,13 +271,14 @@ public:
 
             HalDaemonQrtrWatcher& mWatcher;
             LocIpcQrtrWatcher::ServiceStatus mStatus;
-            const LocIpcSender& mRefSender;
+            uint32_t mNodeId;
+            uint32_t mPortId;
         };
 
         if (LOCATION_CLIENT_API_QSOCKET_HALDAEMON_SERVICE_ID == serviceId &&
             LOCATION_CLIENT_API_QSOCKET_HALDAEMON_INSTANCE_ID == instanceId) {
             mMsgTask.sendMsg(new (nothrow)
-                     onHalServiceStatusChangeHandler(*this, status, refSender));
+                     onHalServiceStatusChangeHandler(*this, status, nodeId, portId));
         }
     }
 };
@@ -361,7 +369,7 @@ LocationIntegrationApiImpl::LocationIntegrationApiImpl(LocIntegrationCbs& integr
 LocationIntegrationApiImpl::~LocationIntegrationApiImpl() {
 }
 
-void LocationIntegrationApiImpl::destroy() {
+void LocationIntegrationApiImpl::destroyMe(locationApiDestroyCompleteCallback destroyCompleteCb) {
 
     struct DestroyReq : public LocMsg {
         DestroyReq(LocationIntegrationApiImpl* apiImpl) :
@@ -388,15 +396,18 @@ void LocationIntegrationApiImpl::destroy() {
                 lock_guard<mutex> lock(mMutex);
                 mApiImpl->mClientRunning = false;
             }
-            usleep(50000); //give 50ms for socket clean up
-
-            delete mApiImpl;
         }
         LocationIntegrationApiImpl* mApiImpl;
     };
 
     mMsgTask.sendMsg(new (nothrow) DestroyReq(this));
-    usleep(100000); //100ms for handling onReceive() messages
+    wait(500); //500ms
+    LOC_LOGw("wait deregister received");
+    if (destroyCompleteCb) {
+        destroyCompleteCb();
+    }
+    delete this;
+
 }
 
 bool LocationIntegrationApiImpl::integrationClientAllowed() {
@@ -502,12 +513,18 @@ void IpcListener::onReceive(const char* data, uint32_t length,
             case E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_REQ_MSG_ID:
             case E_INTAPI_CONFIG_MAP_MATCHED_FEEDBACK_MSG_ID:
             case E_INTAPI_CONFIG_XTRA_USER_CONSENT_MSG_ID:
+            case E_LOCAPI_CLIENT_DEREGISTER_MSG_ID:
             {
                 PBLocAPIGenericRespMsg pbLocApiGenericRsp;
                 if (0 == pbLocApiGenericRsp.ParseFromString(pbLocApiMsg.payload())) {
                     LOC_LOGe("Failed to parse pbLocApiGenericRsp from payload!!");
                     return;
                 }
+                if (locApiMsg.msgId == E_LOCAPI_CLIENT_DEREGISTER_MSG_ID) {
+                    mApiImpl.notify(); //for the wait in destroy()
+                    return;
+                }
+
                 LocAPIGenericRespMsg msg(sockName.c_str(), eLocMsgid, pbLocApiGenericRsp,
                         &mApiImpl.mPbufMsgConv);
                 mApiImpl.processConfigRespCb((LocAPIGenericRespMsg*)&msg);
@@ -1322,7 +1339,8 @@ uint32_t LocationIntegrationApiImpl::getXtraStatus() {
     return 0;
 }
 
-uint32_t LocationIntegrationApiImpl::registerXtraStatusUpdate(bool registerUpdate) {
+uint32_t LocationIntegrationApiImpl::registerXtraStatusUpdate(bool registerUpdate,
+        uint32_t delayInMsec) {
 
     struct RegisterXtraStatusUpdateReq : public LocMsg {
         RegisterXtraStatusUpdateReq(LocationIntegrationApiImpl* apiImpl,
@@ -1361,7 +1379,10 @@ uint32_t LocationIntegrationApiImpl::registerXtraStatusUpdate(bool registerUpdat
         // return 1 to signal error
         return 1;
     }
-    mMsgTask.sendMsg(new (nothrow) RegisterXtraStatusUpdateReq(this, registerUpdate));
+    RegisterXtraStatusUpdateReq* pLocMsg = new RegisterXtraStatusUpdateReq(this,
+                registerUpdate);
+    mMsgTask.sendMsg((const LocMsg*)pLocMsg, delayInMsec);
+
     return 0;
 }
 
@@ -1637,11 +1658,7 @@ void LocationIntegrationApiImpl::processHalReadyMsg() {
 
     // resend XTRA status registration message request
     if (mRegisterXtraUpdate) {
-        string pbStr;
-        LocConfigRegisterXtraStatusUpdateReqMsg msg(mSocketName, &mPbufMsgConv);
-        if (msg.serializeToProtobuf(pbStr)) {
-            sendConfigMsgToHalDaemon(REGISTER_XTRA_STATUS_UPDATE, pbStr, false);
-        }
+        registerXtraStatusUpdate(mRegisterXtraUpdate, XTRA_INIT_WAIT_TIME_MSEC);
     }
 }
 
