@@ -1,4 +1,5 @@
 AM_CFLAGS = \
+     $(GPSUTILS_CFLAGS) \
      -I../ \
      -I../../base_util \
      -I../../ \
@@ -39,7 +40,7 @@ libloc_base_util_la_LDFLAGS = -Wl,-z,defs -lpthread -shared -version-info 1:0:0
 libloc_base_util_la_CPPFLAGS = $(AM_CFLAGS) $(AM_CPPFLAGS)
 endif
 
-libloc_base_util_la_LIBADD = -lstdc++ -ldl -lsqlite3
+libloc_base_util_la_LIBADD = -lstdc++ -ldl -lsqlite3 $(GPSUTILS_LIBS)
 
 #Create and Install libraries
 lib_LTLIBRARIES = libloc_base_util.la
