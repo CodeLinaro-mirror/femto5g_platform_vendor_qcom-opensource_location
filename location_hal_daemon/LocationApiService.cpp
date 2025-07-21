@@ -188,14 +188,15 @@ LocationApiService::LocationApiService(const configParamToRead & configParamRead
     mPositionMode((GnssSuplMode)configParamRead.positionMode),
     mMsgTask("HalMaintMsgTask"),
     mMaintTimer(this),
-    mGtpWwanSsLocationApi(nullptr),
+    mGtpTerrestrialSsLocationApi(nullptr),
     mOptInTerrestrialService(-1),
-    mGtpWwanSsLocationApiCallbacks{},
+    mGtpTerrestrialSsLocationApiCallbacks{},
     mSingleFixLocationApi(nullptr),
     mSingleFixTrackingSessionId(0),
     mSingleFixLocationApiCallbacks{},
     mSingleFixLastLocation{},
     mSignalTypesLocationApi(nullptr),
+    mLocHalSignalTypeMask(0),
     mSignalTypesLocationApiCallbacks{}
     {
 
@@ -274,6 +275,8 @@ LocationApiService::LocationApiService(const configParamToRead & configParamRead
         pClient->mPendingMessages.push(E_LOCAPI_START_TRACKING_MSG_ID);
     }
 
+    registerLocApiForGnssSignalTypesUpdates(true);
+
     // start receiver - never return
     LOC_LOGd("Ready, start Ipc Receivers");
     auto recver = LocIpc::getLocIpcLocalRecver(make_shared<LocHaldLocalIpcListener>(*this),
@@ -290,6 +293,7 @@ LocationApiService::LocationApiService(const configParamToRead & configParamRead
 }
 
 LocationApiService::~LocationApiService() {
+    registerLocApiForGnssSignalTypesUpdates(false);
     mIpc.stopNonBlockingListening();
     mIpc.stopBlockingListening(*mBlockingRecver);
 
@@ -883,7 +887,7 @@ void LocationApiService::deleteClientbyName(const std::string clientname, bool f
     // if client is requesting terrestrial fix, stop it
     if (mTerrestrialFixTimeoutMap.erase(clientname) != 0) {
         if (mTerrestrialFixTimeoutMap.size() == 0) {
-            mGtpWwanSsLocationApi->stopNetworkLocation(&mGtpWwanPosCallback);
+            mGtpTerrestrialSsLocationApi->stopNetworkLocation(&mGtpTerrestrialPosCallback);
         }
     }
 
@@ -1141,13 +1145,9 @@ void LocationApiService::deregisterXtraStatusUpdate(
     }
 }
 
-void LocationApiService::registerGnssSignalTypesUpdate(
-            const LocConfigRegisterGnssSignalTypesUpdateReqMsg * pReqMsg) {
-    LOC_LOGi(">--registerGnssSignalTypesUpdate, client %s, registerUpdate %d",
-            pReqMsg->mSocketName, pReqMsg->mRegisterUpdate);
-
+void LocationApiService::registerLocApiForGnssSignalTypesUpdates (bool registerForUpdate) {
     std::lock_guard<std::recursive_mutex> lock(mMutex);
-    if (pReqMsg->mRegisterUpdate) { // register
+    if (registerForUpdate) { // register
         if (mSignalTypesLocationApi == nullptr) {
             // set callback functions for Location API
             mSignalTypesLocationApiCallbacks.size = sizeof(mSignalTypesLocationApiCallbacks);
@@ -1182,9 +1182,20 @@ void LocationApiService::registerGnssSignalTypesUpdate(
             mSignalTypesLocationApi->updateCallbacks(mSignalTypesLocationApiCallbacks);
         }
     }
+}
+
+void LocationApiService::registerGnssSignalTypesUpdate(
+            const LocConfigRegisterGnssSignalTypesUpdateReqMsg * pReqMsg) {
+    LOC_LOGi(">--registerGnssSignalTypesUpdate, client %s, registerUpdate %d",
+            pReqMsg->mSocketName, pReqMsg->mRegisterUpdate);
+
+    std::lock_guard<std::recursive_mutex> lock(mMutex);
     // trigger LocConfigCb to conform with LIA API uniform
     LocHalDaemonClientHandler* pClient = getClient(pReqMsg->mSocketName);
     if (pClient) {
+        if (pReqMsg->mRegisterUpdate && mLocHalSignalTypeMask) {
+            pClient->onGnssSignalTypesCb(mLocHalSignalTypeMask);
+        }
         pClient->onControlResponseCb(LOCATION_ERROR_SUCCESS, pReqMsg->msgId);
     }
 }
@@ -1562,29 +1573,31 @@ void LocationApiService::configUserConsentTerrestrialPositioning(
              pMsg->mSocketName, mOptInTerrestrialService, pMsg->mUserConsent);
 
     mOptInTerrestrialService = pMsg->mUserConsent;
-    if ((mOptInTerrestrialService == 1) && (mGtpWwanSsLocationApi == nullptr)) {
+    if ((mOptInTerrestrialService == 1) && (mGtpTerrestrialSsLocationApi == nullptr)) {
         // set callback functions for Location API
-        mGtpWwanSsLocationApiCallbacks.size = sizeof(mGtpWwanSsLocationApiCallbacks);
+        mGtpTerrestrialSsLocationApiCallbacks.size = sizeof(mGtpTerrestrialSsLocationApiCallbacks);
 
         // mandatory callback
-        mGtpWwanSsLocationApiCallbacks.capabilitiesCb = [this](LocationCapabilitiesMask mask) {
+        mGtpTerrestrialSsLocationApiCallbacks.capabilitiesCb =
+                [this](LocationCapabilitiesMask mask) {
             onCapabilitiesCallback(mask);
         };
-        mGtpWwanSsLocationApiCallbacks.responseCb = [this](LocationError err, uint32_t id) {
+        mGtpTerrestrialSsLocationApiCallbacks.responseCb = [this](LocationError err, uint32_t id) {
             onResponseCb(err, id);
         };
-        mGtpWwanSsLocationApiCallbacks.collectiveResponseCb =
+        mGtpTerrestrialSsLocationApiCallbacks.collectiveResponseCb =
                 [this](size_t count, LocationError* errs, uint32_t* ids) {
             onCollectiveResponseCallback(count, errs, ids);
         };
 
-        mGtpWwanPosCallback = [this](Location location) {
+        mGtpTerrestrialPosCallback = [this](Location location) {
             onGtpWwanTrackingCallback(location);
         };
 
-        mGtpWwanSsLocationApi = LocationAPI::createInstance(mGtpWwanSsLocationApiCallbacks);
-        if (mGtpWwanSsLocationApi) {
-            mGtpWwanSsLocationApi->enableNetworkProvider();
+        mGtpTerrestrialSsLocationApi =
+            LocationAPI::createInstance(mGtpTerrestrialSsLocationApiCallbacks);
+        if (mGtpTerrestrialSsLocationApi) {
+            mGtpTerrestrialSsLocationApi->enableNetworkProvider();
         }
     }
 
@@ -1855,11 +1868,11 @@ void LocationApiService::onCollectiveResponseCallback(
 
 void LocationApiService::onGnssSignalTypesCb(const GnssCapabNotification& gnssCapabNotification) {
     std::lock_guard<std::recursive_mutex> lock(mMutex);
-    uint32_t signalType = gnssCapabNotification.gnssSupportedSignals;
-    LOC_LOGd("--< supported GNSS signal types: 0x%x", signalType);
+    mLocHalSignalTypeMask = gnssCapabNotification.gnssSupportedSignals;
+    LOC_LOGd("--< supported GNSS signal types: 0x%x", mLocHalSignalTypeMask);
     for (auto each : mClients) {
         // deliver the GNSS signal types to registered client
-        each.second->onGnssSignalTypesCb(signalType);
+        each.second->onGnssSignalTypesCb(mLocHalSignalTypeMask);
     }
 }
 
@@ -1879,7 +1892,7 @@ void LocationApiService::onGtpWwanTrackingCallback(Location location) {
             ++it;
         }
         mTerrestrialFixTimeoutMap.clear();
-        mGtpWwanSsLocationApi->stopNetworkLocation(&mGtpWwanPosCallback);
+        mGtpTerrestrialSsLocationApi->stopNetworkLocation(&mGtpTerrestrialPosCallback);
     }
 }
 
@@ -2071,7 +2084,7 @@ void LocationApiService::getSingleTerrestrialPos(
         }
 
         if (terrestrialSessionStarted == false) {
-            mGtpWwanSsLocationApi->startNetworkLocation(&mGtpWwanPosCallback);
+            mGtpTerrestrialSsLocationApi->startNetworkLocation(&mGtpTerrestrialPosCallback);
         }
     }
 }
@@ -2091,7 +2104,7 @@ void LocationApiService::gtpFixRequestTimeout(const std::string& clientName) {
         mTerrestrialFixTimeoutMap.erase(clientName);
         // stop tracking if there is no more request
         if (mTerrestrialFixTimeoutMap.size() == 0) {
-            mGtpWwanSsLocationApi->stopNetworkLocation(&mGtpWwanPosCallback);
+            mGtpTerrestrialSsLocationApi->stopNetworkLocation(&mGtpTerrestrialPosCallback);
         }
     }
 }

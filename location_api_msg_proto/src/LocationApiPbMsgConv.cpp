@@ -611,6 +611,9 @@ uint32_t LocationApiPbMsgConv::getTerrestrialTechMaskFromPB(
     if (pbTerrestrialTechMask & PB_TERRESTRIAL_TECH_GTP_WWAN) {
         terrestrialTechMask |= TERRESTRIAL_TECH_GTP_WWAN;
     }
+    if (pbTerrestrialTechMask & PB_TERRESTRIAL_TECH_GTP_WIFI) {
+        terrestrialTechMask |= TERRESTRIAL_TECH_GTP_WIFI;
+    }
 
     return terrestrialTechMask;
 }
@@ -622,6 +625,9 @@ uint32_t LocationApiPbMsgConv::getPBMaskForTerrestrialTechMask(
 
     if (terrestrialTechMask & TERRESTRIAL_TECH_GTP_WWAN) {
         pbTerrestrialTechMask |= PB_TERRESTRIAL_TECH_GTP_WWAN;
+    }
+    if (terrestrialTechMask & TERRESTRIAL_TECH_GTP_WIFI) {
+        pbTerrestrialTechMask |= PB_TERRESTRIAL_TECH_GTP_WIFI;
     }
 
     return pbTerrestrialTechMask;
