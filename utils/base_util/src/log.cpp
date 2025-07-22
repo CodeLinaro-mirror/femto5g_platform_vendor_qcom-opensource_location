@@ -16,9 +16,9 @@
 #include <time.h>
 #include <new>
 
-//#include <base_util/log.h>
+#include <base_util/log.h>
 #include <base_util/sync.h>
-#include <base_util/list.h>
+#include <list>
 #include <base_util/time_routines.h>
 #include "log_util.h"
 
@@ -56,16 +56,19 @@
 #define DEFAULT_ERROR_OUTPUT EO_ANDROID
 #endif // #if defined (USE_ANDROID_LOGGING)  || defined (__ANDROID__)
 
+using std::list;
+
 namespace qc_loc_fw
 {
 
+using std::list;
 class LocalLogLevelItem;
 static char global_log_tag[64] = { 'Q', 'C', 'A', 'L', 'O', 'G', '\0' };
 static ERROR_LEVEL global_log_level = EL_LOG_OFF;
 static const char * const private_log_tag = "LOG_UTIL";
 static Mutex * global_log_mutex = Mutex::createInstance();
-static List<LocalLogLevelItem> * local_log_level_list =
-    new (std::nothrow) List<LocalLogLevelItem>();
+static list<LocalLogLevelItem> * local_log_level_list =
+    new (std::nothrow) list<LocalLogLevelItem>();
 
 class LocalLogLevelItem
 {
@@ -159,13 +162,13 @@ static LocalLogLevelItem * findLocalLevelItemLocked(const char * const tag)
 {
   LocalLogLevelItem * p_item = 0;
 
-  if(0 != local_log_level_list)
+  if ( 0 != local_log_level_list )
   {
-    for (ListIterator<LocalLogLevelItem> it = local_log_level_list->begin(); it != local_log_level_list->end(); ++it)
+    for (list<LocalLogLevelItem>::iterator it = local_log_level_list->begin(); it != local_log_level_list->end(); ++it)
     {
       if(it->equals(tag))
       {
-        p_item = it.ptr();
+        p_item = &(*it);
         break;
       }
     }
@@ -399,7 +402,7 @@ int log_set_local_level_for_tag(const char * const tag, const ERROR_LEVEL level,
       item.setLevel(level);
       item.setOutput(output);
       BREAK_IF_ZERO(6, item.getTag());
-      BREAK_IF_NON_ZERO(7, local_log_level_list->add(item));
+      local_log_level_list->push_back(item);
     }
 
     result = 0;
@@ -429,7 +432,8 @@ int log_flush_local_level_for_tag(const char * const tag)
 
     BREAK_IF_NON_ZERO(4, latch.ZeroIfLocked());
 
-    for (ListIterator<LocalLogLevelItem> it = local_log_level_list->begin(); it != local_log_level_list->end();)
+    for (list<LocalLogLevelItem>::iterator it = local_log_level_list->begin();
+                                              it != local_log_level_list->end();)
     {
       if((0 == tag) || it->equals(tag))
       {
