@@ -248,21 +248,17 @@ static void globalRespCb(locClientHandleType clientHandle,
 /* global error callback, it will call the handle service down
    function in the loc api adapter instance. */
 static void globalErrorCb (locClientHandleType clientHandle,
-                           locClientErrorEnumType errorId,
                            void *pClientCookie)
 {
   LocApiV02 *locApiV02Instance =
           (LocApiV02 *)pClientCookie;
 
-  LOC_LOGv ("client = %p, error id = %d, client cookie ptr = %p",
-            clientHandle, errorId, pClientCookie);
-  if (NULL == locApiV02Instance)
+  LOC_LOGv ("client = %p, client cookie ptr = %p",
+            clientHandle, pClientCookie);
+  if (locApiV02Instance)
   {
-    LOC_LOGe ("NULL object passed : client = %p, error id = %d",
-               clientHandle, errorId);
-    return;
+    locApiV02Instance->errorCb(clientHandle);
   }
-  locApiV02Instance->errorCb(clientHandle, errorId);
 }
 
 /* global structure containing the callbacks */
@@ -294,7 +290,6 @@ LocApiV02 :: LocApiV02(LOC_API_ADAPTER_EVENT_MASK_T exMask,
     mClientHandle(LOC_CLIENT_INVALID_HANDLE_VALUE),
     mQmiMask(0), mInSession(false), mPowerMode(GNSS_POWER_MODE_DEFAULT),
     mEngineOn(false), mFirstMeasurementOfSessionReceived(false),
-    mMasterRegisterNotSupported(false),
     mCounter(0), mMinInterval(1000),
     mGnssMeasurements(nullptr),
     mBatchSize(0), mDesiredBatchSize(0),
@@ -1323,13 +1318,6 @@ LocApiV02::registerMasterClient()
                        req_union, LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
                        QMI_LOC_REGISTER_MASTER_CLIENT_IND_V02,
                        &reg_master_client_ind);
-
-  mMasterRegisterNotSupported = false;
-  if (LOCATION_ERROR_SUCCESS != err) {
-    mMasterRegisterNotSupported = true;
-  }
-
-  LOC_LOGv("mMasterRegisterNotSupported = %d", mMasterRegisterNotSupported);
 }
 
 /* Set UMTs SLP server URL */
@@ -5970,18 +5958,6 @@ void LocApiV02::convertGnssMeasurementsHeader(const Gnss_LocSvSystemEnumType loc
         getInterSystemTimeBias("navicL5L1TimeBias",
                                svMeasSetHead.navicL5L1TimeBias, interSystemBias);
         svMeasSetHead.flags |= GNSS_SV_MEAS_HEADER_HAS_NAVICL5L1_TIME_BIAS;
-
-        if (gnss_measurement_info.navicL5L1TimeBias.validMask & QMI_LOC_SYS_TIME_BIAS_VALID_V02) {
-            mTimeBiases.navicL5_navicL1 =
-                    gnss_measurement_info.navicL5L1TimeBias.timeBias * 1000000;
-            mTimeBiases.flags |= BIAS_NAVICL5_NAVICL1_VALID;
-        }
-        if (gnss_measurement_info.navicL5L1TimeBias.validMask &
-            QMI_LOC_SYS_TIME_BIAS_UNC_VALID_V02) {
-            mTimeBiases.navicL5_navicL1Unc =
-                    gnss_measurement_info.navicL5L1TimeBias.timeBiasUnc * 1000000;
-            mTimeBiases.flags |= BIAS_NAVICL5_NAVICL1_UNC_VALID;
-        }
     }
 
     if (1 == gnss_measurement_info.gloTime_valid) {
@@ -6008,11 +5984,6 @@ void LocApiV02::convertGnssMeasurementsHeader(const Gnss_LocSvSystemEnumType loc
             gloSystemTime.validityMask |= GNSS_GLO_NUM_CLOCK_RESETS_VALID;
         }
         svMeasSetHead.flags |= GNSS_SV_MEAS_HEADER_HAS_GLO_SYSTEM_TIME;
-
-        mTimeBiases.gloG1 = gnss_measurement_info.gloTime.gloClkTimeBias * 1000000;
-        mTimeBiases.gloG1Unc = gnss_measurement_info.gloTime.gloClkTimeUncMs * 1000000;
-        mTimeBiases.flags |= BIAS_GLOG1_VALID;
-        mTimeBiases.flags |= BIAS_GLOG1_UNC_VALID;
     }
 
     if ((1 == gnss_measurement_info.systemTime_valid) ||
@@ -7371,15 +7342,10 @@ void LocApiV02 :: eventCb(locClientHandleType /*clientHandle*/,
 }
 
 /* Call the service LocAdapterBase down event*/
-void LocApiV02 :: errorCb(locClientHandleType /*handle*/,
-                             locClientErrorEnumType errorId)
+void LocApiV02 :: errorCb(locClientHandleType /*handle*/)
 {
-  if(errorId == eLOC_CLIENT_ERROR_SERVICE_UNAVAILABLE)
-  {
-    LOC_LOGe("Service unavailable");
-
-    handleEngineDownEvent();
-  }
+  LOC_LOGe("Service unavailable");
+  handleEngineDownEvent();
 }
 
 bool LocApiV02::getBestAvailableZppFixSync(LocGpsLocation &zppLoc,
@@ -7539,9 +7505,8 @@ LocationError LocApiV02::setSvMeasurementConstellation(const locClientEventMaskT
     memset(&setGNSSConstRepConfigReq, 0, sizeof(setGNSSConstRepConfigReq));
 
     setGNSSConstRepConfigReq.measReportConfig_valid = true;
-    if ((mask & (QMI_LOC_EVENT_MASK_GNSS_MEASUREMENT_REPORT_V02 |
-                 QMI_LOC_EVENT_MASK_GNSS_NHZ_MEASUREMENT_REPORT_V02)) ||
-        mMasterRegisterNotSupported) {
+    if (mask & (QMI_LOC_EVENT_MASK_GNSS_MEASUREMENT_REPORT_V02 |
+                QMI_LOC_EVENT_MASK_GNSS_NHZ_MEASUREMENT_REPORT_V02)) {
         setGNSSConstRepConfigReq.measReportConfig = svConstellation;
     }
 

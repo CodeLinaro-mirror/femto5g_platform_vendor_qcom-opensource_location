@@ -27,6 +27,12 @@
  *
  */
 
+/*
+Changes from Qualcomm Technologies, Inc. are provided under the following license:
+Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
+
 #ifndef LOC_API_V02_LOG_H
 #define LOC_API_V02_LOG_H
 
@@ -41,8 +47,6 @@ extern "C"
 const char* loc_get_v02_event_name(uint32_t event);
 const char* loc_get_v02_client_status_name(locClientStatusEnumType status);
 const char* loc_get_v02_qmi_status_name(qmiLocStatusEnumT_v02 status);
-const char* loc_get_v02_qmi_reg_mk_status_name(qmiLocRegisterMasterClientStatusEnumT_v02 status);
-
 
 #ifdef __cplusplus
 }

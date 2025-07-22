@@ -397,9 +397,6 @@ static const locClientRespIndTableStructT locClientRespIndTable[]= {
    { QMI_LOC_RELEASE_BATCH_IND_V02,
      sizeof(qmiLocReleaseBatchIndMsgT_v02)},
 
-   { QMI_LOC_SET_XTRA_VERSION_CHECK_IND_V02,
-     sizeof(qmiLocSetXtraVersionCheckIndMsgT_v02)},
-
    { QMI_LOC_NOTIFY_WIFI_ATTACHMENT_STATUS_IND_V02,
      sizeof(qmiLocNotifyWifiAttachmentStatusIndMsgT_v02)},
 
@@ -643,30 +640,6 @@ static locClientStatusEnumType convertQmiResponseToLocStatus(
   return status;
 }
 
-/** convertQmiErrorToLocError
- @brief converts a qmi service error type to
-        locClientErrorEnumType
- @param [in] error received QMI service.
- @return locClientErrorEnumType corresponding to the error.
-*/
-
-static locClientErrorEnumType convertQmiErrorToLocError(
-  qmi_client_error_type error)
-{
-  locClientErrorEnumType locError;
-  switch(error)
-  {
-    case QMI_SERVICE_ERR:
-      locError = eLOC_CLIENT_ERROR_SERVICE_UNAVAILABLE;
-      break;
-
-    default:
-      locError = eLOC_CLIENT_ERROR_SERVICE_UNAVAILABLE;
-      break;
-  }
-  return locError;
-}
-
 /** locClientErrorCb
  *  @brief handles the QCCI error events, this is called by the
  *         QCCI infrastructure when the service is no longer
@@ -698,7 +671,7 @@ static void locClientErrorCb
     localErrorCallback = pCallbackData->errorCallback;
   }
 
-  LOC_LOGd("Service Error %d received, pCallbackData = %p",
+  LOC_LOGe("Service Error %d received, pCallbackData = %p",
            error, err_cb_data);
 
   /* call the error callback
@@ -715,7 +688,6 @@ static void locClientErrorCb
     //invoke the error callback for the corresponding client
     localErrorCallback(
         (locClientHandleType)pCallbackData,
-        convertQmiErrorToLocError(error),
         pCallbackData->pClientCookie);
     pthread_mutex_unlock(&loc_shutdown_mutex);
   }
@@ -1135,12 +1107,6 @@ bool validateRequest(
     {
       *pOutLen = sizeof(qmiLocReleaseBatchReqMsgT_v02);
       break;
-    }
-
-    case QMI_LOC_SET_XTRA_VERSION_CHECK_REQ_V02:
-    {
-        *pOutLen = sizeof(qmiLocSetXtraVersionCheckReqMsgT_v02);
-        break;
     }
 
     case QMI_LOC_NOTIFY_WIFI_ATTACHMENT_STATUS_REQ_V02:

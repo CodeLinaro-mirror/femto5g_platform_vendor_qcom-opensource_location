@@ -92,11 +92,6 @@ typedef uint64_t GpsSvMeasHeaderFlags;
 #define BIAS_BDSB1_BDSB2BI_VALID        0x04000000
 #define BIAS_BDSB1_BDSB2BI_UNC_VALID    0x08000000
 
-#define BIAS_GLOG1_VALID                0x10000000
-#define BIAS_GLOG1_UNC_VALID            0x20000000
-#define BIAS_NAVICL5_NAVICL1_VALID      0x40000000
-#define BIAS_NAVICL5_NAVICL1_UNC_VALID  0x80000000
-
 typedef struct {
     uint64_t flags;
 
@@ -131,10 +126,6 @@ typedef struct {
     float bdsB1_bdsB2aUnc;
     float bdsB1_bdsB2bi;
     float bdsB1_bdsB2biUnc;
-    float gloG1;
-    float gloG1Unc;
-    float navicL5_navicL1;
-    float navicL5_navicL1Unc;
 } timeBiases;
 
 typedef struct {
@@ -226,8 +217,6 @@ private:
   uint8_t mDwellAlignTimeMsValid;
   uint32_t mDwellAlignTimeMs;
 
-  // Below two member variables are for elapsedRealTime calculation
-  GnssMeasurementsNotification m1HzMeasurementsNotify;
   GnssBasicMeasurementsInfo m1HzMeasurementsInfo;
 
   /* Convert event mask from loc eng to loc_api_v02 format */
@@ -435,6 +424,19 @@ private:
   void updateGnssCapabNotification(GnssCapabNotification& gnssCapabNotification,
                                    qmiLocGnssSignalTypeMaskT_v02 gnssSignalType);
 
+  LocationError setSvMeasurementConstellation(const locClientEventMaskType mask);
+
+  LocPosTechMask convertPosTechMask(qmiLocPosTechMaskT_v02 mask);
+  LocNavSolutionMask convertNavSolutionMask(qmiLocNavSolutionMaskT_v02 mask);
+
+  void convertQmiBlacklistedSvConfigToGnssConfig(
+        const qmiLocGetBlacklistSvIndMsgT_v02& qmiBlacklistConfig,
+        GnssSvIdConfig& gnssBlacklistConfig);
+
+  void convertQmiSecondaryConfigToGnssConfig(
+        qmiLocGNSSConstellEnumT_v02 qmiSecondaryBandConfig,
+        GnssSvTypeConfig& secondaryBandConfig);
+
 protected:
   virtual enum loc_api_adapter_err
     open(LOC_API_ADAPTER_EVENT_MASK_T mask);
@@ -455,8 +457,7 @@ public:
 
   /* error callback, this function handles the  service unavailable
      error */
-  void errorCb(locClientHandleType handle,
-               locClientErrorEnumType errorId);
+  void errorCb(locClientHandleType handle);
 
   // Tracking
   void startTimeBasedTracking(const TrackingOptions& options, LocApiResponse* adapterResponse);
@@ -556,30 +557,12 @@ public:
                             LocApiResponse* adapterResponse=nullptr);
   virtual void setTribandState(bool enabled);
 
-  /*
-  Returns
-  Current value of GPS Lock on success
-  -1 on failure
-  */
-  virtual LocationError setSvMeasurementConstellation(const locClientEventMaskType mask);
-
-  virtual LocPosTechMask convertPosTechMask(qmiLocPosTechMaskT_v02 mask);
-  virtual LocNavSolutionMask convertNavSolutionMask(qmiLocNavSolutionMaskT_v02 mask);
   virtual GnssConfigSuplVersion convertSuplVersion(const uint32_t suplVersion);
   virtual GnssConfigLppeControlPlaneMask convertLppeCp(const uint32_t lppeControlPlaneMask);
   virtual GnssConfigLppeUserPlaneMask convertLppeUp(const uint32_t lppeUserPlaneMask);
   virtual LocationError setEmergencyExtensionWindowSync(const uint32_t emergencyExtensionSeconds);
   virtual void setMeasurementCorrections(
         const GnssMeasurementCorrections& gnssMeasurementCorrections);
-
-  void convertQmiBlacklistedSvConfigToGnssConfig(
-        const qmiLocGetBlacklistSvIndMsgT_v02& qmiBlacklistConfig,
-        GnssSvIdConfig& gnssBlacklistConfig);
-
-  virtual void convertQmiSecondaryConfigToGnssConfig(
-        qmiLocGNSSConstellEnumT_v02 qmiSecondaryBandConfig,
-        GnssSvTypeConfig& secondaryBandConfig);
-
   virtual void configPrecisePositioning(uint32_t featureId, bool enable,
           const std::string& appHash, LocApiResponse* adapterResponse=nullptr);
   virtual void configPrecisePositioning(PreciseType preciseType, bool enable,
