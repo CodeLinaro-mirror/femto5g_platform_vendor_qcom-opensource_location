@@ -10,9 +10,13 @@ h_sources = \
         ../log.h \
         ../postcard.h \
         ../sync.h \
+        ../queue.h \
+        ../list.h \
         ../memorystream.h \
         ../nvparam_mgr.h \
         ../time_routines.h \
+        ../vector.h \
+        ../array.h \
         ../shutdown_timer.h
 
 libloc_base_util_la_SOURCES = \

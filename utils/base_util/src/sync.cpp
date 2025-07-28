@@ -5,7 +5,7 @@
  GENERAL DESCRIPTION
  This component provides utilities used for synchronization among threads
 
- Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
  SPDX-License-Identifier: BSD-3-Clause-Clear
  =============================================================================*/
 #include <pthread.h>
@@ -13,17 +13,13 @@
 #include <errno.h>
 #include <new>
 
-#include <queue>
+#include <base_util/queue.h>
 #include <base_util/log.h>
 #include <base_util/sync.h>
 #include "log_util.h"
 
-using std::queue;
-
 namespace qc_loc_fw
 {
-
-using std::queue;
 
 // non-thread safe version, to be used only in threading related code
 void log_error_no_lock(const char * const local_log_tag, const char * const format, ...);
@@ -527,7 +523,7 @@ public:
 
   virtual int ZeroIfShouldWaitAgain_locked();
 
-  queue<void *> m_queue;
+  Queue<void *> m_queue;
   const char * m_tag;
   bool m_isClosed;
   bool m_verboseLog;
@@ -547,7 +543,7 @@ BlockingQueueImpl::BlockingQueueImpl(const char * tag, const bool verboseLog) :
 
 BlockingQueueImpl::~BlockingQueueImpl()
 {
-  if (m_queue.size() > 0)
+  if(m_queue.getSize() > 0)
   {
     log_warning(m_tag, "~BlockingQueueImpl: memory leak");
   }
@@ -561,7 +557,7 @@ int BlockingQueueImpl::ZeroIfShouldWaitAgain_locked()
   }
   else
   {
-    return m_queue.size();
+    return m_queue.getSize();
   }
 }
 
@@ -579,6 +575,11 @@ int BlockingQueueImpl::push(void * const ptr)
     else
     {
       result = 100;
+      if(0 != m_queue.push(ptr))
+      {
+        // something is wrong, but we cannot leave just now
+        result = 101;
+      }
     }
 
     BREAK_IF_NON_ZERO(4, signal_one_and_then_unlock());
@@ -693,6 +694,19 @@ int BlockingQueueImpl::pop(void ** const pptr, const TimeDiff & timeout, bool * 
       {
         // ignore
       }
+    }
+
+    if(m_queue.getSize() > 0)
+    {
+      if(0 != m_queue.pop(pptr))
+      {
+        // something is wrong, but we cannot leave just now
+        result = 5;
+      }
+    }
+    else
+    {
+      // timeout or queue closed
     }
 
     BREAK_IF_NON_ZERO(5, unlock());
