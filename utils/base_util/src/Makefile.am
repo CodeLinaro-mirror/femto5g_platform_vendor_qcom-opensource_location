@@ -25,7 +25,6 @@ libloc_base_util_la_SOURCES = \
         nvparam_mgr.cpp \
         postcard.cpp \
         sync.cpp \
-        string_routines.cpp \
         time_routines.cpp
 library_includedir = $(pkgincludedir)
 library_include_HEADERS = $(h_sources)
