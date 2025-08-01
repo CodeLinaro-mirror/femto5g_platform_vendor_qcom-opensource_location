@@ -61,6 +61,13 @@ IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+
+/*
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
+
 #ifndef LOCATIONAPISERVICE_H
 #define LOCATIONAPISERVICE_H
 
@@ -313,6 +320,8 @@ private:
             const LocConfigRegisterXtraStatusUpdateReqMsg * pReqMsg);
     void deregisterXtraStatusUpdate(
             const LocConfigDeregisterXtraStatusUpdateReqMsg * pReqMsg);
+
+    void provideNetworkInfoStatus(const UpdateNetworkInfoReq* pNwData);
 
     // Location configuration API util routines
     void addConfigRequestToMap(uint32_t sessionId,

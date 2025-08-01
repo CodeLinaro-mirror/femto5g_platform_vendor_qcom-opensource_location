@@ -62,6 +62,12 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/*
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
+
 #ifndef LOCATIONCLIENTAPI_H
 #define LOCATIONCLIENTAPI_H
 
@@ -4305,13 +4311,6 @@ public:
     */
 
     /* ================================== Other APIs ================================== */
-    /** @brief Inform LocationClientAPI of the device network
-               availability status.
-        @param available
-        True if available. <br/>
-        False otherwise. <br/>  */
-    void updateNetworkAvailability(bool available);
-
     /** @brief Get energy consumed info of modem GNSS engine. <br/>
         If called while the previous call is still being processed,
         then the callback will be updated, and engery consumed info
