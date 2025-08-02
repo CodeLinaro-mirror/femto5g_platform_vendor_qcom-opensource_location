@@ -59,24 +59,6 @@ protected:
 public:
     virtual void handleMsg(qc_loc_fw::InPostcard * const in_card) = 0;
 };
-
-typedef void (*locationUpdateCb)(UlpLocation *location,
-                                 GpsLocationExtended *locExtended,
-                                                                  void* clientData);
-
-typedef void (*svRptUpdateCb)(GnssSvNotification *svNotify,
-                                 void* clientData);
-
-typedef void (*nmeaUpdateCb)(UlpNmea *nmea,  void* clientData);
-
-typedef struct {
-
-        locationUpdateCb    locCb;
-            svRptUpdateCb       svReportCb;
-                nmeaUpdateCb        nmeaCb;
-
-}remoteClientInfo;
-
 } // izat_remote_api
 
 #endif //__IZATREMOTEAPIS_H__
