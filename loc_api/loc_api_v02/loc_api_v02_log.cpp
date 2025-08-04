@@ -154,8 +154,8 @@ const char* loc_get_v02_event_name(uint32_t event)
     return loc_get_name_from_val(loc_v02_event_name_tbl, (int64_t) event);
 }
 
-DECLARE_TBL(loc_v02_client_status_name) =
-{
+// Please note: enum below need to start with 0 and be continuous
+ValStrPair loc_v02_client_status_name_tbl[] = {
     NAME_VAL(eLOC_CLIENT_SUCCESS),
     NAME_VAL(eLOC_CLIENT_FAILURE_GENERAL),
     NAME_VAL(eLOC_CLIENT_FAILURE_UNSUPPORTED),
@@ -167,14 +167,18 @@ DECLARE_TBL(loc_v02_client_status_name) =
     NAME_VAL(eLOC_CLIENT_FAILURE_INTERNAL),
     NAME_VAL(eLOC_CLIENT_FAILURE_INVALID_MESSAGE_ID),
 };
-
 const char* loc_get_v02_client_status_name(locClientStatusEnumType status)
 {
-    return loc_get_name_from_val(loc_v02_client_status_name_tbl, (int64_t) status);
+    if ((status >= 0 && status < LOC_TABLE_SIZE(loc_v02_client_status_name_tbl)) &&
+            (status == loc_v02_client_status_name_tbl[status].val)) {
+        return loc_v02_client_status_name_tbl[status].str;
+    } else {
+        return gUnknownStr.c_str();
+    }
 }
 
-
-DECLARE_TBL(loc_v02_qmi_status_name) =
+// Please note: enum below need to start with 0 and be continuous
+ValStrPair loc_v02_qmi_status_name_tbl[] =
 {
     NAME_VAL(eQMI_LOC_SUCCESS_V02),
     NAME_VAL(eQMI_LOC_GENERAL_FAILURE_V02),
@@ -192,5 +196,10 @@ DECLARE_TBL(loc_v02_qmi_status_name) =
 
 const char* loc_get_v02_qmi_status_name(qmiLocStatusEnumT_v02 status)
 {
-    return loc_get_name_from_val(loc_v02_qmi_status_name_tbl, (int64_t) status);
+    if ((status >= 0 && status < LOC_TABLE_SIZE(loc_v02_qmi_status_name_tbl)) &&
+         (status == loc_v02_qmi_status_name_tbl[status].val)) {
+        return loc_v02_qmi_status_name_tbl[status].str;
+    } else {
+        return gUnknownStr.c_str();
+    }
 }

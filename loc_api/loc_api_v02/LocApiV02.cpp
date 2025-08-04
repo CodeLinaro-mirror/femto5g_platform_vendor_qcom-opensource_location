@@ -8300,10 +8300,10 @@ LocationError LocApiV02::locSyncSendReq(uint32_t req_id,
           err = convertErr(status);
        }
 
-       LOC_LOGe("req %s, status %s, qmi ind status %s, err %d",
+       LOC_LOGe("req %s, status %s, qmi ind status (%d %s), err %d",
                 loc_get_v02_event_name(req_id),
                 loc_get_v02_client_status_name(status),
-                loc_get_v02_qmi_status_name(ind_status), err);
+                ind_status, loc_get_v02_qmi_status_name(ind_status), err);
     }
 
     return err;
