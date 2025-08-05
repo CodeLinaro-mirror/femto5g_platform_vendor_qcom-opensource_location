@@ -1567,9 +1567,6 @@ void LocationApiService::configUserConsentTerrestrialPositioning(
 
         mGtpTerrestrialSsLocationApi =
             LocationAPI::createInstance(mGtpTerrestrialSsLocationApiCallbacks);
-        if (mGtpTerrestrialSsLocationApi) {
-            mGtpTerrestrialSsLocationApi->enableNetworkProvider();
-        }
     }
 
     uint32_t sessionId = mLocationControlApi->setOptInStatus(pMsg->mUserConsent);
@@ -2162,7 +2159,6 @@ void LocationApiService::getSinglePos(LocAPIGetSinglePosReqMsg* pReqMsg) {
             LOC_LOGe("failed to create LocationAPI to serve single shot fix requests");
             return;
         }
-        mSingleFixLocationApi->enableNetworkProvider();
     }
 
     mSingleFixReqMap.erase(clientName);
