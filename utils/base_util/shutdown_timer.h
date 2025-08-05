@@ -1,6 +1,7 @@
 /*====*====*====*====*====*====*====*====*====*====*====*====*====*====*====*
- Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
- SPDX-License-Identifier: BSD-3-Clause-Clear
+  Changes from Qualcomm Technologies, Inc. are provided under the following license:
+  Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+  SPDX-License-Identifier: BSD-3-Clause-Clear
   =============================================================================*/
 #ifndef SHUTDOWN_TIMER_H
 #define SHUTDOWN_TIMER_H
@@ -17,7 +18,7 @@ class ProcessShutdownTimer : public loc_util::LocTimer {
 public:
     ~ProcessShutdownTimer() = default;
     ProcessShutdownTimer(std::string name, const std::function<void()> shutdownCb) :
-            loc_util::LocTimer(), mShutdownCb(shutdownCb), mActive(false),
+            loc_util::LocTimer("ProcessShutdownTimer"), mShutdownCb(shutdownCb), mActive(false),
             mShutdownTimerInMs(PROCESS_SHUTDOWN_TIMEOUT_IN_MS), mLaunchTriggerMask(0),
             mProcessName(name) {
         const loc_param_s_type gpsConfTable[] = {
@@ -28,7 +29,7 @@ public:
         if (mLaunchTriggerMask > 0) {
             LOC_LOGd("Started shutdown timer for process %s", mProcessName.c_str());
             mActive = true;
-            loc_util::LocTimer::start(mShutdownTimerInMs, false);
+            loc_util::LocTimer::start(mShutdownTimerInMs);
         }
     }
 
