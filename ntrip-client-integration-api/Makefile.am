@@ -3,7 +3,7 @@ AM_CFLAGS = \
      -D__STDC_FORMAT_MACROS \
      -Dstrlcpy=g_strlcpy \
      -Dstrlcat=g_strlcat \
-     -std=c++11
+     -std=c++17
 
 ACLOCAL_AMFLAGS = -I m4
 
