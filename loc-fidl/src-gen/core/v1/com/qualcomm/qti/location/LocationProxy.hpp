@@ -374,6 +374,6 @@ std::future<void> LocationProxy<_AttributeExtensions...>::getCompletionFuture() 
 
 
 // Compatibility
-namespace v1_0 = v1;
+namespace v1_1 = v1;
 
 #endif // V1_COM_QUALCOMM_QTI_LOCATION_Location_PROXY_HPP_
