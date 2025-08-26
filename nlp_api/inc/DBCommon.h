@@ -42,12 +42,15 @@ typedef enum {
 } ApBsListStatus;
 
 typedef enum {
-    GSM   = 0,
-    WCDMA = 1,
-    CDMA  = 2,
-    LTE   = 3,
+    UNKNOWN = -1,
+    GSM     = 0,
+    WCDMA   = 1,
+    CDMA    = 2,
+    LTE     = 3,
+    NR      = 4,
 } CellType;
 
+// Legacy cell info
 typedef struct {
     CellType cellType;
     uint16_t regionId1;
@@ -56,6 +59,20 @@ typedef struct {
     uint16_t regionId4;
     uint32_t timestamp;
 } CellInfo;
+
+// Extended cell info
+// Only WCDMA, LTE, and 5G are supported
+#define CELL_INFO_UNAVAILABLE UINT32_MAX
+typedef struct {
+    CellType cellType;
+    uint16_t regionId1;  // MCC
+    uint16_t regionId2;  // MNC
+    uint32_t regionId3;  // TAC (24-bit) or LAC (16-bit) or UNAVAILABLE
+    uint64_t regionId4;  // Global Cell ID (64-bit for NR, and 32-bit for WCDMA and LTE)
+    uint32_t frequency;  // ARFCN, or UNAVAILABLE
+    uint32_t physicalId; // physical id: PSC (UMTS), PCI (LTE/NR), or UNAVAILABLE
+    uint8_t  reserve[8];
+} CellInfoExt;
 
 typedef enum LocationPositionSource : uint8_t {
     GPS    = (1<<0),

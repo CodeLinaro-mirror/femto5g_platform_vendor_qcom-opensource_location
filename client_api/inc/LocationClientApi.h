@@ -1731,7 +1731,8 @@ struct GnssData {
     GnssDataMask  gnssDataMask[GNSS_MAX_NUMBER_OF_SIGNAL_TYPES];
     /** Jammer Indication for each GNSS signal.  <br/>   */
     double        jammerInd[GNSS_MAX_NUMBER_OF_SIGNAL_TYPES];
-    /** Automatic gain control metric, in unit of dB.  <br/>   */
+    /** Overall automatic gain control level as observed at the input to correlator,
+        in units of dB. */
     double        agc[GNSS_MAX_NUMBER_OF_SIGNAL_TYPES];
     /** RF Automatic gain control status for L1 band.  <br/>   */
     AgcStatus     agcStatusL1;
@@ -2001,74 +2002,87 @@ struct GnssMeasurementsData {
      *  documentation in GnssSv::svId. <br/>
      */
     int16_t svId;
-    /** SV constellation type. <br/>   */
+    /** SV constellation type.
+     *  Please see description of GnssSvType. <br/>
+     */
     GnssSvType svType;
-    /** Time offset when the measurement was taken,
-     *  in unit of nanoseconds. <br/>   */
+    /** This field  provides an individual time-stamp for the measurement,
+     *  and allows sub-nanosecond accuracy. It is always set to zero as all
+     *  measurements are aligned to a common time. <br/>
+     */
     double timeOffsetNs;
     /** Bitwise OR of GnssMeasurementsStateMask to specify the
-     *  GNSS measurement state. <br/>   */
+     *  GNSS measurement state. <br/>
+     */
     GnssMeasurementsStateMask stateMask;
-    /** Received GNSS time of the week in nanoseconds when the
-     *  measurement was taken. <br/>
-     *  For sub nanoseconds part of the time, please refer to
-     *  of GnssMeasurementsData::receivedSvTimeSubNs. <br/>
-     *  Total time is: receivedSvTimeNs+receivedSvTimeSubNs. <br/>*/
+    /** The GNSS satellite (SV) time in the constellation time scale
+     *  in nanoseconds at transmission. <br/>
+     *  For GLONASS, this is the time of day, while for other systems,
+     *  it is the time of week. <br/>
+     *  The total SV time is calculated as: <br/>
+     *  receivedSvTimeNs + receivedSvTimeSubNs. <br/>
+     */
     int64_t receivedSvTimeNs;
-
-    /** Sub nanoseconds portion of the received GNSS time of the
-     *  week when the measurement was taken. <br/>
-     *  For nanoseconds portion of the time, please refer to field
-     *  of GnssMeasurementsData::receivedSvTimeSubNs. <br/>
-     *  Total time is: receivedSvTimeNs+receivedSvTimeSubNs. <br/>*/
+    /** The sub nanosecond portion of the GNSS satellite (SV) time
+     *  in the constellation time scale in nanoseconds at transmission. <br/>
+     *  For GLONASS, this is the time of day, while for other systems,
+     *  it is the time of week. <br/>
+     *  The total SV time is calculated as: <br/>
+     *  receivedSvTimeNs + receivedSvTimeSubNs.<br/>
+     */
     float receivedSvTimeSubNs;
-
-    /** Satellite time. <br/>
-     *  All SV times in the current measurement block are already
-     *  propagated to a common reference time epoch, in unit of
-     *  nano seconds.  <br/> */
+    /** Received GNSS satellite (SV) time 1-Sigma uncertainty in nanoseconds <br/>
+     */
     int64_t receivedSvTimeUncertaintyNs;
-    /** Signal strength, carrier to noise ratio, in unit of dB-Hz
-     *  <br/> */
+    /** Carrier to noise ratio at antenna, in unit of dB-Hz.<br/>
+     */
     double carrierToNoiseDbHz;
-    /** Uncorrected pseudorange rate, in unit of metres/second
-     *  <br/> */
+    /** Uncorrected Pseudorange Rate in units of meter/second.<br/>
+     */
     double pseudorangeRateMps;
-    /** Uncorrected pseudorange rate uncertainty, in unit of
-     *  meters/second  <br/> */
+    /** Uncorrected Pseudorange Rate 1-Sigma Uncertainty in units of meter/second. <br/>
+     */
     double pseudorangeRateUncertaintyMps;
-    /** Bitwise OR of GnssMeasurementsAdrStateMask. <br/>   */
+    /** Status bitmask of the ADR (Accumulated Delta Range) data.
+     *  Please see description for GnssMeasurementsAdrStateMask.<br/>
+     */
     GnssMeasurementsAdrStateMask adrStateMask;
-    /** Accumulated delta range, in unit of meters  <br/> */
+    /** Accumulated delta range in units of meters since last SV carrier phase lock.
+     */
     double adrMeters;
-    /** Accumulated delta range uncertainty, in unit of meters
-     *  <br/> */
+    /** 1-Sigma Accumulated delta range uncertainty in unit of meters.
+     */
     double adrUncertaintyMeters;
-    /** Carrier frequency of the tracked signal, in unit of Hertz
-     *  <br/> */
+    /** Carrier frequency of the tracked signal in units of Hertz.<br/>
+     */
     float carrierFrequencyHz;
-    /** The number of full carrier cycles between the receiver and
-     *  the satellite. <br/>   */
+    /** This field is no longer available. Please refer to adrMeters.<br/>
+     */
     int64_t carrierCycles;
-    /** The RF carrier phase that the receiver has detected.
-     *  <br/> */
+    /** This field is no longer available. Please refer to adrMeters.<br/>
+     */
     double carrierPhase;
-    /** The RF carrier phase uncertainty. <br/>   */
+    /** This field is no longer available. Please refer to adrUncertaintyMeters.<br/>
+     */
     double carrierPhaseUncertainty;
-    /** Multipath indicator, could be unknown, present or not
-     *  present. <br/>   */
+    /** This field is no longer available.<br/>
+     */
     GnssMeasurementsMultipathIndicator multipathIndicator;
-    /** Signal to noise ratio, in unit of dB <br/> */
+    /** This field is no longer available.<br/>
+     */
     double signalToNoiseRatioDb;
-    /** Automatic gain control level, in unit of dB <br/> */
+    /** Overall automatic gain control level as observed at the input to correlator,
+        in units of dB.
+     */
     double agcLevelDb;
-    /** Baseband signal strength, in uint of dB Hz.
-     *  Should always be available in measurement report. <br/> */
+    /** Carrier to Noise Ratio at correlator output in units of dB-Hz.<br/>
+     */
     double basebandCarrierToNoiseDbHz;
-    /** GNSS signal type mask of the SV.
-     *  Should always be available in measurement report. <br/> */
+    /** GNSS Signal Type. Please see description for GnssSignalTypeMask.<br/>
+     */
     GnssSignalTypeMask gnssSignalType;
-    /** The full inter-signal bias (ISB) in nanoseconds. <br/>
+    /** The full inter-signal bias (ISB) between the Signal specified
+     *  in gnssSignalType and GPS L1 C/A in nanoseconds.<br/>
      *  This value is the sum of the estimated receiver-side and the
      *  space-segment-side inter-system bias, inter-frequency bias
      *  and inter-code bias. <br/>
@@ -2090,37 +2104,46 @@ struct GnssMeasurementsData {
 };
 
 /** Specify GNSS measurements clock. <br/>
- *  The main equation describing the relationship between
- *  various components is: <br/>
- *  utcTimeNs = timeNs - (fullBiasNs + biasNs) - leapSecond *
- *  1,000,000,000 <br/> */
+ */
 struct GnssMeasurementsClock {
-    /** Bitwise OR of GnssMeasurementsClockFlagsMask. <br/>   */
+    /** Validity bitmask of the GnssMeasurementsClock.
+     *  Please see description for GnssMeasurementsClockFlagsMask.<br/>
+     */
     GnssMeasurementsClockFlagsMask flags;
-    /** Leap second, in unit of seconds. <br/>   */
+    /** Leap Second: Delta between the GNSS time and UTC time in units of seconds.<br/>
+     */
     int16_t leapSecond;
-    /** Time, monotonically increasing as long as the power is on,
-     *  in unit of nanoseconds. <br/>   */
+    /** The internal hardware clock value of the GNSS receiver increases monotonically
+     *  in nanoseconds, as long as the GNSS session remains active. <br/>
+     */
     int64_t timeNs;
-    /** Time uncertainty (one sigma), in unit of nanoseconds
-     *  <br/> */
+    /** System clock time uncertainty in units of nanoseconds.
+     *  This field is always 0. <br/>
+     */
     double timeUncertaintyNs;
-    /** Full bias, in uint of nanoseconds. <br/>   */
+    /** Full bias, in uint of nanoseconds. <br/>
+     *  The difference between hardware clock (timeNs) inside GPS receiver and the true
+     *  GPS time since 0000Z, January 6, 1980, in nanoseconds. <br/>
+     *  This value is available if the receiver has estimated GPS time.
+     *  For clarification,  local estimate of GPS time = timeNs - (fullBiasNs + biasNs)
+     */
     int64_t fullBiasNs;
-    /** Sub-nanoseconds bias, in unit of nonoseconds <br/> */
+    /** Sub-nanoseconds bias, in unit of nanoseconds.
+     */
     double biasNs;
-    /** Bias uncertainty (one sigma), in unit of nanoseconds
-     *  <br/> */
+    /** Bias uncertainty (one sigma), in unit of nanoseconds.
+     */
     double biasUncertaintyNs;
-    /** Clock drift, in unit of nanoseconds/second <br/> */
+    /** GNSS Receiver Clock Drift in units of nanoseconds per seconds.
+     */
     double driftNsps;
-    /** Clock drift uncertainty (one sigma), in unit of
-     *  nanoseconds/second <br/> */
+    /** GNSS Receiver Clock Drift one sigma uncertainty in units of nanoseconds per seconds.
+     */
     double driftUncertaintyNsps;
-    /** HW clock discontinuity count - incremented
-     *  for each discontinuity in HW clock. <br/>   */
+    /** Number of clock resets/discontinuities detected, affecting the field timeNs.<br/>
+     */
     uint32_t hwClockDiscontinuityCount;
-    /** Elapsed time since boot <br/>
+    /** Elapsed real-time of this clock since system boot <br/>
      *  In unit of nano-seconds.<br/>
      *  This field may not always be available. Please check for the
      *  presence of GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_BIT in
@@ -2140,7 +2163,7 @@ struct GnssMeasurementsClock {
      *  GnssMeasurementsClock::flags before retrieving this field. <br/>
      */
     uint64_t elapsedgPTPTime;
-    /** Uncertainty for elapsed PTP time field
+    /** Uncertainty for elapsed GPTP time field
      *  Unit Nanoseconds <br/>
      *  This field may not always be available. Please check for the
      *  presence of GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_GPTP_TIME_UNC_BIT in
@@ -2285,11 +2308,10 @@ struct LocationSystemInfo {
 
 /** Specify the set of terrestrial technologies to be used when
  *  invoking getSingleTerrestrialPosition(). <br/>
- *
- *  Currently, only TERRESTRIAL_TECH_GTP_WWAN is supported.
- *  <br/> */
+**/
 enum TerrestrialTechnologyMask {
     TERRESTRIAL_TECH_GTP_WWAN = 1 << 0,
+    TERRESTRIAL_TECH_GTP_WIFI = 1 << 1,
 };
 
 /** Specify the batching status in BatchingCb. <br/> */
