@@ -316,7 +316,6 @@ private:
         return nullptr;
     }
 
-    GnssInterface* getGnssInterface();
     // OSFramework instance
     void createOSFrameworkInstance();
     void destroyOSFrameworkInstance();
@@ -371,7 +370,8 @@ private:
     // Location api interface to register Gnss signal types callback
     ILocationAPI* mSignalTypesLocationApi;
     LocationCallbacks mSignalTypesLocationApiCallbacks;
+
+    GnssInterface* mGnssInterface;
 };
 
 #endif //LOCATIONAPISERVICE_H
-

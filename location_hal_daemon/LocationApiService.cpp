@@ -175,6 +175,8 @@ LocationApiService::LocationApiService(const configParamToRead & configParamRead
     LOC_LOGd("DeleteAllOnEnginesMask=%u", configParamRead.posEngineMask);
     LOC_LOGd("PositionMode=%u", configParamRead.positionMode);
 
+    mGnssInterface = getGnssInterfaceFromLibGnss();
+
     // create Location control API
     mControlCallabcks.size = sizeof(mControlCallabcks);
     mControlCallabcks.responseCb = [this](LocationError err, uint32_t id) {
@@ -947,12 +949,11 @@ void LocationApiService::updateNetworkAvailability(bool availability) {
 
     LOC_LOGi(">-- updateNetworkAvailability=%u", availability);
     std::string apn("");
-    GnssInterface* gnssInterface = getGnssInterface();
-    if (gnssInterface) {
+    if (mGnssInterface) {
         // Map the network connectivity to MOBILE for now.
         // In next phase, when we support third party connectivity manager,
         // we plan to deplicate this API.
-        gnssInterface->updateConnectionStatus(
+        mGnssInterface->updateConnectionStatus(
                 availability, loc_core::TYPE_MOBILE, false, NETWORK_HANDLE_UNKNOWN, apn);
     }
 }
@@ -961,8 +962,7 @@ void LocationApiService::getGnssEnergyConsumed(const char* clientSocketName) {
 
     LOC_LOGi(">-- getGnssEnergyConsumed by=%s", clientSocketName);
 
-    GnssInterface* gnssInterface = getGnssInterface();
-    if (!gnssInterface) {
+    if (!mGnssInterface) {
         LOC_LOGe(">-- getGnssEnergyConsumed null GnssInterface");
         return;
     }
@@ -992,7 +992,7 @@ void LocationApiService::getGnssEnergyConsumed(const char* clientSocketName) {
                     onGnssEnergyConsumedCb(total);
                 };
 
-            gnssInterface->getGnssEnergyConsumed(reportEnergyCb);
+            mGnssInterface->getGnssEnergyConsumed(reportEnergyCb);
         }
     }
 }
@@ -1001,8 +1001,7 @@ void LocationApiService::getConstellationSecondaryBandConfig(
         const LocConfigGetConstellationSecondaryBandConfigReqMsg* pReqMsg) {
 
     LOC_LOGi(">--getConstellationConfig");
-    GnssInterface* gnssInterface = getGnssInterface();
-    if (!gnssInterface) {
+    if (!mGnssInterface) {
         LOC_LOGe(">-- null GnssInterface");
         return;
     }
@@ -1010,7 +1009,7 @@ void LocationApiService::getConstellationSecondaryBandConfig(
     std::lock_guard<std::recursive_mutex> lock(mMutex);
     // retrieve the constellation enablement/disablement config
     // blacklisted SV info and secondary band config
-    uint32_t sessionId = gnssInterface-> gnssGetSecondaryBandConfig();
+    uint32_t sessionId = mGnssInterface-> gnssGetSecondaryBandConfig();
 
     // if sessionId is 0, e.g.: error callback will be delivered
     // by addConfigRequestToMap
@@ -1043,15 +1042,14 @@ void LocationApiService::getAntennaInfo(const LocAPIGetAntennaInfoMsg* pMsg) {
 void LocationApiService::getXtraStatus(
         const LocConfigGetXtraStatusReqMsg* pReqMsg) {
     LOC_LOGi(">--getXtraStatus");
-    GnssInterface* gnssInterface = getGnssInterface();
-    if (!gnssInterface) {
+    if (!mGnssInterface) {
         LOC_LOGe(">-- null GnssInterface");
         return;
     }
 
     std::lock_guard<std::recursive_mutex> lock(mMutex);
     // retrieve xtra status
-    uint32_t sessionId = gnssInterface->gnssGetXtraStatus();
+    uint32_t sessionId = mGnssInterface->gnssGetXtraStatus();
 
     // if sessionId is 0, e.g.: error callback will be delivered
     // by addConfigRequestToMap
@@ -1065,15 +1063,14 @@ void LocationApiService::registerXtraStatusUpdate(
     // if this is register, update the set
     mClientsRegForXtraStatus.emplace(pReqMsg->mSocketName);
 
-    GnssInterface* gnssInterface = getGnssInterface();
-    if (!gnssInterface) {
+    if (!mGnssInterface) {
         LOC_LOGe(">-- null GnssInterface");
         return;
     }
 
     std::lock_guard<std::recursive_mutex> lock(mMutex);
     // register xtra status update
-    uint32_t sessionId = gnssInterface->gnssRegisterXtraStatusUpdate(true);
+    uint32_t sessionId = mGnssInterface->gnssRegisterXtraStatusUpdate(true);
 
     // if sessionId is 0, e.g.: error callback will be delivered
     // by addConfigRequestToMap
@@ -1087,14 +1084,13 @@ void LocationApiService::deregisterXtraStatusUpdate(
     std::lock_guard<std::recursive_mutex> lock(mMutex);
     mClientsRegForXtraStatus.erase(pReqMsg->mSocketName);
     if (mClientsRegForXtraStatus.size() == 0) {
-        GnssInterface* gnssInterface = getGnssInterface();
-        if (!gnssInterface) {
+        if (!mGnssInterface) {
             LOC_LOGe(">-- null GnssInterface");
             return;
         }
 
         // register xtra status update
-        uint32_t sessionId = gnssInterface->gnssRegisterXtraStatusUpdate(false);
+        uint32_t sessionId = mGnssInterface->gnssRegisterXtraStatusUpdate(false);
 
         // if sessionId is 0, e.g.: error callback will be delivered
         // by addConfigRequestToMap
@@ -1898,24 +1894,6 @@ void LocationApiService::onGnssEnergyConsumedCb(uint64_t totalGnssEnergyConsumed
 /******************************************************************************
 LocationApiService - other utilities
 ******************************************************************************/
-GnssInterface* LocationApiService::getGnssInterface() {
-
-    static bool getGnssInterfaceFailed = false;
-    static GnssInterface* gnssInterface = nullptr;
-
-    if (nullptr == gnssInterface && !getGnssInterfaceFailed) {
-        void * tempPtr = nullptr;
-        getLocationInterface* getter = (getLocationInterface*)
-                dlGetSymFromLib(tempPtr, "libgnss.so", "getGnssInterface");
-
-        if (nullptr == getter) {
-            getGnssInterfaceFailed = true;
-        } else {
-            gnssInterface = (GnssInterface*)(*getter)();
-        }
-    }
-    return gnssInterface;
-}
 
 // Create OSFramework instance
 void LocationApiService::createOSFrameworkInstance() {
