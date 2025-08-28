@@ -878,5 +878,14 @@ bool LocationIntegrationApi::registerXtraStatusUpdate(bool registerUpdate) {
 }
 
 
+bool LocationIntegrationApi::registerGnssSignalTypesUpdate(bool registerUpdate) {
+    if (mApiImpl) {
+        return (mApiImpl->registerGnssSignalTypesUpdate(registerUpdate) == 0);
+    } else {
+        LOC_LOGe ("NULL mApiImpl");
+        return false;
+    }
+}
+
 } // namespace location_integration
 

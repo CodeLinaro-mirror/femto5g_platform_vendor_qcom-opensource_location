@@ -111,6 +111,7 @@ public:
     void onControlResponseCb(LocationError err, ELocMsgID msgId);
     void onGnssConfigCb(ELocMsgID configMsgId, const GnssConfig & gnssConfig);
     void onXtraStatusUpdateCb(const XtraStatus& xtraStatus);
+    void onGnssSignalTypesCb(GnssSignalTypeMask signalType);
     bool hasPendingEngineInfoRequest(uint32_t mask);
     void addEngineInfoRequst(uint32_t mask);
 

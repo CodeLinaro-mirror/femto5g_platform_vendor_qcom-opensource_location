@@ -6202,6 +6202,8 @@ void LocApiV02::processGnssBandsSupportedInd(
 
     if (pGnssBandsSupportedIndMsg->gnssSupportedSignals_valid) {
         GnssCapabNotification gnssCapabNotification = {};
+         gnssCapabNotification.gnssSupportedSignals =
+                pGnssBandsSupportedIndMsg->gnssSupportedSignals;
 
         if (pGnssBandsSupportedIndMsg->gnssSupportedSignals_valid) {
             for (qmiLocGnssSignalTypeMaskT_v02 sig = QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L1CA_V02;
@@ -8580,6 +8582,11 @@ LocApiV02::setBlacklistSvSync(const GnssSvIdConfig& config)
        setBlacklistSvMsg.gps_persist_blacklist_sv = config.gpsBlacklistSvMask,
        setBlacklistSvMsg.gps_clear_persist_blacklist_sv_valid = true;
        setBlacklistSvMsg.gps_clear_persist_blacklist_sv = ~config.gpsBlacklistSvMask;
+    } else {
+        if (config.gpsBlacklistSvMask) {
+            LOC_LOGd("Preferred System %d, SV Blacklisting NOT SUPPORTED !!", mPreferredSvSystemType);
+            return LOCATION_ERROR_NOT_SUPPORTED;
+        }
     }
 
     if (mPreferredSvSystemType != GNSS_SV_TYPE_GLONASS) {
@@ -8594,6 +8601,11 @@ LocApiV02::setBlacklistSvSync(const GnssSvIdConfig& config)
        setBlacklistSvMsg.bds_persist_blacklist_sv = config.bdsBlacklistSvMask;
        setBlacklistSvMsg.bds_clear_persist_blacklist_sv_valid = true;
        setBlacklistSvMsg.bds_clear_persist_blacklist_sv = ~config.bdsBlacklistSvMask;
+    } else {
+        if (config.bdsBlacklistSvMask) {
+            LOC_LOGd("Preferred System %d, SV Blacklisting NOT SUPPORTED !!", mPreferredSvSystemType);
+            return LOCATION_ERROR_NOT_SUPPORTED;
+        }
     }
 
     if (mPreferredSvSystemType != GNSS_SV_TYPE_QZSS) {
@@ -8697,16 +8709,6 @@ LocApiV02::setConstellationControl(const GnssSvTypeConfig& config,
                                    LocApiResponse *adapterResponse)
 {
     sendMsg(new LocApiMsg([this, config, adapterResponse] () {
-
-    // QMI will return INVALID parameter if enabledSvTypesMask is 0,
-    // so we just return back to the caller as this is no-op
-    if (0 == config.enabledSvTypesMask) {
-        if (NULL != adapterResponse) {
-            adapterResponse->returnToSender(LOCATION_ERROR_SUCCESS);
-        }
-        return;
-    }
-
     locClientStatusEnumType status = eLOC_CLIENT_FAILURE_GENERAL;
     locClientReqUnionType req_union = {};
 
@@ -8722,6 +8724,7 @@ LocApiV02::setConstellationControl(const GnssSvTypeConfig& config,
 
     bool disableSupported = ContextBase::isFeatureSupported(
             LOC_SUPPORTED_FEATURE_CONSTELLATION_DISABLEMENT);
+
     if (disableSupported) {
        setConstellationConfigMsg.disableMask_valid = true;
        if (mPreferredSvSystemType != GNSS_SV_TYPE_GPS) {
