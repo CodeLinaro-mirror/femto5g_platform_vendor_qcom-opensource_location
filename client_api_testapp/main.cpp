@@ -84,12 +84,16 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #else
     #include <unordered_map>
 #endif
+#include <MsgTask.h>
+#include <signal.h>
+#include <mutex>
 
 #include <LocationClientApi.h>
 #include <LocationIntegrationApi.h>
 
 using namespace location_client;
 using namespace location_integration;
+using namespace loc_util;
 
 static bool     outputEnabled = true;
 static bool     detailedOutputEnabled = false;
@@ -108,7 +112,12 @@ static sem_t semCompleted;
 static int fixCnt = 0x7fffffff;
 static uint64_t autoTestStartTimeMs = 0;
 static int autoTestTimeoutSec = 0x7FFFFFFF;
+static MsgTask* mMsgTask = nullptr;
+std::mutex portMutex;
 
+static char NMEA_PORT[] = "/dev/at_usb1";
+static int ttyFd = -1;
+static int routeToNMEAPort = 0;
 enum ReportType {
     POSITION_REPORT = 1 << 0,
     NMEA_REPORT     = 1 << 1,
@@ -159,6 +168,72 @@ enum TrackingSessionType {
 #define REGISTER_XTRA_STATUS_UPDATE "registerXtraUpdateStatus"
 #define GET_ENERGY_CONSUMED        "getEnergyConsumed"
 #define REGISTER_SIGNAL_TYPES_UPDATE "registerGnssSignalTypesUpdate"
+
+static bool openPort(void)
+{
+    bool retVal = true;
+
+    if (ttyFd == -1) {
+        printf("opening NMEA port %s ", NMEA_PORT);
+        ttyFd = open(NMEA_PORT, O_RDWR | O_NOCTTY | O_NDELAY);
+        if (ttyFd == -1) {
+            /* Could not open the port. */
+            printf("Unable to open %s \n", NMEA_PORT);
+            retVal = false;
+        } else {
+            printf("openPort success ttyFd: %d\n", ttyFd);
+        }
+    }
+    return retVal;
+}
+
+static bool sendNMEAToTty(const std::string& nmea) {
+
+    std::lock_guard<std::mutex> lock(portMutex);
+    if (ttyFd < 0) {
+        if (!openPort()) {
+            printf("Unable to open Port");
+            return 0;
+        }
+    }
+    int attempts = 1;
+    const char* buf = nmea.c_str();
+    size_t len = nmea.length();
+    if (len > 0) {
+        while (attempts <= 5) {
+            ssize_t ret = write(ttyFd, buf, len);
+            if (ret > 0) {
+                printf("write() of %d bytes returned n %d \n",
+                            len, ret);
+                return true;
+            }
+            printf("Attempt %d write() of %d bytes returned 0, error %d [%s]\n",
+                    attempts, len, errno, strerror(errno));
+            if (errno == EIO || errno == ENODEV || errno == EBADF) {
+                close(ttyFd);
+                ttyFd = -1;
+                if (!openPort()) {
+                    printf("Unable to open Port");
+                    return 0;
+                }
+            } else if (errno == ENOENT) {
+                printf("Device file missing, skipping write");
+                close(ttyFd);
+                ttyFd = -1;
+                break;
+            } else if (errno == 0) {
+                break;
+            } else {
+                continue;
+            }
+            usleep(1000);
+            attempts++;
+        }
+    } else {
+        printf("NMEA corrupted %d", len);
+    }
+    return 0;
+}
 
 // debug utility
 static uint64_t getTimestampMs() {
@@ -343,12 +418,31 @@ static void onGnssSvCb(const std::vector<location_client::GnssSv>& gnssSvs) {
 }
 
 static void onGnssNmeaCb(uint64_t timestamp, const std::string& nmea) {
-    numGnssNmeaCb++;
     if (!outputEnabled) {
         return;
     }
-    printf("<<< onGnssNmeaCb cnt=%u time=%" PRIu64" nmea=%s",
-            numGnssNmeaCb, timestamp, nmea.c_str());
+    numGnssNmeaCb++;
+    struct GnssNmeaMsg : public LocMsg {
+        uint64_t mTimestamp;
+        const std::string mNmea;
+        inline GnssNmeaMsg(uint64_t timestamp, const std::string& nmea):
+            LocMsg(),
+            mTimestamp(timestamp),
+            mNmea(nmea){};
+        inline virtual void proc() const {
+            printf("<<< onGnssNmeaCb cnt=%u time=%" PRIu64" nmea=%s",
+                    numGnssNmeaCb, mTimestamp, mNmea.c_str());
+            sendNMEAToTty(mNmea);
+        }
+    };
+    if (routeToNMEAPort) {
+        if (mMsgTask) {
+            mMsgTask->sendMsg(new GnssNmeaMsg(timestamp, nmea));
+        }
+    } else {
+        printf("<<< onGnssNmeaCb cnt=%u time=%" PRIu64" nmea=%s",
+                numGnssNmeaCb, timestamp, nmea.c_str());
+    }
 }
 
 static void onGnssDataCb(const location_client::GnssData& gnssData) {
@@ -899,7 +993,7 @@ static bool checkForAutoStart(int argc, char *argv[]) {
 
     int long_index =0;
     int opt = -1;
-    while ((opt = getopt_long(argc, argv, "aVNDd:s:e:i:t:l:r:",
+    while ((opt = getopt_long(argc, argv, "aVNDd:s:e:i:t:l:r:U:z",
                    long_options, &long_index)) != -1) {
         switch (opt) {
              case 'a' :
@@ -951,6 +1045,13 @@ static bool checkForAutoStart(int argc, char *argv[]) {
                  printf("report type: %s\n", optarg);
                  reportType = atoi(optarg);
                  break;
+             case 'U' :
+                 printf("route to NMEA port: %s\n", optarg);
+                 routeToNMEAPort = atoi(optarg);
+                 if (routeToNMEAPort && !mMsgTask) {
+                     mMsgTask = new MsgTask("LcaTestApp");
+                 }
+                 break;
              default:
                  printf("unsupported args provided\n");
                  break;
@@ -958,9 +1059,9 @@ static bool checkForAutoStart(int argc, char *argv[]) {
     }
 
     printf("auto run %d, deleteAll %d, delete mask 0x%x, session type %d,"
-           "outputEnabled %d, detailedOutputEnabled %d",
+           "outputEnabled %d, detailedOutputEnabled %d routeToNMEAPort %d",
            autoRun, deleteAll, aidingDataMask, trackingType,
-           outputEnabled, detailedOutputEnabled);
+           outputEnabled, detailedOutputEnabled, routeToNMEAPort);
 
     // check for auto-start option
     if (autoRun) {
@@ -1052,12 +1153,27 @@ static bool checkForAutoStart(int argc, char *argv[]) {
     return autoRun;
 }
 
+void handleSigpipe(int signum) {
+    printf("[SIGPIPE] error");
+}
+
+void registerSignalHandler() {
+   struct sigaction sa = {};
+   sa.sa_handler = handleSigpipe;
+   sigemptyset(&sa.sa_mask);
+   if(sigaction(SIGPIPE, &sa, nullptr) < 0) {
+       printf("Failed to register sig handler");
+   } else {
+       printf("Sig Handler registered well");
+   }
+}
 /******************************************************************************
 Main function
 ******************************************************************************/
 int main(int argc, char *argv[]) {
 
     setRequiredPermToRunAsLocClient();
+    registerSignalHandler();
     checkForAutoStart(argc, argv);
 
     // create Location client API
