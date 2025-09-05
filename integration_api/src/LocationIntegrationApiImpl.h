@@ -221,6 +221,7 @@ public:
     uint32_t configMerkleTree(const char * merkleTreeXml, int xmlSize);
     uint32_t configOsnmaEnablement(bool isEnabled);
     uint32_t registerGnssSignalTypesUpdate(bool registerUpdate);
+    uint32_t updateNetworkInfo(const NetworkInfo& data);
 
 private:
     ~LocationIntegrationApiImpl();

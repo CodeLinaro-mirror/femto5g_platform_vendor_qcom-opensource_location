@@ -61,6 +61,17 @@ IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+/*
+ Changes from Qualcomm Innovation Center are provided under the following license:
+ Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
+
+/*
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
 
 #ifndef LOCATIONCLIENTAPI_H
 #define LOCATIONCLIENTAPI_H
@@ -1281,6 +1292,27 @@ struct Location {
      *  location::flags before retrieving this field. <br/>
      */
     uint64_t elapsedgPTPTimeUnc;
+
+    inline Location() :
+        flags((LocationFlagsMask)0),
+        sessionStatus(LOC_SESS_SUCCESS),
+        timestamp(0),
+        latitude(0.0),
+        longitude(0.0),
+        altitude(0.0),
+        speed(0.0f),
+        bearing(0.0f),
+        horizontalAccuracy(0.0f),
+        verticalAccuracy(0.0f),
+        speedAccuracy(0.0f),
+        bearingAccuracy(0.0f),
+        techMask((LocationTechnologyMask)0),
+        elapsedRealTimeNs(0),
+        elapsedRealTimeUncNs(0),
+        timeUncMs(0.0f),
+        elapsedgPTPTime(0),
+        elapsedgPTPTimeUnc(0) {}
+
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
     string toString() const;
@@ -1534,7 +1566,7 @@ struct GnssLocation : public Location {
 
     /* Default constructor to initalize GnssLocation structure */
     inline GnssLocation() :
-            Location({}), gnssInfoFlags(0),
+            Location(), gnssInfoFlags(0),
             altitudeMeanSeaLevel(0.0f), pdop(0.0f), hdop(0.0f),
             vdop(0.0f), gdop(0.0f), tdop(0.0f), magneticDeviation(0.0f),
             horReliability(LOCATION_RELIABILITY_NOT_SET),
@@ -4305,13 +4337,6 @@ public:
     */
 
     /* ================================== Other APIs ================================== */
-    /** @brief Inform LocationClientAPI of the device network
-               availability status.
-        @param available
-        True if available. <br/>
-        False otherwise. <br/>  */
-    void updateNetworkAvailability(bool available);
-
     /** @brief Get energy consumed info of modem GNSS engine. <br/>
         If called while the previous call is still being processed,
         then the callback will be updated, and engery consumed info
