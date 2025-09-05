@@ -2,7 +2,10 @@
 * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
 * SPDX-License-Identifier: BSD-3-Clause-Clear
 */
+
 #include "LocIdlClientDevice.h"
+
+#define DEFAULT_ELAPSED_REAL_TIMEUNC (100)
 
 void LocIdlClientDevice::fillPosTechMask(unsigned int techmask, unsigned int &outMask)
 {
@@ -568,6 +571,7 @@ void LocIdlClientDevice::getLocationRpt(
             boot_time_ns = tx_ptp_time_ns;
         }
         ulpLoc.gpsLocation.elapsedRealTime = boot_time_ns;
+        ulpLoc.gpsLocation.elapsedRealTimeUnc = DEFAULT_ELAPSED_REAL_TIMEUNC;
 
         LOC_LOGD("%s] --> elapsedRealTime:%ld, ", __func__, ulpLoc.gpsLocation.elapsedRealTime);
 
@@ -576,13 +580,19 @@ void LocIdlClientDevice::getLocationRpt(
     }
     if (flags & LocationTypes::LocationFlagsMaskT::LFMT_ELAPSED_REAL_TIME_UNC_BIT) {
         ulpLoc.gpsLocation.elapsedRealTimeUnc = _locationReport.getElapsedgPtpTimeUnc();
-
+        if (0 == ulpLoc.gpsLocation.elapsedRealTimeUnc) {
+            ulpLoc.gpsLocation.elapsedRealTimeUnc = DEFAULT_ELAPSED_REAL_TIMEUNC;
+        }
         gnssPosDiag.flags |=  LOC_IDL_CLIENT_DIAG_LOCATION_HAS_ELAPSED_REAL_TIME_UNC_BIT;
         gnssPosDiag.elapsedRealTimeUncNs = ulpLoc.gpsLocation.elapsedRealTimeUnc;
     }
     if (flags & LocationTypes::LocationFlagsMaskT::LFMT_HAS_TIME_UNC_BIT) {
         gnssPosDiag.gnssInfoFlags |=  LOC_IDL_CLIENT_DIAG_GNSS_LOCATION_INFO_TIME_UNC_BIT;
         gnssPosDiag.timeUncMs = location.getTimeUncMs();
+        ulpLoc.gpsLocation.elapsedRealTimeUnc = location.getTimeUncMs();
+        if (0 == ulpLoc.gpsLocation.elapsedRealTimeUnc) {
+            ulpLoc.gpsLocation.elapsedRealTimeUnc = DEFAULT_ELAPSED_REAL_TIMEUNC;
+        }
     }
 
     ulpLoc.gpsLocation.spoof_mask = 0;
@@ -1782,6 +1792,9 @@ void LocIdlClientDevice::getMeasurementSet(const LocationTypes::GnssMeasurements
         LocationTypes::GnssMeasurementsClockFlagsMaskT::GMCFMT_ELAPSED_REAL_TIME_BIT) {
         svMeasurementSet.gnssMeasNotification.clock.flags |=
                     GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_BIT;
+        svMeasurementSet.gnssMeasNotification.clock.elapsedRealTime = clk.getElapsedRealTime();
+        svMeasurementSet.gnssMeasNotification.clock.elapsedRealTimeUnc =
+                    DEFAULT_ELAPSED_REAL_TIMEUNC;
 
         gnssMeasDiag.clock.flags |=
                 LOC_IDL_CLIENT_DIAG_GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_BIT;
@@ -1792,6 +1805,12 @@ void LocIdlClientDevice::getMeasurementSet(const LocationTypes::GnssMeasurements
         gnssMeasDiag.clock.flags |=
             LOC_IDL_CLIENT_DIAG_GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_UNC_BIT;
         gnssMeasDiag.clock.elapsedRealTimeUnc = clk.getElapsedRealTimeUnc();
+        svMeasurementSet.gnssMeasNotification.clock.elapsedRealTimeUnc =
+                clk.getElapsedRealTimeUnc();
+        if (0 == svMeasurementSet.gnssMeasNotification.clock.elapsedRealTimeUnc) {
+            svMeasurementSet.gnssMeasNotification.clock.elapsedRealTimeUnc
+                = DEFAULT_ELAPSED_REAL_TIMEUNC;
+        }
     }
     if (flag &
        LocationTypes::GnssMeasurementsClockFlagsMaskT::GMCFMT_ELAPSED_GPTP_TIME_BIT) {
@@ -1805,6 +1824,8 @@ void LocIdlClientDevice::getMeasurementSet(const LocationTypes::GnssMeasurements
         svMeasurementSet.gnssMeasNotification.clock.flags |=
                     GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_BIT;
         svMeasurementSet.gnssMeasNotification.clock.elapsedRealTime = boot_time_ns;
+        svMeasurementSet.gnssMeasNotification.clock.elapsedRealTimeUnc =
+                    DEFAULT_ELAPSED_REAL_TIMEUNC;
 
         gnssMeasDiag.clock.flags |=
                 LOC_IDL_CLIENT_DIAG_GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_BIT;
@@ -1817,6 +1838,10 @@ void LocIdlClientDevice::getMeasurementSet(const LocationTypes::GnssMeasurements
     LocationTypes::GnssMeasurementsClockFlagsMaskT::GMCFMT_ELAPSED_GPTP_TIME_UNC_BIT) {
         svMeasurementSet.gnssMeasNotification.clock.elapsedRealTimeUnc =
                         clk.getElapsedgPtpTimeUnc();
+        if (0 == svMeasurementSet.gnssMeasNotification.clock.elapsedRealTimeUnc) {
+            svMeasurementSet.gnssMeasNotification.clock.elapsedRealTimeUnc
+                = DEFAULT_ELAPSED_REAL_TIMEUNC;
+        }
 
         gnssMeasDiag.clock.flags |=
             LOC_IDL_CLIENT_DIAG_GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_UNC_BIT;
