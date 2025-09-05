@@ -44,50 +44,49 @@ void eventLocClientFidlReportPosition(UlpLocation& location,
 
     fidlThreadContext *fidlContext = (fidlThreadContext *) context;
 
+    double current_timestamp = static_cast<double>(location.gpsLocation.timestamp);
+    double current_min_interval = static_cast<double>(fidlContext->startCommandInQ.min_interval);
+
     if (NULL != fidlContext) {
        fidlContext->currentGpsTimeOfWeekMs = locationExtended.gpsTime.gpsTimeOfWeekMs;
        fidlContext->systemTimeAtGpsTOW = getSystemTimeInmSecFromBoot();
 
        if (fidlContext->startCommandInQ.min_interval > 1000) {
-            if (0 == (((int64_t)location.gpsLocation.timestamp / 1000) %
-                  ((int64_t)fidlContext->startCommandInQ.min_interval / 1000))) {
-                  LOC_LOGD("[%s] min_interval %d timestamp %" PRId64" ", __func__,
-                     fidlContext->startCommandInQ.min_interval,
-                     location.gpsLocation.timestamp);
-                 fidlContext->eventCallback->fidlReportPosition(location,
-                              locationExtended, status, loc_technology_mask,
-                              pDataNotify, msInWeek, fidlContext->fidlLocApiContext);
-            }
+           if (0.0 == fmod((current_timestamp / 1000.0), (current_min_interval / 1000.0))) {
+               LOC_LOGD("[%s] min_interval %d timestamp %" PRId64" ", __func__,
+                   fidlContext->startCommandInQ.min_interval,
+                   location.gpsLocation.timestamp);
+               fidlContext->eventCallback->fidlReportPosition(location,
+                   locationExtended, status, loc_technology_mask,
+                   pDataNotify, msInWeek, fidlContext->fidlLocApiContext);
+           }
 
        } else if (1000 == fidlContext->startCommandInQ.min_interval) {
-             if (0 == (((int64_t)location.gpsLocation.timestamp) % 1000)) {
-                  LOC_LOGD("[%s] min_interval %d timestamp %" PRId64" ", __func__,
-                     fidlContext->startCommandInQ.min_interval,
-                     location.gpsLocation.timestamp);
+           if (0.0 == fmod(current_timestamp, 1000.0)) {
+               LOC_LOGD("[%s] min_interval %d timestamp %" PRId64" ", __func__,
+                   fidlContext->startCommandInQ.min_interval,
+                   location.gpsLocation.timestamp);
 
-                 fidlContext->eventCallback->fidlReportPosition(location,
-                              locationExtended, status, loc_technology_mask,
-                              pDataNotify, msInWeek, fidlContext->fidlLocApiContext);
-             }
+               fidlContext->eventCallback->fidlReportPosition(location,
+                   locationExtended, status, loc_technology_mask,
+                   pDataNotify, msInWeek, fidlContext->fidlLocApiContext);
+           }
+       } else if (fidlContext->startCommandInQ.min_interval > 100) {
+           if (0.0 == fmod((current_timestamp / 100.0), (current_min_interval / 100.0))) {
+               LOC_LOGD("[%s] min_interval %d timestamp %" PRId64" ", __func__,
+                   fidlContext->startCommandInQ.min_interval,
+                   location.gpsLocation.timestamp);
+
+               fidlContext->eventCallback->fidlReportPosition(location,
+                   locationExtended, status, loc_technology_mask,
+                   pDataNotify, msInWeek, fidlContext->fidlLocApiContext);
+           }
        } else {
-             if (fidlContext->startCommandInQ.min_interval > 100) {
-                if (0 == (((int64_t)location.gpsLocation.timestamp / 100) %
-                      ((int64_t)fidlContext->startCommandInQ.min_interval / 100))) {
-                  LOC_LOGD("[%s] min_interval %d timestamp %" PRId64" ", __func__,
-                     fidlContext->startCommandInQ.min_interval,
-                     location.gpsLocation.timestamp);
-
-                    fidlContext->eventCallback->fidlReportPosition(location,
-                               locationExtended, status, loc_technology_mask,
-                               pDataNotify, msInWeek, fidlContext->fidlLocApiContext);
-                }
-             } else {
-                fidlContext->eventCallback->fidlReportPosition(location,
-                          locationExtended, status, loc_technology_mask,
-                          pDataNotify, msInWeek, fidlContext->fidlLocApiContext);
-             }
+           /* Min interval is less than or equal to 100 mSec */
+           fidlContext->eventCallback->fidlReportPosition(location,
+                   locationExtended, status, loc_technology_mask,
+                   pDataNotify, msInWeek, fidlContext->fidlLocApiContext);
        }
-
     }
 }
 
