@@ -54,11 +54,7 @@ void LocIdlServiceLog::diagLogGnssReportInfo(uint8_t reportType, int16_t latency
             gnssReportInfo->serviceReport.reportInfo.latentReportCount = latentReportCount;
             locDiagIfaceHandle->logCommit(gnssReportInfo, bufferSrc,
                     LOG_LOCATION_IDL_SERVICE_REPORT_VERSION, size);
-        } else {
-            LOC_LOGv(" logAlloc failed for diagLogGnssReportInfo !! ");
         }
-    } else {
-        LOC_LOGd(" locDiagIfaceHandle is NULL ");
     }
 }
 
@@ -90,11 +86,7 @@ void LocIdlServiceLog::diagLogConfigConstellationRequest(uint64_t clientIdentifi
             }
             locDiagIfaceHandle->logCommit(svListInfo, bufferSrc,
                     LOG_LOCATION_IDL_SERVICE_REPORT_VERSION, size);
-        } else {
-            LOC_LOGv(" logAlloc failed for Config Constellation Request !! ");
         }
-    } else {
-        LOC_LOGd(" locDiagIfaceHandle is NULL ");
     }
 }
 
@@ -118,11 +110,7 @@ void LocIdlServiceLog::diagLogDeleteAidingRequest (uint64_t clientIdentifier,
             aidingInfo->serviceReport.configApiInfo.configData.deleteAidingMask = aidingMask;
             locDiagIfaceHandle->logCommit(aidingInfo, bufferSrc,
                     LOG_LOCATION_IDL_SERVICE_REPORT_VERSION, size);
-        } else {
-            LOC_LOGv(" logAlloc failed for Delete Aiding Request !! ");
         }
-    } else {
-        LOC_LOGd(" locDiagIfaceHandle is NULL ");
     }
 }
 
@@ -154,11 +142,7 @@ void LocIdlServiceLog::diagLogSessionInfo (diagControlCommandInfo idlSessionInfo
                     idlSessionInfo.numControlRequests;
             locDiagIfaceHandle->logCommit(sessionInfo, bufferSrc,
                     LOG_LOCATION_IDL_SERVICE_REPORT_VERSION, size);
-        } else {
-            LOC_LOGv(" logAlloc failed for session event Info !! ");
         }
-    } else {
-        LOC_LOGd(" locDiagIfaceHandle is NULL ");
     }
 }
 
@@ -180,11 +164,7 @@ void LocIdlServiceLog::diagLogPowerEventInfo(uint8_t powerEvent, uint8_t service
             powerEventInfo->serviceReport.powerEvent.serviceStatus  = serviceStatus;
             locDiagIfaceHandle->logCommit(powerEventInfo, bufferSrc,
                    LOG_LOCATION_IDL_SERVICE_REPORT_VERSION, size);
-        } else {
-            LOC_LOGv(" logAlloc failed for Power Event Info !! ");
         }
-    } else {
-        LOC_LOGv(" locDiagIfaceHandle is NULL ");
     }
 }
 void LocIdlServiceLog::diagLogCapabilityInfo(string capabilityMask) {
@@ -207,11 +187,7 @@ void LocIdlServiceLog::diagLogCapabilityInfo(string capabilityMask) {
                     capsInfo->serviceReport.capabiltiyInfo.capabilityStringLength);
             locDiagIfaceHandle->logCommit(capsInfo, bufferSrc,
                    LOG_LOCATION_IDL_SERVICE_REPORT_VERSION, size);
-        } else {
-            LOC_LOGd(" logAlloc failed for Capability Info !! ");
         }
-    } else {
-        LOC_LOGv(" locDiagIfaceHandle is NULL ");
     }
 }
 

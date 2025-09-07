@@ -40,11 +40,11 @@ public:
 };
 
 const char* Location::getInterface() {
-    return ("com.qualcomm.qti.location.Location:v1_0");
+    return ("com.qualcomm.qti.location.Location:v1_1");
 }
 
 CommonAPI::Version Location::getInterfaceVersion() {
-    return CommonAPI::Version(1, 0);
+    return CommonAPI::Version(1, 1);
 }
 
 
@@ -59,6 +59,6 @@ namespace CommonAPI {
 
 
 // Compatibility
-namespace v1_0 = v1;
+namespace v1_1 = v1;
 
 #endif // V1_COM_QUALCOMM_QTI_LOCATION_LOCATION_HPP_
