@@ -1159,6 +1159,14 @@ void LocIdlClientDevice::getLocationExtendedRpt(
                                             (Gnss_LocSvSystemEnumType)constellation;
             gpsLocExt.measUsageInfo[idx].gnssSignalType = sigType;
             gpsLocExt.measUsageInfo[idx].gnssSvId = meas[idx].getGnssSvId();
+            if (GNSS_LOC_SV_SYSTEM_GLONASS == gpsLocExt.measUsageInfo[idx].gnssConstellation) {
+                if (!((gpsLocExt.measUsageInfo[idx].gnssSvId >= 65) &&
+                   (gpsLocExt.measUsageInfo[idx].gnssSvId <= 96))) {
+                   gpsLocExt.measUsageInfo[idx].gloFrequency
+                       = gpsLocExt.measUsageInfo[idx].gnssSvId - 96;
+                   gpsLocExt.measUsageInfo[idx].gnssSvId = GLO_SV_PRN_SLOT_UNKNOWN;
+                }
+            }
 
             gnssPosDiag.measUsageInfo[idx].gnssConstellation =
                                 (locIdlClientDiagGnss_LocSvSystemEnumType)constellation;
@@ -1395,15 +1403,6 @@ void LocIdlClientDevice::getMeasurementSet(const LocationTypes::GnssMeasurements
         svMeasurementSet.gnssMeasNotification.measurements[idx].flags = 0;
         gnssMeasDiag.measurements[idx].flags = 0;
 
-        if (flags & LocationTypes::GnssMeasurementsDataFlagsMaskT::GMDFMT_SV_ID_BIT) {
-            svMeasurementSet.gnssMeasNotification.measurements[idx].flags |=
-                                                            GNSS_MEASUREMENTS_DATA_SV_ID_BIT;
-            svMeasurementSet.gnssMeasNotification.measurements[idx].svId = measData[idx].getSvId();
-
-            gnssMeasDiag.measurements[idx].flags |=
-                                            LOC_IDL_CLIENT_DIAG_GNSS_MEASUREMENTS_DATA_SV_ID_BIT;
-            gnssMeasDiag.measurements[idx].svId = measData[idx].getSvId();
-        }
         if (flags & LocationTypes::GnssMeasurementsDataFlagsMaskT::GMDFMT_SV_TYPE_BIT) {
             svMeasurementSet.gnssMeasNotification.measurements[idx].flags |=
                                                             GNSS_MEASUREMENTS_DATA_SV_TYPE_BIT;
@@ -1413,6 +1412,26 @@ void LocIdlClientDevice::getMeasurementSet(const LocationTypes::GnssMeasurements
             gnssMeasDiag.measurements[idx].flags |=
                         LOC_IDL_CLIENT_DIAG_GNSS_MEASUREMENTS_DATA_SV_TYPE_BIT;
             gnssMeasDiag.measurements[idx].svType = (locIdlClientDiagGnssSvType)stype;
+        }
+
+        if (flags & LocationTypes::GnssMeasurementsDataFlagsMaskT::GMDFMT_SV_ID_BIT) {
+            svMeasurementSet.gnssMeasNotification.measurements[idx].flags |=
+                                                            GNSS_MEASUREMENTS_DATA_SV_ID_BIT;
+            svMeasurementSet.gnssMeasNotification.measurements[idx].svId = measData[idx].getSvId();
+            if (GNSS_SV_TYPE_GLONASS
+                == svMeasurementSet.gnssMeasNotification.measurements[idx].svType) {
+                if (!((svMeasurementSet.gnssMeasNotification.measurements[idx].svId >= 65) &&
+                      (svMeasurementSet.gnssMeasNotification.measurements[idx].svId <= 96))) {
+                    svMeasurementSet.gnssMeasNotification.measurements[idx].gloFrequency
+                        = svMeasurementSet.gnssMeasNotification.measurements[idx].svId - 97;
+                    svMeasurementSet.gnssMeasNotification.measurements[idx].svId
+                        = GLO_SV_PRN_SLOT_UNKNOWN;
+                }
+            }
+
+            gnssMeasDiag.measurements[idx].flags |=
+                                            LOC_IDL_CLIENT_DIAG_GNSS_MEASUREMENTS_DATA_SV_ID_BIT;
+            gnssMeasDiag.measurements[idx].svId = measData[idx].getSvId();
         }
         svMeasurementSet.gnssMeasNotification.measurements[idx].timeOffsetNs =
                                                             measData[idx].getTimeOffsetNs();
@@ -1891,6 +1910,11 @@ void LocIdlClientDevice::getSvRpt(const vector<LocationTypes::GnssSvDataT> &gnss
             svNotify.gnssSvs[idx].gnssSignalTypeMask = (GnssSignalTypeMask)sigMask;
             svNotify.gnssSvs[idx].basebandCarrierToNoiseDbHz =
                                 gnssSvf[idx].getBasebandCarrierToNoiseDbHz();
+            if (GNSS_SV_TYPE_GLONASS == svNotify.gnssSvs[idx].type) {
+                if (!((svNotify.gnssSvs[idx].svId >= 65) && (svNotify.gnssSvs[idx].svId <= 96))) {
+                    svNotify.gnssSvs[idx].svId = GLO_SV_PRN_SLOT_UNKNOWN;
+                }
+            }
             svNotify.gnssSvs[idx].gloFrequency = gnssSvf[idx].getGloFrequency();
         }
         if (idx < LOC_IDL_CLIENT_DIAG_GNSS_SV_MAX) {
