@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -61,6 +61,11 @@ IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+
+/******************************************************************************
+Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+SPDX-License-Identifier: BSD-3-Clause-Clear
+*******************************************************************************/
 
 #ifndef LOCHAL_CLIENT_HANDLER_H
 #define LOCHAL_CLIENT_HANDLER_H
@@ -189,7 +194,12 @@ private:
         }
     };
 
-    inline ~LocHalDaemonClientHandler() {}
+    inline ~LocHalDaemonClientHandler() {
+        mIpcSender = nullptr;
+        if (mLocationApi) {
+            delete mLocationApi;
+        }
+    }
 
     // Location API callback functions
     void onCapabilitiesCallback(LocationCapabilitiesMask capabilitiesMask);
@@ -218,16 +228,18 @@ private:
 
     // send ipc message to this client for serialized payload
     bool sendMessage(const char* msg, size_t msglen, ELocMsgID msg_id) {
-        bool retVal= LocIpc::send(*mIpcSender, reinterpret_cast<const uint8_t*>(msg), msglen);
-        if (retVal == false) {
-            struct timespec ts;
-            clock_gettime(CLOCK_BOOTTIME, &ts);
-            LOC_LOGe("failed: client %s, msg id: %d, msg size %d, err %s, "
-                     "boot timestamp %" PRIu64" msec",
-                     mName.c_str(), msg_id, msglen, strerror(errno),
-                     (ts.tv_sec * 1000ULL + ts.tv_nsec/1000000));
+        if (NULL != mIpcSender) {
+            bool retVal= LocIpc::send(*mIpcSender, reinterpret_cast<const uint8_t*>(msg), msglen);
+            if (retVal == false) {
+                struct timespec ts;
+                clock_gettime(CLOCK_BOOTTIME, &ts);
+                LOC_LOGe("failed: client %s, msg id: %d, msg size %d, err %s, "
+                         "boot timestamp %" PRIu64" msec",
+                         mName.c_str(), msg_id, msglen, strerror(errno),
+                         (ts.tv_sec * 1000ULL + ts.tv_nsec/1000000));
+            }
+            return retVal;
         }
-        return retVal;
     }
 
     uint32_t getSupportedTbf (uint32_t tbfMsec);

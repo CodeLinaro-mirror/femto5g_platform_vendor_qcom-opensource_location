@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -61,6 +61,17 @@ IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+/*
+ Changes from Qualcomm Innovation Center are provided under the following license:
+ Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
+
+/*
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
 
 #ifndef LOCATIONCLIENTAPI_H
 #define LOCATIONCLIENTAPI_H
@@ -1281,6 +1292,27 @@ struct Location {
      *  location::flags before retrieving this field. <br/>
      */
     uint64_t elapsedgPTPTimeUnc;
+
+    inline Location() :
+        flags((LocationFlagsMask)0),
+        sessionStatus(LOC_SESS_SUCCESS),
+        timestamp(0),
+        latitude(0.0),
+        longitude(0.0),
+        altitude(0.0),
+        speed(0.0f),
+        bearing(0.0f),
+        horizontalAccuracy(0.0f),
+        verticalAccuracy(0.0f),
+        speedAccuracy(0.0f),
+        bearingAccuracy(0.0f),
+        techMask((LocationTechnologyMask)0),
+        elapsedRealTimeNs(0),
+        elapsedRealTimeUncNs(0),
+        timeUncMs(0.0f),
+        elapsedgPTPTime(0),
+        elapsedgPTPTimeUnc(0) {}
+
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
     string toString() const;
@@ -1534,7 +1566,7 @@ struct GnssLocation : public Location {
 
     /* Default constructor to initalize GnssLocation structure */
     inline GnssLocation() :
-            Location({}), gnssInfoFlags(0),
+            Location(), gnssInfoFlags(0),
             altitudeMeanSeaLevel(0.0f), pdop(0.0f), hdop(0.0f),
             vdop(0.0f), gdop(0.0f), tdop(0.0f), magneticDeviation(0.0f),
             horReliability(LOCATION_RELIABILITY_NOT_SET),
@@ -1731,7 +1763,8 @@ struct GnssData {
     GnssDataMask  gnssDataMask[GNSS_MAX_NUMBER_OF_SIGNAL_TYPES];
     /** Jammer Indication for each GNSS signal.  <br/>   */
     double        jammerInd[GNSS_MAX_NUMBER_OF_SIGNAL_TYPES];
-    /** Automatic gain control metric, in unit of dB.  <br/>   */
+    /** Overall automatic gain control level as observed at the input to correlator,
+        in units of dB. */
     double        agc[GNSS_MAX_NUMBER_OF_SIGNAL_TYPES];
     /** RF Automatic gain control status for L1 band.  <br/>   */
     AgcStatus     agcStatusL1;
@@ -2001,74 +2034,87 @@ struct GnssMeasurementsData {
      *  documentation in GnssSv::svId. <br/>
      */
     int16_t svId;
-    /** SV constellation type. <br/>   */
+    /** SV constellation type.
+     *  Please see description of GnssSvType. <br/>
+     */
     GnssSvType svType;
-    /** Time offset when the measurement was taken,
-     *  in unit of nanoseconds. <br/>   */
+    /** This field  provides an individual time-stamp for the measurement,
+     *  and allows sub-nanosecond accuracy. It is always set to zero as all
+     *  measurements are aligned to a common time. <br/>
+     */
     double timeOffsetNs;
     /** Bitwise OR of GnssMeasurementsStateMask to specify the
-     *  GNSS measurement state. <br/>   */
+     *  GNSS measurement state. <br/>
+     */
     GnssMeasurementsStateMask stateMask;
-    /** Received GNSS time of the week in nanoseconds when the
-     *  measurement was taken. <br/>
-     *  For sub nanoseconds part of the time, please refer to
-     *  of GnssMeasurementsData::receivedSvTimeSubNs. <br/>
-     *  Total time is: receivedSvTimeNs+receivedSvTimeSubNs. <br/>*/
+    /** The GNSS satellite (SV) time in the constellation time scale
+     *  in nanoseconds at transmission. <br/>
+     *  For GLONASS, this is the time of day, while for other systems,
+     *  it is the time of week. <br/>
+     *  The total SV time is calculated as: <br/>
+     *  receivedSvTimeNs + receivedSvTimeSubNs. <br/>
+     */
     int64_t receivedSvTimeNs;
-
-    /** Sub nanoseconds portion of the received GNSS time of the
-     *  week when the measurement was taken. <br/>
-     *  For nanoseconds portion of the time, please refer to field
-     *  of GnssMeasurementsData::receivedSvTimeSubNs. <br/>
-     *  Total time is: receivedSvTimeNs+receivedSvTimeSubNs. <br/>*/
+    /** The sub nanosecond portion of the GNSS satellite (SV) time
+     *  in the constellation time scale in nanoseconds at transmission. <br/>
+     *  For GLONASS, this is the time of day, while for other systems,
+     *  it is the time of week. <br/>
+     *  The total SV time is calculated as: <br/>
+     *  receivedSvTimeNs + receivedSvTimeSubNs.<br/>
+     */
     float receivedSvTimeSubNs;
-
-    /** Satellite time. <br/>
-     *  All SV times in the current measurement block are already
-     *  propagated to a common reference time epoch, in unit of
-     *  nano seconds.  <br/> */
+    /** Received GNSS satellite (SV) time 1-Sigma uncertainty in nanoseconds <br/>
+     */
     int64_t receivedSvTimeUncertaintyNs;
-    /** Signal strength, carrier to noise ratio, in unit of dB-Hz
-     *  <br/> */
+    /** Carrier to noise ratio at antenna, in unit of dB-Hz.<br/>
+     */
     double carrierToNoiseDbHz;
-    /** Uncorrected pseudorange rate, in unit of metres/second
-     *  <br/> */
+    /** Uncorrected Pseudorange Rate in units of meter/second.<br/>
+     */
     double pseudorangeRateMps;
-    /** Uncorrected pseudorange rate uncertainty, in unit of
-     *  meters/second  <br/> */
+    /** Uncorrected Pseudorange Rate 1-Sigma Uncertainty in units of meter/second. <br/>
+     */
     double pseudorangeRateUncertaintyMps;
-    /** Bitwise OR of GnssMeasurementsAdrStateMask. <br/>   */
+    /** Status bitmask of the ADR (Accumulated Delta Range) data.
+     *  Please see description for GnssMeasurementsAdrStateMask.<br/>
+     */
     GnssMeasurementsAdrStateMask adrStateMask;
-    /** Accumulated delta range, in unit of meters  <br/> */
+    /** Accumulated delta range in units of meters since last SV carrier phase lock.
+     */
     double adrMeters;
-    /** Accumulated delta range uncertainty, in unit of meters
-     *  <br/> */
+    /** 1-Sigma Accumulated delta range uncertainty in unit of meters.
+     */
     double adrUncertaintyMeters;
-    /** Carrier frequency of the tracked signal, in unit of Hertz
-     *  <br/> */
+    /** Carrier frequency of the tracked signal in units of Hertz.<br/>
+     */
     float carrierFrequencyHz;
-    /** The number of full carrier cycles between the receiver and
-     *  the satellite. <br/>   */
+    /** This field is no longer available. Please refer to adrMeters.<br/>
+     */
     int64_t carrierCycles;
-    /** The RF carrier phase that the receiver has detected.
-     *  <br/> */
+    /** This field is no longer available. Please refer to adrMeters.<br/>
+     */
     double carrierPhase;
-    /** The RF carrier phase uncertainty. <br/>   */
+    /** This field is no longer available. Please refer to adrUncertaintyMeters.<br/>
+     */
     double carrierPhaseUncertainty;
-    /** Multipath indicator, could be unknown, present or not
-     *  present. <br/>   */
+    /** This field is no longer available.<br/>
+     */
     GnssMeasurementsMultipathIndicator multipathIndicator;
-    /** Signal to noise ratio, in unit of dB <br/> */
+    /** This field is no longer available.<br/>
+     */
     double signalToNoiseRatioDb;
-    /** Automatic gain control level, in unit of dB <br/> */
+    /** Overall automatic gain control level as observed at the input to correlator,
+        in units of dB.
+     */
     double agcLevelDb;
-    /** Baseband signal strength, in uint of dB Hz.
-     *  Should always be available in measurement report. <br/> */
+    /** Carrier to Noise Ratio at correlator output in units of dB-Hz.<br/>
+     */
     double basebandCarrierToNoiseDbHz;
-    /** GNSS signal type mask of the SV.
-     *  Should always be available in measurement report. <br/> */
+    /** GNSS Signal Type. Please see description for GnssSignalTypeMask.<br/>
+     */
     GnssSignalTypeMask gnssSignalType;
-    /** The full inter-signal bias (ISB) in nanoseconds. <br/>
+    /** The full inter-signal bias (ISB) between the Signal specified
+     *  in gnssSignalType and GPS L1 C/A in nanoseconds.<br/>
      *  This value is the sum of the estimated receiver-side and the
      *  space-segment-side inter-system bias, inter-frequency bias
      *  and inter-code bias. <br/>
@@ -2090,37 +2136,46 @@ struct GnssMeasurementsData {
 };
 
 /** Specify GNSS measurements clock. <br/>
- *  The main equation describing the relationship between
- *  various components is: <br/>
- *  utcTimeNs = timeNs - (fullBiasNs + biasNs) - leapSecond *
- *  1,000,000,000 <br/> */
+ */
 struct GnssMeasurementsClock {
-    /** Bitwise OR of GnssMeasurementsClockFlagsMask. <br/>   */
+    /** Validity bitmask of the GnssMeasurementsClock.
+     *  Please see description for GnssMeasurementsClockFlagsMask.<br/>
+     */
     GnssMeasurementsClockFlagsMask flags;
-    /** Leap second, in unit of seconds. <br/>   */
+    /** Leap Second: Delta between the GNSS time and UTC time in units of seconds.<br/>
+     */
     int16_t leapSecond;
-    /** Time, monotonically increasing as long as the power is on,
-     *  in unit of nanoseconds. <br/>   */
+    /** The internal hardware clock value of the GNSS receiver increases monotonically
+     *  in nanoseconds, as long as the GNSS session remains active. <br/>
+     */
     int64_t timeNs;
-    /** Time uncertainty (one sigma), in unit of nanoseconds
-     *  <br/> */
+    /** System clock time uncertainty in units of nanoseconds.
+     *  This field is always 0. <br/>
+     */
     double timeUncertaintyNs;
-    /** Full bias, in uint of nanoseconds. <br/>   */
+    /** Full bias, in uint of nanoseconds. <br/>
+     *  The difference between hardware clock (timeNs) inside GPS receiver and the true
+     *  GPS time since 0000Z, January 6, 1980, in nanoseconds. <br/>
+     *  This value is available if the receiver has estimated GPS time.
+     *  For clarification,  local estimate of GPS time = timeNs - (fullBiasNs + biasNs)
+     */
     int64_t fullBiasNs;
-    /** Sub-nanoseconds bias, in unit of nonoseconds <br/> */
+    /** Sub-nanoseconds bias, in unit of nanoseconds.
+     */
     double biasNs;
-    /** Bias uncertainty (one sigma), in unit of nanoseconds
-     *  <br/> */
+    /** Bias uncertainty (one sigma), in unit of nanoseconds.
+     */
     double biasUncertaintyNs;
-    /** Clock drift, in unit of nanoseconds/second <br/> */
+    /** GNSS Receiver Clock Drift in units of nanoseconds per seconds.
+     */
     double driftNsps;
-    /** Clock drift uncertainty (one sigma), in unit of
-     *  nanoseconds/second <br/> */
+    /** GNSS Receiver Clock Drift one sigma uncertainty in units of nanoseconds per seconds.
+     */
     double driftUncertaintyNsps;
-    /** HW clock discontinuity count - incremented
-     *  for each discontinuity in HW clock. <br/>   */
+    /** Number of clock resets/discontinuities detected, affecting the field timeNs.<br/>
+     */
     uint32_t hwClockDiscontinuityCount;
-    /** Elapsed time since boot <br/>
+    /** Elapsed real-time of this clock since system boot <br/>
      *  In unit of nano-seconds.<br/>
      *  This field may not always be available. Please check for the
      *  presence of GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_REAL_TIME_BIT in
@@ -2140,7 +2195,7 @@ struct GnssMeasurementsClock {
      *  GnssMeasurementsClock::flags before retrieving this field. <br/>
      */
     uint64_t elapsedgPTPTime;
-    /** Uncertainty for elapsed PTP time field
+    /** Uncertainty for elapsed GPTP time field
      *  Unit Nanoseconds <br/>
      *  This field may not always be available. Please check for the
      *  presence of GNSS_MEASUREMENTS_CLOCK_FLAGS_ELAPSED_GPTP_TIME_UNC_BIT in
@@ -2285,11 +2340,10 @@ struct LocationSystemInfo {
 
 /** Specify the set of terrestrial technologies to be used when
  *  invoking getSingleTerrestrialPosition(). <br/>
- *
- *  Currently, only TERRESTRIAL_TECH_GTP_WWAN is supported.
- *  <br/> */
+**/
 enum TerrestrialTechnologyMask {
     TERRESTRIAL_TECH_GTP_WWAN = 1 << 0,
+    TERRESTRIAL_TECH_GTP_WIFI = 1 << 1,
 };
 
 /** Specify the batching status in BatchingCb. <br/> */
@@ -3432,6 +3486,12 @@ typedef std::function<void(
     const GnssEnergyConsumedInfo& gnssEneryConsumed
 )> GnssEnergyConsumedCb;
 
+/** @brief Callback to confirm the the LocationClientApi
+           instance is destroyed.<br/>
+*/
+typedef std::function<void(
+)> LocClientDestroyCb;
+
 class LocationClientApiImpl;
 class LocationClientApi
 {
@@ -3452,6 +3512,15 @@ public:
 
     /** @brief Default destructor */
     virtual ~LocationClientApi();
+
+    /** @brief
+       Destroy/cleans up the instance of LocationClientApi object,
+       which should be called when LocationClientApi object is
+       no longer needed.
+       The caller shall not destruct LocationClientApi object before
+       destroyCompleteCb is invoked
+    */
+    void destroy(LocClientDestroyCb destroyCompleteCb);
 
     /* ================================== POSITIONING ================================== */
 
@@ -3774,7 +3843,7 @@ public:
         LocationIntegrationApi::setUserConsentForTerrestrialPositioning() <br/>
 
         This API can be invoked with on-going tracking session
-        initiated via startPositionSession() and single shot
+        initiated via startPositionSession() and/or single shot
         terrestrial fix request initiated via
         getSingleTerrestrialPosition(). <br/>
 
@@ -3788,7 +3857,7 @@ public:
         with LOCATION_RESPONSE_PARAM_INVALID. <br/>
 
         @param horQoS
-        horizontal accuracy requirement for the terrestrial fix. If
+        horizontal accuracy requirement for the position fix. If
         horQoS is set to 0, responseCallback will get invoked with
         LOCATION_RESPONSE_PARAM_INVALID. <br/>
 
@@ -3821,7 +3890,7 @@ public:
         will be delivered to the client and responseCallback is
         invoked with processing status set to
         LOCATION_RESPONSE_TIMEOUT. Please note that the position
-        received for timeout scenarion may not be fresh and it will
+        received for timeout scenario may not be fresh and it will
         not satisfy the QoS requirement. <br/>
 
         If this API is invoked with invalid parameter, e.g.: 0
@@ -4268,13 +4337,6 @@ public:
     */
 
     /* ================================== Other APIs ================================== */
-    /** @brief Inform LocationClientAPI of the device network
-               availability status.
-        @param available
-        True if available. <br/>
-        False otherwise. <br/>  */
-    void updateNetworkAvailability(bool available);
-
     /** @brief Get energy consumed info of modem GNSS engine. <br/>
         If called while the previous call is still being processed,
         then the callback will be updated, and engery consumed info

@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -61,6 +61,10 @@ IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+/******************************************************************************
+Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+SPDX-License-Identifier: BSD-3-Clause-Clear
+*******************************************************************************/
 
 #ifndef LOCATION_INTEGRATION_API_IMPL_H
 #define LOCATION_INTEGRATION_API_IMPL_H
@@ -76,6 +80,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <LocationApiPbMsgConv.h>
 #include <queue>
 #include <unordered_map>
+#include <condition_variable>
 
 using namespace std;
 using namespace loc_util;
@@ -139,14 +144,33 @@ struct ProtoMsgInfo{
             configType(inType), protoStr(std::move(inStr)) {}
 };
 
+// utility for wait / notify
+class Waitable {
+    std::mutex mMutex;
+    std::condition_variable mCond;
+public:
+    Waitable() = default;
+    ~Waitable() = default;
+
+    void wait(uint32_t ms) {
+        std::unique_lock<std::mutex> lock(mMutex);
+        mCond.wait_for(lock, std::chrono::milliseconds(ms));
+    }
+
+    void notify() {
+        mCond.notify_one();
+    }
+};
+
 class IpcListener;
 
-class LocationIntegrationApiImpl : public ILocationControlAPI {
+class LocationIntegrationApiImpl : public ILocationControlAPI, public Waitable {
     friend IpcListener;
 public:
     LocationIntegrationApiImpl(LocIntegrationCbs& integrationCbs);
 
-    virtual void destroy() override;
+    virtual void destroy() override {}
+    void destroyMe(locationApiDestroyCompleteCallback destroyCompleteCb);
 
     // convenient methods
     inline bool sendMessage(const uint8_t* data, uint32_t length) const {
@@ -193,10 +217,11 @@ public:
 
     uint32_t configXtraParams(bool enable, const ::XtraConfigParams& configParams);
     uint32_t getXtraStatus();
-    uint32_t registerXtraStatusUpdate(bool registerUpdate);
+    uint32_t registerXtraStatusUpdate(bool registerUpdate, uint32_t delayInMsec = 0);
     uint32_t configMerkleTree(const char * merkleTreeXml, int xmlSize);
     uint32_t configOsnmaEnablement(bool isEnabled);
     uint32_t registerGnssSignalTypesUpdate(bool registerUpdate);
+    uint32_t updateNetworkInfo(const NetworkInfo& data);
 
 private:
     ~LocationIntegrationApiImpl();

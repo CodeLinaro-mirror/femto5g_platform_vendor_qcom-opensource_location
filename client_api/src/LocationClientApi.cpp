@@ -28,7 +28,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -60,6 +60,12 @@ IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+
+/*
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
 
 #define LOG_TAG "LocSvc_LocationClientApi"
 
@@ -364,10 +370,20 @@ LocationClientApi::LocationClientApi(CapabilitiesCb capaCb) {
 }
 
 LocationClientApi::~LocationClientApi() {
+}
+
+void LocationClientApi::destroy(LocClientDestroyCb destroyCompleteCb) {
+    locationApiDestroyCompleteCallback destroyCb = nullptr;
+    if (destroyCompleteCb) {
+        destroyCb = [destroyCompleteCb] () {
+            LOC_LOGw("call destroyCompleteCb");
+            destroyCompleteCb();
+        };
+    }
+
     if (mApiImpl) {
         // two steps processes due to asynchronous message processing
-        mApiImpl->destroy();
-        // deletion of mApiImpl will be done after messages in the queue are processed
+        mApiImpl->destroy(destroyCb);
     }
 }
 
@@ -782,12 +798,6 @@ void LocationClientApi::resumeGeofences(std::vector<Geofence>& geofences) {
     }
 }
 
-void LocationClientApi::updateNetworkAvailability(bool available) {
-    if (mApiImpl) {
-        mApiImpl->updateNetworkAvailability(available);
-    }
-}
-
 void LocationClientApi::getGnssEnergyConsumed(
         GnssEnergyConsumedCb gnssEnergyConsumedCb,
         ResponseCb responseCb) {
@@ -869,8 +879,7 @@ void LocationClientApi::getSingleTerrestrialPosition(
 
     // null terrestrialPositionCallback means cancelling request
     if ((terrestrialPositionCb != nullptr) &&
-            ((timeoutMsec == 0) || (techMask != TERRESTRIAL_TECH_GTP_WWAN) ||
-             (horQoS != 0.0))) {
+            ((timeoutMsec == 0) || (horQoS != 0.0))) {
         LOC_LOGe("invalid parameter: timeout %d msec, tech mask 0x%x, horQoS %f",
                  timeoutMsec, techMask, horQoS);
         if (responseCb) {
@@ -895,8 +904,8 @@ void LocationClientApi::getSingleTerrestrialPosition(
             };
         }
 
-        mApiImpl->getSingleTerrestrialPos(timeoutMsec, ::TERRESTRIAL_TECH_GTP_WWAN, horQoS,
-                trackingCbFn, responseCbFn);
+        mApiImpl->getSingleTerrestrialPos(timeoutMsec, static_cast<TerrestrialTechMask>(techMask),
+                 horQoS, trackingCbFn, responseCbFn);
     } else {
         LOC_LOGe ("NULL mApiImpl");
     }

@@ -25,11 +25,10 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -61,6 +60,10 @@ IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+/******************************************************************************
+Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+SPDX-License-Identifier: BSD-3-Clause-Clear
+*******************************************************************************/
 
 #define LOG_TAG "LocSvc_LocationIntegrationApi"
 
@@ -73,6 +76,10 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #endif
 #include <log_util.h>
 #include <loc_pla.h>
+
+// Macro to check if a string contains only digits
+#define IS_DIGITS_ONLY(str) (std::all_of((str).begin(), (str).end(), ::isdigit))
+
 namespace location_integration {
 
 
@@ -87,11 +94,22 @@ LocationIntegrationApi::LocationIntegrationApi(
 }
 
 LocationIntegrationApi::~LocationIntegrationApi() {
+}
 
-    LOC_LOGd("calling destructor of LocationIntegrationApi");
-    if (mApiImpl) {
-        mApiImpl->destroy();
+void LocationIntegrationApi::destroy(LocIntegrationDestroyCb destroyCompleteCb) {
+    locationApiDestroyCompleteCallback destroyCb = nullptr;
+    if (destroyCompleteCb) {
+        destroyCb = [destroyCompleteCb] () {
+            LOC_LOGw("call destroyCompleteCb");
+            destroyCompleteCb();
+        };
     }
+
+    if (mApiImpl) {
+        // two steps processes due to asynchronous message processing
+        mApiImpl->destroyMe(destroyCb);
+    }
+
 }
 
 bool LocationIntegrationApi::configConstellations(
@@ -1042,7 +1060,7 @@ bool LocationIntegrationApi::getXtraStatus() {
 
 bool LocationIntegrationApi::registerXtraStatusUpdate(bool registerUpdate) {
     if (mApiImpl) {
-        return (mApiImpl->registerXtraStatusUpdate(registerUpdate) == 0);
+        return (mApiImpl->registerXtraStatusUpdate(registerUpdate, 0) == 0);
     } else {
         LOC_LOGe ("NULL mApiImpl");
         return false;
@@ -1123,6 +1141,61 @@ bool LocationIntegrationApi::injectMapMatchedData(const mapMatchedFeedbackData& 
 #endif
 
         return (mApiImpl->gnssInjectMmfData(mmfData) == 0);
+    } else {
+        LOC_LOGe ("NULL mApiImpl");
+        return false;
+    }
+}
+
+bool LocationIntegrationApi::updateNetworkInfo(const NetworkInfoData& data) {
+    if (data.connection < NET_CONNECTION_UNKNOWN ||
+            data.connection > NET_DISCONNECTED) {
+        LOC_LOGe ("Invalid connection %d", data.connection);
+        return false;
+    }
+
+    if (data.networkType < TYPE_UNKNOWN ||
+            data.networkType > TYPE_WLAN) {
+        LOC_LOGe ("Invalid networkType %d", data.networkType);
+        return false;
+    }
+
+    // Check if country is a 2-byte string
+    if (!data.country.empty() && data.country.length() != 2) {
+        LOC_LOGe ("Invalid country %s", data.country.c_str());
+        return false;
+        for (char c : data.country) {
+            if (!std::isalpha(c)) {
+                LOC_LOGe ("Invalid country %s", data.country.c_str());
+                return false;
+            }
+        }
+    }
+
+    // Check if mccmnc is in the correct format "MCC|MNC"
+    if (!data.mccmnc.empty()) {
+        size_t separatorPos = data.mccmnc.find('|');
+        if (separatorPos == std::string::npos || separatorPos != 3 || data.mccmnc.length() < 6
+                || data.mccmnc.length() > 7) {
+        LOC_LOGe ("Invalid mccmnc %s", data.mccmnc.c_str());
+        return false;
+    }
+        std::string mcc = data.mccmnc.substr(0, 3);
+        std::string mnc = data.mccmnc.substr(4);
+        if (mcc.length() != 3 || (mnc.length() != 2 && mnc.length() != 3) ||
+                !IS_DIGITS_ONLY(mcc) || !IS_DIGITS_ONLY(mnc)) {
+            LOC_LOGe("Invalid mccmnc %s", data.mccmnc.c_str());
+            return false;
+        }
+    }
+
+    if (mApiImpl) {
+        NetworkInfo nwData = {};
+        nwData.connection = (NetworkConnectionStatus)data.connection;
+        nwData.country = data.country;
+        nwData.networkType = (NetworkTypeInfo)data.networkType;
+        nwData.mccmnc = data.mccmnc;
+        return (mApiImpl->updateNetworkInfo(nwData) == 0);
     } else {
         LOC_LOGe ("NULL mApiImpl");
         return false;

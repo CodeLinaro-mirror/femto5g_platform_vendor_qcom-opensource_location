@@ -29,7 +29,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -61,6 +61,12 @@ IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+
+/*
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
 
 #define LOG_TAG "LocSvc_LocationClientApi"
 
@@ -1828,20 +1834,21 @@ public:
             mMsgTask(msgTask), mKnownStatus(LocIpcQrtrWatcher::ServiceStatus::DOWN) {
     }
     inline virtual void onServiceStatusChange(int serviceId, int instanceId,
-            LocIpcQrtrWatcher::ServiceStatus status, const LocIpcSender& refSender) {
+                                              LocIpcQrtrWatcher::ServiceStatus status,
+                                              uint32_t nodeId, uint32_t portId) {
 
         struct onHalServiceStatusChangeHandler : public LocMsg {
             onHalServiceStatusChangeHandler(HalDaemonQrtrWatcher& watcher,
                                             LocIpcQrtrWatcher::ServiceStatus status,
-                                            const LocIpcSender& refSender) :
-                mWatcher(watcher), mStatus(status), mRefSender(refSender) {}
+                                            uint32_t nodeId, uint32_t portId) :
+                mWatcher(watcher), mStatus(status), mNodeId(nodeId), mPortId(portId) {}
 
             virtual ~onHalServiceStatusChangeHandler() {}
             void proc() const {
                 LOC_LOGi("LocIpcQrtrWatcher:: HAL Daemon service status %d", mStatus);
                 if (LocIpcQrtrWatcher::ServiceStatus::UP == mStatus) {
                     auto sender = mWatcher.mIpcSender.lock();
-                    if (nullptr != sender && sender->copyDestAddrFrom(mRefSender)) {
+                    if (nullptr != sender && sender->updateDestAddr(mNodeId, mPortId)) {
                         usleep(gSleepTime);
                         auto listener = mWatcher.mIpcListener.lock();
                         if (nullptr != listener) {
@@ -1860,13 +1867,14 @@ public:
 
             HalDaemonQrtrWatcher& mWatcher;
             LocIpcQrtrWatcher::ServiceStatus mStatus;
-            const LocIpcSender& mRefSender;
+            uint32_t mNodeId;
+            uint32_t mPortId;
         };
 
         if (LOCATION_CLIENT_API_QSOCKET_HALDAEMON_SERVICE_ID == serviceId &&
             LOCATION_CLIENT_API_QSOCKET_HALDAEMON_INSTANCE_ID == instanceId) {
             mMsgTask.sendMsg(new (nothrow)
-                     onHalServiceStatusChangeHandler(*this, status, refSender));
+                     onHalServiceStatusChangeHandler(*this, status, nodeId, portId));
         }
     }
 };
@@ -2009,10 +2017,8 @@ LocationClientApiImpl::~LocationClientApiImpl() {
 void LocationClientApiImpl::destroy(locationApiDestroyCompleteCallback destroyCompleteCb) {
 
     struct DestroyReq : public LocMsg {
-        DestroyReq(LocationClientApiImpl* apiImpl,
-                locationApiDestroyCompleteCallback destroyCompleteCb) :
-                mApiImpl(apiImpl),
-                mDestroyCompleteCb(destroyCompleteCb) {}
+        DestroyReq(LocationClientApiImpl* apiImpl) :
+                mApiImpl(apiImpl) {}
         virtual ~DestroyReq() {}
         void proc() const {
             // deregister
@@ -2038,19 +2044,17 @@ void LocationClientApiImpl::destroy(locationApiDestroyCompleteCallback destroyCo
                          mApiImpl->mClientIdGenerator, mApiImpl->mClientId);
             }
 #endif //FEATURE_EXTERNAL_AP
-            if (mDestroyCompleteCb) {
-                (mDestroyCompleteCb) ();
-            }
-            usleep(50000); //give 50ms for socket clean up
-
-            delete mApiImpl;
         }
         LocationClientApiImpl* mApiImpl;
-        locationApiDestroyCompleteCallback mDestroyCompleteCb;
     };
 
-    mMsgTask.sendMsg(new (nothrow) DestroyReq(this, destroyCompleteCb));
-    usleep(100000); //100ms for handling onReceive() messages
+    mMsgTask.sendMsg(new (nothrow) DestroyReq(this));
+    wait(500); //500ms
+    LOC_LOGw("wait deregister received");
+    if (destroyCompleteCb) {
+        destroyCompleteCb();
+    }
+    delete this;
 }
 
 /******************************************************************************
@@ -2906,31 +2910,6 @@ void LocationClientApiImpl::resumeGeofences(size_t count, uint32_t* ids) {
     mMsgTask.sendMsg(new (nothrow) ResumeGeofencesReq(this, count, ids));
 }
 
-void LocationClientApiImpl::updateNetworkAvailability(bool available) {
-
-    struct UpdateNetworkAvailabilityReq : public LocMsg {
-        UpdateNetworkAvailabilityReq(LocationClientApiImpl* apiImpl, bool available) :
-                mApiImpl(apiImpl), mAvailable(available) {}
-        virtual ~UpdateNetworkAvailabilityReq() {}
-        void proc() const {
-            string pbStr;
-            LocAPIUpdateNetworkAvailabilityReqMsg msg(mApiImpl->mSocketName,
-                                                      mAvailable,
-                                                      &mApiImpl->mPbufMsgConv);
-            if (msg.serializeToProtobuf(pbStr)) {
-                bool rc = mApiImpl->sendMessage(
-                        reinterpret_cast<uint8_t *>((uint8_t *)pbStr.c_str()), pbStr.size());
-                LOC_LOGd(">>> UpdateNetworkAvailabilityReq available=%d rc=%d", mAvailable, rc);
-            } else {
-                LOC_LOGe("LocAPIUpdateNetworkAvailabilityReqMsg serializeToProtobuf failed");
-            }
-        }
-        LocationClientApiImpl* mApiImpl;
-        const bool mAvailable;
-    };
-    mMsgTask.sendMsg(new (nothrow) UpdateNetworkAvailabilityReq(this, available));
-}
-
 void LocationClientApiImpl::getGnssEnergyConsumed(
         gnssEnergyConsumedCallback gnssEnergyConsumedCb,
         responseCallback responseCb) {
@@ -3516,6 +3495,7 @@ void IpcListener::onReceive(const char* data, uint32_t length,
             case E_LOCAPI_START_BATCHING_MSG_ID:
             case E_LOCAPI_STOP_BATCHING_MSG_ID:
             case E_LOCAPI_UPDATE_BATCHING_OPTIONS_MSG_ID:
+            case E_LOCAPI_CLIENT_DEREGISTER_MSG_ID:
             {
                 LOC_LOGd("<<< response message %d\n", locApiMsg.msgId);
                 PBLocAPIGenericRespMsg pbLocApiGenericRsp;
@@ -3523,6 +3503,11 @@ void IpcListener::onReceive(const char* data, uint32_t length,
                     LOC_LOGe("Failed to parse pbLocApiGenericRsp from payload!!");
                     return;
                 }
+                if (locApiMsg.msgId == E_LOCAPI_CLIENT_DEREGISTER_MSG_ID) {
+                    mApiImpl.notify(); //for the wait in destroy()
+                    return;
+                }
+
                 if (locApiMsg.msgId != E_LOCAPI_STOP_TRACKING_MSG_ID) {
                     LocAPIGenericRespMsg respMsg(sockName.c_str(), eLocMsgid, pbLocApiGenericRsp,
                             &mApiImpl.mPbufMsgConv);
