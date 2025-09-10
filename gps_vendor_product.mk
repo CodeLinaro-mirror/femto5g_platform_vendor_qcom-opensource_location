@@ -14,7 +14,9 @@ PRODUCT_PACKAGES += libfidl_loc_api
 PRODUCT_PACKAGES += libloc_fidl_core
 PRODUCT_PACKAGES += libloc_fidl_sim
 PRODUCT_PACKAGES += libLocationFidlV02
+ifneq ($(TARGET_BOARD_PLATFORM)$(TARGET_BOARD_SUFFIX)$(TARGET_BOARD_DERIVATIVE_SUFFIX), gen4_gvm)
 PRODUCT_PACKAGES += locIdlClient_daemon
+endif
 
 PRODUCT_PACKAGES += liblocation_api_msg
 PRODUCT_PACKAGES += liblocation_integration_api
