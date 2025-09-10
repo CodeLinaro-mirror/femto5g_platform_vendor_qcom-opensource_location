@@ -6,7 +6,7 @@
  This component provides utilities used for timestamp and time
  difference processing
 
- Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  SPDX-License-Identifier: BSD-3-Clause-Clear
  =============================================================================*/
 #include <time.h>
@@ -16,6 +16,7 @@
 #include <sys/time.h>
 #include <base_util/time_routines.h>
 #include <base_util/log.h>
+#include <inttypes.h>
 
 #define BREAK_IF_ZERO(ERR,X) if(0==(X)) {result = (ERR); break;}
 #define BREAK_IF_NON_ZERO(ERR,X) if(0!=(X)) {result = (ERR); break;}
@@ -453,9 +454,11 @@ TimeDiff Timestamp::operator -(const Timestamp & rhs) const
 
     if(time_delta.tv_sec < 0)
     {
-      log_error(TAG, "operator - ts returning -ve value probable time rollover: sec:%d/%d/%d, nsec:%d/%d/%d", (int) m_timestamp.tv_sec,
-          (int) rhs.m_timestamp.tv_sec, (int) time_delta.tv_sec, (int) m_timestamp.tv_nsec,
-          (int) rhs.m_timestamp.tv_nsec, (int) time_delta.tv_nsec);
+        log_error(TAG,
+                  "operator - ts returning -ve value probable time rollover: sec:%" PRId64
+                  "/%" PRId64 "/%d, nsec:%d/%d/%d",
+                  m_timestamp.tv_sec, rhs.m_timestamp.tv_sec, (int)time_delta.tv_sec,
+                  (int)m_timestamp.tv_nsec, (int)rhs.m_timestamp.tv_nsec, (int)time_delta.tv_nsec);
     }
 
     // set the diff to valid now
@@ -571,7 +574,7 @@ int Timestamp::insert_into_postcard(OutPostcard * const dest_card, const char * 
     // so, timestamp doesn't really work if your message has any chance of being interpreted from
     // the Java world (of Android)
     BREAK_IF_NON_ZERO(11, nest_card->addInt32("CLOCK_ID", m_clock_id));
-    BREAK_IF_NON_ZERO(12, nest_card->addInt32("TS_SEC", (OutPostcard::INT32 )m_timestamp.tv_sec));
+    BREAK_IF_NON_ZERO(12, nest_card->addInt64("TS_SEC", (OutPostcard::INT64 )m_timestamp.tv_sec));
     BREAK_IF_NON_ZERO(13, nest_card->addInt32("TS_NSEC", (OutPostcard::INT32 )m_timestamp.tv_nsec));
     BREAK_IF_NON_ZERO(14, nest_card->finalize());
     BREAK_IF_NON_ZERO(20, dest_card->addCard(name_str, nest_card));
@@ -603,8 +606,8 @@ int Timestamp::retrieve_from_postcard(InPostcard * const src_card, const char * 
     BREAK_IF_NON_ZERO(10, src_card->getCard(name_str, &nest_card));
 
     BREAK_IF_NON_ZERO(10, nest_card->getInt32("CLOCK_ID", m_clock_id));
-    int ts_sec = 0;
-    BREAK_IF_NON_ZERO(11, nest_card->getInt32("TS_SEC", ts_sec));
+    InPostcard::INT64 ts_sec = 0;
+    BREAK_IF_NON_ZERO(11, nest_card->getInt64("TS_SEC", ts_sec));
     m_timestamp.tv_sec = ts_sec;
     int ts_nsec = 0;
     BREAK_IF_NON_ZERO(12, nest_card->getInt32("TS_NSEC", ts_nsec));

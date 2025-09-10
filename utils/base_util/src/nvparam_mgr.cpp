@@ -8,7 +8,7 @@
  module parameters coming from server that need to be persistent
  across bootup.
 
- Copyright (c) 2024-2025 Qualcomm Innovation Center, Inc. All rights reserved.
+ Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  SPDX-License-Identifier: BSD-3-Clause-Clear
  =============================================================================*/
 #include <stdio.h>
@@ -611,7 +611,7 @@ int NvParamMgr::generatePseudoClientIdIfNeeded ()
     // use RTC time as seed and software based pseudo number generator
     if (is_valid == false)
     {
-      int time_sec = time (NULL);
+      time_t time_sec = time (NULL);
       // Make sure device is getting proper time
       // Will need to be larger than 43 years interval (1970 - 2014)
       if (time_sec > (43 * 365 * 24 * 60 * 60 ))
@@ -640,7 +640,7 @@ int NvParamMgr::generatePseudoClientIdIfNeeded ()
     // so we will keep trying to generate a none zero pseudo client id
     // when pseudo client id is needed
 #else
-    int time_sec = time (NULL);
+    time_t time_sec = time (NULL);
     // Make sure device is getting proper time
     // Will need to be larger than 43 years interval (1970 - 2014)
     if (time_sec > (43 * 365 * 24 * 60 * 60 ))
