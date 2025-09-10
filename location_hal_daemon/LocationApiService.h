@@ -61,6 +61,13 @@ IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+
+/*
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
+
 #ifndef LOCATIONAPISERVICE_H
 #define LOCATIONAPISERVICE_H
 
@@ -269,7 +276,7 @@ private:
     void onCapabilitiesCallback(LocationCapabilitiesMask mask);
     void onResponseCb(LocationError err, uint32_t id);
     void onCollectiveResponseCallback(size_t count, LocationError *errs, uint32_t *ids);
-    void onGtpWwanTrackingCallback(Location location);
+    void onGtpTerrestrialTrackingCallback(Location location);
     void onGnssLocationInfoCb(const GnssLocationInfoNotification& notification);
 
     // Location configuration API requests
@@ -313,6 +320,8 @@ private:
             const LocConfigRegisterXtraStatusUpdateReqMsg * pReqMsg);
     void deregisterXtraStatusUpdate(
             const LocConfigDeregisterXtraStatusUpdateReqMsg * pReqMsg);
+
+    void provideNetworkInfoStatus(const UpdateNetworkInfoReq* pNwData);
 
     // Location configuration API util routines
     void addConfigRequestToMap(uint32_t sessionId,
@@ -381,10 +390,10 @@ private:
     const MsgTask   mMsgTask;
 
     // Terrestrial service related APIs
-    // Location api interface for single short wwan fix
-    ILocationAPI* mGtpWwanSsLocationApi;
-    LocationCallbacks mGtpWwanSsLocationApiCallbacks;
-    trackingCallback mGtpWwanPosCallback;
+    // Location api interface for single short terrestrial fix
+    ILocationAPI* mGtpTerrestrialSsLocationApi;
+    LocationCallbacks mGtpTerrestrialSsLocationApiCallbacks;
+    trackingCallback mGtpTerrestrialPosCallback;
     // -1: not set, 0: user not opt-in, 1: user opt in
     int mOptInTerrestrialService;
     // LIA clients that register for xtra status update
