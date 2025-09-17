@@ -61,6 +61,10 @@ IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+/******************************************************************************
+Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+SPDX-License-Identifier: BSD-3-Clause-Clear
+*******************************************************************************/
 
 #ifndef LOCATION_INTEGRATION_API_IMPL_H
 #define LOCATION_INTEGRATION_API_IMPL_H
@@ -213,10 +217,11 @@ public:
 
     uint32_t configXtraParams(bool enable, const ::XtraConfigParams& configParams);
     uint32_t getXtraStatus();
-    uint32_t registerXtraStatusUpdate(bool registerUpdate);
+    uint32_t registerXtraStatusUpdate(bool registerUpdate, uint32_t delayInMsec = 0);
     uint32_t configMerkleTree(const char * merkleTreeXml, int xmlSize);
     uint32_t configOsnmaEnablement(bool isEnabled);
     uint32_t registerGnssSignalTypesUpdate(bool registerUpdate);
+    uint32_t updateNetworkInfo(const NetworkInfo& data);
 
 private:
     ~LocationIntegrationApiImpl();
