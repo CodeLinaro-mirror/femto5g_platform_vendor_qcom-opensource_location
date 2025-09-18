@@ -26,6 +26,10 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
+/** Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ *  Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ *  SPDX-License-Identifier: BSD-3-Clause-Clear */
+
 #include <loc_api_v02_log.h>
 #include <location_service_v02.h>
 
@@ -212,6 +216,7 @@ DECLARE_TBL(loc_v02_event_name) =
     NAME_VAL(QMI_LOC_GET_MULTIBAND_CONFIG_REQ_V02),
     NAME_VAL(QMI_LOC_LATENCY_INFORMATION_IND_V02),
     NAME_VAL(QMI_LOC_EVENT_PLATFORM_POWER_STATE_CHANGED_IND_V02),
+    NAME_VAL(QMI_LOC_GNSS_BANDS_SUPPORTED_IND_V02),
 };
 
 const char* loc_get_v02_event_name(uint32_t event)

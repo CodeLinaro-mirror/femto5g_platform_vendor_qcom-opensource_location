@@ -26,6 +26,10 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/** Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ *  Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ *  SPDX-License-Identifier: BSD-3-Clause-Clear */
+
 /** @file loc_api_v02_client.h
 */
 
@@ -1146,6 +1150,10 @@ typedef union
    const qmiLocPlatformPowerStateChangedIndMsgT_v02 *pPowerStateChangedIndMsg;
    /** Sent by the engine to inform power state change
     QMI_LOC_EVENT_PLATFORM_POWER_STATE_CHANGED_IND_V02 */
+
+   const qmiLocGnssBandsSupportedIndMsgT_v02* pGnssBandsSupportedIndMsg;
+   /** Sent by the engine to inform the supported bands and the preferred one
+    QMI_LOC_GNSS_BANDS_SUPPORTED_IND_V02 */
 }locClientEventIndUnionType;
 
 
