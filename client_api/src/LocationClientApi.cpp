@@ -61,6 +61,12 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/*
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
+
 #define LOG_TAG "LocSvc_LocationClientApi"
 
 #include <inttypes.h>
@@ -789,12 +795,6 @@ void LocationClientApi::resumeGeofences(std::vector<Geofence>& geofences) {
             LOC_LOGd("resumeGeofences id : %d", gfIds[i]);
         }
         mApiImpl->resumeGeofences(count, gfIds);
-    }
-}
-
-void LocationClientApi::updateNetworkAvailability(bool available) {
-    if (mApiImpl) {
-        mApiImpl->updateNetworkAvailability(available);
     }
 }
 
