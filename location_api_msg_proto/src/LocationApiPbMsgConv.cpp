@@ -292,6 +292,12 @@ ELocMsgID LocationApiPbMsgConv::getEnumForPBELocMsgID(const PBELocMsgID &pbLocMs
         case PB_E_INTAPI_DEREGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID:
             eLocMsgId = E_INTAPI_DEREGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID;
             break;
+        case PB_E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_REQ_MSG_ID:
+            eLocMsgId = E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_REQ_MSG_ID;
+            break;
+        case PB_E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_RESP_MSG_ID:
+            eLocMsgId = E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_RESP_MSG_ID;
+            break;
         default:
             break;
     }
@@ -980,6 +986,12 @@ PBELocMsgID LocationApiPbMsgConv::getPBEnumForELocMsgID(const ELocMsgID &eLocMsg
         case E_INTAPI_DEREGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID:
             pbLocMsgId = PB_E_INTAPI_DEREGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID;
             break;
+        case E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_REQ_MSG_ID:
+            pbLocMsgId = PB_E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_REQ_MSG_ID;
+            break;
+        case E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_RESP_MSG_ID:
+            pbLocMsgId = PB_E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_RESP_MSG_ID;
+            break;
         default:
             break;
     }
@@ -1222,7 +1234,7 @@ PBLocApiGnss_LocSvSystemEnumType LocationApiPbMsgConv::getPBGnssLocSvSysEnumFrom
 uint32_t LocationApiPbMsgConv::getPBMaskForLocationCallbacksMask(const uint32_t &locCbMask) const {
     uint32_t pbLocCbMask = 0;
     if (locCbMask & E_LOC_CB_DISTANCE_BASED_TRACKING_BIT) {
-        pbLocCbMask |= PB_E_LOC_CB_DISTANCE_BASED_TRACKING_BIT;
+        pbLocCbMask |= PB_E_LOC_CB_TRACKING_BIT;
     }
     if (locCbMask & E_LOC_CB_GNSS_LOCATION_INFO_BIT) {
         pbLocCbMask |= PB_E_LOC_CB_GNSS_LOCATION_INFO_BIT;
@@ -1883,7 +1895,12 @@ uint32_t LocationApiPbMsgConv::getPBMaskForGnssMeasurementsAdrStateMask(
         pbGnssMeasAdrStateMask |= PB_GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_RESET_BIT;
     }
     if (gnssMeasAdrStateMask & GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_CYCLE_SLIP_BIT) {
-       pbGnssMeasAdrStateMask |= PB_GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_CYCLE_SLIP_BIT;
+        pbGnssMeasAdrStateMask |= PB_GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_CYCLE_SLIP_BIT;
+    }
+    if (gnssMeasAdrStateMask &
+            GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_HALF_CYCLE_RESOLVED_BIT) {
+        pbGnssMeasAdrStateMask |=
+            PB_GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_HALF_CYCLE_RESOLVED_BIT;
     }
     LocApiPb_LOGv("LocApiPB: gnssMeasAdrStateMask:%x, pbGnssMeasAdrStateMask:%x",
             gnssMeasAdrStateMask, pbGnssMeasAdrStateMask);
@@ -2257,7 +2274,7 @@ uint64_t LocationApiPbMsgConv::getLocationCapabilitiesMaskFromPB(
 
 uint32_t LocationApiPbMsgConv::getLocationCallbacksMaskFromPB(const uint32_t &pbLocCbMask) const {
     uint32_t locCbMask = 0;
-    if (pbLocCbMask & PB_E_LOC_CB_DISTANCE_BASED_TRACKING_BIT) {
+    if (pbLocCbMask & PB_E_LOC_CB_TRACKING_BIT) {
         locCbMask |= E_LOC_CB_DISTANCE_BASED_TRACKING_BIT;
     }
     if (pbLocCbMask & PB_E_LOC_CB_GNSS_LOCATION_INFO_BIT) {
@@ -2773,6 +2790,11 @@ uint32_t LocationApiPbMsgConv::getGnssMeasurementsAdrStateMaskFromPB(
             PB_GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_CYCLE_SLIP_BIT) {
         gnssMeasAdrStateMask |= GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_CYCLE_SLIP_BIT;
     }
+    if (pbGnssMeasAdrStateMask &
+            PB_GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_HALF_CYCLE_RESOLVED_BIT) {
+        gnssMeasAdrStateMask |=
+            GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_HALF_CYCLE_RESOLVED_BIT;
+    }
     LocApiPb_LOGv("LocApiPB: pbGnssMeasAdrStateMask:%x, gnssMeasAdrStateMask:%x",
             pbGnssMeasAdrStateMask, gnssMeasAdrStateMask);
     return gnssMeasAdrStateMask;
@@ -3196,11 +3218,15 @@ int LocationApiPbMsgConv::convertGnssSvIdConfigToPB(const GnssSvIdConfig &gnssSv
     // uint64_t navicBlacklistSvMask = 6;
     pbGnssSvIdCfg->set_navicblacklistsvmask(gnssSvIdCfg.navicBlacklistSvMask);
 
+    // uint64_t gpsBlacklistSvMask = 7;
+    pbGnssSvIdCfg->set_gpsblacklistsvmask(gnssSvIdCfg.gpsBlacklistSvMask);
+
     LocApiPb_LOGd("LocApiPB: gnssSvIdCfg - Glo: %" PRIu64 ",Bds: %" PRIu64 ",Qzss: %" PRIu64 \
-            ",Gal: %" PRIu64 ",Sbas: %" PRIu64",Nav: %" PRIu64, gnssSvIdCfg.gloBlacklistSvMask,
+            ",Gal: %" PRIu64 ",Sbas: %" PRIu64",Nav: %" PRIu64", GPS: %" PRIu64 " ",
+            gnssSvIdCfg.gloBlacklistSvMask,
             gnssSvIdCfg.bdsBlacklistSvMask, gnssSvIdCfg.qzssBlacklistSvMask,
             gnssSvIdCfg.galBlacklistSvMask, gnssSvIdCfg.sbasBlacklistSvMask,
-            gnssSvIdCfg.navicBlacklistSvMask);
+            gnssSvIdCfg.navicBlacklistSvMask, gnssSvIdCfg.gpsBlacklistSvMask);
     return 0;
 }
 
@@ -5293,11 +5319,15 @@ int LocationApiPbMsgConv::pbConvertToGnssSvIdConfig(const PBGnssSvIdConfig &pbGn
     // uint64_t navicBlacklistSvMask = 6;
     gnssSvIdConfig.navicBlacklistSvMask = pbGnssSvIdConfig.navicblacklistsvmask();
 
-    LOC_LOGd("LocApiPB: BlackListSvMask - Glo: %" PRIu64 ",Bds: %" PRIu64 ",Qzss: %" PRIu64 \
-            ",Gal: %" PRIu64 ",Sbas: %" PRIu64",Nav: %" PRIu64, gnssSvIdConfig.gloBlacklistSvMask,
+    // uint64_t gpsBlacklistSvMask = 7;
+    gnssSvIdConfig.gpsBlacklistSvMask = pbGnssSvIdConfig.gpsblacklistsvmask();
+
+    LOC_LOGv("LocApiPB: BlackListSvMask - Glo: %" PRIu64 ",Bds: %" PRIu64 ",Qzss: %" PRIu64 \
+            ",Gal: %" PRIu64 ",Sbas: %" PRIu64",Nav: %" PRIu64 " GPS: %" PRIu64 " ",
+            gnssSvIdConfig.gloBlacklistSvMask,
             gnssSvIdConfig.bdsBlacklistSvMask, gnssSvIdConfig.qzssBlacklistSvMask,
             gnssSvIdConfig.galBlacklistSvMask, gnssSvIdConfig.sbasBlacklistSvMask,
-            gnssSvIdConfig.navicBlacklistSvMask);
+            gnssSvIdConfig.navicBlacklistSvMask, gnssSvIdConfig.gpsBlacklistSvMask);
     return 0;
 }
 
