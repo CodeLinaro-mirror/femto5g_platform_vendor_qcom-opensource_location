@@ -109,6 +109,7 @@ bool LocationIntegrationApi::configConstellations(
     } else {
         constellationEnablementConfig.size = sizeof(constellationEnablementConfig);
         constellationEnablementConfig.enabledSvTypesMask =
+                GNSS_SV_TYPES_MASK_GPS_BIT|
                 GNSS_SV_TYPES_MASK_GLO_BIT|GNSS_SV_TYPES_MASK_BDS_BIT|
                 GNSS_SV_TYPES_MASK_QZSS_BIT|GNSS_SV_TYPES_MASK_GAL_BIT;
         blacklistSvConfig.size = sizeof(GnssSvIdConfig);
@@ -120,6 +121,11 @@ bool LocationIntegrationApi::configConstellations(
             GnssSvId initialSvId = 0;
             uint16_t svIndexOffset = 0;
             switch (it.constellation) {
+            case GNSS_CONSTELLATION_TYPE_GPS:
+                svTypeMask = (GnssSvTypesMask) GNSS_SV_TYPES_MASK_GPS_BIT;
+                svMaskPtr = &blacklistSvConfig.gpsBlacklistSvMask;
+                initialSvId = GNSS_SV_CONFIG_GPS_INITIAL_SV_ID;
+                break;
             case GNSS_CONSTELLATION_TYPE_GLONASS:
                 svTypeMask = (GnssSvTypesMask) GNSS_SV_TYPES_MASK_GLO_BIT;
                 svMaskPtr = &blacklistSvConfig.gloBlacklistSvMask;
@@ -191,11 +197,13 @@ bool LocationIntegrationApi::configConstellations(
     }
 
     LOC_LOGd("constellation config size=%d, enabledMask=0x%" PRIx64 ", disabledMask=0x%" PRIx64 ", "
+             "gps blacklist mask =0x%" PRIx64 ", "
              "glo blacklist mask =0x%" PRIx64 ", qzss blacklist mask =0x%" PRIx64 ", "
              "bds blacklist mask =0x%" PRIx64 ", gal blacklist mask =0x%" PRIx64 ", "
              "sbas blacklist mask =0x%" PRIx64 ", Navic blacklist mask =0x%" PRIx64 ", ",
              constellationEnablementConfig.size, constellationEnablementConfig.enabledSvTypesMask,
              constellationEnablementConfig.blacklistedSvTypesMask,
+             blacklistSvConfig.gpsBlacklistSvMask,
              blacklistSvConfig.gloBlacklistSvMask, blacklistSvConfig.qzssBlacklistSvMask,
              blacklistSvConfig.bdsBlacklistSvMask, blacklistSvConfig.galBlacklistSvMask,
              blacklistSvConfig.sbasBlacklistSvMask, blacklistSvConfig.navicBlacklistSvMask);
