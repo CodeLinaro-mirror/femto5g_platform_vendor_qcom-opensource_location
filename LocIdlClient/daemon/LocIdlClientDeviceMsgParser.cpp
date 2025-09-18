@@ -1692,26 +1692,27 @@ void LocIdlClientDevice::getMeasurementSet(const LocationTypes::GnssMeasurements
                                         measData[idx].getOtherCodeTypeName().c_str(), sizeInBuff);
         }
 
-        if (tempAgc.svType && tempAgc.agcLevelDb && tempAgc.carrierFrequencyHz) {
-            if (measAgc[tempAgc.svType].agcLevelDb < tempAgc.agcLevelDb) {
+        if ((0 != tempAgc.svType) &&
+               (0 != tempAgc.agcLevelDb) && (0 != tempAgc.carrierFrequencyHz)) {
+            if ((measAgc[tempAgc.svType].agcLevelDb < tempAgc.agcLevelDb) ||
+                (0 == measAgc[tempAgc.svType].agcLevelDb)) {
                 measAgc[tempAgc.svType].agcLevelDb = tempAgc.agcLevelDb;
                 measAgc[tempAgc.svType].carrierFrequencyHz = tempAgc.carrierFrequencyHz;
+                measAgc[tempAgc.svType].svType = tempAgc.svType;
             }
         }
     }
     svMeasurementSet.gnssMeasNotification.agcCount = 0;
+    uint32_t count = svMeasurementSet.gnssMeasNotification.agcCount;
     for (uint32_t i = 1; i < (GNSS_SV_TYPE_NAVIC + 1); i++) {
         if (0 != measAgc[i].agcLevelDb && 0 != measAgc[i].carrierFrequencyHz) {
-            uint32_t count = svMeasurementSet.gnssMeasNotification.agcCount;
             svMeasurementSet.gnssMeasNotification.gnssAgc[count].agcLevelDb =
                                                         measAgc[i].agcLevelDb;
             svMeasurementSet.gnssMeasNotification.gnssAgc[count].svType = (GnssSvType)i;
             svMeasurementSet.gnssMeasNotification.gnssAgc[count].carrierFrequencyHz =
                                                         measAgc[i].carrierFrequencyHz;
             svMeasurementSet.gnssMeasNotification.agcCount += 1;
-        } else {
-            LOC_LOGD("%s]--> Measurement agcLevelDb: %f, carrierFrequencyHz: %f",__func__,
-                 measAgc[i].agcLevelDb, measAgc[i].carrierFrequencyHz);
+            count++;
         }
     }
 

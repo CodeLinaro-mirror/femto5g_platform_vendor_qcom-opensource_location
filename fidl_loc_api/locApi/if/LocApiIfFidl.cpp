@@ -506,6 +506,7 @@ void handleLocApiFidlRequestNiNotify(GnssNiNotification &notify, const void* dat
 void handleLocApiFidlReportGnssMeasurementData(GnssMeasurements &measurements,
     int msInWeek, void *context) {
 
+    LOC_LOGD("%s:%d, msInWeek %d ",__func__,__LINE__, msInWeek);
     if (nullptr != context) {
         FidlLocApi *fidlLocApiInstance = (FidlLocApi*)context;
         fidlLocApiInstance->reportGnssMeasurements(measurements, msInWeek);

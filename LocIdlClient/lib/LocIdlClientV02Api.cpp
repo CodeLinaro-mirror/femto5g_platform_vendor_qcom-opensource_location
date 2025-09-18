@@ -218,7 +218,9 @@ void LocIdlClientV02Api::sendMeasRptHelper(
         virtual void proc() const
         {
             GnssMeasurements    &meas = pMsg->measurements;
-            fidlLocApiV02EventCb->locClientFidlReportSvMeasurement(meas, fidlLocApiContext);
+            int currentMsInWeek = pMsg->msInWeek;
+            fidlLocApiV02EventCb->locClientFidlReportGnssMeasurementData(meas,
+                currentMsInWeek, fidlLocApiContext);
             delete pMsg;
         }
     };
