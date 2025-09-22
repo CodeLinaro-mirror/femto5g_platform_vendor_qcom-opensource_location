@@ -139,6 +139,10 @@ static LocConfigTypeEnum getLocConfigTypeFromMsgId(ELocMsgID  msgId) {
     case E_INTAPI_GET_CONSTELLATION_SECONDARY_BAND_CONFIG_RESP_MSG_ID:
         configType = GET_CONSTELLATION_SECONDARY_BAND_CONFIG;
         break;
+    case E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_REQ_MSG_ID:
+    case E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_RESP_MSG_ID:
+        configType = REGISTER_SIGNAL_TYPES_UPDATE;
+        break;
     default:
         break;
     }
@@ -451,6 +455,7 @@ void IpcListener::onReceive(const char* data, uint32_t length,
             case E_INTAPI_GET_MIN_GPS_WEEK_REQ_MSG_ID:
             case E_INTAPI_GET_MIN_SV_ELEVATION_REQ_MSG_ID:
             case E_INTAPI_GET_CONSTELLATION_SECONDARY_BAND_CONFIG_REQ_MSG_ID:
+            case E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_REQ_MSG_ID:
             {
                 PBLocAPIGenericRespMsg pbLocApiGenericRsp;
                 if (0 == pbLocApiGenericRsp.ParseFromString(pbLocApiMsg.payload())) {
@@ -517,6 +522,21 @@ void IpcListener::onReceive(const char* data, uint32_t length,
                         cfgGetConstlnSecBandCfgRespMsg, &mApiImpl.mPbufMsgConv);
                 mApiImpl.processGetConstellationSecondaryBandConfigRespCb(
                         (LocConfigGetConstellationSecondaryBandConfigRespMsg*)&msg);
+                break;
+            }
+
+            case E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_RESP_MSG_ID:
+            {
+                PBLocConfigRegisterGnssSignalTypesUpdateRespMsg respMsg;
+                if (0 == respMsg.ParseFromString(pbLocApiMsg.payload())) {
+                    LOC_LOGe("Failed to parse RegisterGnssSignalTypesUpdateRespMsg from payload!!");
+                    return;
+                }
+
+                LocConfigRegisterGnssSignalTypesUpdateRespMsg msg(sockName.c_str(), respMsg,
+                                                            &mApiImpl.mPbufMsgConv);
+                mApiImpl.processRegisterGnssSignalTypesRespCb(
+                        (LocConfigRegisterGnssSignalTypesUpdateRespMsg*)&msg);
                 break;
             }
 
@@ -1071,6 +1091,32 @@ uint32_t LocationIntegrationApiImpl::configEngineIntegrityRisk(
     return 0;
 }
 
+uint32_t LocationIntegrationApiImpl::registerGnssSignalTypesUpdate(bool registerUpdate) {
+    struct RegisterGnssSignalTypesUpdateReq : public LocMsg {
+        RegisterGnssSignalTypesUpdateReq(LocationIntegrationApiImpl* apiImpl,
+                bool registerUpdate) : mApiImpl(apiImpl), mRegisterUpdate(registerUpdate) {}
+        virtual ~RegisterGnssSignalTypesUpdateReq() {}
+        void proc() const {
+            string pbStr;
+            LocConfigRegisterGnssSignalTypesUpdateReqMsg msg(mApiImpl->mSocketName, mRegisterUpdate,
+                    &mApiImpl->mPbufMsgConv);
+            if (msg.serializeToProtobuf(pbStr)) {
+                mApiImpl->sendConfigMsgToHalDaemon(REGISTER_SIGNAL_TYPES_UPDATE,
+                        reinterpret_cast<uint8_t*>((uint8_t *)pbStr.c_str()),
+                        pbStr.size());
+            } else {
+                LOC_LOGe("serializeToProtobuf failed");
+            }
+        }
+
+        LocationIntegrationApiImpl* mApiImpl;
+        bool mRegisterUpdate;
+    };
+
+    mMsgTask->sendMsg(new (nothrow) RegisterGnssSignalTypesUpdateReq(this, registerUpdate));
+    return 0;
+}
+
 bool LocationIntegrationApiImpl::sendConfigMsgToHalDaemon(
         LocConfigTypeEnum configType, uint8_t* pMsg,
         size_t msgSize, bool invokeResponseCb) {
@@ -1438,6 +1484,81 @@ void LocationIntegrationApiImpl::processGetConstellationSecondaryBandConfigRespC
         }
 
         mIntegrationCbs.getConstellationSecondaryBandConfigCb(secondaryBandDisablementSet);
+    }
+}
+void LocationIntegrationApiImpl::processRegisterGnssSignalTypesRespCb(
+                        const LocConfigRegisterGnssSignalTypesUpdateRespMsg* msg) {
+    if (mIntegrationCbs.gnssSignalTypesCb && msg) {
+        uint32_t gnssSignalTypeMask = 0;
+        if (msg->mSignalTypeMask & ::GNSS_SIGNAL_GPS_L1CA) {
+            gnssSignalTypeMask |= location_client::GNSS_SIGNAL_GPS_L1CA_BIT;
+        }
+        if (msg->mSignalTypeMask & ::GNSS_SIGNAL_GPS_L1C) {
+            gnssSignalTypeMask |= location_client::GNSS_SIGNAL_GPS_L1C_BIT;
+        }
+        if (msg->mSignalTypeMask & ::GNSS_SIGNAL_GPS_L2) {
+            gnssSignalTypeMask |= location_client::GNSS_SIGNAL_GPS_L2_BIT;
+        }
+        if (msg->mSignalTypeMask & ::GNSS_SIGNAL_GPS_L5) {
+            gnssSignalTypeMask |= location_client::GNSS_SIGNAL_GPS_L5_BIT;
+        }
+        if (msg->mSignalTypeMask & ::GNSS_SIGNAL_GLONASS_G1) {
+            gnssSignalTypeMask |= location_client::GNSS_SIGNAL_GLONASS_G1_BIT;
+        }
+        if (msg->mSignalTypeMask & ::GNSS_SIGNAL_GLONASS_G2) {
+            gnssSignalTypeMask |= location_client::GNSS_SIGNAL_GLONASS_G2_BIT;
+        }
+        if (msg->mSignalTypeMask & ::GNSS_SIGNAL_GALILEO_E1) {
+            gnssSignalTypeMask |= location_client::GNSS_SIGNAL_GALILEO_E1_BIT;
+        }
+        if (msg->mSignalTypeMask & ::GNSS_SIGNAL_GALILEO_E5A) {
+            gnssSignalTypeMask |= location_client::GNSS_SIGNAL_GALILEO_E5A_BIT;
+        }
+        if (msg->mSignalTypeMask & ::GNSS_SIGNAL_GALILEO_E5B) {
+            gnssSignalTypeMask |= location_client::GNSS_SIGNAL_GALILEO_E5B_BIT;
+        }
+        if (msg->mSignalTypeMask & ::GNSS_SIGNAL_BEIDOU_B1I) {
+            gnssSignalTypeMask |= location_client::GNSS_SIGNAL_BEIDOU_B1I_BIT;
+        }
+        if (msg->mSignalTypeMask & ::GNSS_SIGNAL_BEIDOU_B1C) {
+            gnssSignalTypeMask |= location_client::GNSS_SIGNAL_BEIDOU_B1C_BIT;
+        }
+        if (msg->mSignalTypeMask & ::GNSS_SIGNAL_BEIDOU_B2I) {
+            gnssSignalTypeMask |= location_client::GNSS_SIGNAL_BEIDOU_B2I_BIT;
+        }
+        if (msg->mSignalTypeMask & ::GNSS_SIGNAL_BEIDOU_B2AI) {
+            gnssSignalTypeMask |= location_client::GNSS_SIGNAL_BEIDOU_B2AI_BIT;
+        }
+        if (msg->mSignalTypeMask & ::GNSS_SIGNAL_QZSS_L1CA) {
+            gnssSignalTypeMask |= location_client::GNSS_SIGNAL_QZSS_L1CA_BIT;
+        }
+        if (msg->mSignalTypeMask & ::GNSS_SIGNAL_QZSS_L1S) {
+            gnssSignalTypeMask |= location_client::GNSS_SIGNAL_QZSS_L1S_BIT;
+        }
+        if (msg->mSignalTypeMask & ::GNSS_SIGNAL_QZSS_L2) {
+            gnssSignalTypeMask |= location_client::GNSS_SIGNAL_QZSS_L2_BIT;
+        }
+        if (msg->mSignalTypeMask & ::GNSS_SIGNAL_QZSS_L5) {
+            gnssSignalTypeMask |= location_client::GNSS_SIGNAL_QZSS_L5_BIT;
+        }
+        if (msg->mSignalTypeMask & ::GNSS_SIGNAL_SBAS_L1) {
+            gnssSignalTypeMask |= location_client::GNSS_SIGNAL_SBAS_L1_BIT;
+        }
+        if (msg->mSignalTypeMask & ::GNSS_SIGNAL_NAVIC_L5) {
+            gnssSignalTypeMask |= location_client::GNSS_SIGNAL_NAVIC_L5_BIT;
+        }
+        if (msg->mSignalTypeMask & ::GNSS_SIGNAL_BEIDOU_B2AQ) {
+            gnssSignalTypeMask |= location_client::GNSS_SIGNAL_BEIDOU_B2AQ_BIT;
+        }
+        if (msg->mSignalTypeMask & ::GNSS_SIGNAL_BEIDOU_B1) {
+            gnssSignalTypeMask |= location_client::GNSS_SIGNAL_BEIDOU_B1_BIT;
+        }
+        if (msg->mSignalTypeMask & ::GNSS_SIGNAL_BEIDOU_B2) {
+            gnssSignalTypeMask |= location_client::GNSS_SIGNAL_BEIDOU_B2_BIT;
+        }
+        LOC_LOGd("received GNSS signal Types : %x, send out supported GNSS signal types: %x",
+                msg->mSignalTypeMask, gnssSignalTypeMask);
+        mIntegrationCbs.gnssSignalTypesCb((location_client::GnssSignalTypeMask)gnssSignalTypeMask);
     }
 }
 

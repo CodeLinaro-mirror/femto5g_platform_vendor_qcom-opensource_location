@@ -1132,6 +1132,28 @@ void LocHalDaemonClientHandler::onLocationSystemInfoCb(LocationSystemInfo notifi
     }
 }
 
+void LocHalDaemonClientHandler::onGnssSignalTypesCb(GnssSignalTypeMask signalType) {
+    std::lock_guard<std::mutex> lock(LocationApiService::mMutex);
+    LOC_LOGd("--< client name %s, ipc valid %d, supported GNSS signal types 0x%x",
+             mName.c_str(), (nullptr != mIpcSender), signalType);
+
+    if (nullptr != mIpcSender) {
+        string pbStr;
+        LocConfigRegisterGnssSignalTypesUpdateRespMsg msg(SERVICE_NAME, signalType,
+                &mService->mPbufMsgConv);
+        if (msg.serializeToProtobuf(pbStr)) {
+            bool rc = sendMessage(pbStr.c_str(), pbStr.size(), msg.msgId);
+            // purge this client if failed
+            if (!rc) {
+                LOC_LOGe("failed rc=%d purging client=%s", rc, mName.c_str());
+                mService->deleteClientbyName(mName);
+            }
+        } else {
+            LOC_LOGe("serializeToProtobuf failed, resp size: %d", pbStr.size());
+        }
+    }
+}
+
 void LocHalDaemonClientHandler::onLocationApiDestroyCompleteCb() {
     std::lock_guard<std::mutex> lock(LocationApiService::mMutex);
 

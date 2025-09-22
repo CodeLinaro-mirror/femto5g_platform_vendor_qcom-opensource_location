@@ -175,7 +175,7 @@ public:
     uint32_t configEngineIntegrityRisk(PositioningEngineMask engType, uint32_t integrityRisk);
 
     uint32_t getConstellationSecondaryBandConfig();
-
+    uint32_t registerGnssSignalTypesUpdate(bool registerUpdate);
 private:
     ~LocationIntegrationApiImpl();
     bool integrationClientAllowed();
@@ -196,6 +196,8 @@ private:
     void processGetMinSvElevationRespCb(const LocConfigGetMinSvElevationRespMsg* pRespMsg);
     void processGetConstellationSecondaryBandConfigRespCb(
             const LocConfigGetConstellationSecondaryBandConfigRespMsg* pRespMsg);
+    void processRegisterGnssSignalTypesRespCb(
+            const LocConfigRegisterGnssSignalTypesUpdateRespMsg* msg);
 
     // protobuf conversion util class
     LocationApiPbMsgConv mPbufMsgConv;

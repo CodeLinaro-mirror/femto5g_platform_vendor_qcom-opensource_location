@@ -185,7 +185,10 @@ LocationApiService::LocationApiService(const configParamToRead & configParamRead
     mAutoStartGnss(configParamRead.autoStartGnss),
     mPowerState(POWER_STATE_UNKNOWN),
     mPositionMode((GnssSuplMode)configParamRead.positionMode),
-    mMaintTimer(this)
+    mMaintTimer(this),
+    mSignalTypesLocationApi(nullptr),
+    mLocHalSignalTypeMask(0),
+    mSignalTypesLocationApiCallbacks{}
 #ifdef POWERMANAGER_ENABLED
     ,mPowerEventObserver(nullptr)
 #endif
@@ -265,6 +268,8 @@ LocationApiService::LocationApiService(const configParamToRead & configParamRead
         pClient->mPendingMessages.push(E_LOCAPI_START_TRACKING_MSG_ID);
     }
 
+    registerLocApiForGnssSignalTypesUpdates(true);
+
     // start receiver - never return
     LOC_LOGd("Ready, start Ipc Receivers");
     auto recver = LocIpc::getLocIpcLocalRecver(make_shared<LocHaldLocalIpcListener>(*this),
@@ -281,6 +286,7 @@ LocationApiService::LocationApiService(const configParamToRead & configParamRead
 }
 
 LocationApiService::~LocationApiService() {
+    registerLocApiForGnssSignalTypesUpdates(false);
     mIpc.stopNonBlockingListening();
     mIpc.stopBlockingListening(*mBlockingRecver);
 
@@ -663,6 +669,18 @@ void LocationApiService::processClientMsg(const char* data, uint32_t length) {
             break;
         }
 
+        case E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_REQ_MSG_ID: {
+            PBLocConfigRegisterGnssSignalTypesUpdateReqMsg pbMsg;
+            if (0 == pbMsg.ParseFromString(pbLocApiMsg.payload())) {
+                LOC_LOGe("Failed to parse registerGnssSignalTypesUpdateReqMsg from payload!!");
+                return;
+            }
+            LocConfigRegisterGnssSignalTypesUpdateReqMsg msg(sockName.c_str(), pbMsg,
+                    &mPbufMsgConv);
+            registerGnssSignalTypesUpdate(&msg);
+            break;
+        }
+
         default: {
             LOC_LOGe("Unknown message with id: %d ", eLocMsgid);
             LocHalDaemonClientHandler* pClient = getClient(sockName);
@@ -893,6 +911,61 @@ void LocationApiService::getConstellationSecondaryBandConfig(
     // if sessionId is 0, e.g.: error callback will be delivered
     // by addConfigRequestToMap
     addConfigRequestToMap(sessionId, pReqMsg);
+}
+
+void LocationApiService::registerLocApiForGnssSignalTypesUpdates (bool registerForUpdate) {
+    std::lock_guard<std::mutex> lock(mMutex);
+    if (registerForUpdate) { // register
+        if (mSignalTypesLocationApi == nullptr) {
+            // set callback functions for Location API
+            mSignalTypesLocationApiCallbacks.size = sizeof(mSignalTypesLocationApiCallbacks);
+
+            // mandatory callback
+            mSignalTypesLocationApiCallbacks.capabilitiesCb = [this](
+                    LocationCapabilitiesMask mask) {
+                onCapabilitiesCallback(mask);
+            };
+            mSignalTypesLocationApiCallbacks.responseCb = [this](LocationError err, uint32_t id) {
+                onResponseCb(err, id);
+            };
+            mSignalTypesLocationApiCallbacks.collectiveResponseCb =
+                [this](size_t count, LocationError* errs, uint32_t* ids) {
+                    onCollectiveResponseCallback(count, errs, ids);
+                };
+            mSignalTypesLocationApiCallbacks.gnssSignalTypesCb =
+                [this](const GnssCapabNotification& gnssCapNotif) {//TODO
+                    onGnssSignalTypesCb(gnssCapNotif);
+                };
+            mSignalTypesLocationApi = LocationAPI::createInstance(mSignalTypesLocationApiCallbacks);
+        } else {
+            mSignalTypesLocationApiCallbacks.gnssSignalTypesCb =
+                [this](const GnssCapabNotification& gnssCapNotif) {//TODO
+                    onGnssSignalTypesCb(gnssCapNotif);
+                };
+            mSignalTypesLocationApi->updateCallbacks(mSignalTypesLocationApiCallbacks);
+        }
+    } else { // unregister
+        if (mSignalTypesLocationApi) {
+            mSignalTypesLocationApiCallbacks.gnssSignalTypesCb = nullptr;
+            mSignalTypesLocationApi->updateCallbacks(mSignalTypesLocationApiCallbacks);
+        }
+    }
+}
+
+void LocationApiService::registerGnssSignalTypesUpdate(
+            const LocConfigRegisterGnssSignalTypesUpdateReqMsg * pReqMsg) {
+    LOC_LOGi(">--registerGnssSignalTypesUpdate, client %s, registerUpdate %d",
+            pReqMsg->mSocketName, pReqMsg->mRegisterUpdate);
+
+    std::lock_guard<std::mutex> lock(mMutex);
+    // trigger LocConfigCb to conform with LIA API uniform
+    LocHalDaemonClientHandler* pClient = getClient(pReqMsg->mSocketName);
+    if (pClient) {
+        if (pReqMsg->mRegisterUpdate && mLocHalSignalTypeMask) {
+            pClient->onGnssSignalTypesCb(mLocHalSignalTypeMask);
+        }
+        pClient->onControlResponseCb(LOCATION_ERROR_SUCCESS, pReqMsg->msgId);
+    }
 }
 
 /******************************************************************************
@@ -1406,6 +1479,30 @@ void LocationApiService::onGnssConfigCallback(uint32_t sessionId,
     } else {
         LOC_LOGe("--< client not found for session id %d", sessionId);
     }
+}
+
+// mandatory callback for location api
+void LocationApiService::onCapabilitiesCallback(LocationCapabilitiesMask mask) {
+}
+
+// mandatory callback for location api
+void LocationApiService::onResponseCb(LocationError err, uint32_t id) {
+}
+
+// mandatory callback for location api
+void LocationApiService::onCollectiveResponseCallback(
+        size_t count, LocationError *errs, uint32_t *ids) {
+}
+
+void LocationApiService::onGnssSignalTypesCb(const GnssCapabNotification& gnssCapabNotification) {
+    std::lock_guard<std::mutex> lock(mMutex);
+    mLocHalSignalTypeMask = gnssCapabNotification.gnssSupportedSignals;
+    LOC_LOGd("--< supported GNSS signal types: 0x%x", mLocHalSignalTypeMask);
+    for (auto each : mClients) {
+        // deliver the GNSS signal types to registered client
+        each.second->onGnssSignalTypesCb(mLocHalSignalTypeMask);
+    }
+
 }
 
 /******************************************************************************

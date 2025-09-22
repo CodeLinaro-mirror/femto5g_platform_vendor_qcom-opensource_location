@@ -621,6 +621,8 @@ public:
     // NmeaTypesMask to/frmom PB NmeaTypesMask
     uint32_t getNmeaTypesMaskFromPB(const uint32_t &pbNmeaTypesMask) const;
     uint32_t getPBMaskForNmeaTypesMask(const uint32_t& nmeaTypesMask) const;
+    // GnssSignalTypeMask to PBGnssSignalTypeMask
+    uint32_t getPBMaskForGnssSignalTypeMask(const uint32_t &gnssSignalTypeMask) const;
 
 private:
     bool mPbDebugLogEnabled;
@@ -759,8 +761,6 @@ private:
             const uint32_t &gnssGloTimeStructTypeFlags) const;
     // GnssSvOptionsMask to PBLocApiGnssSvOptionsMask
     uint32_t getPBMaskForGnssSvOptionsMask(const uint32_t &gnssSvOptMask) const;
-    // GnssSignalTypeMask to PBGnssSignalTypeMask
-    uint32_t getPBMaskForGnssSignalTypeMask(const uint32_t &gnssSignalTypeMask) const;
     // GeofenceBreachTypeMask to PBGeofenceBreachTypeMask
     uint32_t getPBMaskForGeofenceBreachTypeMask(const uint32_t &gfBreachTypeMask) const;
     // DeadReckoningEngineConfigValidMask to PBDeadReckoningEngineConfigValidMask
