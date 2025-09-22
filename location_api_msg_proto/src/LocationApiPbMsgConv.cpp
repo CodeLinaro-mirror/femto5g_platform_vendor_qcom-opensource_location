@@ -27,39 +27,9 @@
  */
 
 /*
-Changes from Qualcomm Innovation Center are provided under the following license:
-
-Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted (subject to the limitations in the
-disclaimer below) provided that the following conditions are met:
-
-    * Redistributions of source code must retain the above copyright
-      notice, this list of conditions and the following disclaimer.
-
-    * Redistributions in binary form must reproduce the above
-      copyright notice, this list of conditions and the following
-      disclaimer in the documentation and/or other materials provided
-      with the distribution.
-
-    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
-      contributors may be used to endorse or promote products derived
-      from this software without specific prior written permission.
-
-NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
-WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
-GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
-IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
-OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
 #define LOG_TAG "LocSvc_LocationApiPbMsgConv"
@@ -1643,6 +1613,38 @@ uint64_t LocationApiPbMsgConv::getPBMaskForGnssDataMask(const uint64_t &gnssData
     return pbGnssDataMask;
 }
 
+uint64_t LocationApiPbMsgConv::getPBMaskForGnssDataValidityMask(
+    const uint64_t &gnssDataValidityMask) const {
+    uint64_t pbGnssDataValidityMask = 0;
+    if (gnssDataValidityMask & GNSS_LOC_DATA_JAMMER_IND_ARRAY_BIT) {
+        pbGnssDataValidityMask |= PB_GNSS_LOC_DATA_JAMMER_IND_ARRAY_BIT;
+    }
+    if (gnssDataValidityMask & GNSS_LOC_DATA_AGC_ARRAY_BIT) {
+        pbGnssDataValidityMask |= PB_GNSS_LOC_DATA_AGC_ARRAY_BIT;
+    }
+    if (gnssDataValidityMask & GNSS_LOC_DATA_AGC_STATUS_L1_BIT) {
+        pbGnssDataValidityMask |= PB_GNSS_LOC_DATA_AGC_STATUS_L1_BIT;
+    }
+    if (gnssDataValidityMask & GNSS_LOC_DATA_AGC_STATUS_L2_BIT) {
+        pbGnssDataValidityMask |= PB_GNSS_LOC_DATA_AGC_STATUS_L2_BIT;
+    }
+    if (gnssDataValidityMask & GNSS_LOC_DATA_AGC_STATUS_L5_BIT) {
+        pbGnssDataValidityMask |= PB_GNSS_LOC_DATA_AGC_STATUS_L5_BIT;
+    }
+    if (gnssDataValidityMask & GNSS_LOC_DATA_GPS_SYSTEM_TIME_BIT) {
+        pbGnssDataValidityMask |= PB_GNSS_LOC_DATA_GPS_SYSTEM_TIME_BIT;
+    }
+    if (gnssDataValidityMask & GNSS_LOC_DATA_SYSTEM_TICK_AT_GPS_TIME_BIT) {
+        pbGnssDataValidityMask |= PB_GNSS_LOC_DATA_SYSTEM_TICK_AT_GPS_TIME_BIT;
+    }
+    if (gnssDataValidityMask & GNSS_LOC_DATA_HW_CLK_FREQ_CORRECTION_BIT) {
+        pbGnssDataValidityMask |= PB_GNSS_LOC_DATA_HW_CLK_FREQ_CORRECTION_BIT;
+    }
+    LocApiPb_LOGv("LocApiPB: gnssDataValidityMask:%" PRIu64 ", pbGnssDataValidityMask:%" PRIu64,
+                  gnssDataValidityMask, pbGnssDataValidityMask);
+    return pbGnssDataValidityMask;
+}
+
 uint32_t LocationApiPbMsgConv::getPBMaskForGnssAidingDataSvMask(
         const uint32_t &gnssAidDataSvMask) const {
     uint32_t pbGnssAidDataSvMask = 0;
@@ -2827,6 +2829,38 @@ uint64_t LocationApiPbMsgConv::getGnssDataMaskFromPB(const uint64_t &pbGnssDataM
     LocApiPb_LOGv("LocApiPB: pbGnssDataMask:%" PRIu64", gnssDataMask:%" PRIu64,
             pbGnssDataMask, gnssDataMask);
     return gnssDataMask;
+}
+
+uint64_t LocationApiPbMsgConv::getGnssDataValidityMaskFromPB(
+    const uint64_t &pbGnssDataValidityMask) const {
+    uint64_t gnssDataValidityMask = 0;
+    if (pbGnssDataValidityMask & PB_GNSS_LOC_DATA_JAMMER_IND_ARRAY_BIT) {
+        gnssDataValidityMask |= GNSS_LOC_DATA_JAMMER_IND_ARRAY_BIT;
+    }
+    if (pbGnssDataValidityMask & PB_GNSS_LOC_DATA_AGC_ARRAY_BIT) {
+        gnssDataValidityMask |= GNSS_LOC_DATA_AGC_ARRAY_BIT;
+    }
+    if (pbGnssDataValidityMask & PB_GNSS_LOC_DATA_AGC_STATUS_L1_BIT) {
+        gnssDataValidityMask |= GNSS_LOC_DATA_AGC_STATUS_L1_BIT;
+    }
+    if (pbGnssDataValidityMask & PB_GNSS_LOC_DATA_AGC_STATUS_L2_BIT) {
+        gnssDataValidityMask |= GNSS_LOC_DATA_AGC_STATUS_L2_BIT;
+    }
+    if (pbGnssDataValidityMask & PB_GNSS_LOC_DATA_AGC_STATUS_L5_BIT) {
+        gnssDataValidityMask |= GNSS_LOC_DATA_AGC_STATUS_L5_BIT;
+    }
+    if (pbGnssDataValidityMask & PB_GNSS_LOC_DATA_GPS_SYSTEM_TIME_BIT) {
+        gnssDataValidityMask |= GNSS_LOC_DATA_GPS_SYSTEM_TIME_BIT;
+    }
+    if (pbGnssDataValidityMask & PB_GNSS_LOC_DATA_SYSTEM_TICK_AT_GPS_TIME_BIT) {
+        gnssDataValidityMask |= GNSS_LOC_DATA_SYSTEM_TICK_AT_GPS_TIME_BIT;
+    }
+    if (pbGnssDataValidityMask & PB_GNSS_LOC_DATA_HW_CLK_FREQ_CORRECTION_BIT) {
+        gnssDataValidityMask |= GNSS_LOC_DATA_HW_CLK_FREQ_CORRECTION_BIT;
+    }
+    LocApiPb_LOGv("LocApiPB: pbGnssDataValidityMask:%" PRIu64 ", gnssDataValidityMask:%" PRIu64,
+                  pbGnssDataValidityMask, gnssDataValidityMask);
+    return gnssDataValidityMask;
 }
 
 uint32_t LocationApiPbMsgConv::getLeapSecSysInfoMaskFromPB(
@@ -4696,6 +4730,28 @@ int LocationApiPbMsgConv::convertGnssDataNotifToPB(const GnssDataNotification &g
     pbGnssDataNotif->set_agcstatusl2(getPBEnumForAgcStatus(gnssDataNotif.agcStatusL2));
     // PBAgcStatus agcStatusL5 = 7;
     pbGnssDataNotif->set_agcstatusl5(getPBEnumForAgcStatus(gnssDataNotif.agcStatusL5));
+
+    // uint64 gnssDataValidityMask = 8;
+    pbGnssDataNotif->set_gnssdatavaliditymask(
+        getPBMaskForGnssDataValidityMask(gnssDataNotif.gnssDataValidityMask));
+
+    // PBLocApiGnssSystemTimeStructType gpsSystemTime = 9;
+    PBLocApiGnssSystemTimeStructType *pGpsSystemTime = pbGnssDataNotif->mutable_gpssystemtime();
+    if (nullptr != pGpsSystemTime) {
+        if (convertGnssSystemTimeStructTypeToPB(gnssDataNotif.gpsSystemTime, pGpsSystemTime)) {
+            LOC_LOGe("convertGnssSystemTimeStructTypeToPB failed");
+            free(pGpsSystemTime);
+            return 1;
+        }
+    } else {
+        LOC_LOGe("mutable_gpsSystemTime failed");
+        return 1;
+    }
+
+    // uint64 systemTickAtGpsTime = 10;
+    pbGnssDataNotif->set_systemtickatgpstime(gnssDataNotif.systemTickAtGpsTime);
+    // uint32 hwClkFreqCorrection = 11;
+    pbGnssDataNotif->set_hwclkfreqcorrection(gnssDataNotif.hwClkFreqCorrection);
     return 0;
 }
 
@@ -5952,6 +6008,24 @@ int LocationApiPbMsgConv::pbConvertToGnssDataNotification(
         LocApiPb_LOGd("LocApiPB: pbGnssDataNotif - jammerInd:%lf, agc:%lf, gnssDataMask: %" PRIu64,
                 gnssDataNotif.jammerInd[i], gnssDataNotif.agc[i], gnssDataNotif.gnssDataMask[i]);
     }
+
+    // PBAgcStatus agcStatusL1 = 5;
+    gnssDataNotif.agcStatusL1 = getEnumForPBAgcStatus(pbGnssDataNotif.agcstatusl1());
+    // PBAgcStatus agcStatusL2 = 6;
+    gnssDataNotif.agcStatusL2 = getEnumForPBAgcStatus(pbGnssDataNotif.agcstatusl2());
+    // PBAgcStatus agcStatusL5 = 7;
+    gnssDataNotif.agcStatusL5 = getEnumForPBAgcStatus(pbGnssDataNotif.agcstatusl5());
+
+    // uint64 gnssDataValidityMask = 8;
+    gnssDataNotif.gnssDataValidityMask =
+        getGnssDataValidityMaskFromPB(pbGnssDataNotif.gnssdatavaliditymask());
+    // PBLocApiGnssSystemTimeStructType gpsSystemTime = 9;
+    pbConvertToGnssSystemTimeStructType(pbGnssDataNotif.gpssystemtime(),
+                                        gnssDataNotif.gpsSystemTime);
+    // uint64 systemTickAtGpsTime = 10;
+    gnssDataNotif.systemTickAtGpsTime = pbGnssDataNotif.systemtickatgpstime();
+    // uint32 hwClkFreqCorrection = 11;
+    gnssDataNotif.hwClkFreqCorrection = pbGnssDataNotif.hwclkfreqcorrection();
     return 0;
 }
 
