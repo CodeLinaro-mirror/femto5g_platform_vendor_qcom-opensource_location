@@ -77,7 +77,7 @@ syntax = "proto3";
 import "LocationApiDataTypes.proto";
 
 option optimize_for = LITE_RUNTIME;
-
+option cc_enable_arenas = true;
 // ============================================================================
 // Proto file versioning
 // ============================================================================

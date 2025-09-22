@@ -69,6 +69,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 syntax = "proto3";
 
 option optimize_for = LITE_RUNTIME;
+option cc_enable_arenas = true;
 
 // ============================================================================
 // Proto file versioning

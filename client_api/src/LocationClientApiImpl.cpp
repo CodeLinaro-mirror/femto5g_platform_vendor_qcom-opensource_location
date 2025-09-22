@@ -98,6 +98,89 @@ uint32_t GeofenceImpl::nextId() {
     }
     return id;
 }
+struct StrView {
+    const char* data;
+    size_t      size;
+    StrView(const char* d, size_t s) : data(d), size(s) {}
+    std::string to_string() const { return std::string(data, size); }
+};
+using namespace google::protobuf;
+#define PARSE_FROM_ARENA_OR_RETURN(arena, MsgType, msgPtr, payload) \
+    MsgType* msgPtr = Arena::CreateMessage<MsgType>(&arena);        \
+    if (!(msgPtr)) {                                                \
+        LOC_LOGe("Failed to allocate " #MsgType " from arena!");    \
+        return;                                                     \
+    }                                                               \
+    if (!(msgPtr)->ParseFromString(payload)) {                      \
+        LOC_LOGe("Failed to parse " #MsgType " from payload!!");    \
+        return;                                                     \
+    }
+
+static GnssMeasurements gnssMeasurements;
+
+void resetGnssMeasurements() {
+    // Clear contents but retain allocated memory
+    gnssMeasurements.measurements.clear();
+    // Reset clock fields to default values
+    memset(&gnssMeasurements.clock, 0, sizeof(gnssMeasurements.clock));
+    gnssMeasurements.isNhz = false;
+}
+void cleanupGnssMeasurements() {
+    resetGnssMeasurements();
+    // Force deallocation of memory by shrinking to zero
+    std::vector<GnssMeasurementsData>().swap(gnssMeasurements.measurements);
+}
+
+static GnssLocation gnssLocation;
+static void resetGnssLocation() {
+    // Clear contents but retain allocated memory
+    gnssLocation.measUsageInfo.clear();
+    gnssLocation.dgnssStationId.clear();
+    // Reset other fields
+}
+static void cleanupGnssLocation() {
+    resetGnssLocation();
+    // Force deallocation of memory by shrinking to zero
+    std::vector<GnssMeasUsageInfo>().swap(gnssLocation.measUsageInfo);
+    std::vector<uint16_t>().swap(gnssLocation.dgnssStationId);
+}
+
+static std::vector<GnssLocation> engLocationsVector;
+static std::vector<uint8_t> extendedDataVector;
+static void resetEngineLocation()
+{
+    // Clear contents but retain allocated memory
+    engLocationsVector.clear();
+    extendedDataVector.clear();
+    // Reset other fields
+}
+static void cleanupEngineLocation() {
+    resetEngineLocation();
+    // Force deallocation of memory by shrinking to zero
+    std::vector<GnssLocation>().swap(engLocationsVector);
+    std::vector<uint8_t>().swap(extendedDataVector);
+}
+
+static std::vector<GnssSv> gnssSvsVector;
+static void resetGnssSv()
+{
+    // Clear contents but retain allocated memory
+    gnssSvsVector.clear();
+    // Reset other fields
+}
+static void cleanupGnssSv() {
+    resetGnssSv();
+    // Force deallocation of memory by shrinking to zero
+    std::vector<GnssSv>().swap(gnssSvsVector);
+}
+
+static void cleanupData()
+{
+    cleanupGnssMeasurements();
+    cleanupGnssLocation();
+    cleanupEngineLocation();
+    cleanupGnssSv();
+}
 
 /******************************************************************************
 Utilities
@@ -380,14 +463,13 @@ static void parseGnssMeasUsageInfo(const ::GnssLocationInfoNotification &halLoca
     if (halLocationInfo.numOfMeasReceived) {
 
         for (int idx = 0; idx < halLocationInfo.numOfMeasReceived; idx++) {
-            GnssMeasUsageInfo measUsageInfo;
-
+            clientMeasUsageInfo.emplace_back();
+            GnssMeasUsageInfo& measUsageInfo = clientMeasUsageInfo.back();
             measUsageInfo.gnssSignalType = parseGnssSignalType(
                     halLocationInfo.measUsageInfo[idx].gnssSignalType);
             measUsageInfo.gnssConstellation = (Gnss_LocSvSystemEnumType)
                     halLocationInfo.measUsageInfo[idx].gnssConstellation;
             measUsageInfo.gnssSvId = halLocationInfo.measUsageInfo[idx].gnssSvId;
-            clientMeasUsageInfo.push_back(measUsageInfo);
         }
     }
 }
@@ -620,10 +702,9 @@ static GnssSystemTime parseSystemTime(const ::GnssSystemTime &halSystemTime) {
     return systemTime;
 }
 
-static GnssLocation parseLocationInfo(const ::GnssLocationInfoNotification &halLocationInfo) {
+static void parseLocationInfo(const ::GnssLocationInfoNotification &halLocationInfo,
+        GnssLocation &locationInfo) {
 
-    GnssLocation locationInfo;
-    memset(&locationInfo, 0, sizeof(locationInfo));
     parseLocation(halLocationInfo.location, locationInfo);
     uint64_t flags = 0;
 
@@ -820,7 +901,9 @@ static GnssLocation parseLocationInfo(const ::GnssLocationInfoNotification &halL
     locationInfo.protectVertical =  halLocationInfo.protectVertical;
     for (uint32_t i = 0; (i < halLocationInfo.numOfDgnssStationId) &&
             (DGNSS_STATION_ID_MAX > i); i++) {
-        locationInfo.dgnssStationId.push_back(halLocationInfo.dgnssStationId[i]);
+        locationInfo.dgnssStationId.emplace_back();
+        uint16_t& dgnssStationId = locationInfo.dgnssStationId.back();
+        dgnssStationId = halLocationInfo.dgnssStationId[i];
     }
 
     flags = 0;
@@ -859,12 +942,9 @@ static GnssLocation parseLocationInfo(const ::GnssLocationInfoNotification &halL
             halLocationInfo.bodyFrameData, halLocationInfo.bodyFrameDataExt);
     locationInfo.gnssSystemTime = parseSystemTime(halLocationInfo.gnssSystemTime);
     locationInfo.leapSeconds = halLocationInfo.leapSeconds;
-
-    return locationInfo;
 }
 
-static GnssSv parseGnssSv(const ::GnssSv &halGnssSv) {
-    GnssSv gnssSv;
+static void parseGnssSv(const ::GnssSv &halGnssSv, GnssSv &gnssSv) {
 
     gnssSv.svId = halGnssSv.svId;
     switch (halGnssSv.type) {
@@ -938,13 +1018,9 @@ static GnssSv parseGnssSv(const ::GnssSv &halGnssSv) {
     gnssSv.gnssSignalTypeMask = parseGnssSignalType(halGnssSv.gnssSignalTypeMask);
     gnssSv.gloFrequency = halGnssSv.gloFrequency;
     gnssSv.basebandCarrierToNoiseDbHz = halGnssSv.basebandCarrierToNoiseDbHz;
-
-    return gnssSv;
 }
 
-static GnssData parseGnssData(const ::GnssDataNotification &halGnssData) {
-
-    GnssData gnssData;
+static void parseGnssData(const ::GnssDataNotification &halGnssData, GnssData &gnssData) {
 
     for (int sig = GNSS_LOC_SIGNAL_TYPE_GPS_L1CA;
          sig < GNSS_LOC_MAX_NUMBER_OF_SIGNAL_TYPES; sig++) {
@@ -958,7 +1034,6 @@ static GnssData parseGnssData(const ::GnssDataNotification &halGnssData) {
             LOC_LOGv("agc[%d]=%f", sig, gnssData.agc[sig]);
         }
     }
-    return gnssData;
 }
 
 static GnssMeasurementsDataFlagsMask parseGnssMeasDataValidityFlags(
@@ -1036,64 +1111,54 @@ static GnssMeasurementsDataFlagsMask parseGnssMeasDataValidityFlags(
     return (GnssMeasurementsDataFlagsMask) flags;
 }
 
-static GnssMeasurements parseGnssMeasurements(const ::GnssMeasurementsNotification
-            &halGnssMeasurements) {
-    GnssMeasurements gnssMeasurements = {};
+static void parseGnssMeasurements(const ::GnssMeasurementsNotification& halGnssMeasurements,
+                                  GnssMeasurements& gnssMeasurements) {
 
-    for (int meas = 0; meas < halGnssMeasurements.count; meas++) {
-        GnssMeasurementsData measurement;
-
-        measurement.flags = (GnssMeasurementsDataFlagsMask)
-                parseGnssMeasDataValidityFlags(halGnssMeasurements.measurements[meas].flags);
-        measurement.svId = halGnssMeasurements.measurements[meas].svId;
-        measurement.svType =
-                (location_client::GnssSvType)halGnssMeasurements.measurements[meas].svType;
-        if ((GNSS_SV_TYPE_GLONASS == measurement.svType) && isGloSlotUnknown(measurement.svId)) {
-            // OSN is not known, report FCN
-            measurement.svId = halGnssMeasurements.measurements[meas].gloFrequency + 96;
-        }
-        measurement.timeOffsetNs = halGnssMeasurements.measurements[meas].timeOffsetNs;
-        measurement.stateMask = (GnssMeasurementsStateMask)
-                halGnssMeasurements.measurements[meas].stateMask;
-        measurement.receivedSvTimeNs = halGnssMeasurements.measurements[meas].receivedSvTimeNs;
-        measurement.receivedSvTimeUncertaintyNs =
-                halGnssMeasurements.measurements[meas].receivedSvTimeUncertaintyNs;
-        measurement.carrierToNoiseDbHz =
-                halGnssMeasurements.measurements[meas].carrierToNoiseDbHz;
-        measurement.pseudorangeRateMps =
-                halGnssMeasurements.measurements[meas].pseudorangeRateMps;
-        measurement.pseudorangeRateUncertaintyMps =
-                halGnssMeasurements.measurements[meas].pseudorangeRateUncertaintyMps;
-        measurement.adrStateMask = (GnssMeasurementsAdrStateMask)
-                halGnssMeasurements.measurements[meas].adrStateMask;
-        measurement.adrMeters = halGnssMeasurements.measurements[meas].adrMeters;
-        measurement.adrUncertaintyMeters =
-                halGnssMeasurements.measurements[meas].adrUncertaintyMeters;
-        measurement.carrierFrequencyHz =
-                halGnssMeasurements.measurements[meas].carrierFrequencyHz;
-        measurement.carrierCycles = halGnssMeasurements.measurements[meas].carrierCycles;
-        measurement.carrierPhase = halGnssMeasurements.measurements[meas].carrierPhase;
-        measurement.carrierPhaseUncertainty =
-                halGnssMeasurements.measurements[meas].carrierPhaseUncertainty;
-        measurement.multipathIndicator = (location_client::GnssMeasurementsMultipathIndicator)
-                halGnssMeasurements.measurements[meas].multipathIndicator;
-        measurement.signalToNoiseRatioDb =
-                halGnssMeasurements.measurements[meas].signalToNoiseRatioDb;
-        measurement.agcLevelDb = halGnssMeasurements.measurements[meas].agcLevelDb;
-        measurement.gnssSignalType =
-                parseGnssSignalType(halGnssMeasurements.measurements[meas].gnssSignalType);
-
-        measurement.basebandCarrierToNoiseDbHz =
-               halGnssMeasurements.measurements[meas].basebandCarrierToNoiseDbHz;
-        measurement.fullInterSignalBiasNs =
-               halGnssMeasurements.measurements[meas].fullInterSignalBiasNs;
-        measurement.fullInterSignalBiasUncertaintyNs =
-               halGnssMeasurements.measurements[meas].fullInterSignalBiasUncertaintyNs;
-
-        gnssMeasurements.measurements.push_back(measurement);
+    if (gnssMeasurements.measurements.capacity() < halGnssMeasurements.count) {
+        gnssMeasurements.measurements.reserve(halGnssMeasurements.count);
     }
-    gnssMeasurements.clock.flags =
-            (GnssMeasurementsClockFlagsMask) halGnssMeasurements.clock.flags;
+
+    for (int meas = 0; meas < halGnssMeasurements.count; ++meas) {
+        const auto& src = halGnssMeasurements.measurements[meas];
+
+        gnssMeasurements.measurements.emplace_back();
+        GnssMeasurementsData& measurement = gnssMeasurements.measurements.back();
+        memset(&measurement, 0, sizeof(measurement));
+        measurement.flags =
+                (GnssMeasurementsDataFlagsMask)parseGnssMeasDataValidityFlags(src.flags);
+        measurement.svId = src.svId;
+        measurement.svType = (location_client::GnssSvType)src.svType;
+
+        if ((GNSS_SV_TYPE_GLONASS == measurement.svType) && isGloSlotUnknown(measurement.svId)) {
+            measurement.svId = src.gloFrequency + 96;
+        }
+
+        measurement.timeOffsetNs = src.timeOffsetNs;
+        measurement.stateMask = (GnssMeasurementsStateMask)src.stateMask;
+        measurement.receivedSvTimeNs = src.receivedSvTimeNs;
+        measurement.receivedSvTimeUncertaintyNs = src.receivedSvTimeUncertaintyNs;
+        measurement.carrierToNoiseDbHz = src.carrierToNoiseDbHz;
+        measurement.pseudorangeRateMps = src.pseudorangeRateMps;
+        measurement.pseudorangeRateUncertaintyMps = src.pseudorangeRateUncertaintyMps;
+        measurement.adrStateMask = (GnssMeasurementsAdrStateMask)src.adrStateMask;
+        measurement.adrMeters = src.adrMeters;
+        measurement.adrUncertaintyMeters = src.adrUncertaintyMeters;
+        measurement.carrierFrequencyHz = src.carrierFrequencyHz;
+        measurement.carrierCycles = src.carrierCycles;
+        measurement.carrierPhase = src.carrierPhase;
+        measurement.carrierPhaseUncertainty = src.carrierPhaseUncertainty;
+        measurement.multipathIndicator =
+            (location_client::GnssMeasurementsMultipathIndicator)src.multipathIndicator;
+        measurement.signalToNoiseRatioDb = src.signalToNoiseRatioDb;
+        measurement.agcLevelDb = src.agcLevelDb;
+        measurement.gnssSignalType = parseGnssSignalType(src.gnssSignalType);
+        measurement.basebandCarrierToNoiseDbHz = src.basebandCarrierToNoiseDbHz;
+        measurement.fullInterSignalBiasNs = src.fullInterSignalBiasNs;
+        measurement.fullInterSignalBiasUncertaintyNs = src.fullInterSignalBiasUncertaintyNs;
+    }
+
+    // Update clock and flags
+    gnssMeasurements.clock.flags = (GnssMeasurementsClockFlagsMask)halGnssMeasurements.clock.flags;
     gnssMeasurements.clock.leapSecond = halGnssMeasurements.clock.leapSecond;
     gnssMeasurements.clock.timeNs = halGnssMeasurements.clock.timeNs;
     gnssMeasurements.clock.timeUncertaintyNs = halGnssMeasurements.clock.timeUncertaintyNs;
@@ -1105,8 +1170,6 @@ static GnssMeasurements parseGnssMeasurements(const ::GnssMeasurementsNotificati
     gnssMeasurements.clock.hwClockDiscontinuityCount =
             halGnssMeasurements.clock.hwClockDiscontinuityCount;
     gnssMeasurements.isNhz = halGnssMeasurements.isNhz;
-
-    return gnssMeasurements;
 }
 
 static LocationResponse parseLocationError(::LocationError error) {
@@ -1641,7 +1704,7 @@ void LocationClientApiImpl::destroy() {
                     LOC_LOGe("LocAPIClientDeregisterReqMsg serializeToProtobuf failed");
                 }
             }
-
+            cleanupData();
             if (mApiImpl->mMsgTask) {
                 mApiImpl->mMsgTask->destroy();
             }
@@ -2610,19 +2673,19 @@ void IpcListener::onReceive(const char* data, uint32_t length,
 
         virtual ~OnReceiveHandler() {}
         void proc() const {
+            // Create a thread-local Arena to reuse across cases
+            static thread_local Arena arenaHeader;
+            // Reset the arena before each parse to reclaim memory
+            arenaHeader.Reset();
             // Protobuff Encoding enabled, so we need to convert the message from proto
             // encoded format to local structure
-            PBLocAPIMsgHeader pbLocApiMsg;
-            if (0 == pbLocApiMsg.ParseFromString(mMsgData)) {
-                LOC_LOGe("Failed to parse pbLocApiMsg from input stream!! length: %u",
-                        mMsgData.length());
-                return;
-            }
+            PARSE_FROM_ARENA_OR_RETURN(arenaHeader, PBLocAPIMsgHeader,
+                        pbLocApiMsg, mMsgData);
 
-            ELocMsgID eLocMsgid = mApiImpl.mPbufMsgConv.getEnumForPBELocMsgID(pbLocApiMsg.msgid());
-            string sockName = pbLocApiMsg.msocketname();
-            uint32_t msgVer = pbLocApiMsg.msgversion();
-            uint32_t payloadSize = pbLocApiMsg.payloadsize();
+            ELocMsgID eLocMsgid = mApiImpl.mPbufMsgConv.getEnumForPBELocMsgID(pbLocApiMsg->msgid());
+            const string &sockName = pbLocApiMsg->msocketname();
+            uint32_t msgVer = pbLocApiMsg->msgversion();
+            uint32_t payloadSize = pbLocApiMsg->payloadsize();
             // pbLocApiMsg.payload() contains the payload data.
 
             LOC_LOGi(">-- onReceive Rcvd msg id: %d, sockname: %s, payload size: %d", eLocMsgid,
@@ -2633,13 +2696,17 @@ void IpcListener::onReceive(const char* data, uint32_t length,
             if (false == locApiMsg.isValidServerMsg(payloadSize)) {
                 return;
             }
+            // Create a thread-local Arena to reuse across cases
+            static thread_local Arena arena;
+            // Reset the arena before each parse to reclaim memory
+            arena.Reset();
 
             switch (locApiMsg.msgId) {
             case E_LOCAPI_CAPABILILTIES_MSG_ID:
             {
                 LOC_LOGd("<<< capabilities indication");
                 PBLocAPICapabilitiesIndMsg pbLocApiCapIndMsg;
-                if (0 == pbLocApiCapIndMsg.ParseFromString(pbLocApiMsg.payload())) {
+                if (0 == pbLocApiCapIndMsg.ParseFromString(pbLocApiMsg->payload())) {
                     LOC_LOGe("Failed to parse pbLocApiCapIndMsg from payload!!");
                     return;
                 }
@@ -2670,7 +2737,7 @@ void IpcListener::onReceive(const char* data, uint32_t length,
             {
                 LOC_LOGd("<<< response message %d\n", locApiMsg.msgId);
                 PBLocAPIGenericRespMsg pbLocApiGenericRsp;
-                if (0 == pbLocApiGenericRsp.ParseFromString(pbLocApiMsg.payload())) {
+                if (0 == pbLocApiGenericRsp.ParseFromString(pbLocApiMsg->payload())) {
                     LOC_LOGe("Failed to parse pbLocApiGenericRsp from payload!!");
                     return;
                 }
@@ -2691,7 +2758,7 @@ void IpcListener::onReceive(const char* data, uint32_t length,
             {
                 LOC_LOGd("<<< collective response message, msgId = %d", locApiMsg.msgId);
                 PBLocAPICollectiveRespMsg pbLocApiCollctvRespMsg;
-                if (0 == pbLocApiCollctvRespMsg.ParseFromString(pbLocApiMsg.payload())) {
+                if (0 == pbLocApiCollctvRespMsg.ParseFromString(pbLocApiMsg->payload())) {
                     LOC_LOGe("Failed to parse pbLocApiCollctvRespMsg from payload!!");
                     return;
                 }
@@ -2722,17 +2789,15 @@ void IpcListener::onReceive(const char* data, uint32_t length,
             case E_LOCAPI_LOCATION_MSG_ID:
             {
                 LOC_LOGd("<<< message = location");
-                PBLocAPILocationIndMsg pbLocApiLocIndMsg;
-                if (0 == pbLocApiLocIndMsg.ParseFromString(pbLocApiMsg.payload())) {
-                    LOC_LOGe("Failed to parse pbLocApiLocIndMsg from payload!!");
-                    return;
-                }
-                LocAPILocationIndMsg msg(sockName.c_str(), pbLocApiLocIndMsg,
-                        &mApiImpl.mPbufMsgConv);
                 LocationCallbacksMask tempMask =
                         (E_LOC_CB_DISTANCE_BASED_TRACKING_BIT | E_LOC_CB_SIMPLE_LOCATION_INFO_BIT);
                 if ((mApiImpl.mSessionId != LOCATION_CLIENT_SESSION_ID_INVALID) &&
                         (mApiImpl.mCallbacksMask & tempMask)) {
+
+                    PARSE_FROM_ARENA_OR_RETURN(arena, PBLocAPILocationIndMsg,
+                                pbLocApiLocIndMsg, pbLocApiMsg->payload());
+                    LocAPILocationIndMsg msg(sockName.c_str(), *pbLocApiLocIndMsg,
+                            &mApiImpl.mPbufMsgConv);
                     const LocAPILocationIndMsg* pLocationIndMsg = (LocAPILocationIndMsg*)(&msg);
                     Location location = parseLocation(pLocationIndMsg->locationNotification);
                     if (mApiImpl.mLocationCb) {
@@ -2766,7 +2831,7 @@ void IpcListener::onReceive(const char* data, uint32_t length,
                 LOC_LOGd("<<< message = batching");
                 if (mApiImpl.mCallbacksMask & E_LOC_CB_BATCHING_BIT) {
                     PBLocAPIBatchingIndMsg pbLocApiBatchIndMsg;
-                    if (0 == pbLocApiBatchIndMsg.ParseFromString(pbLocApiMsg.payload())) {
+                    if (0 == pbLocApiBatchIndMsg.ParseFromString(pbLocApiMsg->payload())) {
                         LOC_LOGe("Failed to parse pbLocApiBatchIndMsg from payload!!");
                         return;
                     }
@@ -2804,7 +2869,7 @@ void IpcListener::onReceive(const char* data, uint32_t length,
                 LOC_LOGd("<<< message = geofence breach");
                 if (mApiImpl.mCallbacksMask & E_LOCAPI_GEOFENCE_BREACH_MSG_ID) {
                     PBLocAPIGeofenceBreachIndMsg pbLocApiGfBreachIndMsg;
-                    if (0 == pbLocApiGfBreachIndMsg.ParseFromString(pbLocApiMsg.payload())) {
+                    if (0 == pbLocApiGfBreachIndMsg.ParseFromString(pbLocApiMsg->payload())) {
                         LOC_LOGe("Failed to parse pbLocApiGfBreachIndMsg from payload!!");
                         return;
                     }
@@ -2835,17 +2900,15 @@ void IpcListener::onReceive(const char* data, uint32_t length,
                 LOC_LOGd("<<< message = location info");
                 if ((mApiImpl.mSessionId != LOCATION_CLIENT_SESSION_ID_INVALID) &&
                         (mApiImpl.mCallbacksMask & E_LOC_CB_GNSS_LOCATION_INFO_BIT)) {
-                    PBLocAPILocationInfoIndMsg pbLocApiLocInfoIndMsg;
-                    if (0 == pbLocApiLocInfoIndMsg.ParseFromString(pbLocApiMsg.payload())) {
-                        LOC_LOGe("Failed to parse pbLocApiLocInfoIndMsg from payload!!");
-                        return;
-                    }
-                    LocAPILocationInfoIndMsg msg(sockName.c_str(), pbLocApiLocInfoIndMsg,
+                    PARSE_FROM_ARENA_OR_RETURN(arena, PBLocAPILocationInfoIndMsg,
+                            pbLocApiLocInfoIndMsg, pbLocApiMsg->payload());
+                    LocAPILocationInfoIndMsg msg(sockName.c_str(), *pbLocApiLocInfoIndMsg,
                             &mApiImpl.mPbufMsgConv);
                     const LocAPILocationInfoIndMsg* pLocationInfoIndMsg =
                         (LocAPILocationInfoIndMsg*)(&msg);
-                    GnssLocation gnssLocation =
-                        parseLocationInfo(pLocationInfoIndMsg->gnssLocationInfoNotification);
+                    resetGnssLocation();
+                    parseLocationInfo(pLocationInfoIndMsg->gnssLocationInfoNotification,
+                            gnssLocation);
 
                     if (mApiImpl.mGnssLocationCb) {
                         mApiImpl.mGnssLocationCb(gnssLocation);
@@ -2860,13 +2923,10 @@ void IpcListener::onReceive(const char* data, uint32_t length,
 
                 if ((mApiImpl.mSessionId != LOCATION_CLIENT_SESSION_ID_INVALID) &&
                         (mApiImpl.mCallbacksMask & E_LOC_CB_ENGINE_LOCATIONS_INFO_BIT)) {
-                    PBLocAPIEngineLocationsInfoIndMsg pbLocApiEngLocInfoIndMsg;
-                    if (0 == pbLocApiEngLocInfoIndMsg.ParseFromString(pbLocApiMsg.payload())) {
-                        LOC_LOGe("Failed to parse pbLocApiEngLocInfoIndMsg from payload!!");
-                        return;
-                    }
+                    PARSE_FROM_ARENA_OR_RETURN(arena, PBLocAPIEngineLocationsInfoIndMsg,
+                            pbLocApiEngLocInfoIndMsg, pbLocApiMsg->payload());
                     LocAPIEngineLocationsInfoIndMsg msg(sockName.c_str(),
-                            pbLocApiEngLocInfoIndMsg,
+                            *pbLocApiEngLocInfoIndMsg,
                             &mApiImpl.mPbufMsgConv);
                     const LocAPIEngineLocationsInfoIndMsg* pEngLocationsInfoIndMsg =
                             (LocAPIEngineLocationsInfoIndMsg*)(&msg);
@@ -2876,12 +2936,12 @@ void IpcListener::onReceive(const char* data, uint32_t length,
                                 locApiMsg.msgId);
                     }
 
-                    std::vector<GnssLocation> engLocationsVector;
-                    std::vector<uint8_t> extendedDataVector;
-                    for (int i=0; i< pEngLocationsInfoIndMsg->count; i++) {
-                        GnssLocation gnssLocation =
-                            parseLocationInfo(pEngLocationsInfoIndMsg->engineLocationsInfo[i]);
-                        engLocationsVector.push_back(gnssLocation);
+                    resetEngineLocation();
+                    for (int i = 0; i < pEngLocationsInfoIndMsg->count; i++) {
+                        engLocationsVector.emplace_back();
+                        GnssLocation& gnssLocation = engLocationsVector.back();
+                        parseLocationInfo(pEngLocationsInfoIndMsg->engineLocationsInfo[i],
+                                gnssLocation);
                         mApiImpl.mLogger.log(gnssLocation, mApiImpl.mCapsMask);
                         //check SPE engine has ExtendedData data payload
                         if ((LOC_OUTPUT_ENGINE_SPE == gnssLocation.locOutputEngType) &&
@@ -2917,20 +2977,17 @@ void IpcListener::onReceive(const char* data, uint32_t length,
             {
                 LOC_LOGd("<<< message = sv");
                 if (mApiImpl.mCallbacksMask & E_LOC_CB_GNSS_SV_BIT) {
-                    PBLocAPISatelliteVehicleIndMsg pbLocApiSatVehIndMsg;
-                    if (0 == pbLocApiSatVehIndMsg.ParseFromString(pbLocApiMsg.payload())) {
-                        LOC_LOGe("Failed to parse pbLocApiSatVehIndMsg from payload!!");
-                        return;
-                    }
-                    LocAPISatelliteVehicleIndMsg msg(sockName.c_str(), pbLocApiSatVehIndMsg,
+                    PARSE_FROM_ARENA_OR_RETURN(arena, PBLocAPISatelliteVehicleIndMsg,
+                            pbLocApiSatVehIndMsg, pbLocApiMsg->payload());
+                    LocAPISatelliteVehicleIndMsg msg(sockName.c_str(), *pbLocApiSatVehIndMsg,
                             &mApiImpl.mPbufMsgConv);
                     const LocAPISatelliteVehicleIndMsg* pSvIndMsg =
                         (LocAPISatelliteVehicleIndMsg*)(&msg);
-                    std::vector<GnssSv> gnssSvsVector;
-                    for (int i=0; i< pSvIndMsg->gnssSvNotification.count; i++) {
-                        GnssSv gnssSv;
-                        gnssSv = parseGnssSv(pSvIndMsg->gnssSvNotification.gnssSvs[i]);
-                        gnssSvsVector.push_back(gnssSv);
+                    resetGnssSv();
+                    for (int i = 0; i < pSvIndMsg->gnssSvNotification.count; i++) {
+                        gnssSvsVector.emplace_back();
+                        GnssSv &gnssSv = gnssSvsVector.back();
+                        parseGnssSv(pSvIndMsg->gnssSvNotification.gnssSvs[i], gnssSv);
                     }
                     if (mApiImpl.mGnssSvCb) {
                         mApiImpl.mGnssSvCb(gnssSvsVector);
@@ -2946,25 +3003,33 @@ void IpcListener::onReceive(const char* data, uint32_t length,
                         (mApiImpl.mCallbacksMask & E_LOC_CB_GNSS_NMEA_BIT) &&
                          mApiImpl.mGnssNmeaCb) {
 
-                    PBLocAPINmeaIndMsg pbLocApiNmeaIndMsg;
-                    if (0 == pbLocApiNmeaIndMsg.ParseFromString(pbLocApiMsg.payload())) {
-                        LOC_LOGe("Failed to parse pbLocApiNmeaIndMsg from payload!!");
-                        return;
-                    }
-                    LocAPINmeaIndMsg msg(sockName.c_str(), pbLocApiNmeaIndMsg,
+                    PARSE_FROM_ARENA_OR_RETURN(arena, PBLocAPINmeaIndMsg,
+                            pbLocApiNmeaIndMsg, pbLocApiMsg->payload());
+                    LocAPINmeaIndMsg msg(sockName.c_str(), *pbLocApiNmeaIndMsg,
                             &mApiImpl.mPbufMsgConv);
                     // nmea is variable length, can not be checked
                     const LocAPINmeaIndMsg* pNmeaIndMsg = (LocAPINmeaIndMsg*)(&msg);
                     uint64_t timestamp = pNmeaIndMsg->gnssNmeaNotification.timestamp;
-                    std::string nmea(pNmeaIndMsg->gnssNmeaNotification.nmea);
+                    const std::string &nmea = pNmeaIndMsg->gnssNmeaNotification.nmea;
                     LOC_LOGv("<<< message = nmea[%s]", nmea.c_str());
-                    std::stringstream ss(nmea);
-                    std::string each;
-                    while(std::getline(ss, each, '\n')) {
-                        each += '\n';
-                        mApiImpl.mGnssNmeaCb(timestamp, each);
+                    const char* raw = nmea.data();          // points into the original string
+                    size_t      len = nmea.size();
+                    size_t      pos = 0;
+
+                    while (pos < len) {
+                        const char* nl =
+                                static_cast<const char*>(memchr(raw + pos, '\n', len - pos));
+                        size_t lineLen = nl ? (nl - (raw + pos) + 1)   // include '\n'
+                                            : (len - pos);            // last line without '\n'
+
+                        StrView line(raw + pos, lineLen);               // no allocation
+                        // Callback expects std::string, so allocate only once per line
+                        mApiImpl.mGnssNmeaCb(timestamp, line.to_string());
+
+                        pos += lineLen;
                     }
-                    mApiImpl.mLogger.log(timestamp, nmea.size(), nmea.c_str());
+                    //mApiImpl.mLogger.log(timestamp, nmea.size(), nmea.c_str());
+                    mApiImpl.mLogger.log(timestamp, len, raw);
                 }
                 break;
             }
@@ -2974,16 +3039,13 @@ void IpcListener::onReceive(const char* data, uint32_t length,
                 LOC_LOGd("<<< message = data");
                 if ((mApiImpl.mSessionId != LOCATION_CLIENT_SESSION_ID_INVALID) &&
                         (mApiImpl.mCallbacksMask & E_LOC_CB_GNSS_DATA_BIT)) {
-                    PBLocAPIDataIndMsg pbLocApiDataIndMsg;
-                    if (0 == pbLocApiDataIndMsg.ParseFromString(pbLocApiMsg.payload())) {
-                        LOC_LOGe("Failed to parse pbLocApiDataIndMsg from payload!!");
-                        return;
-                    }
-                    LocAPIDataIndMsg msg(sockName.c_str(), pbLocApiDataIndMsg,
+                    PARSE_FROM_ARENA_OR_RETURN(arena, PBLocAPIDataIndMsg,
+                            pbLocApiDataIndMsg, pbLocApiMsg->payload());
+                    LocAPIDataIndMsg msg(sockName.c_str(), *pbLocApiDataIndMsg,
                             &mApiImpl.mPbufMsgConv);
                     const LocAPIDataIndMsg* pDataIndMsg = (LocAPIDataIndMsg*)(&msg);
-                    GnssData gnssData =
-                        parseGnssData(pDataIndMsg->gnssDataNotification);
+                    GnssData gnssData = {};
+                    parseGnssData(pDataIndMsg->gnssDataNotification, gnssData);
                     if (mApiImpl.mGnssDataCb) {
                         mApiImpl.mGnssDataCb(gnssData);
                     }
@@ -2996,17 +3058,15 @@ void IpcListener::onReceive(const char* data, uint32_t length,
                 LOC_LOGd("<<< message = measurements");
                 if ((mApiImpl.mSessionId != LOCATION_CLIENT_SESSION_ID_INVALID) &&
                     (mApiImpl.mCallbacksMask & E_LOC_CB_GNSS_MEAS_BIT)) {
-
-                    PBLocAPIMeasIndMsg pbLocApiMeasIndMsg;
-                    if (0 == pbLocApiMeasIndMsg.ParseFromString(pbLocApiMsg.payload())) {
-                        LOC_LOGe("Failed to parse pbLocApiMeasIndMsg from payload!!");
-                        return;
-                    }
-                    LocAPIMeasIndMsg msg(sockName.c_str(), pbLocApiMeasIndMsg,
+                    // Allocate message from arena
+                    PARSE_FROM_ARENA_OR_RETURN(arena, PBLocAPIMeasIndMsg,
+                            pbLocApiMeasIndMsg, pbLocApiMsg->payload());
+                    LocAPIMeasIndMsg msg(sockName.c_str(), *pbLocApiMeasIndMsg,
                             &mApiImpl.mPbufMsgConv);
                     const LocAPIMeasIndMsg* pMeasIndMsg = (LocAPIMeasIndMsg*)(&msg);
-                    GnssMeasurements gnssMeasurements =
-                        parseGnssMeasurements(pMeasIndMsg->gnssMeasurementsNotification);
+                    resetGnssMeasurements();
+                    parseGnssMeasurements(pMeasIndMsg->gnssMeasurementsNotification,
+                        gnssMeasurements);
                     if (gnssMeasurements.isNhz) {
                         if ((mApiImpl.mCallbacksMask & E_LOC_CB_GNSS_NHZ_MEAS_BIT) &&
                                 (nullptr != mApiImpl.mGnssNHzMeasurementsCb)) {
@@ -3028,7 +3088,7 @@ void IpcListener::onReceive(const char* data, uint32_t length,
             {
                 LOC_LOGd("<<< message = GNSS power consumption\n");
                 PBLocAPIGnssEnergyConsumedIndMsg pbLocApiGnssEnergyConsmdIndMsg;
-                if (0 == pbLocApiGnssEnergyConsmdIndMsg.ParseFromString(pbLocApiMsg.payload())) {
+                if (0 == pbLocApiGnssEnergyConsmdIndMsg.ParseFromString(pbLocApiMsg->payload())) {
                     LOC_LOGe("Failed to parse pbLocApiGnssEnergyConsmdIndMsg from payload!!");
                     return;
                 }
@@ -3060,7 +3120,7 @@ void IpcListener::onReceive(const char* data, uint32_t length,
                 LOC_LOGd("<<< message = location system info");
                 if (mApiImpl.mCallbacksMask & E_LOC_CB_SYSTEM_INFO_BIT) {
                     PBLocAPILocationSystemInfoIndMsg pbLocApiLocSysInfoIndMsg;
-                    if (0 == pbLocApiLocSysInfoIndMsg.ParseFromString(pbLocApiMsg.payload())) {
+                    if (0 == pbLocApiLocSysInfoIndMsg.ParseFromString(pbLocApiMsg->payload())) {
                         LOC_LOGe("Failed to parse pbLocApiLocSysInfoIndMsg from payload!!");
                         return;
                     }
@@ -3081,7 +3141,7 @@ void IpcListener::onReceive(const char* data, uint32_t length,
             {
                 LOC_LOGd("<<< ping message %d", locApiMsg.msgId);
                 PBLocAPIPingTestIndMsg pbLocApiPingTestIndMsg;
-                if (0 == pbLocApiPingTestIndMsg.ParseFromString(pbLocApiMsg.payload())) {
+                if (0 == pbLocApiPingTestIndMsg.ParseFromString(pbLocApiMsg->payload())) {
                     LOC_LOGe("Failed to parse pbLocApiPingTestIndMsg from payload!!");
                     return;
                 }
@@ -3100,7 +3160,7 @@ void IpcListener::onReceive(const char* data, uint32_t length,
                 if ((mApiImpl.mSessionId != LOCATION_CLIENT_SESSION_ID_INVALID) &&
                         (mApiImpl.mPositionSessionResponseCbPending == false)) {
                     PBLocAPIEphIndMsg pbLocApiEphIndMsg;
-                    if (0 == pbLocApiEphIndMsg.ParseFromString(pbLocApiMsg.payload())) {
+                    if (0 == pbLocApiEphIndMsg.ParseFromString(pbLocApiMsg->payload())) {
                         LOC_LOGe("Failed to parse pbLocApiEphIndMsg from payload!!");
                         return;
                     }
