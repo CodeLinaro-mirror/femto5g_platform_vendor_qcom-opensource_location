@@ -15,45 +15,18 @@
 #include <stdlib.h>
 #include <time.h>
 #include <new>
-
 #include <base_util/log.h>
 #include <base_util/sync.h>
 #include <list>
 #include <base_util/time_routines.h>
 #include "log_util.h"
 
-#define DEFAULT_ERROR_OUTPUT EO_STDOUT
-
 #if defined (USE_ANDROID_LOGGING)  || defined (__ANDROID__)
 // Android and LE targets with logcat support
 #define LOG_NDEBUG 0
-
-// these 2 symbols are needed on ICS for DEBUG- and INFO-level
-// log messages to be processed. They are not neeeded on JB
-#define LOG_NDEBUG 0
-#define LOG_NIDEBUG 0
-
 #define LOG_TAG NULL
-
-#ifdef __ANDROID_NDK__
-#include <android/log.h>
-
-#define ANDROID_LOG __android_log_print
-#define LOG_VERBOSE ANDROID_LOG_VERBOSE
-#define LOG_DEBUG ANDROID_LOG_DEBUG
-#define LOG_INFO ANDROID_LOG_INFO
-#define LOG_WARN ANDROID_LOG_WARN
-#define LOG_ERROR ANDROID_LOG_ERROR
-#else // #ifdef __ANDROID_NDK__
 #include <utils/Log.h>
-#ifdef ALOG
 #define ANDROID_LOG ALOG
-#else // #ifdef ALOG
-#define ANDROID_LOG LOG
-#endif // #ifdef ALOG
-#endif // #ifdef __ANDROID_NDK__
-#undef DEFAULT_ERROR_OUTPUT
-#define DEFAULT_ERROR_OUTPUT EO_ANDROID
 #endif // #if defined (USE_ANDROID_LOGGING)  || defined (__ANDROID__)
 
 namespace qc_loc_fw
@@ -73,7 +46,6 @@ class LocalLogLevelItem
 private:
   char * local_tag;
   ERROR_LEVEL local_log_level;
-  ERROR_OUTPUT local_output;
 
   void setTag(const char * const tag)
   {
@@ -95,26 +67,15 @@ public:
     local_log_level = level;
   }
 
-  void setOutput(const ERROR_OUTPUT output)
-  {
-    local_output = output;
-  }
-
   ERROR_LEVEL getLevel() const
   {
     return local_log_level;
-  }
-
-  ERROR_OUTPUT getOutput() const
-  {
-    return local_output;
   }
 
   LocalLogLevelItem(const char * const tag)
   {
     setTag(tag);
     local_log_level = EL_LOG_ALL;
-    local_output = DEFAULT_ERROR_OUTPUT;
   }
 
   LocalLogLevelItem(const LocalLogLevelItem & rhs)
@@ -127,7 +88,6 @@ public:
 
     setTag(rhs.local_tag);
     local_log_level = rhs.local_log_level;
-    local_output = rhs.local_output;
   }
 
   ~LocalLogLevelItem()
@@ -206,14 +166,13 @@ static void vlog(const char * const local_log_tag, const ERROR_LEVEL log_level, 
 {
   bool ok_to_log = false;
   const LocalLogLevelItem * const pLogLevelRec = findLocalLevelItemLocked(local_log_tag);
-  ERROR_OUTPUT local_output = DEFAULT_ERROR_OUTPUT;
+
   if(0 != pLogLevelRec)
   {
     if(log_level <= pLogLevelRec->getLevel())
     {
       ok_to_log = true;
     }
-    local_output = pLogLevelRec->getOutput();
   }
   else
   {
@@ -235,83 +194,77 @@ static void vlog(const char * const local_log_tag, const ERROR_LEVEL log_level, 
     }
 
 #if defined (USE_ANDROID_LOGGING)  || defined (__ANDROID__)
-    if (EO_ANDROID & local_output)
+    if (0 != local_log_tag)
     {
-      if (0 != local_log_tag)
-      {
-        format_result = snprintf(buffer2, sizeof(buffer2), "[%s] %s", local_log_tag, buffer1);
-      }
-      else
-      {
-        format_result = snprintf(buffer2, sizeof(buffer2), "%s", buffer1);
-      }
+      format_result = snprintf(buffer2, sizeof(buffer2), "[%s] %s", local_log_tag, buffer1);
+    }
+    else
+    {
+      format_result = snprintf(buffer2, sizeof(buffer2), "%s", buffer1);
+    }
 
-      if (format_result > 0)
+    if (format_result > 0)
+    {
+      switch (log_level)
       {
-        switch (log_level)
-        {
-        case EL_ERROR:
-          ANDROID_LOG(LOG_ERROR, global_log_tag, "%s", buffer2);
-          break;
-        case EL_WARNING:
-          ANDROID_LOG(LOG_WARN, global_log_tag, "%s", buffer2);
-          break;
-        case EL_INFO:
-          ANDROID_LOG(LOG_INFO, global_log_tag, "%s", buffer2);
-          break;
-        case EL_DEBUG:
-          ANDROID_LOG(LOG_DEBUG, global_log_tag, "%s", buffer2);
-          break;
-        case EL_VERBOSE:
-          ANDROID_LOG(LOG_VERBOSE, global_log_tag, "%s", buffer2);
-          break;
-        default:
-          ANDROID_LOG(LOG_ERROR, global_log_tag, "Internal error in log subsystem: unknown log level");
-          break;
-        }
-      }
-      else
-      {
-        ANDROID_LOG(LOG_ERROR, global_log_tag, "Internal error in log subsystem: format error");
+      case EL_ERROR:
+        ANDROID_LOG(LOG_ERROR, global_log_tag, "%s", buffer2);
+        break;
+      case EL_WARNING:
+        ANDROID_LOG(LOG_WARN, global_log_tag, "%s", buffer2);
+        break;
+      case EL_INFO:
+        ANDROID_LOG(LOG_INFO, global_log_tag, "%s", buffer2);
+        break;
+      case EL_DEBUG:
+        ANDROID_LOG(LOG_DEBUG, global_log_tag, "%s", buffer2);
+        break;
+      case EL_VERBOSE:
+        ANDROID_LOG(LOG_VERBOSE, global_log_tag, "%s", buffer2);
+        break;
+      default:
+        ANDROID_LOG(LOG_ERROR, global_log_tag, "unknown log level");
+        break;
       }
     }
-#endif // #if defined (USE_ANDROID_LOGGING)  || defined (__ANDROID__)
-
-    if (EO_STDOUT & local_output)
+    else
     {
-      char time_string[40];
-      time_t now = time(NULL);
-      struct tm *curr_time = localtime(&now);
-      struct tm zero_time;
-      memset(&zero_time, 0, sizeof(zero_time));
-
-      if (nullptr == curr_time) {
-          curr_time = &zero_time;
-      }
-
-      // time format example: 11-11 11:06:02.725
-      strftime(time_string, sizeof(time_string)-1, "%m-%d %H:%M:%S.000", curr_time);
-
-      if (0 != local_log_tag)
-      {
-        format_result = snprintf(buffer2, sizeof(buffer2), "%s %s:[%s] %s",
-                                 time_string, global_log_tag, local_log_tag, buffer1);
-      }
-      else
-      {
-        format_result = snprintf(buffer2, sizeof(buffer2), "%s %s: %s",
-                                 time_string, global_log_tag, buffer1);
-      }
-
-      if (format_result > 0)
-      {
-        puts(buffer2);
-      }
-      else
-      {
-        puts("Internal error in log subsystem: format error");
-      }
+      ANDROID_LOG(LOG_ERROR, global_log_tag, "format error");
     }
+#else // #if defined (USE_ANDROID_LOGGING)  || defined (__ANDROID__)
+    char time_string[40];
+    time_t now = time(NULL);
+    struct tm *curr_time = localtime(&now);
+    struct tm zero_time;
+    memset(&zero_time, 0, sizeof(zero_time));
+
+    if (nullptr == curr_time) {
+      curr_time = &zero_time;
+    }
+
+    // time format example: 11-11 11:06:02.725
+    strftime(time_string, sizeof(time_string)-1, "%m-%d %H:%M:%S.000", curr_time);
+
+    if (0 != local_log_tag)
+    {
+      format_result = snprintf(buffer2, sizeof(buffer2), "%s %s:[%s] %s",
+                               time_string, global_log_tag, local_log_tag, buffer1);
+    }
+    else
+    {
+      format_result = snprintf(buffer2, sizeof(buffer2), "%s %s: %s",
+                               time_string, global_log_tag, buffer1);
+    }
+
+    if (format_result > 0)
+    {
+      puts(buffer2);
+    }
+    else
+    {
+      puts("Internal error in log subsystem: format error");
+    }
+#endif
   }
 }
 
@@ -368,14 +321,6 @@ int log_set_global_tag(const char * const tag)
 
 int log_set_local_level_for_tag(const char *const tag, const ERROR_LEVEL level)
 {
-
-  ERROR_OUTPUT output = DEFAULT_ERROR_OUTPUT;
-  return log_set_local_level_for_tag(tag, level, output);
-}
-
-int log_set_local_level_for_tag(const char * const tag, const ERROR_LEVEL level,
-                                const ERROR_OUTPUT output)
-{
   int result = 1;
   do
   {
@@ -392,13 +337,11 @@ int log_set_local_level_for_tag(const char * const tag, const ERROR_LEVEL level,
     if(0 != p_item)
     {
       p_item->setLevel(level);
-      p_item->setOutput(output);
     }
     else
     {
       LocalLogLevelItem item(tag);
       item.setLevel(level);
-      item.setOutput(output);
       BREAK_IF_ZERO(6, item.getTag());
       local_log_level_list->push_front(item);
     }
