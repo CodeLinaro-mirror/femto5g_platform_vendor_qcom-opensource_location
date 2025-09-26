@@ -710,6 +710,16 @@ locClientEventMaskType LocApiV02 :: adjustLocClientEventMask(locClientEventMaskT
                                            QMI_LOC_EVENT_MASK_GNSS_SV_POLYNOMIAL_REPORT_V02 |
                                            QMI_LOC_EVENT_MASK_EPHEMERIS_REPORT_V02 |
                                            QMI_LOC_EVENT_MASK_LATENCY_INFORMATION_REPORT_V02 |
+                                           QMI_LOC_EVENT_MASK_INJECT_POSITION_REQ_V02 |
+                                           QMI_LOC_EVENT_MASK_WIFI_REQ_V02 |
+                                           QMI_LOC_EVENT_MASK_GEOFENCE_GEN_ALERT_V02 |
+                                           QMI_LOC_EVENT_MASK_INJECT_WIFI_AP_DATA_REQ_V02 |
+                                           QMI_LOC_EVENT_MASK_GEOFENCE_BATCH_BREACH_NOTIFICATION_V02 |
+                                           QMI_LOC_EVENT_MASK_GEOFENCE_BATCH_DWELL_NOTIFICATION_V02 |
+                                           QMI_LOC_EVENT_MASK_GET_TIME_ZONE_REQ_V02 |
+                                           QMI_LOC_EVENT_MASK_BATCHING_STATUS_V02 |
+                                           QMI_LOC_EVENT_MASK_NEXT_LS_INFO_REPORT_V02 |
+                                           QMI_LOC_EVENT_MASK_GNSS_EVENT_REPORT_V02 |
                                            QMI_LOC_EVENT_MASK_ENGINE_DEBUG_DATA_REPORT_V02;
         // clear GNSS_EVENT_REPORT mask because QMI_LOC_EVENT_MASK_FEATURE_STATUS_V02 is set
         // when LOC_SUPPORTED_FEATURE_DYNAMIC_FEATURE_STATUS is supported
@@ -720,7 +730,7 @@ locClientEventMaskType LocApiV02 :: adjustLocClientEventMask(locClientEventMaskT
     }
 
 #ifdef __ANDROID__
-    if (mInSession || mEngineOn) {
+    if (mInSession) {
         // if device is in session, always register for engine state
         // so that we can support full tracking mode in concurrent
         // measurement and position session
