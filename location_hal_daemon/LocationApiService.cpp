@@ -725,11 +725,6 @@ void LocationApiService::processClientMsg(const char* data, uint32_t length) {
             break;
         }
 
-        case E_LOCAPI_GET_DEBUG_REQ_MSG_ID: {
-            getDebugReport((const LocAPIGetDebugReqMsg*)&locApiMsg);
-            break;
-        }
-
         case E_INTAPI_INJECT_LOCATION_MSG_ID: {
             PBLocIntApiInjectLocationMsg pbMsg;
             if (0 == pbMsg.ParseFromString(pbLocApiMsg.payload())) {
@@ -738,11 +733,6 @@ void LocationApiService::processClientMsg(const char* data, uint32_t length) {
             }
             LocIntApiInjectLocationMsg msg(sockName.c_str(), pbMsg, &mPbufMsgConv);
             injectLocation(reinterpret_cast<LocIntApiInjectLocationMsg*> (&msg));
-            break;
-        }
-
-        case E_LOCAPI_GET_ANTENNA_INFO_MSG_ID: {
-            getAntennaInfo((const LocAPIGetAntennaInfoMsg*)&locApiMsg);
             break;
         }
 
@@ -1014,29 +1004,6 @@ void LocationApiService::getConstellationSecondaryBandConfig(
     // if sessionId is 0, e.g.: error callback will be delivered
     // by addConfigRequestToMap
     addConfigRequestToMap(sessionId, pReqMsg);
-}
-
-void LocationApiService::getDebugReport(
-        const LocAPIGetDebugReqMsg* pReqMsg) {
-    LOC_LOGi(">--getDebugReport from %s", pReqMsg->mSocketName);
-    std::lock_guard<std::recursive_mutex> lock(mMutex);
-    LocHalDaemonClientHandler* pClient = getClient(pReqMsg->mSocketName);
-    if (pClient) {
-        pClient->getDebugReport();
-    } else {
-        LOC_LOGe(">-- invalid client=%s", pReqMsg->mSocketName);
-    }
-}
-
-void LocationApiService::getAntennaInfo(const LocAPIGetAntennaInfoMsg* pMsg) {
-    LOC_LOGi(">--getAntennaInfo from %s", pMsg->mSocketName);
-    std::lock_guard<std::recursive_mutex> lock(mMutex);
-    LocHalDaemonClientHandler* pClient = getClient(pMsg->mSocketName);
-    if (pClient) {
-        pClient->getAntennaInfo();
-    } else {
-        LOC_LOGe(">-- invalid client=%s", pMsg->mSocketName);
-    }
 }
 
 void LocationApiService::getXtraStatus(

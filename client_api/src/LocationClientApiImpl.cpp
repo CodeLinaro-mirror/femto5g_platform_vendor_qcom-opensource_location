@@ -1887,8 +1887,7 @@ LocationClientApiImpl::LocationClientApiImpl(capabilitiesCallback capabilitiescb
         mSinglePosRespCb(nullptr),
         mPingTestCb(nullptr),
         mMsgTask("LcaMsgTask"),
-        mLogger(),
-        mpAntennaInfoCb(nullptr)
+        mLogger()
 {
     const loc_param_s_type configTable[] =
     {
@@ -3114,83 +3113,6 @@ void LocationClientApiImpl::getSingleTerrestrialPos(uint32_t timeoutMsec,
             terrestrialPositionCb, responseCb));
 }
 
-void LocationClientApiImpl::getDebugReport(GnssDebugReport& report) {
-
-    struct GetDebugReportReq : public LocMsg {
-
-        GetDebugReportReq(LocationClientApiImpl* apiImpl) :
-            mApiImpl(apiImpl) {}
-        virtual ~GetDebugReportReq() {}
-        void proc() const {
-            string pbStr;
-            LocAPIGetDebugReqMsg msg(mApiImpl->mSocketName, &mApiImpl->mPbufMsgConv);
-            if (msg.serializeToProtobuf(pbStr)) {
-                bool rc = mApiImpl->sendMessage(
-                    reinterpret_cast<uint8_t*>((uint8_t*)pbStr.c_str()),
-                    pbStr.size());
-                LOC_LOGd(">>> send LocAPIGetDebugReqMsg rc=%d", rc);
-            } else {
-                LOC_LOGe("LocAPIGetDebugReqMsg serializeToProtobuf failed");
-            }
-        }
-
-        LocationClientApiImpl* mApiImpl;
-    };
-
-    mpDebugReport = &report;
-    mMsgTask.sendMsg(new (nothrow) GetDebugReportReq(this));
-    wait(500);  //500ms
-}
-
-void LocationClientApiImpl::processGetDebugRespCb(const LocAPIGetDebugRespMsg* pRespMsg) {
-    *mpDebugReport = pRespMsg->mDebugReport;
-    for (uint32_t i = 0; i < pRespMsg->mDebugReport.mSatelliteInfo.size(); i++) {
-        mpDebugReport->mSatelliteInfo[i] = pRespMsg->mDebugReport.mSatelliteInfo[i];
-    }
-    notify(); //for the wait in getDebugReport
-}
-
-uint32_t LocationClientApiImpl::getAntennaInfo(AntennaInfoCallback* cb) {
-    struct GetAntennaInfoMsg : public LocMsg {
-        GetAntennaInfoMsg(LocationClientApiImpl* apiImpl) :
-                mApiImpl(apiImpl) {}
-        virtual ~GetAntennaInfoMsg() {}
-        void proc() const {
-            string pbStr;
-            LocAPIGetAntennaInfoMsg msg(mApiImpl->mSocketName, &mApiImpl->mPbufMsgConv);
-            if (msg.serializeToProtobuf(pbStr)) {
-                bool rc = mApiImpl->sendMessage(
-                    reinterpret_cast<uint8_t*>((uint8_t*)pbStr.c_str()),
-                    pbStr.size());
-                LOC_LOGd(">>> send LocAPIGetAntennaInfoMsg rc=%d", rc);
-            }
-            else {
-                LOC_LOGe("LocAPIGetAntennaInfoMsg serializeToProtobuf failed");
-            }
-        }
-
-        LocationClientApiImpl* mApiImpl;
-    };
-
-    if (!mHalRegistered) {
-        LOC_LOGe("Not registered yet");
-        return LOCATION_ERROR_GENERAL_FAILURE;
-    }
-    mpAntennaInfoCb = cb;
-    mMsgTask.sendMsg(new (nothrow) GetAntennaInfoMsg(this));
-    return LOCATION_ERROR_SUCCESS;
-}
-
-void LocationClientApiImpl::processAntennaInfo(
-        const LocAPIAntennaInfoMsg* pAntennaInfoMsg) {
-    if (mpAntennaInfoCb) {
-        (*mpAntennaInfoCb)((std::vector<GnssAntennaInformation> &)
-                (pAntennaInfoMsg->mAntennaInfo.antennaInfos));
-    } else {
-        LOC_LOGe("NULL mpAntennaInfoCb");
-    }
-}
-
 void LocationClientApiImpl::getSinglePos(
         uint32_t timeoutMsec, float horQoS,
         trackingCallback positionCb, responseCallback responseCb) {
@@ -3891,19 +3813,6 @@ void IpcListener::onReceive(const char* data, uint32_t length,
                 break;
             }
 
-            case E_LOCAPI_GET_DEBUG_RESP_MSG_ID:
-            {
-                PBLocAPIGetDebugRespMsg getDebugRespMsg;
-                if (0 == getDebugRespMsg.ParseFromString(pbLocApiMsg.payload())) {
-                    LOC_LOGe("Failed to parse cfgGetDebugRespMsg from payload!!");
-                    return;
-                }
-                LocAPIGetDebugRespMsg msg(sockName.c_str(),
-                        getDebugRespMsg, &mApiImpl.mPbufMsgConv);
-                mApiImpl.processGetDebugRespCb((LocAPIGetDebugRespMsg*)&msg);
-                break;
-            }
-
             case E_LOCAPI_GET_SINGLE_TERRESTRIAL_POS_RESP_MSG_ID:
             {
                 LOC_LOGd("<<< message = terrestrial pos info");
@@ -3926,19 +3835,6 @@ void IpcListener::onReceive(const char* data, uint32_t length,
                     mApiImpl.mSingleTerrestrialPosRespCb = nullptr;
                     mApiImpl.mSingleTerrestrialPosCb = nullptr;
                 }
-                break;
-            }
-
-            case E_LOCAPI_ANTENNA_INFO_MSG_ID:
-            {
-                PBLocAPIAntennaInfoMsg antennaInfoMsg;
-                if (0 == antennaInfoMsg.ParseFromString(pbLocApiMsg.payload())) {
-                    LOC_LOGe("Failed to parse PBLocAPIAntennaInfoMsg from payload!!");
-                    return;
-                }
-                LocAPIAntennaInfoMsg msg(sockName.c_str(),
-                    antennaInfoMsg, &mApiImpl.mPbufMsgConv);
-                mApiImpl.processAntennaInfo((LocAPIAntennaInfoMsg*)&msg);
                 break;
             }
 
@@ -4027,19 +3923,4 @@ LocationClientApiImpl - Not implemented overrides
 
 void LocationClientApiImpl::gnssNiResponse(uint32_t id, GnssNiResponse response) {
 }
-
-
-static ILocationAPI* gLocationClientApiImpl = nullptr;
-static mutex gMutexForCreate;
-extern "C" ILocationAPI* getLocationClientApiImpl(CapabilitiesCb capabitiescb)
-{
-    lock_guard<mutex> lock(gMutexForCreate);
-
-    if (nullptr == gLocationClientApiImpl) {
-        gLocationClientApiImpl = new LocationClientApiImpl(capabitiescb);
-    }
-
-    return gLocationClientApiImpl;
-}
-
 } // namespace location_client

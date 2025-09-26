@@ -116,15 +116,9 @@ public:
     // LocationSystemInfo to PBLocationSystemInfo
     int convertLocSysInfoToPB(const LocationSystemInfo &locSysInfo,
             PBLocationSystemInfo *pbLocSysInfo) const;
-    // GnssDebugReport to PBGnssDebugReport
-    int convertGnssDebugReportToPB(const GnssDebugReport& gnssDebugReport,
-            PBGnssDebugReport* pbGnssDebugReport) const;
     // GnssDcReportInfo to PBGnssDcReportInfo
     int convertGnssDcReportToPB(const GnssDcReportInfo &dcReportInfo,
             PBGnssDcReportInfo *pbDcReportInfo) const;
-    // AntennaInformation to PBAntennaInformation
-    int convertAntennaInfoToPB(const AntennaInformation& antennaInfo,
-            PBAntennaInformation* pbAntennaInfo) const;
 
     // GnssMapMatchedData to PBGnssMapMatchedData
     int convertGnssMmfDataToPB(const GnssMapMatchedData mmfData,
@@ -431,20 +425,6 @@ public:
         pbLocCfgGetConstlSecBandRespMsg.clear_msecondarybandconfig();
     }
 
-    inline void freeupPBLocAPIGetDebugRespMsg(
-            PBLocAPIGetDebugRespMsg& pbLocAPIGetDebugRespMsg) const {
-        // PBGnssDebugReport mDebugReport = 1;
-        pbLocAPIGetDebugRespMsg.clear_mdebugreport();
-    }
-
-    inline void freeupPBAntennaInfoMsg(
-            PBLocAPIAntennaInfoMsg& pbLocAPIAntennaInfoMsg) const {
-        // PBAntennaInformation mAntennaInformation = 1;
-        PBAntennaInformation antennaInformation = pbLocAPIAntennaInfoMsg.mantennainformation();
-        antennaInformation.clear_antennainfos();
-        pbLocAPIAntennaInfoMsg.clear_mantennainformation();
-    }
-
     inline void freeUpPBLocConfigXtraReqMsg(PBLocConfigXtraReqMsg &pbLocConfMsg) const {
         pbLocConfMsg.clear_xtraparams();
     }
@@ -600,14 +580,8 @@ public:
     // PBGnssConfigRobustLocation to GnssConfigRobustLocation
     int pbConvertToGnssConfigRobustLocation(const PBGnssConfigRobustLocation &pbGnssCfgRobLoc,
             GnssConfigRobustLocation &gnssCfgRobLoc) const;
-    // PBGnssDebugReport to GnssDebugReport
-    int pbConvertToGnssDebugReport(const PBGnssDebugReport &pbGnssDebugReport,
-            GnssDebugReport &gnssDebugReport) const;
     int pbConvertToDcReport(const PBGnssDcReportInfo & pbDcReportInfo,
                             GnssDcReportInfo & dcReporInfo) const;
-    // PBAntennaInformation to AntennaInformation
-    int pbConvertToAntennaInfo(const PBAntennaInformation& pbAntennaInfo,
-            AntennaInformation& antennaInfo) const;
     int pbConvertToXtraConfig(const PBXtraConfigParams &pbXtraParams,
             XtraConfigParams& xtraParams) const;
     int pbConvertToXtraStatus(const PBXtraStatus &pbXtraStatus,
@@ -739,24 +713,6 @@ private:
     // BodyToSensorMountParams to PBLIABodyToSensorMountParams
     int convertBodyToSensorMountParamsToPB(const BodyToSensorMountParams &bodyToSensorMntParams,
             PBLIABodyToSensorMountParams *pbBodyToSensorMntParams) const;
-    int convertGnssDebugLocationToPB(const GnssDebugLocation& debugLocation,
-            PBGnssDebugLocation* pbDebugLocation) const;
-    int convertTimespecToPB(const timespec& utcReported,
-            PBTimespec* pbUtcReported) const;
-    int convertGnssDebugTimeToPB(const GnssDebugTime& gnssDebugTime,
-            PBGnssDebugTime* pbGnssDebugTime) const;
-    int convertGnssDebugSatelliteInfoToPB(
-            const GnssDebugSatelliteInfo& satelliteInfo,
-            PBGnssDebugSatelliteInfo* pbSatelliteInfo) const;
-    int convertGnssAntennaInformationToPB(
-            const GnssAntennaInformation& gnssAntennaInfo,
-            PBGnssAntennaInformation* pbGnssAntennaInfo) const;
-    int convertGnssCoordinateToPB(
-            const GnssCoordinate& gnssCoordinate,
-            PBGnssCoordinate* pbGnssCoordinate) const;
-    int convert2DimensionDoubleVectorToPB(
-            const std::vector<std::vector<double>>& doubleArrays,
-            PB2DimensionDoubleVector* pbDoubleArrarys) const;
 
     // HAL to PB EPH functions
     PBGnssEphAction getPBEphAction (const GnssEphAction& ephAction) const;
@@ -869,13 +825,6 @@ private:
     PBAgcStatus getPBEnumForAgcStatus(const AgcStatus &agcStatus) const;
     // PBLocationSessionStatus from/to loc_sess_status
     PBLocationSessionStatus getPBEnumForLocSessionStatus(const loc_sess_status &status) const;
-    PBGnssEphemerisType getPBEnumForGnssEphemerisType(
-            const GnssEphemerisType& ephemerisType) const;
-    PBGnssEphemerisSource getPBEnumForGnssEphemerisSource(
-            const GnssEphemerisSource& ephemerisSource) const;
-    PBGnssEphemerisHealth getPBEnumForGnssEphemerisHealth(
-            const GnssEphemerisHealth& ephemerisHealth) const;
-
 
     // ** Special enum conversion
     // GnssSvType to PBLocApiGnss_LocSvSystemEnumType
@@ -956,12 +905,6 @@ private:
     LocOutputEngineType getEnumForPBLocOutputEngineType(
             const PBLocApiOutputEngineType &pbLocOpEngType) const;
     loc_sess_status getLocSessionStatusFromPB(const PBLocationSessionStatus &pbStatus) const;
-    GnssEphemerisType getEnumForPBGnssEphemerisType(
-            const PBGnssEphemerisType& pbGnssEphemerisType) const;
-    GnssEphemerisSource getEnumForPBGnssEphemerisSource(
-            const PBGnssEphemerisSource& pbGnssEphemerisSource) const;
-    GnssEphemerisHealth getEnumForPBGnssEphemerisHealth(
-            const PBGnssEphemerisHealth& pbGnssEphemerisHealth) const;
     AgcStatus getEnumForPBAgcStatus(const PBAgcStatus &pbAgcStatus) const;
 
     // ** Special enum conversion
@@ -1022,26 +965,6 @@ private:
     int pbConvertToBodyToSensorMountParams(
             const PBLIABodyToSensorMountParams &pbBody2SensorMntParam,
             BodyToSensorMountParams &body2SensorMntParam) const;
-    // Helper function of GnssDebugReport
-    int pbConvertToGnssTimespec(const PBTimespec& pbTimespec,
-            timespec& timespec) const;
-    int pbConvertToGnssDebugTime(const PBGnssDebugTime &pbDebugTime,
-            GnssDebugTime debugTime) const;
-    int pbConvertToGnssDebugLocation(const PBGnssDebugLocation& pbDebugLocation,
-            GnssDebugLocation& debugLocation) const;
-    int pbConvertToGnssDebugSatelliteInfo(
-            const PBGnssDebugSatelliteInfo &pbSatelliteInfo,
-            GnssDebugSatelliteInfo &satelliteInfo) const;
-    // Helper function of AntennaInfo
-    int pbConvertToGnssAntennaInformaiton(
-            const PBGnssAntennaInformation& pbGnssAntennaInfo,
-            GnssAntennaInformation& gnssAntennaInfo) const;
-    int pbConvertToGnssCoordinate(
-            const PBGnssCoordinate& pbGnssCoordinate,
-            GnssCoordinate& gnssCoordinate) const;
-    int pbConvertTo2DimensionDoubleVector(
-            const PB2DimensionDoubleVector& pbDoubleArrarys,
-            std::vector<std::vector<double>>& doubleArrays) const;
 
     // To PB to HAL Eph report
     GnssEphAction pbConvertToEphAction (const PBGnssEphAction& pbEphAction) const;

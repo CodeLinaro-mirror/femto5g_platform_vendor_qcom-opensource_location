@@ -142,10 +142,6 @@ public:
     //GNSS
     virtual void gnssNiResponse(uint32_t id, GnssNiResponse response) override;
 
-    virtual void getDebugReport(GnssDebugReport& reports) override;
-
-    virtual uint32_t getAntennaInfo(AntennaInfoCallback* cb) override;
-
     // other interface
     void startPositionSession(const LocationCallbacks& callbacksOption,
                               const TrackingOptions& trackingOptions);
@@ -269,8 +265,6 @@ private:
 
     void invokePositionSessionResponseCb(LocationError errCode);
     void diagLogGnssLocation(const GnssLocation &gnssLocation);
-    void processGetDebugRespCb(const LocAPIGetDebugRespMsg* pRespMsg);
-    void processAntennaInfo(const LocAPIAntennaInfoMsg* pAntennaInfoMsg);
 
     // protobuf conversion util class
     LocationApiPbMsgConv mPbufMsgConv;
@@ -298,8 +292,6 @@ private:
     uint16_t                   mYearOfHw;
     bool                       mPositionSessionResponseCbPending;
     uint64_t                   mSessionStartBootTimestampNs;
-    GnssDebugReport*           mpDebugReport;
-    AntennaInfoCallback*       mpAntennaInfoCb;
 
     // callbacks
     LocationCallbacks       mLocationCbs;

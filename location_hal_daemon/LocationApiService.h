@@ -275,8 +275,6 @@ private:
                        GnssConfigFlagsBits configFlag);
     void getConstellationSecondaryBandConfig(
             const LocConfigGetConstellationSecondaryBandConfigReqMsg* pReqMsg);
-    void getDebugReport(const LocAPIGetDebugReqMsg* pReqMsg);
-    void getAntennaInfo(const LocAPIGetAntennaInfoMsg* pMsg);
     void getXtraStatus(const LocConfigGetXtraStatusReqMsg* pReqMsg);
     void registerXtraStatusUpdate(
             const LocConfigRegisterXtraStatusUpdateReqMsg * pReqMsg);

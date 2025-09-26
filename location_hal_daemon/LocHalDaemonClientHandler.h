@@ -77,8 +77,7 @@ public:
                 mSubscriptionMask(0),
                 mEngineInfoRequestMask(0),
                 mGeofenceIds(nullptr),
-                mIpcSender(createSender(clientname.c_str())),
-                mAntennaInfoCb(*this) {
+                mIpcSender(createSender(clientname.c_str())) {
 
         if (mClientType == LOCATION_CLIENT_API) {
             updateSubscription(E_LOC_CB_GNSS_LOCATION_INFO_BIT);
@@ -132,9 +131,7 @@ public:
     void sendTerrestrialFix(LocationError error, const Location& location);
     void sendSingleFusedFix(LocationError error, const Location& location);
 
-    void getDebugReport();
     void sendCapabilitiesMsg();
-    void getAntennaInfo();
 
     inline shared_ptr<LocIpcSender> getIpcSender () {return mIpcSender;};
     inline int getServiceId() {return mServiceId;}  // for EAP client
@@ -150,15 +147,6 @@ public:
             LocOutputEngineType engType);
 
 private:
-    struct AntennaInfoHalClientCallback : public AntennaInfoCallback {
-        LocHalDaemonClientHandler& mLocHalDaemonClient;
-        inline AntennaInfoHalClientCallback(LocHalDaemonClientHandler& locHalDaemonClient) :
-            AntennaInfoCallback(), mLocHalDaemonClient(locHalDaemonClient) {}
-        inline virtual void operator()(std::vector<GnssAntennaInformation>& antennaInfo) override {
-            mLocHalDaemonClient.onAntennaInfoCb(antennaInfo);
-        }
-    };
-
     inline ~LocHalDaemonClientHandler() {
         mIpcSender = nullptr;
         if (mLocationApi) {
@@ -188,7 +176,6 @@ private:
     void onLocationSystemInfoCb(const LocationSystemInfo& systemInfo);
     void onDcReportCb(const GnssDcReportInfo& dcReportInfo);
     void onLocationApiDestroyCompleteCb();
-    void onAntennaInfoCb(std::vector<GnssAntennaInformation>& gnssAntennaInformations);
     void onGnssSvEphemerisCb(const GnssSvEphemerisReport &notification);
 
     // send ipc message to this client for serialized payload
@@ -234,7 +221,6 @@ private:
     uint32_t* mGeofenceIds;
     shared_ptr<LocIpcSender> mIpcSender;
     std::unordered_map<uint32_t, uint32_t> mGfIdsMap; //geofence ID map, clientId-->session
-    AntennaInfoHalClientCallback mAntennaInfoCb;
     // To keep track of Boot time of previous position report sent
     uint64_t mPrevPosReportSentBootTimeMsec[LOC_OUTPUT_ENGINE_COUNT];
     // To keep track of First final fix recieved

@@ -419,14 +419,6 @@ void LocHalDaemonClientHandler::pingTest() {
     }
 }
 
-void LocHalDaemonClientHandler::getAntennaInfo() {
-    if (mLocationApi) {
-        mLocationApi->getAntennaInfo(&mAntennaInfoCb);
-    } else {
-        LOC_LOGe("null mLocationApi");
-    }
-}
-
 void LocHalDaemonClientHandler::cleanup(bool forceRemove) {
     // please do not attempt to hold the lock, as the caller of this function
     // already holds the lock
@@ -1286,51 +1278,6 @@ void LocHalDaemonClientHandler::onLocationApiDestroyCompleteCb() {
 
     delete this;
     // PLEASE NOTE: no more code after this, including print for class variable
-}
-
-void LocHalDaemonClientHandler::getDebugReport() {
-
-    if (nullptr != mIpcSender) {
-        string pbStr;
-        GnssDebugReport report;
-
-        mLocationApi->getDebugReport(report);
-        LocAPIGetDebugRespMsg msg(SERVICE_NAME, report, &mService->mPbufMsgConv);
-        LOC_LOGv("Sending LocAPIGetDebugRespMsg to %s", mName.c_str());
-        if (msg.serializeToProtobuf(pbStr)) {
-            bool rc = sendMessage(pbStr.c_str(), pbStr.size(), msg.msgId);
-            // purge this client if failed
-            if (!rc) {
-                LOC_LOGe("failed rc=%d purging client=%s", rc, mName.c_str());
-                mService->deleteClientbyName(mName);
-            }
-        } else {
-            LOC_LOGe("LocAPIGetDebugRespMsg serializeToProtobuf failed");
-        }
-    }
-}
-
-void LocHalDaemonClientHandler::onAntennaInfoCb(
-        std::vector<GnssAntennaInformation>& gnssAntennaInformations) {
-
-    std::lock_guard<std::recursive_mutex> lock(LocationApiService::mMutex);
-    if (nullptr != mIpcSender) {
-        string pbStr;
-        AntennaInformation antennaInfo;
-        antennaInfo.antennaInfos = gnssAntennaInformations;
-        LocAPIAntennaInfoMsg msg(SERVICE_NAME, antennaInfo, &mService->mPbufMsgConv);
-        LOC_LOGv("Sending LocAPIAntennaInfoMsg to %s", mName.c_str());
-        if (msg.serializeToProtobuf(pbStr)) {
-            bool rc = sendMessage(pbStr.c_str(), pbStr.size(), msg.msgId);
-            // purge this client if failed
-            if (!rc) {
-                LOC_LOGe("failed rc=%d purging client=%s", rc, mName.c_str());
-                mService->deleteClientbyName(mName);
-            }
-        } else {
-            LOC_LOGe("LocAPIAntennaInfoMsg serializeToProtobuf failed");
-        }
-    }
 }
 
 /******************************************************************************
