@@ -2472,7 +2472,7 @@ void LocApiV02 :: reportPosition (
                     if (gnssSvIdUsed <= GPS_SV_PRN_MAX)
                     {
                         uint64_t bit = (1ULL << (gnssSvIdUsed - GPS_SV_PRN_MIN));
-                        locationExtended.gnss_sv_used_ids.gps_sv_used_ids_mask |= bit;
+                        locationExtended.gnss_sv_used_ids.gpsSvUsedIdsMask |= bit;
                         locationExtended.measUsageInfo[idx].gnssConstellation =
                                 GNSS_LOC_SV_SYSTEM_GPS;
                         if (multiBandTypesAvailable) {
@@ -2507,7 +2507,7 @@ void LocApiV02 :: reportPosition (
                              (gnssSvIdUsed <= GLO_SV_PRN_MAX))
                     {
                         uint64_t bit = (1ULL << (gnssSvIdUsed - GLO_SV_PRN_MIN));
-                        locationExtended.gnss_sv_used_ids.glo_sv_used_ids_mask |= bit;
+                        locationExtended.gnss_sv_used_ids.gloSvUsedIdsMask |= bit;
                         locationExtended.measUsageInfo[idx].gnssConstellation =
                                 GNSS_LOC_SV_SYSTEM_GLONASS;
                         if (multiBandTypesAvailable) {
@@ -2533,7 +2533,7 @@ void LocApiV02 :: reportPosition (
                              (gnssSvIdUsed <= BDS_SV_PRN_MAX))
                     {
                         uint64_t bit = (1ULL << (gnssSvIdUsed - BDS_SV_PRN_MIN));
-                        locationExtended.gnss_sv_used_ids.bds_sv_used_ids_mask |= bit;
+                        locationExtended.gnss_sv_used_ids.bdsSvUsedIdsMask |= bit;
                         locationExtended.measUsageInfo[idx].gnssConstellation =
                                 GNSS_LOC_SV_SYSTEM_BDS;
                         if (multiBandTypesAvailable) {
@@ -2583,7 +2583,7 @@ void LocApiV02 :: reportPosition (
                              (gnssSvIdUsed <= GAL_SV_PRN_MAX))
                     {
                         uint64_t bit = (1ULL << (gnssSvIdUsed - GAL_SV_PRN_MIN));
-                        locationExtended.gnss_sv_used_ids.gal_sv_used_ids_mask |= bit;
+                        locationExtended.gnss_sv_used_ids.galSvUsedIdsMask |= bit;
                         locationExtended.measUsageInfo[idx].gnssConstellation =
                                 GNSS_LOC_SV_SYSTEM_GALILEO;
                         if (multiBandTypesAvailable) {
@@ -2614,7 +2614,7 @@ void LocApiV02 :: reportPosition (
                              (gnssSvIdUsed <= QZSS_SV_PRN_MAX))
                     {
                         uint64_t bit = (1ULL << (gnssSvIdUsed - QZSS_SV_PRN_MIN));
-                        locationExtended.gnss_sv_used_ids.qzss_sv_used_ids_mask |= bit;
+                        locationExtended.gnss_sv_used_ids.qzssSvUsedIdsMask |= bit;
                         locationExtended.measUsageInfo[idx].gnssConstellation =
                                 GNSS_LOC_SV_SYSTEM_QZSS;
                         if (multiBandTypesAvailable) {
@@ -2650,7 +2650,7 @@ void LocApiV02 :: reportPosition (
                              (gnssSvIdUsed <= NAVIC_SV_PRN_MAX))
                     {
                         uint64_t bit = (1ULL << (gnssSvIdUsed - NAVIC_SV_PRN_MIN));
-                        locationExtended.gnss_sv_used_ids.navic_sv_used_ids_mask |= bit;
+                        locationExtended.gnss_sv_used_ids.navicSvUsedIdsMask |= bit;
                         locationExtended.measUsageInfo[idx].gnssConstellation =
                                 GNSS_LOC_SV_SYSTEM_NAVIC;
 
