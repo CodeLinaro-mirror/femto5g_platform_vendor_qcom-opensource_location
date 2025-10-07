@@ -1656,12 +1656,35 @@ enum GnssSignalTypes {
 };
 
 /** Specify valid mask of data fields in
- *  GnssData. <br/>   */
+ *  JammerInd and AGC arrays of GnssData
+ *  for different signal types. <br/>   */
 enum GnssDataMask {
     /** Jammer Indicator is available. <br/>   */
     GNSS_DATA_JAMMER_IND_BIT = (1ULL << 0),
     /** AGC is available. <br/>   */
-    GNSS_DATA_AGC_BIT = (1ULL << 1),
+    GNSS_DATA_AGC_BIT        = (1ULL << 1),
+};
+
+typedef uint64_t GnssDataValidityMask;
+/** Specify valid mask of data fields in
+ *  GnssData. <br/>   */
+enum GnssDataValidity {
+    /** Jammer Indicator is available. <br/>   */
+    GNSS_DATA_JAMMER_IND_ARRAY_BIT        = (1ULL << 0),
+    /** AGC is available. <br/>   */
+    GNSS_DATA_AGC_ARRAY_BIT               = (1ULL << 1),
+    /** AGC status for L1 band is available. <br/>  */
+    GNSS_DATA_AGC_STATUS_L1_BIT           = (1ULL << 2),
+    /** AGC status for L2 band is available. <br/>  */
+    GNSS_DATA_AGC_STATUS_L2_BIT           = (1ULL << 3),
+    /** AGC status for L5 band is available. <br/>  */
+    GNSS_DATA_AGC_STATUS_L5_BIT           = (1ULL << 4),
+    /** GPS system time is available. <br/>  */
+    GNSS_DATA_GPS_SYSTEM_TIME_BIT         = (1ULL << 5),
+    /** System Tick at GPS Time is available. <br/>  */
+    GNSS_DATA_SYSTEM_TICK_AT_GPS_TIME_BIT = (1ULL << 6),
+    /** Hardware clock frequency correction is available. <br/>  */
+    GNSS_DATA_HW_CLK_FREQ_CORRECTION_BIT  = (1ULL << 7),
 };
 
 /** Indicate RF Automatic Gain Control Status <br/>   */
@@ -1677,8 +1700,14 @@ enum AgcStatus {
 };
 
 /** Specify the additional GNSS data that can be provided
- *  during a tracking session, currently jammer and automatic
- *  gain control data are available. <br/>
+ *  during a tracking session, including jammer and automatic
+ *  gain control (AGC) data, AGC status for L1/L2/L5 bands,
+ *  GPS system time, system tick at GPS time, and hardware
+ *  clock frequency correction. <br/>
+ *
+ *  To determine if Jammer info and automatic gain control
+ *  arrays are valid, check the validity of these in
+ *  GnssData::gnssDataValidityMask. <br/>
  *
  *  To find out the jammer info and automatic gain control
  *  metric for a particular GNSS signal type, refer to the array
@@ -1694,21 +1723,36 @@ enum AgcStatus {
  *  is valid or not by checking the element at index of the
  *  specified RF band in GnssData::gnssDataMask has
  *  GNSS_DATA_AGC_BIT set. <br/>
+ *
+ *  To determine the validity of other fields such as
+ *  GnssData::agcStatusL1, GnssData::agcStatusL2, GnssData::agcStatusL5,
+ *  GnssData::gpsSystemTime, GnssData::systemTickAtGpsTime, and
+ *  GnssData::hwClkFreqCorrection by checking the corresponding
+ *  bits in GnssData::gnssDataValidityMask. <br/>
  */
 struct GnssData {
     /** Bitwise OR of GnssDataMask to indicate the valid data
      *  fields. <br/> */
-    GnssDataMask  gnssDataMask[GNSS_MAX_NUMBER_OF_SIGNAL_TYPES];
+    GnssDataMask             gnssDataMask[GNSS_MAX_NUMBER_OF_SIGNAL_TYPES];
     /** Jammer Indication for each GNSS signal.  <br/>   */
-    double        jammerInd[GNSS_MAX_NUMBER_OF_SIGNAL_TYPES];
-    /** Automatic gain control metric, in unit of dB.  <br/>   */
-    double        agc[GNSS_MAX_NUMBER_OF_SIGNAL_TYPES];
+    double                   jammerInd[GNSS_MAX_NUMBER_OF_SIGNAL_TYPES];
+    /** Overall automatic gain control level as observed at the input to correlator,
+        in units of dB. */
+    double                   agc[GNSS_MAX_NUMBER_OF_SIGNAL_TYPES];
     /** RF Automatic gain control status for L1 band.  <br/>   */
-    AgcStatus     agcStatusL1;
+    AgcStatus                agcStatusL1;
     /** RF Automatic gain control status for L2 band.  <br/>   */
-    AgcStatus     agcStatusL2;
+    AgcStatus                agcStatusL2;
     /** RF Automatic gain control status for L5 band.  <br/>   */
-    AgcStatus     agcStatusL5;
+    AgcStatus                agcStatusL5;
+    /** Bitwise OR of GnssDataValidity to indicate the valid data fields.  <br/>  */
+    GnssDataValidityMask     gnssDataValidityMask;
+    /** GPS System time.  <br/>  */
+    GnssSystemTimeStructType gpsSystemTime;
+    /** System Tick at GPS Time  <br/>  */
+    uint64_t                 systemTickAtGpsTime;
+    /** Hardware clock frequency correction  <br/>  */
+    uint32_t                 hwClkFreqCorrection;
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
     string toString() const;
