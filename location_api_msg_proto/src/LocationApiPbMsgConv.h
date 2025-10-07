@@ -804,6 +804,8 @@ private:
     uint32_t getPBMaskForLocSysInfoMask(const uint32_t &locSysInfoMask) const;
     // GnssDataMask to PBGnssDataMask
     uint64_t getPBMaskForGnssDataMask(const uint64_t &gnssDataMask) const;
+    // GnssDataValidityMask to PBGnssDataValidityMask
+    uint64_t getPBMaskForGnssDataValidityMask(const uint64_t &gnssDataValidityMask) const;
     // GnssAidingDataSvMask to PBLocApiGnssAidingDataSvMask
     uint32_t getPBMaskForGnssAidingDataSvMask(const uint32_t &gnssAidDataSvMask) const;
     // LeapSecondSysInfoMask to PBLeapSecondSysInfoMask
@@ -893,6 +895,8 @@ private:
     uint32_t getLocationSystemInfoMaskFromPB(const uint32_t &pbLocSysInfoMask) const;
     // PBGnssDataMask to GnssDataMask
     uint64_t getGnssDataMaskFromPB(const uint64_t &pbGnssDataMask) const;
+    // PBGnssDataValidityMask to GnssDataValidityMask
+    uint64_t getGnssDataValidityMaskFromPB(const uint64_t &pbGnssDataValidityMask) const;
     // PBLeapSecondSysInfoMask to LeapSecondSysInfoMask
     uint32_t getLeapSecSysInfoMaskFromPB(const uint32_t &pbLeapSecSysInfoMask) const;
     // PBLocApiGnssSystemTimeStructTypeFlags to GnssSystemTimeStructTypeFlags

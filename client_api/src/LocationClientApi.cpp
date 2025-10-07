@@ -1219,6 +1219,17 @@ DECLARE_TBL(GnssDataMask) = {
     {GNSS_DATA_JAMMER_IND_BIT, "JAMMER"},
     {GNSS_DATA_AGC_BIT, "AGC"}
 };
+// GnssDataValidity
+DECLARE_TBL(GnssDataValidity) = {
+    {GNSS_DATA_JAMMER_IND_ARRAY_BIT, "JAMMER_IND_ARRAY"},
+    {GNSS_DATA_AGC_ARRAY_BIT, "AGC_ARRAY"},
+    {GNSS_DATA_AGC_STATUS_L1_BIT, "AGC_STATUS_L1"},
+    {GNSS_DATA_AGC_STATUS_L2_BIT, "AGC_STATUS_L2"},
+    {GNSS_DATA_AGC_STATUS_L5_BIT, "AGC_STATUS_L5"},
+    {GNSS_DATA_GPS_SYSTEM_TIME_BIT, "GPS_SYSTEM_TIME"},
+    {GNSS_DATA_SYSTEM_TICK_AT_GPS_TIME_BIT, "SYSTEM_TICK_AT_GPS_TIME"},
+    {GNSS_DATA_HW_CLK_FREQ_CORRECTION_BIT, "HW_CLK_FREQ_CORRECTION"},
+};
 // GnssMeasurementsDataFlagsMask
 DECLARE_TBL(GnssMeasurementsDataFlagsMask) = {
     {GNSS_MEASUREMENTS_DATA_SV_ID_BIT, "svId"},
@@ -1588,6 +1599,7 @@ string GnssData::toString() const {
     string out;
     out.reserve(4096);
 
+    out += FIELDVAL_MASK(gnssDataValidityMask, GnssDataValidity_tbl);
     for (int i = 0; i < GNSS_MAX_NUMBER_OF_SIGNAL_TYPES; i++) {
         out += FIELDVAL_MASK(i, GnssSignalTypes_tbl);
         out += FIELDVAL_MASK(gnssDataMask[i], GnssDataMask_tbl);
@@ -1597,6 +1609,10 @@ string GnssData::toString() const {
     out += FIELDVAL_DEC(agcStatusL1);
     out += FIELDVAL_DEC(agcStatusL2);
     out += FIELDVAL_DEC(agcStatusL5);
+
+    out += gpsSystemTime.toString();
+    out += FIELDVAL_DEC(systemTickAtGpsTime);
+    out += FIELDVAL_DEC(hwClkFreqCorrection);
 
     return out;
 }

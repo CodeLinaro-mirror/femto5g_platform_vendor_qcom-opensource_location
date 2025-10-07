@@ -1049,21 +1049,49 @@ GnssData LocationClientApiImpl::parseGnssData(const ::GnssDataNotification &halG
 
     GnssData gnssData = {};
 
-    for (int sig = GNSS_LOC_SIGNAL_TYPE_GPS_L1CA;
-         sig < GNSS_LOC_MAX_NUMBER_OF_SIGNAL_TYPES; sig++) {
-        gnssData.gnssDataMask[sig] =
-                (location_client::GnssDataMask) halGnssData.gnssDataMask[sig];
-        gnssData.jammerInd[sig] = halGnssData.jammerInd[sig];
-        gnssData.agc[sig] = halGnssData.agc[sig];
-        if (0 != gnssData.gnssDataMask[sig]) {
-            LOC_LOGv("gnssDataMask[%d]=0x%X", sig, gnssData.gnssDataMask[sig]);
-            LOC_LOGv("jammerInd[%d]=%f", sig, gnssData.jammerInd[sig]);
-            LOC_LOGv("agc[%d]=%f", sig, gnssData.agc[sig]);
+    if (::GNSS_LOC_DATA_JAMMER_IND_ARRAY_BIT & halGnssData.gnssDataValidityMask &&
+        ::GNSS_LOC_DATA_AGC_ARRAY_BIT & halGnssData.gnssDataValidityMask) {
+        gnssData.gnssDataValidityMask |= (GNSS_DATA_JAMMER_IND_ARRAY_BIT | GNSS_DATA_AGC_ARRAY_BIT);
+        for (int sig = GNSS_LOC_SIGNAL_TYPE_GPS_L1CA; sig < GNSS_LOC_MAX_NUMBER_OF_SIGNAL_TYPES;
+             sig++) {
+            gnssData.gnssDataMask[sig] =
+                (location_client::GnssDataMask)halGnssData.gnssDataMask[sig];
+            gnssData.jammerInd[sig] = halGnssData.jammerInd[sig];
+            gnssData.agc[sig]       = halGnssData.agc[sig];
+            if (0 != gnssData.gnssDataMask[sig]) {
+                LOC_LOGv("gnssDataMask[%d]=0x%X", sig, gnssData.gnssDataMask[sig]);
+                LOC_LOGv("jammerInd[%d]=%f", sig, gnssData.jammerInd[sig]);
+                LOC_LOGv("agc[%d]=%f", sig, gnssData.agc[sig]);
+            }
         }
     }
-    gnssData.agcStatusL1 = parseAgcStatus(halGnssData.agcStatusL1);
-    gnssData.agcStatusL2 = parseAgcStatus(halGnssData.agcStatusL2);
-    gnssData.agcStatusL5 = parseAgcStatus(halGnssData.agcStatusL5);
+
+    if (::GNSS_LOC_DATA_AGC_STATUS_L1_BIT & halGnssData.gnssDataValidityMask) {
+        gnssData.agcStatusL1 = parseAgcStatus(halGnssData.agcStatusL1);
+        gnssData.gnssDataValidityMask |= GNSS_DATA_AGC_STATUS_L1_BIT;
+    }
+    if (::GNSS_LOC_DATA_AGC_STATUS_L2_BIT & halGnssData.gnssDataValidityMask) {
+        gnssData.agcStatusL2 = parseAgcStatus(halGnssData.agcStatusL2);
+        gnssData.gnssDataValidityMask |= GNSS_DATA_AGC_STATUS_L2_BIT;
+    }
+    if (::GNSS_LOC_DATA_AGC_STATUS_L5_BIT & halGnssData.gnssDataValidityMask) {
+        gnssData.agcStatusL5 = parseAgcStatus(halGnssData.agcStatusL5);
+        gnssData.gnssDataValidityMask |= GNSS_DATA_AGC_STATUS_L5_BIT;
+    }
+
+    if (::GNSS_LOC_DATA_GPS_SYSTEM_TIME_BIT & halGnssData.gnssDataValidityMask) {
+        gnssData.gpsSystemTime = parseGnssTime(halGnssData.gpsSystemTime);
+        gnssData.gnssDataValidityMask |= GNSS_DATA_GPS_SYSTEM_TIME_BIT;
+    }
+    if (::GNSS_LOC_DATA_SYSTEM_TICK_AT_GPS_TIME_BIT & halGnssData.gnssDataValidityMask) {
+        gnssData.systemTickAtGpsTime = halGnssData.systemTickAtGpsTime;
+        gnssData.gnssDataValidityMask |= GNSS_DATA_SYSTEM_TICK_AT_GPS_TIME_BIT;
+    }
+    if (::GNSS_LOC_DATA_HW_CLK_FREQ_CORRECTION_BIT & halGnssData.gnssDataValidityMask) {
+        gnssData.hwClkFreqCorrection = halGnssData.hwClkFreqCorrection;
+        gnssData.gnssDataValidityMask |= GNSS_DATA_HW_CLK_FREQ_CORRECTION_BIT;
+    }
+
     return gnssData;
 }
 
