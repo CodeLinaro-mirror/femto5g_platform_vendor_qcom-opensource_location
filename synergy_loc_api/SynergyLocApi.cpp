@@ -114,7 +114,6 @@ void handleSllEngineDown(void *context) {
    @param loc_sess_status[Input]   Indicates Position report status
                                    as Final or intermediate
    @param LocPosTechMask[Input]         Indiacte Fix type.
-   @param GnssDataNotification[Input]   Indicate Jammer and AGC info.
    @param msInWeek[Input]   Indicate time in milliseconds.
    @param context[Input]    Context Pointer of Synergy Location API.
 
@@ -128,13 +127,12 @@ void handleSllReportPosition(UlpLocation& location,
                     GpsLocationExtended& locationExtended,
                     enum loc_sess_status status,
                     LocPosTechMask loc_technology_mask,
-                    GnssDataNotification* pDataNotify,
                     int msInWeek, void *context) {
 
     if (nullptr != context) {
         SynergyLocApi *synergyLocApiInstance = (SynergyLocApi*)context;
         synergyLocApiInstance->reportPosition(location, locationExtended,
-                            status, loc_technology_mask, pDataNotify);
+                            status, loc_technology_mask);
     } else {
         LOC_LOGw ("Context is NULL");
     }
