@@ -35,6 +35,7 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #include <loc_api_v02_log.h>
 #include <location_service_v02.h>
 
+// NOTE: as req, resp, ind has same enum, only one entry need to be added in above table
 DECLARE_TBL(loc_v02_event_name) =
 {
    {QMI_LOC_GET_SUPPORTED_MSGS_REQ_V02, "GET_SUPPORTED_MSGS"},

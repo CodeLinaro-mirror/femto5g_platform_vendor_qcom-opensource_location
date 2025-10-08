@@ -181,8 +181,6 @@ private:
   GnssPowerMode mPowerMode;
   bool mEngineOn;
   bool mFirstMeasurementOfSessionReceived;
-  bool mMasterRegisterNotSupported;
-  uint32_t mCounter;
   uint32_t mMinInterval;
 
   CycleSlipCountMap mPrev1HzSlipCountMap;
@@ -197,7 +195,6 @@ private:
 
   size_t mBatchSize, mDesiredBatchSize;
   bool mIsFirstFinalFixReported;
-  bool mIsFirstStartFixReq;
   std::string mPackageName[eQMI_LOC_NTN_V02+1];
   bool mIsFullTracking;
   qmiLocGnssSignalTypeMaskT_v02 mPreferredSignalType;

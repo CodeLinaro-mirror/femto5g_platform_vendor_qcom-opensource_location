@@ -295,11 +295,10 @@ LocApiV02 :: LocApiV02(LOC_API_ADAPTER_EVENT_MASK_T exMask,
     mClientHandle(LOC_CLIENT_INVALID_HANDLE_VALUE),
     mQmiMask(0), mInSession(false), mPowerMode(GNSS_POWER_MODE_DEFAULT),
     mEngineOn(false), mFirstMeasurementOfSessionReceived(false),
-    mCounter(0), mMinInterval(1000),
+    mMinInterval(1000),
     mGnssMeasurements(nullptr),
     mBatchSize(0), mDesiredBatchSize(0),
     mIsFirstFinalFixReported(false),
-    mIsFirstStartFixReq(false),
     mTimeBiases{},
     mPlatformPowerState(eQMI_LOC_POWER_STATE_UNKNOWN_V02),
     mIsFullTracking(true),
@@ -2356,34 +2355,19 @@ void LocApiV02 :: reportPosition (
                 mQmiMask & QMI_LOC_EVENT_MASK_GNSS_MEASUREMENT_REPORT_V02 &&
                 isTOAValid(location_report_ptr, &m1HzMeasurementsInfo);
 
-        if (((location_report_ptr->expandedGnssSvUsedList_valid) &&
-                (location_report_ptr->expandedGnssSvUsedList_len != 0)) ||
-                ((location_report_ptr->gnssSvUsedList_valid) &&
-                (location_report_ptr->gnssSvUsedList_len != 0)))
+        if ((location_report_ptr->expandedGnssSvUsedList_valid) &&
+                (location_report_ptr->expandedGnssSvUsedList_len != 0))
         {
-            uint32_t idx=0;
-            uint32_t gnssSvUsedList_len = 0;
             uint16_t gnssSvIdUsed = 0;
-            const uint16_t *svUsedList;
             bool multiBandTypesAvailable = false;
-
-            if (location_report_ptr->expandedGnssSvUsedList_valid)
-            {
-                gnssSvUsedList_len = location_report_ptr->expandedGnssSvUsedList_len;
-                svUsedList = location_report_ptr->expandedGnssSvUsedList;
-            } else if (location_report_ptr->gnssSvUsedList_valid)
-            {
-                gnssSvUsedList_len = location_report_ptr->gnssSvUsedList_len;
-                svUsedList = location_report_ptr->gnssSvUsedList;
-            }
+            uint32_t gnssSvUsedList_len = location_report_ptr->expandedGnssSvUsedList_len;
+            const uint16_t *svUsedList = location_report_ptr->expandedGnssSvUsedList;
 
             // If multifreq data is not available then default to L1 for all constellations.
             if ((location_report_ptr->gnssSvUsedSignalTypeList_valid) &&
                     (location_report_ptr->gnssSvUsedSignalTypeList_len != 0)) {
                 multiBandTypesAvailable = true;
             }
-
-            LOC_LOGa("sv length %d ", gnssSvUsedList_len);
 
             locationExtended.numOfMeasReceived = gnssSvUsedList_len;
             memset(locationExtended.measUsageInfo, 0, sizeof(locationExtended.measUsageInfo));
@@ -2396,7 +2380,7 @@ void LocApiV02 :: reportPosition (
                  }
             }
 
-            for (idx = 0; idx < gnssSvUsedList_len; idx++)
+            for (uint32_t idx = 0; idx < gnssSvUsedList_len; idx++)
             {
                 gnssSvIdUsed = svUsedList[idx];
                 qmiLocGnssSignalTypeMaskT_v02 qmiGnssSignalType =
@@ -3038,31 +3022,19 @@ void  LocApiV02 :: reportSv (
     const qmiLocEventGnssSvInfoIndMsgT_v02 *gnss_report_ptr)
 {
     GnssSvNotification SvNotify = {};
-    int              num_svs_max, i;
-    const qmiLocSvInfoStructT_v02 *sv_info_ptr;
+    int     num_svs_max = 0, i = 0;
+    const qmiLocSvInfoStructT_v02 *sv_info_ptr = nullptr;
     uint8_t gloFrequency = 0;
-
-    num_svs_max = 0;
-    if (1 == gnss_report_ptr->expandedSvList_valid) {
-        num_svs_max = std::min((uint32_t)QMI_LOC_EXPANDED_SV_INFO_LIST_MAX_SIZE_V02,
-                                gnss_report_ptr->expandedSvList_len);
-    }
-    else if (1 == gnss_report_ptr->svList_valid) {
-        num_svs_max = std::min((uint32_t)QMI_LOC_MAX_SV_USED_LIST_LENGTH_V02,
-                                gnss_report_ptr->svList_len);
-    }
-    num_svs_max = std::min(num_svs_max, GNSS_SV_MAX);
 
     SvNotify.size = sizeof(GnssSvNotification);
     if (gnss_report_ptr->gnssSignalTypeList_valid) {
         SvNotify.gnssSignalTypeMaskValid = true;
     }
 
-    if (1 == gnss_report_ptr->svList_valid ||
-        1 == gnss_report_ptr->expandedSvList_valid) {
+    if (1 == gnss_report_ptr->expandedSvList_valid) {
+        num_svs_max = std::min((uint32_t)GNSS_SV_MAX, gnss_report_ptr->expandedSvList_len);
         SvNotify.count = 0;
-        if (0 == gnss_report_ptr->expandedSvList_valid ||
-            0 == gnss_report_ptr->rfLoss_valid) {
+        if (0 == gnss_report_ptr->rfLoss_valid) {
             /*  For modems that don's send rfLoss in the QMI LOC message
                 we need to read this info from gps.conf, this is done
                 in the constructor */
@@ -3074,15 +3046,12 @@ void  LocApiV02 :: reportSv (
             }
         }
         for(i = 0; i < num_svs_max; i++) {
-            if (1 == gnss_report_ptr->expandedSvList_valid) {
-                sv_info_ptr = &(gnss_report_ptr->expandedSvList[i].svInfo);
-            }
-            else {
-                sv_info_ptr = &(gnss_report_ptr->svList[i]);
-            }
-            if((sv_info_ptr->validMask & QMI_LOC_SV_INFO_MASK_VALID_SYSTEM_V02) &&
-               (sv_info_ptr->validMask & QMI_LOC_SV_INFO_MASK_VALID_GNSS_SVID_V02)
-                && (sv_info_ptr->gnssSvId != 0 ))
+            sv_info_ptr = &(gnss_report_ptr->expandedSvList[i].svInfo);
+            gloFrequency = gnss_report_ptr->expandedSvList[i].gloFrequency;
+
+            if ((sv_info_ptr->validMask & QMI_LOC_SV_INFO_MASK_VALID_SYSTEM_V02) &&
+                  (sv_info_ptr->validMask & QMI_LOC_SV_INFO_MASK_VALID_GNSS_SVID_V02) &&
+                  (sv_info_ptr->gnssSvId != 0 ))
             {
                 GnssSvOptionsMask mask = 0;
 
@@ -3091,9 +3060,7 @@ void  LocApiV02 :: reportSv (
 
                 gnssSv_ref.size = sizeof(GnssSv);
                 gnssSv_ref.svId = sv_info_ptr->gnssSvId;
-                if (1 == gnss_report_ptr->expandedSvList_valid) {
-                    gnssSv_ref.gloFrequency = gnss_report_ptr->expandedSvList[i].gloFrequency;
-                }
+                gnssSv_ref.gloFrequency = gloFrequency;
 
                 switch (sv_info_ptr->system) {
                 case eQMI_LOC_SV_SYSTEM_GPS_V02:
@@ -3166,12 +3133,10 @@ void  LocApiV02 :: reportSv (
 
                 if (sv_info_ptr->validMask &
                     QMI_LOC_SV_INFO_MASK_VALID_SVINFO_MASK_V02) {
-                    if (sv_info_ptr->svInfoMask &
-                        QMI_LOC_SVINFO_MASK_HAS_EPHEMERIS_V02) {
+                    if (sv_info_ptr->svInfoMask & QMI_LOC_SVINFO_MASK_HAS_EPHEMERIS_V02) {
                         mask |= GNSS_SV_OPTIONS_HAS_EPHEMER_BIT;
                     }
-                    if (sv_info_ptr->svInfoMask &
-                        QMI_LOC_SVINFO_MASK_HAS_ALMANAC_V02) {
+                    if (sv_info_ptr->svInfoMask & QMI_LOC_SVINFO_MASK_HAS_ALMANAC_V02) {
                         mask |= GNSS_SV_OPTIONS_HAS_ALMANAC_BIT;
                     }
                 }
@@ -3182,10 +3147,6 @@ void  LocApiV02 :: reportSv (
                         LOC_LOGw("Frequency not available for this SV");
                     }
                     else {
-                        if (1 == gnss_report_ptr->expandedSvList_valid) {
-                            gloFrequency = gnss_report_ptr->expandedSvList[i].gloFrequency;
-                        }
-
                         if (gnss_report_ptr->gnssSignalTypeList[i] != 0) {
                             gnssSv_ref.carrierFrequencyHz =
                                     convertSignalTypeToCarrierFrequency(
@@ -5032,7 +4993,6 @@ void LocApiV02::reportGnssMeasurementData(
             mGnssMeasurements->gnssSvMeasurementSet.isNhz = true;
             measData.isNhz = true;
         }
-        mCounter++;
     }
 
     Gnss_LocSvSystemEnumType locSvSystemType =
