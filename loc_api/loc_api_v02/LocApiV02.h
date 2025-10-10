@@ -436,6 +436,7 @@ private:
   void convertQmiSecondaryConfigToGnssConfig(
         qmiLocGNSSConstellEnumT_v02 qmiSecondaryBandConfig,
         GnssSvTypeConfig& secondaryBandConfig);
+  void injectFeatureConfig();
 
 protected:
   virtual enum loc_api_adapter_err
