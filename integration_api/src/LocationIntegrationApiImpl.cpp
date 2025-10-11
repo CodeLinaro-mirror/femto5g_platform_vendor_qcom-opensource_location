@@ -61,6 +61,10 @@ IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+/******************************************************************************
+Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+SPDX-License-Identifier: BSD-3-Clause-Clear
+*******************************************************************************/
 
 #define LOG_TAG "LocSvc_LocationIntegrationApiImpl"
 
@@ -79,6 +83,9 @@ static const loc_param_s_type gConfigTable[] = {
     {"XTRA_TEST_ENABLED", &sXtraTestEnabled, NULL, 'n'},
     {"QRTRWATCHER_DELAY_MICROSECOND", &sSleepTime, NULL, 'n'}
 };
+
+// For HALD restart wait time for XTRA INIT to complete
+#define XTRA_INIT_WAIT_TIME_MSEC (200)
 
 namespace location_integration {
 
@@ -170,6 +177,9 @@ static LocConfigTypeEnum getLocConfigTypeFromMsgId(ELocMsgID  msgId) {
         break;
     case E_INTAPI_CONFIG_XTRA_USER_CONSENT_MSG_ID:
         configType = CONFIG_XTRA_USER_CONSENT;
+        break;
+    case E_INTAPI_NETWORK_UPDATE_INFO_MSG_ID:
+        configType = NETWORK_INFO_UPDATE;
         break;
     default:
         break;
@@ -507,6 +517,7 @@ void IpcListener::onReceive(const char* data, uint32_t length,
             case E_INTAPI_CONFIG_MAP_MATCHED_FEEDBACK_MSG_ID:
             case E_INTAPI_CONFIG_XTRA_USER_CONSENT_MSG_ID:
             case E_LOCAPI_CLIENT_DEREGISTER_MSG_ID:
+            case E_INTAPI_NETWORK_UPDATE_INFO_MSG_ID:
             {
                 PBLocAPIGenericRespMsg pbLocApiGenericRsp;
                 if (0 == pbLocApiGenericRsp.ParseFromString(pbLocApiMsg.payload())) {
@@ -1332,7 +1343,8 @@ uint32_t LocationIntegrationApiImpl::getXtraStatus() {
     return 0;
 }
 
-uint32_t LocationIntegrationApiImpl::registerXtraStatusUpdate(bool registerUpdate) {
+uint32_t LocationIntegrationApiImpl::registerXtraStatusUpdate(bool registerUpdate,
+        uint32_t delayInMsec) {
 
     struct RegisterXtraStatusUpdateReq : public LocMsg {
         RegisterXtraStatusUpdateReq(LocationIntegrationApiImpl* apiImpl,
@@ -1371,7 +1383,10 @@ uint32_t LocationIntegrationApiImpl::registerXtraStatusUpdate(bool registerUpdat
         // return 1 to signal error
         return 1;
     }
-    mMsgTask.sendMsg(new (nothrow) RegisterXtraStatusUpdateReq(this, registerUpdate));
+    RegisterXtraStatusUpdateReq* pLocMsg = new RegisterXtraStatusUpdateReq(this,
+                registerUpdate);
+    mMsgTask.sendMsg((const LocMsg*)pLocMsg, delayInMsec);
+
     return 0;
 }
 
@@ -1448,6 +1463,29 @@ uint32_t LocationIntegrationApiImpl::registerGnssSignalTypesUpdate(bool register
     return 0;
 }
 
+uint32_t LocationIntegrationApiImpl::updateNetworkInfo(const NetworkInfo& data) {
+    struct UpdateNetworkInfoReqMsg : public LocMsg {
+        UpdateNetworkInfoReqMsg(LocationIntegrationApiImpl* apiImpl,
+                const NetworkInfo& data) : mApiImpl(apiImpl), mNwData(data) {}
+        virtual ~UpdateNetworkInfoReqMsg() {}
+        void proc() const {
+            string pbStr;
+            UpdateNetworkInfoReq msg(mApiImpl->mSocketName, const_cast<NetworkInfo&>(mNwData),
+                    &mApiImpl->mPbufMsgConv);
+            if (msg.serializeToProtobuf(pbStr)) {
+                mApiImpl->sendConfigMsgToHalDaemon(NETWORK_INFO_UPDATE, pbStr);
+            } else {
+                LOC_LOGe("serializeToProtobuf failed");
+            }
+        }
+
+        LocationIntegrationApiImpl* mApiImpl;
+        const NetworkInfo mNwData;
+    };
+
+    mMsgTask.sendMsg(new (nothrow) UpdateNetworkInfoReqMsg(this, data));
+    return 0;
+}
 
 bool LocationIntegrationApiImpl::sendConfigMsgToHalDaemon(
         LocConfigTypeEnum configType, const string& pbStr, bool invokeResponseCb) {
@@ -1647,11 +1685,7 @@ void LocationIntegrationApiImpl::processHalReadyMsg() {
 
     // resend XTRA status registration message request
     if (mRegisterXtraUpdate) {
-        string pbStr;
-        LocConfigRegisterXtraStatusUpdateReqMsg msg(mSocketName, &mPbufMsgConv);
-        if (msg.serializeToProtobuf(pbStr)) {
-            sendConfigMsgToHalDaemon(REGISTER_XTRA_STATUS_UPDATE, pbStr, false);
-        }
+        registerXtraStatusUpdate(mRegisterXtraUpdate, XTRA_INIT_WAIT_TIME_MSEC);
     }
 }
 
