@@ -143,8 +143,6 @@ bool LocationClientApi::startPositionSession(
         const GnssReportCbs& gnssReportCallbacks,
         ResponseCb responseCallback) {
 
-    loc_boot_kpi_marker("L - LCA Extended startFix, tbf %d", intervalInMs);
-
     if (!mApiImpl) {
         LOC_LOGe ("NULL mApiImpl");
         return false;
