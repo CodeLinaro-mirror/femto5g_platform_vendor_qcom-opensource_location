@@ -1895,6 +1895,7 @@ LocationClientApiImpl::LocationClientApiImpl(capabilitiesCallback capabilitiescb
        {"QRTRWATCHER_DELAY_MICROSECOND", &gSleepTime, NULL, 'n'}
     };
     // read configuration file
+    UTIL_READ_CONF_DEFAULT(LOC_PATH_GPS_CONF);
     UTIL_READ_CONF(LOC_PATH_GPS_CONF, configTable);
 
     // get pid to generate sokect name
