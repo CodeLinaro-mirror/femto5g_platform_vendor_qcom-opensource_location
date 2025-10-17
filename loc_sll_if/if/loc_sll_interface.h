@@ -27,7 +27,7 @@
  */
 /*
 Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
-Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
 SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
@@ -142,8 +142,6 @@ typedef struct {
 
        @param loc_technology_mask       Location Technology Mask.
 
-       @param pDataNotify               GNSS Data Notification.
-
        @param msInWeek                  Week in milliseconds.
 
        @param context[Input]    Context Pointer of Synergy Location API.
@@ -158,7 +156,6 @@ typedef struct {
                         GpsLocationExtended& locationExtended,
                         enum loc_sess_status status,
                         LocPosTechMask loc_technology_mask,
-                        GnssDataNotification* pDataNotify,
                         int msInWeek, void *context);
 
     /**

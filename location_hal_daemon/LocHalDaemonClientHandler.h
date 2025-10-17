@@ -27,39 +27,9 @@
  */
 
 /*
-Changes from Qualcomm Innovation Center are provided under the following license:
-
-Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted (subject to the limitations in the
-disclaimer below) provided that the following conditions are met:
-
-    * Redistributions of source code must retain the above copyright
-      notice, this list of conditions and the following disclaimer.
-
-    * Redistributions in binary form must reproduce the above
-      copyright notice, this list of conditions and the following
-      disclaimer in the documentation and/or other materials provided
-      with the distribution.
-
-    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
-      contributors may be used to endorse or promote products derived
-      from this software without specific prior written permission.
-
-NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
-WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
-GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
-IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
-OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
 #ifndef LOCHAL_CLIENT_HANDLER_H
@@ -84,7 +54,7 @@ class LocationApiService;
 /******************************************************************************
 LocHalDaemonClientHandler
 ******************************************************************************/
-class LocHalDaemonClientHandler
+class LocHalDaemonClientHandler : public std::enable_shared_from_this<LocHalDaemonClientHandler>
 {
 public:
     inline LocHalDaemonClientHandler(LocationApiService* service, const std::string& clientname,
@@ -114,7 +84,7 @@ public:
             updateSubscription(E_LOC_CB_GNSS_LOCATION_INFO_BIT);
             // client has not yet subscribed to anything yet
             mSubscriptionMask = 0;
-            mLocationApi = LocationAPI::createInstance(mCallbacks);
+            mLocationApi = std::shared_ptr<ILocationAPI>(LocationAPI::createInstance(mCallbacks));
         }
         if (mName.compare(0, sizeof(sEAP)-1, sEAP) == 0) {
             SockNode::getId1Id2(mName.c_str(), mName.length(),
@@ -122,6 +92,10 @@ public:
             LOC_LOGi("EAP client: clientname %s, service id: %d, instance id: %d",
                      mName.c_str(), mServiceId, mInstanceId);
         }
+    }
+
+    inline ~LocHalDaemonClientHandler() {
+        LOC_LOGd("LocHalDaemonClientHandler destructor");
     }
 
     static shared_ptr<LocIpcSender> createSender(const string socket);
@@ -189,13 +163,6 @@ private:
         }
     };
 
-    inline ~LocHalDaemonClientHandler() {
-        mIpcSender = nullptr;
-        if (mLocationApi) {
-            delete mLocationApi;
-        }
-    }
-
     // Location API callback functions
     void onCapabilitiesCallback(LocationCapabilitiesMask capabilitiesMask);
     void onResponseCb(LocationError err, uint32_t id);
@@ -250,7 +217,7 @@ private:
     LocationCapabilitiesMask mCapabilityMask;
     uint32_t mSessionId;
     uint32_t mBatchingId;
-    ILocationAPI* mLocationApi;
+    std::shared_ptr<ILocationAPI> mLocationApi;
     LocationCallbacks mCallbacks;
     TrackingOptions mOptions;
     BatchingOptions mBatchOptions;

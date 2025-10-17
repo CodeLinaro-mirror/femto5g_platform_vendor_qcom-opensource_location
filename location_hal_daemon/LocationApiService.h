@@ -296,7 +296,7 @@ private:
     virtual ~LocationApiService();
 
     // private utilities
-    inline LocHalDaemonClientHandler* getClient(const std::string& clientname) {
+    inline std::shared_ptr<LocHalDaemonClientHandler> getClient(const std::string& clientname) {
         // find client from property db
         auto client = mClients.find(clientname);
         if (client == std::end(mClients)) {
@@ -306,7 +306,7 @@ private:
         return client->second;
     }
 
-    inline LocHalDaemonClientHandler* getClient(const char* socketName) {
+    inline std::shared_ptr<LocHalDaemonClientHandler> getClient(const char* socketName) {
         std::string clientname(socketName);
         return getClient(clientname);
     }
@@ -333,7 +333,7 @@ private:
     unique_ptr<LocIpcRecver> mBlockingRecver;
 
     // Client propery database
-    std::unordered_map<std::string, LocHalDaemonClientHandler*> mClients;
+    std::unordered_map<std::string, std::shared_ptr<LocHalDaemonClientHandler>> mClients;
     std::unordered_map<uint32_t, ConfigReqClientData> mConfigReqs;
 
     // Location Control API interface

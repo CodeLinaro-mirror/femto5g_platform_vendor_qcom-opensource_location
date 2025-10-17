@@ -25,41 +25,12 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
 /*
-Changes from Qualcomm Innovation Center are provided under the following license:
-
-Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted (subject to the limitations in the
-disclaimer below) provided that the following conditions are met:
-
-    * Redistributions of source code must retain the above copyright
-      notice, this list of conditions and the following disclaimer.
-
-    * Redistributions in binary form must reproduce the above
-      copyright notice, this list of conditions and the following
-      disclaimer in the documentation and/or other materials provided
-      with the distribution.
-
-    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
-      contributors may be used to endorse or promote products derived
-      from this software without specific prior written permission.
-
-NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
-WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
-GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
-IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
-OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
 #ifndef LOC_SERVICE_02_H
 #define LOC_SERVICE_02_H
 /**
@@ -96,8 +67,8 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *THIS IS AN AUTO GENERATED FILE. DO NOT ALTER IN ANY WAY
  *====*====*====*====*====*====*====*====*====*====*====*====*====*====*====*/
 
-/* This file was generated with Tool version 6.14.7
-   It was generated on: Tue Dec  3 2024 (Spin 0)
+/* This file was generated with Tool version 6.14.11
+   It was generated on: Mon Sep 29 2025 (Spin 0)
    From IDL File: location_service_v02.idl */
 
 /** @defgroup loc_qmi_consts Constant values defined in the IDL */
@@ -123,7 +94,7 @@ extern "C" {
 /** Major Version Number of the IDL used to generate this file */
 #define LOC_V02_IDL_MAJOR_VERS 0x02
 /** Revision Number of the IDL used to generate this file */
-#define LOC_V02_IDL_MINOR_VERS 0xB1
+#define LOC_V02_IDL_MINOR_VERS 0xB5
 /** Major Version Number of the qmi_idl_compiler used to generate this file */
 #define LOC_V02_IDL_TOOL_VERS 0x06
 /** Maximum Defined Message ID */
@@ -1127,6 +1098,20 @@ typedef enum {
     @}
   */
 
+/** @addtogroup loc_qmi_enums
+    @{
+  */
+typedef enum {
+  QMILOCACTIVITYTYPEENUMT_MIN_ENUM_VAL_V02 = -2147483647, /**< To force a 32 bit signed enum.  Do not change or use*/
+  eQMI_LOC_ACTIVITY_TYPE_DEFAULT_V02 = 0, /**<  Default Activity Type for all GNSS use cases  */
+  eQMI_LOC_ACTIVITY_TYPE_SWIMMING_V02 = 1, /**<  Use this activity type for Swimming specific use cases  */
+  eQMI_LOC_ACTIVITY_TYPE_STAMINA_V02 = 2, /**<  Use this activity type for Stamina specific use cases  */
+  QMILOCACTIVITYTYPEENUMT_MAX_ENUM_VAL_V02 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
+}qmiLocActivityTypeEnumT_v02;
+/**
+    @}
+  */
+
 /** @addtogroup loc_qmi_messages
     @{
   */
@@ -1279,6 +1264,19 @@ typedef struct {
       - eQMI_LOC_SPECIAL_REQUEST_SHORT_CODE (1) --  QMI_LOC client requests for location fix with special
        service type set with short code, allow even when GPS and privacy NVs
        do not allow fix requests for this client.
+ */
+
+  /* Optional */
+  /*  Activity Type */
+  uint8_t activityType_valid;  /**< Must be set to true if activityType is being passed */
+  qmiLocActivityTypeEnumT_v02 activityType;
+  /**<   QMI_LOC client requests for location fix with
+ specific activity types for which GNSS engine may
+ tune the receiver for better performance in specified modes.
+ Values: \n
+      - eQMI_LOC_ACTIVITY_TYPE_DEFAULT (0) --  Default Activity Type for all GNSS use cases
+      - eQMI_LOC_ACTIVITY_TYPE_SWIMMING (1) --  Use this activity type for Swimming specific use cases
+      - eQMI_LOC_ACTIVITY_TYPE_STAMINA (2) --  Use this activity type for Stamina specific use cases
  */
 }qmiLocStartReqMsgT_v02;  /* Message */
 /**
@@ -2513,6 +2511,20 @@ typedef struct {
        mandatory NMEA string is empty. \n
        - Type -- NULL-terminated string \n
        - Expanded maximum string length (including NULL-terminator) -- 4096
+    */
+
+  /* Optional */
+  /*  System Tick at GPS Time */
+  uint8_t systemTick_valid;  /**< Must be set to true if systemTick is being passed */
+  uint64_t systemTick;
+  /**<   System tick at GPS time of week. */
+
+  /* Optional */
+  /*  Uncertainty for System Tick at GPS Time */
+  uint8_t systemTickUnc_valid;  /**< Must be set to true if systemTickUnc is being passed */
+  float systemTickUnc;
+  /**<   Uncertainty for system tick at GPS time of week. \n
+       - Units -- milliseconds
     */
 }qmiLocEventNmeaIndMsgT_v02;  /* Message */
 /**
@@ -6613,10 +6625,12 @@ typedef uint32_t qmiLocNmeaSentenceMaskT_v02;
 #define QMI_LOC_NMEA_MASK_GIGSV_V02 ((qmiLocNmeaSentenceMaskT_v02)0x20000000) /**<  Enable GIGSV type \n  */
 #define QMI_LOC_NMEA_MASK_GNDTM_V02 ((qmiLocNmeaSentenceMaskT_v02)0x40000000) /**<  Enable GNDTM type \n  */
 #define QMI_LOC_NMEA_MASK_GSA_TAGBLOCK_ENABLE_V02 ((qmiLocNmeaSentenceMaskT_v02)0x80000000) /**<  Enable TAG block for GSA sentence  */
+typedef uint64_t qmiLocExtendedNmeaSentenceMaskT_v02;
+#define QMI_LOC_EXT_NMEA_MASK_GBGNS_V02 ((qmiLocExtendedNmeaSentenceMaskT_v02)0x0000000000000001ull) /**<  Enable GBGNS type \n  */
 /** @addtogroup loc_qmi_messages
     @{
   */
-/** Request Message; Sets the NMEA types. (Deprecated) */
+/** Request Message; Sets the NMEA types. */
 typedef struct {
 
   /* Mandatory */
@@ -6662,6 +6676,15 @@ typedef struct {
  - QMI_LOC_NMEA_MASK_PQGSV
 
  */
+
+  /* Optional */
+  /*  Extended NMEA Sentence Types */
+  uint8_t nmeaExtendedSentenceType_valid;  /**< Must be set to true if nmeaExtendedSentenceType is being passed */
+  qmiLocExtendedNmeaSentenceMaskT_v02 nmeaExtendedSentenceType;
+  /**<   Bitmask of extended NMEA types to enable. \n
+ Valid bitmasks: \n
+      - QMI_LOC_EXT_NMEA_MASK_GBGNS (0x0000000000000001) --  Enable GBGNS type \n  \n
+ */
 }qmiLocSetNmeaTypesReqMsgT_v02;  /* Message */
 /**
     @}
@@ -6670,7 +6693,7 @@ typedef struct {
 /** @addtogroup loc_qmi_messages
     @{
   */
-/** Indication Message; Sets the NMEA types. (Deprecated) */
+/** Indication Message; Sets the NMEA types. */
 typedef struct {
 
   /* Mandatory */
@@ -6778,6 +6801,15 @@ typedef struct {
  set, they are ignored: \n
  - QMI_LOC_NMEA_MASK_PQGSA \n
  - QMI_LOC_NMEA_MASK_PQGSV
+ */
+
+  /* Optional */
+  /*  Extended NMEA Sentence Types */
+  uint8_t nmeaExtendedSentenceType_valid;  /**< Must be set to true if nmeaExtendedSentenceType is being passed */
+  qmiLocExtendedNmeaSentenceMaskT_v02 nmeaExtendedSentenceType;
+  /**<   Bitmask of extended NMEA types to enable. \n
+ Valid bitmasks: \n
+      - QMI_LOC_EXT_NMEA_MASK_GBGNS (0x0000000000000001) --  Enable GBGNS type \n  \n
  */
 }qmiLocGetNmeaTypesIndMsgT_v02;  /* Message */
 /**
@@ -25211,6 +25243,20 @@ typedef enum {
     @}
   */
 
+/** @addtogroup loc_qmi_enums
+    @{
+  */
+typedef enum {
+  QMILOCROTATORQUALITYENUMT_MIN_ENUM_VAL_V02 = -2147483647, /**< To force a 32 bit signed enum.  Do not change or use*/
+  eQMI_LOC_ROTATOR_QUALITY_NONE_V02 = 0, /**<  Rotator Quality not available.  */
+  eQMI_LOC_ROTATOR_QUALITY_GOOD_V02 = 1, /**<  Rotator quality is good.  */
+  eQMI_LOC_ROTATOR_QUALITY_XO_COMP_HIGH_V02 = 2, /**<  Rotator quality is degraded due to XO compensation > 2 ppm  */
+  QMILOCROTATORQUALITYENUMT_MAX_ENUM_VAL_V02 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
+}qmiLocRotatorQualityEnumT_v02;
+/**
+    @}
+  */
+
 /** @addtogroup loc_qmi_messages
     @{
   */
@@ -25823,6 +25869,69 @@ typedef struct {
       - eQMI_LOC_FRONT_END_GAIN_MAXIMUM_SATURATION (1) --  AGC status is Front end gain maximum saturation \n
       - eQMI_LOC_FRONT_END_GAIN_MINIMUM_SATURATION (2) --  AGC status is Front end gain minimum saturation
  */
+
+  /* Optional */
+  /*  System Tick at GPS Time */
+  uint8_t systemTickAtGpsTime_valid;  /**< Must be set to true if systemTickAtGpsTime is being passed */
+  uint64_t systemTickAtGpsTime;
+  /**<   System tick corresponding to the Fcount at GPS time. */
+
+  /* Optional */
+  /*  Hardware clock frequency correction */
+  uint8_t HwClkFreqCorrection_valid;  /**< Must be set to true if HwClkFreqCorrection is being passed */
+  uint32_t HwClkFreqCorrection;
+
+  /* Optional */
+  /*  GPS Clock Time Bias */
+  uint8_t GpsClkTimeBias_valid;  /**< Must be set to true if GpsClkTimeBias is being passed */
+  uint32_t GpsClkTimeBias;
+
+  /* Optional */
+  /*  XO Temperature */
+  uint8_t xoTemp_valid;  /**< Must be set to true if xoTemp is being passed */
+  float xoTemp;
+  /**<   Temperature at XO thermistor. \n
+     - Units -- Degrees Celcius  */
+
+  /* Optional */
+  /*  XO Temperature Slope */
+  uint8_t xoTempSlope_valid;  /**< Must be set to true if xoTempSlope is being passed */
+  float xoTempSlope;
+  /**<   Rate of temperature change at XO thermistor. \n
+      - Units -- Degrees Celcius per Second  */
+
+  /* Optional */
+  /*  XO temperature acceleration */
+  uint8_t xoTempAccel_valid;  /**< Must be set to true if xoTempAccel is being passed */
+  float xoTempAccel;
+  /**<   Acceleration of temperature change at XO thermistor. \n
+      - Units -- Degrees Celcius per Second^2  */
+
+  /* Optional */
+  /*  XO Field Calibration Reset Count */
+  uint8_t xoCalResetCount_valid;  /**< Must be set to true if xoCalResetCount is being passed */
+  uint32_t xoCalResetCount;
+  /**<   Reset counter for XO calibration data. \n
+      Indication to check GNSS outage issue due to bad XO cal, XO aging or rotator push. \n
+      - Units -- uint32  */
+
+  /* Optional */
+  /*  Rotator Quality */
+  uint8_t xoRotatorQuality_valid;  /**< Must be set to true if xoRotatorQuality is being passed */
+  qmiLocRotatorQualityEnumT_v02 xoRotatorQuality;
+  /**<   XO rotator quality. Values: \n
+      - eQMI_LOC_ROTATOR_QUALITY_NONE (0) --  Rotator Quality not available.
+      - eQMI_LOC_ROTATOR_QUALITY_GOOD (1) --  Rotator quality is good.
+      - eQMI_LOC_ROTATOR_QUALITY_XO_COMP_HIGH (2) --  Rotator quality is degraded due to XO compensation > 2 ppm  */
+
+  /* Optional */
+  /*  Time Inconsistency Status */
+  uint8_t timeInconsistencyStatus_valid;  /**< Must be set to true if timeInconsistencyStatus is being passed */
+  uint8_t timeInconsistencyStatus;
+  /**<   GNSS time inconsistency check. \n
+      Indication to check potential time issue due to XO/TCXO switch during sleep. \n
+      - FALSE -- GNSS time was not detected. \n
+      - TRUE -- GNSS time inconsistency was detected.   */
 }qmiLocEngineDebugDataIndMsgT_v02;  /* Message */
 /**
     @}

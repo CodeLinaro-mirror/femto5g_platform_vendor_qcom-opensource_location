@@ -26,39 +26,9 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 /*
-Changes from Qualcomm Innovation Center are provided under the following license:
-
-Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted (subject to the limitations in the
-disclaimer below) provided that the following conditions are met:
-
-    * Redistributions of source code must retain the above copyright
-      notice, this list of conditions and the following disclaimer.
-
-    * Redistributions in binary form must reproduce the above
-      copyright notice, this list of conditions and the following
-      disclaimer in the documentation and/or other materials provided
-      with the distribution.
-
-    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
-      contributors may be used to endorse or promote products derived
-      from this software without specific prior written permission.
-
-NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
-WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
-GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
-IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
-OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
 #define LOG_TAG "LocSvc_LocationClientApi"
@@ -1243,6 +1213,17 @@ DECLARE_TBL(GnssDataMask) = {
     {GNSS_DATA_JAMMER_IND_BIT, "JAMMER"},
     {GNSS_DATA_AGC_BIT, "AGC"}
 };
+// GnssDataValidity
+DECLARE_TBL(GnssDataValidity) = {
+    {GNSS_DATA_JAMMER_IND_ARRAY_BIT, "JAMMER_IND_ARRAY"},
+    {GNSS_DATA_AGC_ARRAY_BIT, "AGC_ARRAY"},
+    {GNSS_DATA_AGC_STATUS_L1_BIT, "AGC_STATUS_L1"},
+    {GNSS_DATA_AGC_STATUS_L2_BIT, "AGC_STATUS_L2"},
+    {GNSS_DATA_AGC_STATUS_L5_BIT, "AGC_STATUS_L5"},
+    {GNSS_DATA_GPS_SYSTEM_TIME_BIT, "GPS_SYSTEM_TIME"},
+    {GNSS_DATA_SYSTEM_TICK_AT_GPS_TIME_BIT, "SYSTEM_TICK_AT_GPS_TIME"},
+    {GNSS_DATA_HW_CLK_FREQ_CORRECTION_BIT, "HW_CLK_FREQ_CORRECTION"},
+};
 // GnssMeasurementsDataFlagsMask
 DECLARE_TBL(GnssMeasurementsDataFlagsMask) = {
     {GNSS_MEASUREMENTS_DATA_SV_ID_BIT, "svId"},
@@ -1612,6 +1593,7 @@ string GnssData::toString() const {
     string out;
     out.reserve(4096);
 
+    out += FIELDVAL_MASK(gnssDataValidityMask, GnssDataValidity_tbl);
     for (int i = 0; i < GNSS_MAX_NUMBER_OF_SIGNAL_TYPES; i++) {
         out += FIELDVAL_MASK(i, GnssSignalTypes_tbl);
         out += FIELDVAL_MASK(gnssDataMask[i], GnssDataMask_tbl);
@@ -1621,6 +1603,10 @@ string GnssData::toString() const {
     out += FIELDVAL_DEC(agcStatusL1);
     out += FIELDVAL_DEC(agcStatusL2);
     out += FIELDVAL_DEC(agcStatusL5);
+
+    out += gpsSystemTime.toString();
+    out += FIELDVAL_DEC(systemTickAtGpsTime);
+    out += FIELDVAL_DEC(hwClkFreqCorrection);
 
     return out;
 }
