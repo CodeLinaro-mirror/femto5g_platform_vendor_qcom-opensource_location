@@ -2768,8 +2768,8 @@ void LocApiV02 :: reportPosition (
                                 GNSS_LOC_SV_SYSTEM_BDS;
                         locationExtended.measUsageInfo[idx].gnssSignalType =
                                 (multiBandTypesAvailable ?
-                                location_report_ptr->gnssSvUsedSignalTypeList[idx]:
-                                GNSS_SIGNAL_BEIDOU_B1);
+                                location_report_ptr->gnssSvUsedSignalTypeList[idx] :
+                                GNSS_SIGNAL_BEIDOU_B1I);
                     }
                     else if ((gnssSvIdUsed >= GAL_SV_PRN_MIN) && (gnssSvIdUsed <= GAL_SV_PRN_MAX))
                     {
