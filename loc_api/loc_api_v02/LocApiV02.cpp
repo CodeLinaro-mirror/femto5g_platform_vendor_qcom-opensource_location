@@ -2701,32 +2701,40 @@ void LocApiV02 :: reportPosition (
                 locationExtended.eastStdDeviation  = sqrt(eastSquare);
             }
 
-            const uint16_t* gnssSvUsedList = NULL;
-            uint32_t gnssSvUsedList_len = 0;
-            if (location_report_ptr->expandedGnssSvUsedList_valid &&
-                      (location_report_ptr->expandedGnssSvUsedList_len != 0)) {
-                gnssSvUsedList = location_report_ptr->expandedGnssSvUsedList;
-                gnssSvUsedList_len = location_report_ptr->expandedGnssSvUsedList_len;
-            }
-            else if (location_report_ptr->gnssSvUsedList_valid &&
-                      (location_report_ptr->gnssSvUsedList_len != 0)) {
-                gnssSvUsedList = location_report_ptr->gnssSvUsedList;
-                gnssSvUsedList_len = location_report_ptr->gnssSvUsedList_len;
-            }
-
-            LOC_LOGv("sv length %d ", gnssSvUsedList_len);
-
-            if ((gnssSvUsedList != NULL) && (gnssSvUsedList_len != 0)) {
+            if (((location_report_ptr->expandedGnssSvUsedList_valid) &&
+                    (location_report_ptr->expandedGnssSvUsedList_len != 0)) ||
+                    ((location_report_ptr->gnssSvUsedList_valid) &&
+                    (location_report_ptr->gnssSvUsedList_len != 0)))
+            {
                 uint32_t idx=0;
+                uint32_t gnssSvUsedList_len = 0;
                 uint16_t gnssSvIdUsed = 0;
+                const uint16_t *svUsedList;
+                bool multiBandTypesAvailable = false;
 
                 locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_GNSS_SV_USED_DATA;
+                if (location_report_ptr->expandedGnssSvUsedList_valid)
+                {
+                    gnssSvUsedList_len = location_report_ptr->expandedGnssSvUsedList_len;
+                    svUsedList = location_report_ptr->expandedGnssSvUsedList;
+                } else if (location_report_ptr->gnssSvUsedList_valid)
+                {
+                    gnssSvUsedList_len = location_report_ptr->gnssSvUsedList_len;
+                    svUsedList = location_report_ptr->gnssSvUsedList;
+                }
+
+                // If multifreq data is not available then default to L1 for all constellations.
+                if ((location_report_ptr->gnssSvUsedSignalTypeList_valid) &&
+                        (location_report_ptr->gnssSvUsedSignalTypeList_len != 0)) {
+                    multiBandTypesAvailable = true;
+                }
+
                 locationExtended.numOfMeasReceived = gnssSvUsedList_len;
                 memset(locationExtended.measUsageInfo, 0, sizeof(locationExtended.measUsageInfo));
                 // Set of used_in_fix SV ID
                 for (idx = 0; idx < gnssSvUsedList_len; idx++)
                 {
-                    gnssSvIdUsed = gnssSvUsedList[idx];
+                    gnssSvIdUsed = svUsedList[idx];
                     locationExtended.measUsageInfo[idx].gnssSvId = gnssSvIdUsed;
                     locationExtended.measUsageInfo[idx].carrierPhaseAmbiguityType =
                         CARRIER_PHASE_AMBIGUITY_RESOLUTION_NONE;
@@ -2737,7 +2745,9 @@ void LocApiV02 :: reportPosition (
                         locationExtended.measUsageInfo[idx].gnssConstellation =
                                 GNSS_LOC_SV_SYSTEM_GPS;
                         locationExtended.measUsageInfo[idx].gnssSignalType =
-                                GNSS_SIGNAL_GPS_L1CA;
+                                (multiBandTypesAvailable ?
+                                location_report_ptr->gnssSvUsedSignalTypeList[idx]:
+                                GNSS_SIGNAL_GPS_L1CA);
                     }
                     else if ((gnssSvIdUsed >= GLO_SV_PRN_MIN) && (gnssSvIdUsed <= GLO_SV_PRN_MAX))
                     {
@@ -2746,7 +2756,9 @@ void LocApiV02 :: reportPosition (
                         locationExtended.measUsageInfo[idx].gnssConstellation =
                                 GNSS_LOC_SV_SYSTEM_GLONASS;
                         locationExtended.measUsageInfo[idx].gnssSignalType =
-                                GNSS_SIGNAL_GLONASS_G1;
+                                (multiBandTypesAvailable ?
+                                location_report_ptr->gnssSvUsedSignalTypeList[idx]:
+                                GNSS_SIGNAL_GLONASS_G1);
                     }
                     else if ((gnssSvIdUsed >= BDS_SV_PRN_MIN) && (gnssSvIdUsed <= BDS_SV_PRN_MAX))
                     {
@@ -2755,7 +2767,9 @@ void LocApiV02 :: reportPosition (
                         locationExtended.measUsageInfo[idx].gnssConstellation =
                                 GNSS_LOC_SV_SYSTEM_BDS;
                         locationExtended.measUsageInfo[idx].gnssSignalType =
-                                GNSS_SIGNAL_BEIDOU_B1;
+                                (multiBandTypesAvailable ?
+                                location_report_ptr->gnssSvUsedSignalTypeList[idx]:
+                                GNSS_SIGNAL_BEIDOU_B1);
                     }
                     else if ((gnssSvIdUsed >= GAL_SV_PRN_MIN) && (gnssSvIdUsed <= GAL_SV_PRN_MAX))
                     {
@@ -2764,7 +2778,9 @@ void LocApiV02 :: reportPosition (
                         locationExtended.measUsageInfo[idx].gnssConstellation =
                                 GNSS_LOC_SV_SYSTEM_GALILEO;
                         locationExtended.measUsageInfo[idx].gnssSignalType =
-                                GNSS_SIGNAL_GALILEO_E1;
+                                (multiBandTypesAvailable ?
+                                location_report_ptr->gnssSvUsedSignalTypeList[idx]:
+                                GNSS_SIGNAL_GALILEO_E1);
                     }
                     else if ((gnssSvIdUsed >= QZSS_SV_PRN_MIN) && (gnssSvIdUsed <= QZSS_SV_PRN_MAX))
                     {
@@ -2773,7 +2789,9 @@ void LocApiV02 :: reportPosition (
                         locationExtended.measUsageInfo[idx].gnssConstellation =
                                 GNSS_LOC_SV_SYSTEM_QZSS;
                         locationExtended.measUsageInfo[idx].gnssSignalType =
-                                GNSS_SIGNAL_QZSS_L1CA;
+                                (multiBandTypesAvailable ?
+                                location_report_ptr->gnssSvUsedSignalTypeList[idx]:
+                                GNSS_SIGNAL_QZSS_L1CA);
                     }
                 }
             }
@@ -3006,6 +3024,10 @@ void  LocApiV02 :: reportSv (
     }
 
     SvNotify.size = sizeof(GnssSvNotification);
+    if (gnss_report_ptr->gnssSignalTypeList_valid) {
+        SvNotify.gnssSignalTypeMaskValid = true;
+    }
+
     if (1 == gnss_report_ptr->svList_valid ||
         1 == gnss_report_ptr->expandedSvList_valid) {
         SvNotify.count = 0;
@@ -3101,12 +3123,14 @@ void  LocApiV02 :: reportSv (
                                         gnss_report_ptr->gnssSignalTypeList[SvNotify.count],
                                         gloFrequency);
                             mask |= GNSS_SV_OPTIONS_HAS_CARRIER_FREQUENCY_BIT;
+
+                            gnssSv_ref.gnssSignalTypeMask =
+                                gnss_report_ptr->gnssSignalTypeList[SvNotify.count];
                         }
                     }
                 }
 
                 gnssSv_ref.gnssSvOptionsMask = mask;
-
                 SvNotify.count++;
             }
         }
@@ -3137,12 +3161,14 @@ void  LocApiV02 :: reportSvMeasurement (
             svMeasurementSet.timeStamp.apTimeStamp.tv_sec,
             svMeasurementSet.timeStamp.apTimeStamp.tv_nsec);
 
-  LOC_LOGI("[SvMeas] SeqNum: %d, MaxMsgNum: %d, MeasValid: %d, #of SV: %d\n",
+  LOC_LOGI("[SvMeas] SeqNum: %d, MaxMsgNum: %d, MeasValid: %d, #of SV: %d %d 0x%x\n",
            gnss_raw_measurement_ptr->seqNum,
            gnss_raw_measurement_ptr->maxMessageNum,
            gnss_raw_measurement_ptr->svMeasurement_valid,
            (gnss_raw_measurement_ptr->svMeasurement_valid)?
-           gnss_raw_measurement_ptr->svMeasurement_len : 0);
+           gnss_raw_measurement_ptr->svMeasurement_len : 0,
+           gnss_raw_measurement_ptr->gnssSignalType_valid,
+           gnss_raw_measurement_ptr->gnssSignalType);
 
   svMeasurementSet.seqNum           = gnss_raw_measurement_ptr->seqNum;
   svMeasurementSet.maxMessageNum    = gnss_raw_measurement_ptr->maxMessageNum;
@@ -3299,8 +3325,10 @@ void  LocApiV02 :: reportSvMeasurement (
       //This should not happen normally, anycase limit to Max List Size
       svMeasurementSet.gnssMeas.numSvs = GNSS_LOC_SV_MEAS_LIST_MAX_SIZE;
     }
-    svMeasurementSet.gnssMeas.numSvs = gnss_raw_measurement_ptr->svMeasurement_len;
-    svMeasurementSet.gnssMeasValid   = gnss_raw_measurement_ptr->svMeasurement_valid;
+    svMeasurementSet.gnssMeas.numSvs         = gnss_raw_measurement_ptr->svMeasurement_len;
+    svMeasurementSet.gnssMeasValid           = gnss_raw_measurement_ptr->svMeasurement_valid;
+    svMeasurementSet.gnssSignalTypeMaskValid = gnss_raw_measurement_ptr->gnssSignalType_valid;
+    svMeasurementSet.gnssSignalTypeMask      = gnss_raw_measurement_ptr->gnssSignalType;
 
     uint32_t i = 0, cnt=0;
     for(i=0;i<gnss_raw_measurement_ptr->svMeasurement_len;i++)
