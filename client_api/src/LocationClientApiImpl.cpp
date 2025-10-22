@@ -62,6 +62,12 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/*
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
+
 #define LOG_TAG "LocSvc_LocationClientApi"
 
 #include <inttypes.h>
@@ -2902,31 +2908,6 @@ void LocationClientApiImpl::resumeGeofences(size_t count, uint32_t* ids) {
         uint32_t* mGfIds;
     };
     mMsgTask.sendMsg(new (nothrow) ResumeGeofencesReq(this, count, ids));
-}
-
-void LocationClientApiImpl::updateNetworkAvailability(bool available) {
-
-    struct UpdateNetworkAvailabilityReq : public LocMsg {
-        UpdateNetworkAvailabilityReq(LocationClientApiImpl* apiImpl, bool available) :
-                mApiImpl(apiImpl), mAvailable(available) {}
-        virtual ~UpdateNetworkAvailabilityReq() {}
-        void proc() const {
-            string pbStr;
-            LocAPIUpdateNetworkAvailabilityReqMsg msg(mApiImpl->mSocketName,
-                                                      mAvailable,
-                                                      &mApiImpl->mPbufMsgConv);
-            if (msg.serializeToProtobuf(pbStr)) {
-                bool rc = mApiImpl->sendMessage(
-                        reinterpret_cast<uint8_t *>((uint8_t *)pbStr.c_str()), pbStr.size());
-                LOC_LOGd(">>> UpdateNetworkAvailabilityReq available=%d rc=%d", mAvailable, rc);
-            } else {
-                LOC_LOGe("LocAPIUpdateNetworkAvailabilityReqMsg serializeToProtobuf failed");
-            }
-        }
-        LocationClientApiImpl* mApiImpl;
-        const bool mAvailable;
-    };
-    mMsgTask.sendMsg(new (nothrow) UpdateNetworkAvailabilityReq(this, available));
 }
 
 void LocationClientApiImpl::getGnssEnergyConsumed(

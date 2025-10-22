@@ -62,6 +62,12 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/*
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
+
 #define LOG_TAG "LocSvc_LocationApiMsg"
 
 #include <inttypes.h>
@@ -226,6 +232,8 @@ const char* LocApiMsgString(ELocMsgID msgId) {
         return "E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_RESP_MSG_ID";
     case E_INTAPI_CONFIG_MAP_MATCHED_FEEDBACK_MSG_ID:
         return "E_INTAPI_CONFIG_MAP_MATCHED_FEEDBACK_MSG_ID";
+    case E_INTAPI_NETWORK_UPDATE_INFO_MSG_ID:
+        return "E_INTAPI_NETWORK_UPDATE_INFO_MSG_ID";
     default:
         return "unknown ELocMsgID";
     }
@@ -991,44 +999,6 @@ int LocAPIResumeGeofencesReqMsg::serializeToProtobuf(string& protoStr) {
     }
     // free memory
     pLocApiPbMsgConv->freeUpPBLocAPIResumeGeofencesReqMsg(pbLocApiResumeGf);
-    return protoStr.size();
-}
-
-// Convert LocAPIUpdateNetworkAvailabilityReqMsg -> PBLocAPIUpdateNetworkAvailabilityReqMsg
-int LocAPIUpdateNetworkAvailabilityReqMsg::serializeToProtobuf(string& protoStr) {
-    PBLocAPIMsgHeader pLocApiMsgHdr;
-    PBLocAPIUpdateNetworkAvailabilityReqMsg pbLocApiUptNetwAvail;
-
-    if (nullptr == pLocApiPbMsgConv) {
-        LOC_LOGe("pLocApiPbMsgConv is null!");
-        return 0;
-    }
-    // string      mSocketName = 1;
-    pLocApiMsgHdr.set_msocketname(mSocketName);
-    // PBELocMsgID  msgId = 2;
-    pLocApiMsgHdr.set_msgid(pLocApiPbMsgConv->getPBEnumForELocMsgID(msgId));
-    // uint32   msgVersion = 3;
-    pLocApiMsgHdr.set_msgversion(msgVersion);
-
-    // >>>> PBLocAPIUpdateNetworkAvailabilityReqMsg conversion
-    // bool mAvailability = 1;
-    pbLocApiUptNetwAvail.set_mavailability(mAvailability);
-
-    string pbStr;
-    if (!pbLocApiUptNetwAvail.SerializeToString(&pbStr)) {
-        LOC_LOGe("SerializeToString on pbLocApiUptNetwAvail failed!");
-        return 0;
-    }
-    // bytes       payload = 4;
-    pLocApiMsgHdr.set_payload(pbStr);
-
-    // uint32   payloadSize = 5;
-    pLocApiMsgHdr.set_payloadsize(sizeof(LocAPIUpdateNetworkAvailabilityReqMsg));
-
-    if (!pLocApiMsgHdr.SerializeToString(&protoStr)) {
-        LOC_LOGe("SerializeToString on pLocApiMsgHdr failed!");
-        return 0;
-    }
     return protoStr.size();
 }
 
@@ -3879,16 +3849,6 @@ LocAPIResumeGeofencesReqMsg::LocAPIResumeGeofencesReqMsg(const char* name,
             gfClientIds);
 }
 
-// Decode PBLocAPIUpdateNetworkAvailabilityReqMsg -> LocAPIUpdateNetworkAvailabilityReqMsg
-LocAPIUpdateNetworkAvailabilityReqMsg::LocAPIUpdateNetworkAvailabilityReqMsg(const char* name,
-            const PBLocAPIUpdateNetworkAvailabilityReqMsg &pbUpdateNetAvailReqMsg,
-            const LocationApiPbMsgConv *pbMsgConv):
-        LocAPIMsgHeader(name, E_LOCAPI_CONTROL_UPDATE_NETWORK_AVAILABILITY_MSG_ID, pbMsgConv) {
-    // >>>> PBLocAPIUpdateNetworkAvailabilityReqMsg conversion
-    // bool mAvailability = 1;
-    mAvailability = pbUpdateNetAvailReqMsg.mavailability();
-}
-
 // Decode PBLocAPILocationIndMsg -> LocAPILocationIndMsg
 LocAPILocationIndMsg::LocAPILocationIndMsg(const char* name,
             const PBLocAPILocationIndMsg &pbLocApiLocIndMsg,
@@ -4477,5 +4437,69 @@ int LocAPIEphIndMsg ::serializeToProtobuf(string& protoStr) {
     }
     // free memory
     pLocApiPbMsgConv->freeUpPBLocAPIEphIndMsg(pbLocApiEphInd);
+    return protoStr.size();
+}
+
+// Decode PBUpdateNetworkInfoReq -> UpdateNetworkInfoReq
+UpdateNetworkInfoReq::UpdateNetworkInfoReq(const char* name,
+            const PBUpdateNetworkInfoReq &pbNetworkInfoMsg,
+            const LocationApiPbMsgConv *pbMsgConv):
+        LocAPIMsgHeader(name, E_INTAPI_NETWORK_UPDATE_INFO_MSG_ID, pbMsgConv) {
+    if (nullptr == pLocApiPbMsgConv) {
+        LOC_LOGe("pLocApiPbMsgConv is null!");
+        return;
+    }
+    // >>>> PBUpdateNetworkInfoReq conversion
+    // PBNetworkInfoData data = 1;
+    pLocApiPbMsgConv->pbConvertToNetworkDataInfo(pbNetworkInfoMsg.data(),
+            mData);
+}
+
+// Decode UpdateNetworkInfoReq -> PBUpdateNetworkInfoReq
+int UpdateNetworkInfoReq::serializeToProtobuf(string& protoStr) {
+    PBLocAPIMsgHeader pLocApiMsgHdr;
+    PBUpdateNetworkInfoReq pbNetworkInfo;
+
+    if (nullptr == pLocApiPbMsgConv) {
+        LOC_LOGe("pLocApiPbMsgConv is null!");
+        return 0;
+    }
+    // string      mSocketName = 1;
+    pLocApiMsgHdr.set_msocketname(mSocketName);
+    // PBELocMsgID  msgId = 2;
+    pLocApiMsgHdr.set_msgid(pLocApiPbMsgConv->getPBEnumForELocMsgID(msgId));
+    // uint32   msgVersion = 3;
+    pLocApiMsgHdr.set_msgversion(msgVersion);
+
+    // PBNetworkInfoData data = 1;
+    PBNetworkInfoData* nwInfo = pbNetworkInfo.mutable_data();
+    if (nullptr != nwInfo) {
+        if (pLocApiPbMsgConv->convertNetworkInfoMsgToPB(mData, nwInfo)) {
+            LOC_LOGe("convertNetworkInfoMsgToPB failed");
+            free(nwInfo);
+            return 0;
+        }
+    } else {
+        LOC_LOGe("mutable_data failed");
+        return 0;
+    }
+
+    string pbStr;
+    if (!pbNetworkInfo.SerializeToString(&pbStr)) {
+        LOC_LOGe("SerializeToString on pbNetworkInfo failed!");
+        return 0;
+    }
+    // bytes       payload = 4;
+    pLocApiMsgHdr.set_payload(pbStr);
+
+    // uint32   payloadSize = 5;
+    pLocApiMsgHdr.set_payloadsize(sizeof(UpdateNetworkInfoReq));
+
+    if (!pLocApiMsgHdr.SerializeToString(&protoStr)) {
+        LOC_LOGe("SerializeToString on pLocApiMsgHdr failed!");
+        return 0;
+    }
+    // free memory
+    pLocApiPbMsgConv->freeUpPBNetworkInfoMsg(pbNetworkInfo);
     return protoStr.size();
 }
