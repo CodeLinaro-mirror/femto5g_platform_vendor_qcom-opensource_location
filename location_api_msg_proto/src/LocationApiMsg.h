@@ -268,16 +268,8 @@ enum ELocMsgID {
     E_LOCAPI_GET_SINGLE_TERRESTRIAL_POS_REQ_MSG_ID = 31,
     E_LOCAPI_GET_SINGLE_TERRESTRIAL_POS_RESP_MSG_ID = 32,
 
-    // Debug Report
-    E_LOCAPI_GET_DEBUG_REQ_MSG_ID = 33,
-    E_LOCAPI_GET_DEBUG_RESP_MSG_ID = 34,
-
     // Disater and crisis reports
     E_LOCAPI_DC_REPORT_MSG_ID = 35,
-
-    // Antenna Info
-    E_LOCAPI_GET_ANTENNA_INFO_MSG_ID = 36,
-    E_LOCAPI_ANTENNA_INFO_MSG_ID = 37,
 
     // Single fix request/response msg
     E_LOCAPI_GET_SINGLE_POS_REQ_MSG_ID = 38,
@@ -352,7 +344,6 @@ enum ELocationCallbacksOption {
     E_LOC_CB_GNSS_MEAS_BIT              = (1<<11), /**< Register for GNSS Measurements */
     E_LOC_CB_GNSS_NHZ_MEAS_BIT          = (1<<12), /**< Register for NHZ GNSS Measurements */
     E_LOC_CB_GNSS_DC_REPORT_BIT         = (1<<13), /**< Register for disaster and crisis reports */
-    E_LOC_CB_ANTENNA_INFO_BIT           = (1<<14), /**< Register for Antenna Info */
     E_LOC_CB_ENGINE_NMEA_BIT            = (1<<15), /**< Register for Engine NMEA */
     E_LOC_CB_GNSS_EPH_BIT               = (1<<16) /**< Register for Engine NMEA */
 };
@@ -430,9 +421,6 @@ struct CollectiveResPayload {
     std::vector<GeofenceResponse> resp;
 };
 
-struct AntennaInformation {
-    std::vector<GnssAntennaInformation> antennaInfos;
-};
 /******************************************************************************
 IPC message header structure
 ******************************************************************************/
@@ -1564,56 +1552,6 @@ struct LocConfigGetConstellationSecondaryBandConfigRespMsg: LocAPIMsgHeader
     LocConfigGetConstellationSecondaryBandConfigRespMsg(const char* name,
             const PBLocConfigGetConstltnSecondaryBandConfigRespMsg &pbCfgGetConstSecBandCfgResp,
             const LocationApiPbMsgConv *pbMsgConv);
-
-    int serializeToProtobuf(string& protoStr) override;
-};
-
-struct LocAPIGetDebugReqMsg : LocAPIMsgHeader
-{
-    inline LocAPIGetDebugReqMsg(const char* name,
-            const LocationApiPbMsgConv* pbMsgConv) :
-        LocAPIMsgHeader(name, E_LOCAPI_GET_DEBUG_REQ_MSG_ID, pbMsgConv) { }
-
-    int serializeToProtobuf(string& protoStr) override;
-};
-
-struct LocAPIGetDebugRespMsg : LocAPIMsgHeader
-{
-    GnssDebugReport mDebugReport;
-
-    inline LocAPIGetDebugRespMsg(const char* name,
-            GnssDebugReport debugReport,
-            const LocationApiPbMsgConv* pbMsgConv) :
-        LocAPIMsgHeader(name, E_LOCAPI_GET_DEBUG_RESP_MSG_ID, pbMsgConv),
-        mDebugReport(debugReport) { }
-    LocAPIGetDebugRespMsg(const char* name,
-            const PBLocAPIGetDebugRespMsg& pbMsg,
-            const LocationApiPbMsgConv* pbMsgConv);
-
-    int serializeToProtobuf(string& protoStr) override;
-};
-
-struct LocAPIGetAntennaInfoMsg : LocAPIMsgHeader
-{
-    inline LocAPIGetAntennaInfoMsg(const char* name,
-        const LocationApiPbMsgConv* pbMsgConv) :
-        LocAPIMsgHeader(name, E_LOCAPI_GET_ANTENNA_INFO_MSG_ID, pbMsgConv) { }
-
-    int serializeToProtobuf(string& protoStr) override;
-};
-
-struct LocAPIAntennaInfoMsg : LocAPIMsgHeader
-{
-    AntennaInformation mAntennaInfo;
-
-    inline LocAPIAntennaInfoMsg(const char* name,
-            AntennaInformation& antennaInfo,
-            const LocationApiPbMsgConv* pbMsgConv) :
-        LocAPIMsgHeader(name, E_LOCAPI_ANTENNA_INFO_MSG_ID, pbMsgConv),
-        mAntennaInfo(antennaInfo) { }
-    LocAPIAntennaInfoMsg(const char* name,
-            const PBLocAPIAntennaInfoMsg& pbMsg,
-            const LocationApiPbMsgConv* pbMsgConv);
 
     int serializeToProtobuf(string& protoStr) override;
 };
