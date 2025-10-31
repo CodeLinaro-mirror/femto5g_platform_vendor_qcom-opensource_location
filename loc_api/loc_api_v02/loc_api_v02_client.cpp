@@ -53,7 +53,7 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 
 #include <loc_pla.h>
 #include "loc_api_v02_client.h"
-#include "loc_util_log.h"
+#include "log_util.h"
 #include "loc_api_v02_log.h"
 
 #include "loc_cfg.h"
