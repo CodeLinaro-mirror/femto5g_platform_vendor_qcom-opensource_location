@@ -9872,7 +9872,10 @@ LocApiV02::addGeofence(uint32_t clientId,
         data.hwId = ind.geofenceId;
         err = LOCATION_ERROR_SUCCESS;
     } else {
-        if (eQMI_LOC_MAX_GEOFENCE_PROGRAMMED_V02 == ind.status) {
+        if (eLOC_CLIENT_FAILURE_UNSUPPORTED == st) {
+            err = LOCATION_ERROR_NOT_SUPPORTED;
+            LOC_LOGd("Geofence feature is not supported");
+        } else if (eQMI_LOC_MAX_GEOFENCE_PROGRAMMED_V02 == ind.status) {
             err = LOCATION_ERROR_GEOFENCES_AT_MAX;
         }
         LOC_LOGE("addGeofence: failed! rv is %d, ind.geofenceId_valid is %d",
