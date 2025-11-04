@@ -42,8 +42,7 @@ library_include_HEADERS = \
     loc_api_v02_log.h \
     loc_api_v02_client.h \
     loc_api_sync_req.h \
-    LocApiV02.h \
-    loc_util_log.h
+    LocApiV02.h
 
 library_includedir = $(pkgincludedir)/loc_api_v02
 

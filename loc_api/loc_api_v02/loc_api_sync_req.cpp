@@ -52,7 +52,7 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 // log debug logs
 #define LOG_NDDEBUG 1
 #define LOG_TAG "LocSvc_api_v02"
-#include "loc_util_log.h"
+#include "log_util.h"
 
 #define LOC_SYNC_REQ_BUFFER_SIZE 8
 pthread_mutex_t  loc_sync_call_mutex = PTHREAD_MUTEX_INITIALIZER;

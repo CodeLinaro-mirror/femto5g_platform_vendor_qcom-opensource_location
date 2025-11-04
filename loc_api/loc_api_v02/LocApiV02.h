@@ -129,12 +129,6 @@ typedef struct {
 } timeBiases;
 
 typedef struct {
-    GnssSvType svType;
-    double carrierFrequencyHz;
-    GnssMeasurementsCodeType codeType;
-} referenceSignalTypeForIsb;
-
-typedef struct {
   /* bitwise OR of GnssMeasurementsClockFlagsBits */
     GnssMeasurementsClockFlagsMask flags;
     int64_t timeNs;
