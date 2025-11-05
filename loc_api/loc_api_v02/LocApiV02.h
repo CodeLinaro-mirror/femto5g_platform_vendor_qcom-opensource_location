@@ -564,8 +564,6 @@ public:
   virtual LocationError setEmergencyExtensionWindowSync(const uint32_t emergencyExtensionSeconds);
   virtual void setMeasurementCorrections(
         const GnssMeasurementCorrections& gnssMeasurementCorrections);
-  virtual void configPrecisePositioning(uint32_t featureId, bool enable,
-          const std::string& appHash, LocApiResponse* adapterResponse=nullptr);
   virtual void configPrecisePositioning(PreciseType preciseType, bool enable,
           LocApiResponse* adapterResponse=nullptr);
   /* Requests for SV/Constellation Control */
