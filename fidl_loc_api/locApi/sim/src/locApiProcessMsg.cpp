@@ -53,7 +53,6 @@ void processFidlStartMsg(fidlEngineMsg *rxMsg, fidlThreadContext *fidlContext)
         LOC_LOGE("[%s] Error Message ", __func__);
         return;
     }
-    LOC_LOGD("[%s]---> 2 PTR %d ", __func__,fidlContext->eventCallback->fidlReportPosition);
     /* Send Simulated PVT Report */
     if (NULL != fidlContext->eventCallback->fidlReportPosition) {
         memset(&location, 0x00, sizeof(location));
