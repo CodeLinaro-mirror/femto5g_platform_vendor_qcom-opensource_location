@@ -1868,9 +1868,21 @@ void LocationApiService::onGnssSignalTypesCb(const GnssCapabNotification& gnssCa
     std::lock_guard<std::recursive_mutex> lock(mMutex);
     mLocHalSignalTypeMask = gnssCapabNotification.gnssSupportedSignals;
     LOC_LOGd("--< supported GNSS signal types: 0x%x", mLocHalSignalTypeMask);
-    for (auto each : mClients) {
-        // deliver the GNSS signal types to registered client
-        each.second->onGnssSignalTypesCb(mLocHalSignalTypeMask);
+    for (const auto& each : mClients) {
+        const auto& clientId = each.first;
+        const auto& clientHandler = each.second;
+
+        if (clientId.empty()) {
+            LOC_LOGe("Client ID is empty or corrupted");
+            continue;
+        }
+
+        if (clientHandler) {
+            LOC_LOGd("Delivering GNSS signal types to client: %s", clientId.c_str());
+            clientHandler->onGnssSignalTypesCb(mLocHalSignalTypeMask);
+        } else {
+            LOC_LOGw("Null client handler for client: %s", clientId.c_str());
+        }
     }
 }
 
