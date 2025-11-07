@@ -57,7 +57,6 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
                          QMI_LOC_##ID##_IND_V02,          \
                          &ind);                           \
 
-using Resender = std::function<void()>;
 using namespace loc_core;
 
 typedef uint64_t GpsSvMeasHeaderFlags;
@@ -182,7 +181,6 @@ private:
   GnssPowerMode mPowerMode;
   bool mEngineOn;
   bool mFirstMeasurementOfSessionReceived;
-  std::vector<Resender> mResenders;
   bool mMasterRegisterNotSupported;
   uint32_t mCounter;
   uint32_t mMinInterval;
@@ -391,7 +389,6 @@ private:
   void setOperationMode(GnssSuplMode mode);
   void batchFullEvent(const qmiLocEventBatchFullIndMsgT_v02* batchFullInfo);
   void batchStatusEvent(const qmiLocEventBatchingStatusIndMsgT_v02* batchStatusInfo);
-  void geofenceBreachEvent(const qmiLocEventGeofenceBreachIndMsgT_v02* breachInfo);
   void geofenceBreachEvent(const qmiLocEventGeofenceBatchedBreachIndMsgT_v02* batchedBreachInfo);
   void geofenceStatusEvent(const qmiLocEventGeofenceGenAlertIndMsgT_v02* alertInfo);
   void geofenceDwellEvent(const qmiLocEventGeofenceBatchedDwellIndMsgT_v02 *dwellEvent);

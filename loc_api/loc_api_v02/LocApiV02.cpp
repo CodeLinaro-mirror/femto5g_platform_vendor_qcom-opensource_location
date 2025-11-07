@@ -34,7 +34,6 @@
 #define LOG_NDEBUG 0
 #define LOG_TAG "LocSvc_ApiV02"
 
-#include <syslog.h>
 #undef LOG_PRI
 #include <inttypes.h>
 #include <stdio.h>
@@ -383,10 +382,6 @@ LocApiV02 :: open(LOC_API_ADAPTER_EVENT_MASK_T mask)
 
   LOC_API_ADAPTER_EVENT_MASK_T newMask = mask & ~mExcludedMask;
 
-  syslog(LOG_INFO, "%p loc_open: pid %d, enter mask 0x%" PRIx64 ", "
-         "mExcludedMask: 0x%" PRIx64", current mMask: 0x%" PRIx64 ", "
-         "newMask: 0x%" PRIx64 ",  mQmiMask: 0x%" PRIx64"",
-         mClientHandle, (uint32_t)getpid(), mask, mExcludedMask, mMask, newMask, mQmiMask);
   LOC_LOGi("%p Enter mask 0x%" PRIx64 ", mExcludedMask: 0x%" PRIx64","
            "mMask: 0x%" PRIx64 ", newMask: 0x%" PRIx64 ",  mQmiMask: 0x%" PRIx64"",
            mClientHandle, mask, mExcludedMask, mMask, newMask, mQmiMask);
@@ -502,11 +497,6 @@ void LocApiV02 :: registerEventMask()
     }
     mQmiMask = qmiMask;
   }
-
-    syslog(LOG_INFO, "registerEventMask:  mMask: 0x%" PRIx64 " "
-           "mQmiMask=0x%" PRIx64 " qmiMask=0x%" PRIx64"",
-           mMask, mQmiMask, qmiMask);
-
     LOC_LOGi("mMask: 0x%" PRIx64 " mQmiMask=0x%" PRIx64 " qmiMask=0x%" PRIx64"",
             mMask, mQmiMask, qmiMask);
 }
@@ -601,16 +591,11 @@ locClientEventMaskType LocApiV02 :: adjustLocClientEventMask(locClientEventMaskT
         qmiMask &= ~(QMI_LOC_EVENT_MASK_ENGINE_STATE_V02 |
                 QMI_LOC_EVENT_MASK_NEXT_LS_INFO_REPORT_V02 |
                 QMI_LOC_EVENT_DWELL_TIME_ALIGNMENT_INFO_V02);
-        syslog(LOG_INFO, "adjustLocClientEventMask, oldQmiMask=0x%" PRIx64 " "
-               "qmiMask=0x%" PRIx64 " mInSession: %d, power state %d, retry queue empty %d",
-               oldQmiMask, qmiMask, mInSession, mPlatformPowerState, mResenders.empty());
-    } else if (mResenders.empty() == false) {
-        qmiMask |= QMI_LOC_EVENT_MASK_ENGINE_STATE_V02;
     }
 
     LOC_LOGi("oldQmiMask=0x%" PRIx64 " qmiMask=0x%" PRIx64 " mInSession: %d, "
-             "power state %d, retry queue empty %d, mEngineOn: %d, qmi mask has engine state %d",
-             oldQmiMask, qmiMask, mInSession, mPlatformPowerState, mResenders.empty(), mEngineOn,
+             "power state %d, mEngineOn: %d, qmi mask has engine state %d",
+             oldQmiMask, qmiMask, mInSession, mPlatformPowerState, mEngineOn,
              (qmiMask & QMI_LOC_EVENT_MASK_ENGINE_STATE_V02) != 0);
 
     return qmiMask;
@@ -4666,10 +4651,8 @@ void LocApiV02 :: reportEngineState (
       inline MsgUpdateEngineState(LocApiV02* pLocApiV02, bool engineOn) :
                  LocMsg(), mpLocApiV02(pLocApiV02), mEngineOn(engineOn) {}
       inline virtual void proc() const {
-
           LOC_LOGi("current engine state %d, old engine state %d, in session %d",
                    mEngineOn, mpLocApiV02->mEngineOn, mpLocApiV02->mInSession);
-
           // During quick session stop/start, there is a chance of left
           // over GNSS measurement from previous session gets received at
           // current session, when this happens, we need to set
@@ -4678,21 +4661,7 @@ void LocApiV02 :: reportEngineState (
           if (mpLocApiV02->mEngineOn != mEngineOn) {
               mpLocApiV02->mFirstMeasurementOfSessionReceived = false;
           }
-          // Call registerEventMask so that if qmi mask has changed,
-          // it will register the new qmi mask to the modem
           mpLocApiV02->mEngineOn = mEngineOn;
-
-          if (!mEngineOn) {
-              for (auto resender : mpLocApiV02->mResenders) {
-                  LOC_LOGV("%s:%d]: resend failed command.", __func__, __LINE__);
-                  resender();
-              }
-              mpLocApiV02->mResenders.clear();
-              // update the registration mask upon receiving Engine state off
-              // as we have already flushed out the queue, and can un-register
-              // the ENGINE_STATE event
-              mpLocApiV02->registerEventMask();
-          }
       }
   };
 
@@ -4702,7 +4671,6 @@ void LocApiV02 :: reportEngineState (
   else if (eQMI_LOC_ENGINE_STATE_OFF_V02 == engine_state_ptr->engineState) {
       sendMsg(new MsgUpdateEngineState(this, false));
   }
-
 }
 
 #define ATL_OPEN_WAIT_DEFAULT_TIMEOUT_MSEC 15000
@@ -7146,7 +7114,7 @@ void LocApiV02 :: eventCb(locClientHandleType /*clientHandle*/,
   if ((eQMI_LOC_POWER_STATE_SUSPENDED_V02 == mPlatformPowerState) ||
         (eQMI_LOC_POWER_STATE_DEEP_SLEEP_ENTRY_V02 == mPlatformPowerState) ||
             (eQMI_LOC_POWER_STATE_SHUTDOWN_V02 == mPlatformPowerState)) {
-      syslog(LOG_INFO, "eventCb: event id = 0x%X, event name %s",
+      LOC_LOGi("eventCb: event id = 0x%X, event name %s",
              eventId, loc_get_v02_event_name(eventId));
   }
 
@@ -7231,10 +7199,6 @@ void LocApiV02 :: eventCb(locClientHandleType /*clientHandle*/,
       reportLocationRequestNotification(eventPayload.pLocReqNotifEvent);
       break;
 
-    case QMI_LOC_EVENT_GEOFENCE_BREACH_NOTIFICATION_IND_V02:
-      geofenceBreachEvent(eventPayload.pGeofenceBreachEvent);
-      break;
-
     case QMI_LOC_EVENT_GEOFENCE_BATCHED_BREACH_NOTIFICATION_IND_V02:
       geofenceBreachEvent(eventPayload.pGeofenceBatchedBreachEvent);
       break;
@@ -7264,7 +7228,7 @@ void LocApiV02 :: eventCb(locClientHandleType /*clientHandle*/,
       break;
 
     case QMI_LOC_EVENT_ENGINE_LOCK_STATE_IND_V02:
-      LOC_LOGd("Got QMI_LOC_EVENT_ENGINE_STATE_IND_V02");
+      LOC_LOGd("Got QMI_LOC_EVENT_ENGINE_LOCK_STATE_IND_V02");
       reportEngineLockStatus(eventPayload.pEngineLockStateIndMsg->engineLockState);
       break;
 
@@ -7569,7 +7533,7 @@ void LocApiV02 :: updateSystemPowerState(PowerStateType powerState){
     qmiLocInjectPlatformPowerStateIndMsgT_v02 ind;
     locClientReqUnionType req_union;
 
-    syslog(LOG_INFO, "updatePowerState: power state %d", powerState);
+    LOC_LOGi("updatePowerState: power state %d", powerState);
     qmiLocPlatformPowerStateEnumT_v02 qmiPowerState = eQMI_LOC_POWER_STATE_UNKNOWN_V02;
     switch (powerState) {
     case POWER_STATE_SUSPEND:
@@ -8258,38 +8222,6 @@ LocationError LocApiV02::locSyncSendReq(uint32_t req_id,
 
     if (nullptr != ind_payload_ptr) {
         ind_status = *(qmiLocStatusEnumT_v02*)ind_payload_ptr;
-    }
-
-    if (eLOC_CLIENT_FAILURE_ENGINE_BUSY == status ||
-            (eLOC_CLIENT_SUCCESS == status && eQMI_LOC_ENGINE_BUSY_V02 == ind_status)) {
-        if (((eQMI_LOC_POWER_STATE_RESUME_V02 == mPlatformPowerState) ||
-                (eQMI_LOC_POWER_STATE_DEEP_SLEEP_EXIT_V02 == mPlatformPowerState)) &&
-                mResenders.empty() && ((mQmiMask & QMI_LOC_EVENT_MASK_ENGINE_STATE_V02) == 0)) {
-            locClientRegisterEventMask(mClientHandle,
-                                       mQmiMask | QMI_LOC_EVENT_MASK_ENGINE_STATE_V02, isMaster());
-        }
-        LOC_LOGd("Engine busy, cache req: %d", req_id);
-        uint32_t reqLen = 0;
-        void* pReqData = nullptr;
-        locClientReqUnionType req_payload_copy = {nullptr};
-        validateRequest(req_id, req_payload, &pReqData, &reqLen);
-        if (nullptr != pReqData) {
-            req_payload_copy.pReqData = malloc(reqLen);
-            if (nullptr != req_payload_copy.pReqData) {
-                memcpy(req_payload_copy.pReqData, pReqData, reqLen);
-            }
-        }
-        // something would be wrong if (nullptr != pReqData && nullptr == req_payload_copy)
-        if (nullptr == pReqData || nullptr != req_payload_copy.pReqData) {
-            mResenders.push_back([=](){
-                    // ignore indicator, we use nullptr as the last parameter
-                    loc_sync_send_req(mClientHandle, req_id, req_payload_copy,
-                                      timeout_msec, ind_id, nullptr);
-                    if (nullptr != req_payload_copy.pReqData) {
-                        free(req_payload_copy.pReqData);
-                    }
-                });
-        }
     }
 
     if (status != eLOC_CLIENT_SUCCESS || eQMI_LOC_SUCCESS_V02 != ind_status) {
@@ -8993,7 +8925,7 @@ void LocApiV02::reportPowerStateChangeInfo(
         }
     };
 
-    syslog(LOG_INFO, "reportPowerStateChangeInfo, old state: %d %d, new state: %d, %d",
+    LOC_LOGi("reportPowerStateChangeInfo, old state: %d %d, new state: %d, %d",
              pPowerStateChangedInfo->powerStateOld_valid,
              pPowerStateChangedInfo->powerStateOld,
              pPowerStateChangedInfo->powerStateNew_valid,
@@ -9048,84 +8980,6 @@ void LocApiV02::batchStatusEvent(const qmiLocEventBatchingStatusIndMsgT_v02* bat
 }
 
 // For Geofence
-void LocApiV02::geofenceBreachEvent(const qmiLocEventGeofenceBreachIndMsgT_v02* breachInfo)
-{
-    uint32_t hwId = breachInfo->geofenceId;
-    int64_t timestamp = time(NULL); // get the current time
-    Location location;
-    memset(&location, 0, sizeof(Location));
-    location.size = sizeof(Location);
-
-    if (breachInfo->geofencePosition_valid) {
-        // Latitude & Longitude
-        location.flags |= LOCATION_HAS_LAT_LONG_BIT;
-        if (breachInfo->geofencePosition.latitude >= -90 &&
-            breachInfo->geofencePosition.latitude <= 90 &&
-            breachInfo->geofencePosition.longitude >= -180 &&
-            breachInfo->geofencePosition.longitude <= 180) {
-            // latitude and longitude look to be in the expected format
-            location.latitude  = breachInfo->geofencePosition.latitude;
-            location.longitude = breachInfo->geofencePosition.longitude;
-        }
-        else {
-            // latitude and longitude must be in wrong format, so convert
-            location.latitude  = breachInfo->geofencePosition.latitude * LAT_LONG_TO_RADIANS;
-            location.longitude = breachInfo->geofencePosition.longitude * LAT_LONG_TO_RADIANS;
-        }
-
-        // Time stamp (UTC)
-        location.timestamp = breachInfo->geofencePosition.timestampUtc;
-
-        // Altitude
-        location.flags |= LOCATION_HAS_ALTITUDE_BIT;
-        location.altitude = breachInfo->geofencePosition.altitudeWrtEllipsoid;
-
-        // Speed
-        if (breachInfo->geofencePosition.speedHorizontal_valid == 1) {
-            location.flags |= LOCATION_HAS_SPEED_BIT;
-            location.speed = breachInfo->geofencePosition.speedHorizontal;
-        }
-
-        // Heading
-        if (breachInfo->geofencePosition.heading_valid == 1) {
-            location.flags |= LOCATION_HAS_BEARING_BIT;
-            location.bearing = breachInfo->geofencePosition.heading;
-        }
-
-        // Uncertainty (circular)
-        location.flags |= LOCATION_HAS_ACCURACY_BIT;
-        location.accuracy = sqrt(
-            (breachInfo->geofencePosition.horUncEllipseSemiMinor *
-            breachInfo->geofencePosition.horUncEllipseSemiMinor) +
-            (breachInfo->geofencePosition.horUncEllipseSemiMajor *
-            breachInfo->geofencePosition.horUncEllipseSemiMajor));
-
-        location.techMask = LOCATION_TECHNOLOGY_GNSS_BIT;
-
-        LOC_LOGv("Location lat=%8.2f long=%8.2f ",
-                 location.latitude, location.longitude);
-
-    } else {
-       LOC_LOGe("NO Location ");
-    }
-
-    GeofenceBreachType breachType;
-    switch (breachInfo->breachType) {
-    case eQMI_LOC_GEOFENCE_BREACH_TYPE_ENTERING_V02:
-        breachType = GEOFENCE_BREACH_ENTER;
-        break;
-    case eQMI_LOC_GEOFENCE_BREACH_TYPE_LEAVING_V02:
-        breachType = GEOFENCE_BREACH_EXIT;
-        break;
-    default:
-        breachType = GEOFENCE_BREACH_UNKNOWN;
-        break;
-    }
-
-    // calling the base
-    geofenceBreach(1, &hwId, location, breachType, timestamp);
-}
-
 void
 LocApiV02::geofenceBreachEvent(const qmiLocEventGeofenceBatchedBreachIndMsgT_v02* breachInfo)
 {

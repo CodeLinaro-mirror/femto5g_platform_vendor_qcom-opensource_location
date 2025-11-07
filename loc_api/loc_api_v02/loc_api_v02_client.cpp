@@ -156,10 +156,6 @@ static const locClientEventIndTableStructT locClientEventIndTable[]= {
   { QMI_LOC_EVENT_GEOFENCE_GEN_ALERT_IND_V02,
     sizeof(qmiLocEventGeofenceGenAlertIndMsgT_v02) },
 
-  //Geofence Breach event
-  { QMI_LOC_EVENT_GEOFENCE_BREACH_NOTIFICATION_IND_V02,
-    sizeof(qmiLocEventGeofenceBreachIndMsgT_v02) },
-
   //Geofence Batched Breach event
   { QMI_LOC_EVENT_GEOFENCE_BATCHED_BREACH_NOTIFICATION_IND_V02,
     sizeof(qmiLocEventGeofenceBatchedBreachIndMsgT_v02) },
