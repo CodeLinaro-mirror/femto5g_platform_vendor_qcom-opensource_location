@@ -1,0 +1,10 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+
+Name:
+Description: ZAxis test
+Version: @VERSION@
+Libs:
+Cflags:
