@@ -1271,7 +1271,6 @@ bool validateRequest(
     }
 
     // ALL requests with no payload
-    case QMI_LOC_GET_PREDICTED_ORBITS_DATA_SOURCE_REQ_V02:
     case QMI_LOC_GET_ENGINE_LOCK_REQ_V02:
     case QMI_LOC_GET_SUPPORTED_MSGS_REQ_V02:
     case QMI_LOC_GET_BLACKLIST_SV_REQ_V02:
