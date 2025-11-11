@@ -2131,13 +2131,16 @@ void LocationApiService::getSinglePos(LocAPIGetSinglePosReqMsg* pReqMsg) {
     mSingleFixReqMap.erase(clientName);
 
     if (pReqMsg->mHorQoS != 0.0 && pReqMsg->mTimeoutMsec != 0) {
-        SingleFixReqInfo reqInfo(pReqMsg->mHorQoS,
-                                 new SingleFixTimer(this, clientName, SINGLE_SHOT_FIX_TIMER_FUSED));
-        mSingleFixReqMap.emplace(clientName, std::move(reqInfo));
+        auto result = mSingleFixReqMap.emplace(
+            std::piecewise_construct,
+            std::forward_as_tuple(clientName),
+            std::forward_as_tuple(pReqMsg->mHorQoS, nullptr));
 
-        auto it = mSingleFixReqMap.find(clientName);
-        if (it != mSingleFixReqMap.end()) {
-            it->second.timeoutTimer->start(pReqMsg->mTimeoutMsec, false);
+        if (result.second) {
+            // Only create timer after successful insertion
+            result.first->second.timeoutTimer =
+                new SingleFixTimer(this, clientName, SINGLE_SHOT_FIX_TIMER_FUSED);
+            result.first->second.timeoutTimer->start(pReqMsg->mTimeoutMsec, false);
         }
 
         // start tracking with TBF of 1 second
