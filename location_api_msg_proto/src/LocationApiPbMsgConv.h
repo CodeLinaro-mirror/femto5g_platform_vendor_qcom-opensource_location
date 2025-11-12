@@ -62,6 +62,12 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/*
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
+
 #ifndef LOCATION_API_PBMSGCONV_H
 #define LOCATION_API_PBMSGCONV_H
 
@@ -159,6 +165,12 @@ public:
     // GnssMapMatchedData to PBGnssMapMatchedData
     int convertGnssMmfDataToPB(const GnssMapMatchedData mmfData,
            PBGnssMapMatchedData* pbMmfData) const;
+
+    NetworkConnectionStatus getConnectionStatusEnum (PBNetworkConnection pbNwConn) const;
+    NetworkTypeInfo getNwTypeEnum(PBNetworkType pbNwType) const;
+
+    int convertNetworkInfoMsgToPB(const NetworkInfo& nwInfo,
+            PBNetworkInfoData* pbNwInfo) const;
 
     // Memory cleanup - Free up memory after PB conversion and serializing data
     inline void freeUpPBLocAPIStartTrackingReqMsg(PBLocAPIStartTrackingReqMsg &pbLocApiStartTrack)
@@ -571,6 +583,10 @@ public:
         pbLocApiEphInd.clear_gnssephemerisnotification();
     }
 
+    inline void freeUpPBNetworkInfoMsg(PBUpdateNetworkInfoReq &pbNetworkInfo) const {
+        pbNetworkInfo.clear_data();
+    }
+
     // **** helper function to convert from protobuf struct to normal struct.
     // PBCollectiveResPayload to CollectiveResPayload
     int pbConvertToCollectiveResPayload(const PBCollectiveResPayload &pbClctResPayload,
@@ -644,6 +660,11 @@ public:
             XtraStatus& xtraStatus) const;
     int pbConvertToGnssMmfData(const PBGnssMapMatchedData& pbMmfData,
             GnssMapMatchedData& mmfData) const;
+
+    PBNetworkConnection getPBConnectionStatusEnum(NetworkConnectionStatus nwConn) const;
+    PBNetworkType getPBNwTypeEnum (NetworkTypeInfo nwType) const;
+    int pbConvertToNetworkDataInfo(const PBNetworkInfoData& pbNwInfo,
+            NetworkInfo& nwInfo) const;
 
     // MASK CONVERSION
     // ***************
