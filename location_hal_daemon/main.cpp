@@ -93,9 +93,9 @@ int main(int argc, char *argv[])
     // For systemd, common supplementary groups are set via service files
 #ifdef OPENWRT_BUILD
     // OpenWrt requires Deep sleep in its group list to connect to DS related file descriptors.
-    char groupNames[LOC_MAX_PARAM_NAME] = "gps system radio diag powermgr locclient inet vnw";
+    char groupNames[LOC_MAX_PARAM_NAME] = "gps system radio diag powermgr locclient vnw";
 #else
-    char groupNames[LOC_MAX_PARAM_NAME] = "gps radio diag powermgr locclient inet vnw";
+    char groupNames[LOC_MAX_PARAM_NAME] = "gps radio diag powermgr locclient vnw";
 #endif
 
     gid_t groupIds[LOC_PROCESS_MAX_NUM_GROUPS] = {};
