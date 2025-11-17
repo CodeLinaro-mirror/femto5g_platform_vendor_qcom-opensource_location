@@ -7926,6 +7926,32 @@ void LocApiV02::reportEngDebugDataInfo(const qmiLocEngineDebugDataIndMsgT_v02*
         gnssEngineDebugDataInfo.xoState = pLocEngDbgDataInfoIndMsg->xoState;
     }
 
+    if (pLocEngDbgDataInfoIndMsg->xoTemp_valid) {
+        gnssEngineDebugDataInfo.xoTemp = pLocEngDbgDataInfoIndMsg->xoTemp;
+    }
+
+    if (pLocEngDbgDataInfoIndMsg->xoTempSlope_valid) {
+        gnssEngineDebugDataInfo.xoTempSlope = pLocEngDbgDataInfoIndMsg->xoTempSlope;
+    }
+
+    if (pLocEngDbgDataInfoIndMsg->xoTempAccel_valid) {
+        gnssEngineDebugDataInfo.xoTempAccel = pLocEngDbgDataInfoIndMsg->xoTempAccel;
+    }
+
+    if (pLocEngDbgDataInfoIndMsg->xoCalResetCount_valid) {
+        gnssEngineDebugDataInfo.xoCalResetCount = pLocEngDbgDataInfoIndMsg->xoCalResetCount;
+    }
+
+    if (pLocEngDbgDataInfoIndMsg->xoRotatorQuality_valid) {
+        gnssEngineDebugDataInfo.xoRotatorQuality =
+            (GnssRotatorQuality)(pLocEngDbgDataInfoIndMsg->xoRotatorQuality);
+    }
+
+    if (pLocEngDbgDataInfoIndMsg->timeInconsistencyStatus_valid) {
+        gnssEngineDebugDataInfo.timeInconsistencyStatus =
+            pLocEngDbgDataInfoIndMsg->timeInconsistencyStatus;
+    }
+
     if (pLocEngDbgDataInfoIndMsg->rcvrErrRecovery_valid) {
         gnssEngineDebugDataInfo.rcvrErrRecovery = pLocEngDbgDataInfoIndMsg->rcvrErrRecovery;
     }
