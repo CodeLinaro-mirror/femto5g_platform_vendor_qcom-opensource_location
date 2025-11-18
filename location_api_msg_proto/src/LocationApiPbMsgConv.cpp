@@ -4939,7 +4939,7 @@ int LocationApiPbMsgConv::pbConvertToLocAPIGfBreachNotification(
     uint32_t gfBreachCnt = pbLocApiGfBreachNotif.id_size();
     LOC_LOGv("LocApiPB: gfBreachCnt: %" PRIu32"", gfBreachCnt);
     for (uint32_t i=0; i < gfBreachCnt; i++) {
-        locApiGfBreachNotif.id.push_back(pbLocApiGfBreachNotif.id(0));
+        locApiGfBreachNotif.id.push_back(pbLocApiGfBreachNotif.id(i));
     }
 
     LOC_LOGv("LocApiPB: pbLocApiGfBreachNotif - BreachTypMask: %x, timestamp: %" PRIu64,
