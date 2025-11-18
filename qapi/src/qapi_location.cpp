@@ -26,6 +26,12 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/*
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
+
 #define LOG_TAG "LocSvc_LocationQapi"
 
 #include <loc_pla.h>
@@ -154,17 +160,6 @@ static void print_qLocation_array(qapi_Location_t* qLocationArray, uint32_t leng
     }
 }
 
-static void print_qGnssData(qapi_Gnss_Data_t* qGnssData) {
-
-    LOC_LOGv("JAMMER_GPS: %u JAMMER_GLONASS: %u",
-        qGnssData->jammerInd[QAPI_GNSS_SV_TYPE_GPS],
-        qGnssData->jammerInd[QAPI_GNSS_SV_TYPE_GLONASS]);
-
-    LOC_LOGv("JAMMER_BEIDOU: %u JAMMER_GALILEO: %u",
-        qGnssData->jammerInd[QAPI_GNSS_SV_TYPE_BEIDOU],
-        qGnssData->jammerInd[QAPI_GNSS_SV_TYPE_GALILEO]);
-}
-
 static void location_capabilities_callback(
     LocationCapabilitiesMask capsMask)
 {
@@ -185,36 +180,6 @@ static void location_response_callback(
     // hard-code id to 0 for now
     uint32_t id = 0;
     qLocationCallbacks.responseCb(qErr, id);
-}
-
-static void location_collective_response_callback(
-    vector<std::pair<Geofence, LocationResponse>>& responses)
-{
-    qapi_Location_Error_t* qLocationErrorArray = NULL;
-
-    // hard-coded
-    qLocationErrorArray = new qapi_Location_Error_t[5];
-    if (nullptr == qLocationErrorArray) {
-        LOC_LOGe("qLocationErrorArray is nullptr");
-        return;
-    }
-    uint32_t* ids = new uint32_t[5];
-    if (nullptr == ids) {
-        LOC_LOGe("ids is nullptr");
-        delete[] qLocationErrorArray;
-        return;
-    }
-
-    for (int i = 0; i < 5; i++) {
-        qLocationErrorArray[i] = QAPI_LOCATION_ERROR_SUCCESS;
-    }
-
-    LOC_LOGd("Invoking Collective Response Cb");
-    qLocationCallbacks.collectiveResponseCb(
-        5, qLocationErrorArray, ids);
-
-    delete[] qLocationErrorArray;
-    delete[] ids;
 }
 
 static void location_tracking_callback(
@@ -368,35 +333,9 @@ static void loc_passive_response_callback(
     LOC_LOGv("loc_passive_response_callback!");
 }
 
-struct MyClientCallbacks {
-    CapabilitiesCb capabilitycb;
-    ResponseCb responsecb;
-    CollectiveResponseCb collectivecb;
-    LocationCb locationcb;
-};
-
-static MyClientCallbacks gLocationCallbacks = {
-    location_capabilities_callback,
-    location_response_callback,
-    location_collective_response_callback,
-    location_tracking_callback,
-};
-
-#define LOC_PATH_QAPI_CONF_STR      "/etc/qapi.conf"
-
-const char LOC_PATH_QAPI_CONF[] = LOC_PATH_QAPI_CONF_STR;
 static uint32_t gDebug = 0;
 static uint32_t gSingleshotTimeout = 0;
 
-static const loc_param_s_type gConfigTable[] =
-{
-    { "DEBUG_LEVEL", &gDebug, NULL, 'n' }
-};
-
-static const loc_param_s_type gQapiConfigTable[] =
-{
-    { "SINGLESHOT_TIMEOUT", &gSingleshotTimeout, NULL, 'n' }
-};
 
 /* Parameters we need in a configuration file specifically for QAPI:
     SINGLESHOT_TIMEOUT
@@ -410,14 +349,23 @@ extern "C" {
         qapi_Location_Error_t retVal =
             QAPI_LOCATION_ERROR_SUCCESS;
 
+        const loc_param_s_type configTable[] =
+        {
+            { "DEBUG_LEVEL", &gDebug, NULL, 'n' }
+        };
+
+        const loc_param_s_type qapiConfigTable[] =
+        {
+            { "QAPI_SINGLESHOT_TIMEOUT", &gSingleshotTimeout, NULL, 'n' }
+        };
+
         // read configuration file
-        UTIL_READ_CONF(LOC_PATH_GPS_CONF, gConfigTable);
+        UTIL_READ_CONF(LOC_PATH_GPS_CONF, configTable);
         LOC_LOGd("gDebug=%u LOC_PATH_GPS_CONF=%s", gDebug, LOC_PATH_GPS_CONF);
 
-        UTIL_READ_CONF(LOC_PATH_QAPI_CONF, gQapiConfigTable);
-        LOC_LOGd("gSingleshotTimeout=%u LOC_PATH_QAPI_CONF=%s", gSingleshotTimeout, LOC_PATH_QAPI_CONF);
-
-        MyClientCallbacks locationCallbacks = gLocationCallbacks;
+        UTIL_READ_CONF(LOC_PATH_IZAT_CONF, qapiConfigTable);
+        LOC_LOGd("gSingleshotTimeout=%u LOC_PATH_IZAT_CONF=%s",
+                    gSingleshotTimeout, LOC_PATH_IZAT_CONF);
 
         LOC_LOGd("qapi_Loc_Init! pCallbacks %p"
             "cap %p res %p col %p trk %p",
@@ -428,12 +376,9 @@ extern "C" {
             pCallbacks->trackingCb);
 
         LOC_LOGd("qapi_Loc_Init! pCallbacks %p"
-            "bat %p gf %p ss %p gd %p",
+            "ss %p",
             pCallbacks,
-            pCallbacks->batchingCb,
-            pCallbacks->geofenceBreachCb,
-            pCallbacks->singleShotCb,
-            pCallbacks->gnssDataCb);
+            pCallbacks->singleShotCb);
 
         if (!qMutexInitDone)
         {
@@ -447,10 +392,6 @@ extern "C" {
             NULL == pCallbacks->collectiveResponseCb)
         {
             return QAPI_LOCATION_ERROR_CALLBACK_MISSING;
-        }
-        /* Don't register callbacks not provided by client */
-        if (NULL == pCallbacks->trackingCb) {
-            locationCallbacks.locationcb = NULL;
         }
         pthread_mutex_lock(&qMutex);
 
@@ -595,80 +536,6 @@ extern "C" {
         return QAPI_LOCATION_ERROR_NOT_SUPPORTED;
     }
 
-    qapi_Location_Error_t qapi_Loc_Start_Batching(
-        qapi_loc_client_id clientId,
-        const qapi_Location_Options_t* pOptions,
-        uint32_t* pSessionId)
-    {
-        return QAPI_LOCATION_ERROR_NOT_SUPPORTED;
-    }
-
-    qapi_Location_Error_t qapi_Loc_Stop_Batching(
-        qapi_loc_client_id clientId,
-        uint32_t sessionId)
-    {
-        return QAPI_LOCATION_ERROR_NOT_SUPPORTED;
-    }
-
-    qapi_Location_Error_t qapi_Loc_Update_Batching_Options(
-        qapi_loc_client_id clientId,
-        uint32_t sessionId,
-        const qapi_Location_Options_t* pOptions)
-    {
-        return QAPI_LOCATION_ERROR_NOT_SUPPORTED;
-    }
-
-    qapi_Location_Error_t qapi_Loc_Get_Batched_Locations(
-        qapi_loc_client_id clientId,
-        uint32_t sessionId,
-        size_t count)
-    {
-        return QAPI_LOCATION_ERROR_NOT_SUPPORTED;
-    }
-
-    qapi_Location_Error_t qapi_Loc_Add_Geofences(
-        qapi_loc_client_id clientId,
-        size_t count,
-        const qapi_Geofence_Option_t* pOptions,
-        const qapi_Geofence_Info_t* pInfo,
-        uint32_t** pIdArray)
-    {
-        return QAPI_LOCATION_ERROR_NOT_SUPPORTED;
-    }
-
-    qapi_Location_Error_t qapi_Loc_Remove_Geofences(
-        qapi_loc_client_id clientId,
-        size_t count,
-        const uint32_t* pIDs)
-    {
-        return QAPI_LOCATION_ERROR_NOT_SUPPORTED;
-    }
-
-    qapi_Location_Error_t qapi_Loc_Modify_Geofences(
-        qapi_loc_client_id clientId,
-        size_t count,
-        const uint32_t* pIDs,
-        const qapi_Geofence_Option_t* options)
-    {
-        return QAPI_LOCATION_ERROR_NOT_SUPPORTED;
-    }
-
-    qapi_Location_Error_t qapi_Loc_Pause_Geofences(
-        qapi_loc_client_id clientId,
-        size_t count,
-        const uint32_t* pIDs)
-    {
-        return QAPI_LOCATION_ERROR_NOT_SUPPORTED;
-    }
-
-    qapi_Location_Error_t qapi_Loc_Resume_Geofences(
-        qapi_loc_client_id clientId,
-        size_t count,
-        const uint32_t* pIDs)
-    {
-        return QAPI_LOCATION_ERROR_NOT_SUPPORTED;
-    }
-
     qapi_Location_Error_t qapi_Loc_Get_Single_Shot(
         qapi_loc_client_id clientId,
         qapi_Location_Power_Level_t powerLevel,
@@ -729,46 +596,6 @@ extern "C" {
         return retVal;
     }
 
-    qapi_Location_Error_t qapi_Loc_Cancel_Single_Shot(
-        qapi_loc_client_id clientId,
-        uint32_t sessionId)
-    {
-        qapi_Location_Error_t retVal =
-            QAPI_LOCATION_ERROR_SUCCESS;
-
-        LOC_LOGv("qapi_Loc_Cancel_Single_Shot! clientId %d, sessionId %d",
-            clientId, sessionId);
-
-        pthread_mutex_lock(&qMutex);
-        if (mTimer.isStarted()) {
-            LOC_LOGd("Timer was started, singleshot session in progress");
-            if (nullptr != pLocClientApi) {
-                LOC_LOGd("Stop singleshot session");
-                pLocClientApi->stopPositionSession();
-            }
-            LOC_LOGd("Stop singleshot timer");
-            mTimer.stop();
-        } else {
-            LOC_LOGd("No singleshot session in progress!");
-        }
-        pthread_mutex_unlock(&qMutex);
-        return retVal;
-    }
-
-    qapi_Location_Error_t qapi_Loc_Start_Get_Gnss_Data(
-        qapi_loc_client_id clientId,
-        uint32_t* pSessionId)
-    {
-        return QAPI_LOCATION_ERROR_NOT_SUPPORTED;
-    }
-
-    qapi_Location_Error_t qapi_Loc_Stop_Get_Gnss_Data(
-        qapi_loc_client_id clientId,
-        uint32_t sessionId)
-    {
-        return QAPI_LOCATION_ERROR_NOT_SUPPORTED;
-    }
-
     qapi_Location_Error_t qapi_Loc_Get_Best_Available_Position(
         qapi_loc_client_id clientId,
         uint32_t* pSessionId)
@@ -781,7 +608,8 @@ extern "C" {
             if (nullptr != pLocClientApi) {
                 Runnable timerRunnable = [] {
                     if (qLocationCallbacks.singleShotCb) {
-                        qLocationCallbacks.singleShotCb(qCacheLocation, QAPI_LOCATION_ERROR_SUCCESS);
+                        qLocationCallbacks.singleShotCb(qCacheLocation,
+                                                        QAPI_LOCATION_ERROR_SUCCESS);
                     } else {
                         LOC_LOGe("No singleshot cb registered");
                     }
