@@ -524,9 +524,6 @@ typedef union
     const qmiLocInjectXtraDataReqMsgT_v02 *pInjectXtraDataReq;
     /*QMI_LOC_INJECT_XTRA_DATA_REQ_V02*/
 
-    const qmiLocInjectXtraPcidReqMsgT_v02 *pInjectXtraPcidReq;
-    /*QMI_LOC_INJECT_XTRA_PCID_REQ_V02*/
-
     const qmiLocQueryXtraInfoReqMsgT_v02   *pQueryXtraInfoReq;
     /*QMI_LOC_QUERY_XTRA_INFO_REQ_V02*/
 
