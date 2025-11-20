@@ -506,6 +506,7 @@ void handleLocApiFidlRequestNiNotify(GnssNiNotification &notify, const void* dat
 void handleLocApiFidlReportGnssMeasurementData(GnssMeasurements &measurements,
     int msInWeek, void *context) {
 
+    LOC_LOGD("%s:%d, msInWeek %d ",__func__,__LINE__, msInWeek);
     if (nullptr != context) {
         FidlLocApi *fidlLocApiInstance = (FidlLocApi*)context;
         fidlLocApiInstance->reportGnssMeasurements(measurements, msInWeek);
@@ -2752,7 +2753,7 @@ FidlLocApi::startTimeBasedTracking(const TrackingOptions& options,
             posMode.preferred_time = 120000;
             posMode.share_position = true;
             posMode.powerMode = GNSS_POWER_MODE_M2;
-            posMode.timeBetweenMeasurements = 1000;
+            posMode.timeBetweenMeasurements = options.tbm;
 
             rtv = fidlReqIf->fidlStartFix(posMode, ((void *)this));
             if (LOC_API_ADAPTER_ERR_SUCCESS == rtv) {

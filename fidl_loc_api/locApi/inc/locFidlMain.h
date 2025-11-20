@@ -123,6 +123,8 @@ typedef struct {
     void *fidlIfLibFileHandle;
     bool isStartCommandInQ;
     fidlSetPosModeMsg startCommandInQ;
+    uint32_t currentGpsTimeOfWeekMs;
+    uint64_t systemTimeAtGpsTOW;
 } fidlThreadContext;
 
 

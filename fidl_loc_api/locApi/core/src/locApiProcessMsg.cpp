@@ -21,6 +21,20 @@
 
 #define LOC_CLIENT_FIDL_IF_LIB_NAME  "libLocationFidlV02.so"
 
+uint64_t getSystemTimeInmSecFromBoot(void);
+
+uint64_t getSystemTimeInmSecFromBoot(void)
+{
+   struct timespec curt_ts;
+   uint64_t curt_time_ms = 0;
+
+   memset(&curt_ts, 0x00, sizeof(struct timespec));
+   clock_gettime(CLOCK_BOOTTIME, &curt_ts);
+   curt_time_ms = (curt_ts.tv_sec * 1000LL);
+   curt_time_ms += (curt_ts.tv_nsec / 1000000LL);
+   return curt_time_ms;
+}
+
 void eventLocClientFidlReportPosition(UlpLocation& location,
                     GpsLocationExtended& locationExtended,
                     enum loc_sess_status status,
@@ -34,6 +48,8 @@ void eventLocClientFidlReportPosition(UlpLocation& location,
     double current_min_interval = static_cast<double>(fidlContext->startCommandInQ.min_interval);
 
     if (NULL != fidlContext) {
+       fidlContext->currentGpsTimeOfWeekMs = locationExtended.gpsTime.gpsTimeOfWeekMs;
+       fidlContext->systemTimeAtGpsTOW = getSystemTimeInmSecFromBoot();
 
        if (fidlContext->startCommandInQ.min_interval > 1000) {
            if (0.0 == fmod((current_timestamp / 1000.0), (current_min_interval / 1000.0))) {
@@ -85,11 +101,47 @@ void eventLocClientFidlReportSv(GnssSvNotification& svNotify, void *context) {
 
 void eventLocClientFidlReportSvMeasurement(GnssMeasurements &svMeasurementSet,
         void *context) {
-    fidlThreadContext *fidlContext = (fidlThreadContext *) context;
+   fidlThreadContext *fidlContext = (fidlThreadContext *) context;
 
-    if (NULL != fidlContext) {
-        fidlContext->eventCallback->fidlReportGnssMeasurementData (svMeasurementSet,
-           0, fidlContext->fidlLocApiContext);
+   if (NULL != fidlContext) {
+       double timeBetweenMeasurements
+             = static_cast<double> (fidlContext->startCommandInQ.timeBetweenMeasurements);
+       double currentSystemTime = static_cast<double> (getSystemTimeInmSecFromBoot());
+       int msrMsInWeek = fidlContext->currentGpsTimeOfWeekMs
+                         + (currentSystemTime - fidlContext->systemTimeAtGpsTOW);
+
+       if (timeBetweenMeasurements > 1000.0) {
+           if (0.0 == fmod((currentSystemTime / 1000.0), (timeBetweenMeasurements / 1000.0))) {
+               LOC_LOGD("[%s] min_interval %f timestamp %f ", __func__,
+                   timeBetweenMeasurements, currentSystemTime);
+
+               fidlContext->eventCallback->fidlReportSvMeasurement (svMeasurementSet,
+                   fidlContext->fidlLocApiContext);
+           }
+
+       } else if (1000.0 == timeBetweenMeasurements) {
+           if (0.0 == fmod((currentSystemTime), 1000.0)) {
+               LOC_LOGD("[%s] min_interval %f timestamp %f ", __func__,
+                   timeBetweenMeasurements, currentSystemTime);
+
+               fidlContext->eventCallback->fidlReportSvMeasurement (svMeasurementSet,
+                   fidlContext->fidlLocApiContext);
+           }
+       } else if (timeBetweenMeasurements > 100.0) {
+           if (0.0 == fmod((currentSystemTime / 100), (timeBetweenMeasurements / 100))) {
+               LOC_LOGD("[%s] min_interval %f timestamp %f ", __func__,
+                   timeBetweenMeasurements, currentSystemTime);
+
+               fidlContext->eventCallback->fidlReportSvMeasurement (svMeasurementSet,
+                   fidlContext->fidlLocApiContext);
+           }
+        } else {
+           LOC_LOGD("[%s] min_interval %f timestamp %f ", __func__,
+               timeBetweenMeasurements, currentSystemTime);
+
+           fidlContext->eventCallback->fidlReportSvMeasurement(svMeasurementSet,
+               fidlContext->fidlLocApiContext);
+       }
     }
 }
 
@@ -104,11 +156,69 @@ void eventLocClientFidlReportNmea(const char* nmea, int length, void *context) {
 
 void eventLocClientFidlReportGnssMeasurementData(GnssMeasurements& measurements,
         int msInWeek, void *context) {
-    fidlThreadContext *fidlContext = (fidlThreadContext *) context;
+    fidlThreadContext *fidlContext = static_cast<fidlThreadContext*>(context);
+    if (fidlContext == nullptr) {
+        return;
+    }
 
-    if (NULL != fidlContext) {
-        fidlContext->eventCallback->fidlReportGnssMeasurementData (measurements,
-           msInWeek, fidlContext->fidlLocApiContext);
+    static double lastMSRTime = 0.0;
+
+    double currentSystemTime = static_cast<double>(getSystemTimeInmSecFromBoot());
+    double timeBetweenMeasurements
+       = static_cast<double>(fidlContext->startCommandInQ.timeBetweenMeasurements);
+
+    // Drop if measurements are duplicate
+    double timeBwtnLastReport = currentSystemTime - lastMSRTime;
+    if (timeBwtnLastReport < 50.0) {
+        LOC_LOGD("[%s] Drop the MSR as it may be duplicate lastReportTime %f currentSystemTime %f ",
+                 __func__, lastMSRTime, currentSystemTime);
+        return;
+    }
+
+    // Determine actual reporting interval and modulo factor
+    double effectiveReportIntervalMs = timeBetweenMeasurements;
+    bool shouldReport = false;
+
+    if (timeBetweenMeasurements >= 1000.0) {
+       // Round to nearest 1000ms
+       effectiveReportIntervalMs = round(timeBetweenMeasurements / 1000.0) * 1000.0;
+
+       if (1000.0 == effectiveReportIntervalMs) {
+           shouldReport = true;
+       } else if (fabs(fmod((currentSystemTime/1000.0),(effectiveReportIntervalMs/1000.0))) < 0.9){
+           shouldReport = true;
+       }
+
+    } else if (measurements.gnssMeasNotification.isNhz) {
+
+       if (timeBetweenMeasurements >= 100.0) {
+           // Round to nearest 100ms
+           effectiveReportIntervalMs = round(timeBetweenMeasurements / 100.0) * 100.0;
+           if (100.0 == effectiveReportIntervalMs) {
+               shouldReport = true;
+           } else if(fabs(fmod((currentSystemTime/100.0),(effectiveReportIntervalMs/100.0)))< 0.9){
+               shouldReport = true;
+           }
+       } else {
+           // This suggests fastest possible when nHz is enabled and interval is less than 100.
+           shouldReport = true;
+       }
+    } else {
+        // Default 1Hz case
+        shouldReport = true;
+    }
+
+    if (shouldReport) {
+       // Calculate msrMsInWeek here just before use
+       int msrMsInWeek = fidlContext->currentGpsTimeOfWeekMs +
+               static_cast<int>(currentSystemTime - fidlContext->systemTimeAtGpsTOW);
+
+       fidlContext->eventCallback->fidlReportGnssMeasurementData(measurements,
+               msrMsInWeek, fidlContext->fidlLocApiContext);
+       lastMSRTime = currentSystemTime;
+    } else {
+       LOC_LOGD("[%s] No MSR report - Configured: %f, current: %f, isNhz: %d", __func__,
+           timeBetweenMeasurements, currentSystemTime, measurements.gnssMeasNotification.isNhz);
     }
 }
 
@@ -143,6 +253,8 @@ void eventLocClientFidlReportHardwareStatus(uint32_t hardwareStatus, void *conte
                            = fidlContext->startCommandInQ.min_interval;
                    sndMsg.u.msgStartFix.preferred_accuracy
                            = fidlContext->startCommandInQ.preferred_accuracy;
+                   sndMsg.u.msgStartFix.timeBetweenMeasurements
+                           = fidlContext->startCommandInQ.timeBetweenMeasurements;
                    sendMsg2FidlEngine(&sndMsg);
                    fidlContext->isStartCommandInQ = false;
                }
@@ -335,6 +447,8 @@ void processFidlStartMsg(fidlEngineMsg *rxMsg, fidlThreadContext *fidlContext)
          posMode.preferred_time = rxMsg->u.msgStartFix.preferred_time;
          posMode.preferred_accuracy = rxMsg->u.msgStartFix.preferred_accuracy;
          posMode.timeBetweenMeasurements = rxMsg->u.msgStartFix.timeBetweenMeasurements;
+         LOC_LOGD("[%s] timeBetweenMeasurements: %d ", __func__,
+             fidlContext->startCommandInQ.timeBetweenMeasurements);
          if ((nullptr != fidlContext->locClientFildReq) &&
              (nullptr != fidlContext->locClientFildReq->locClientFidlStartFix)) {
              fidlContext->locClientFildReq->locClientFidlStartFix(posMode, ((void *)fidlContext));
