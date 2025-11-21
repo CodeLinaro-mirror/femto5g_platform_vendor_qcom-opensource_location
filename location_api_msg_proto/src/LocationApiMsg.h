@@ -62,6 +62,12 @@ OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/*
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
+
 #ifndef LOCATIONAPIMSG_H
 #define LOCATIONAPIMSG_H
 
@@ -362,6 +368,7 @@ enum ELocMsgID {
 
     E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_REQ_MSG_ID = 312,
     E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_RESP_MSG_ID = 313,
+    E_INTAPI_NETWORK_UPDATE_INFO_MSG_ID = 314,
 };
 
 const char* LocApiMsgString(ELocMsgID msgId);
@@ -830,21 +837,6 @@ struct LocAPIResumeGeofencesReqMsg: LocAPIMsgHeader
 /******************************************************************************
 IPC message structure - control
 ******************************************************************************/
-struct LocAPIUpdateNetworkAvailabilityReqMsg: LocAPIMsgHeader
-{
-    bool mAvailability;
-
-    inline LocAPIUpdateNetworkAvailabilityReqMsg(const char* name, bool availability,
-            const LocationApiPbMsgConv *pbMsgConv) :
-        LocAPIMsgHeader(name, E_LOCAPI_CONTROL_UPDATE_NETWORK_AVAILABILITY_MSG_ID, pbMsgConv),
-        mAvailability(availability) { }
-    LocAPIUpdateNetworkAvailabilityReqMsg(const char* name,
-            const PBLocAPIUpdateNetworkAvailabilityReqMsg &pbUpdateNetAvailReqMsg,
-            const LocationApiPbMsgConv *pbMsgConv);
-
-    int serializeToProtobuf(string& protoStr) override;
-};
-
 struct LocAPIGetGnssEnergyConsumedReqMsg: LocAPIMsgHeader
 {
     inline LocAPIGetGnssEnergyConsumedReqMsg(const char* name,
@@ -1694,6 +1686,7 @@ struct LocConfigRegisterGnssSignalTypesUpdateRespMsg : LocAPIMsgHeader {
 
     int serializeToProtobuf(string& protoStr) override;
 };
+
 /**************** XTRA related section **********************/
 struct LocConfigGetXtraStatusReqMsg: LocAPIMsgHeader
 {
@@ -1739,6 +1732,20 @@ struct LocConfigGetXtraStatusRespMsg: LocAPIMsgHeader
     LocConfigGetXtraStatusRespMsg(const char* name,
                                   const PBLocConfigGetXtraStatusRespMsg &pbGetXtraStatusMsg,
                                   const LocationApiPbMsgConv *pbMsgConv);
+
+    int serializeToProtobuf(string& protoStr) override;
+};
+
+struct UpdateNetworkInfoReq: LocAPIMsgHeader {
+    NetworkInfo mData;
+    inline UpdateNetworkInfoReq(const char* name,
+                                NetworkInfo data,
+                                const LocationApiPbMsgConv *pbMsgConv) :
+        LocAPIMsgHeader(name, E_INTAPI_NETWORK_UPDATE_INFO_MSG_ID, pbMsgConv),
+        mData(data) { }
+    UpdateNetworkInfoReq(
+            const char* name, const PBUpdateNetworkInfoReq& pbMsg,
+            const LocationApiPbMsgConv *pbMsgConv);
 
     int serializeToProtobuf(string& protoStr) override;
 };
