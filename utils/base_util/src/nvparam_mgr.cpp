@@ -33,14 +33,7 @@ using namespace qc_loc_fw;
 
 namespace qc_loc_fw
 {
-#ifndef IZAT_OFFLINE
 #define NVPARAM_NAME "/data/vendor/location/nvparam.sqlite"
-#else
-#ifndef ROOT_DIR
-#define ROOT_DIR ""
-#endif
-#define NVPARAM_NAME ROOT_DIR "nvparam.sqlite"
-#endif // #ifndef IZAT_OFFLINE
 
 static const char * const TAG = "NvParamMgr";
 
@@ -545,7 +538,6 @@ int NvParamMgr::generatePseudoClientIdIfNeeded ()
       break;
     }
 
-#ifndef IZAT_OFFLINE
     // On Android, we first try to use hardware random number generator
     // If for any reason that fails, we fall back to UTC time
     int      random_fd = -1;
@@ -634,29 +626,6 @@ int NvParamMgr::generatePseudoClientIdIfNeeded ()
         log_debug (TAG, "generatePseudoClientIdIfNeeded: time is too small for seed");
       }
     }
-
-    // For real target, we prevent 0 to be used as pseudo client id
-    // so we will keep trying to generate a none zero pseudo client id
-    // when pseudo client id is needed
-#else
-    int time_sec = time (NULL);
-    // Make sure device is getting proper time
-    // Will need to be larger than 43 years interval (1970 - 2014)
-    if (time_sec > (43 * 365 * 24 * 60 * 60 ))
-    {
-      srand48 (time_sec);
-      random_uint64 = (uint32_t) mrand48();
-      random_uint64 <<= 32;
-      random_uint64 += (uint32_t) mrand48();
-      is_valid = true;
-    }
-    else
-    {
-      log_debug (TAG, "generatePseudoClientIdIfNeeded: time is too small for seed");
-    }
-
-    is_valid = true;
-#endif
 
     if (is_valid == true)
     {
