@@ -67,8 +67,8 @@
  *THIS IS AN AUTO GENERATED FILE. DO NOT ALTER IN ANY WAY
  *====*====*====*====*====*====*====*====*====*====*====*====*====*====*====*/
 
-/* This file was generated with Tool version 6.14.11
-   It was generated on: Mon Sep 29 2025 (Spin 0)
+/* This file was generated with Tool version 6.14.9
+   It was generated on: Fri Nov 14 2025 (Spin 0)
    From IDL File: location_service_v02.idl */
 
 /** @defgroup loc_qmi_consts Constant values defined in the IDL */
@@ -94,7 +94,7 @@ extern "C" {
 /** Major Version Number of the IDL used to generate this file */
 #define LOC_V02_IDL_MAJOR_VERS 0x02
 /** Revision Number of the IDL used to generate this file */
-#define LOC_V02_IDL_MINOR_VERS 0xB5
+#define LOC_V02_IDL_MINOR_VERS 0xB9
 /** Major Version Number of the qmi_idl_compiler used to generate this file */
 #define LOC_V02_IDL_TOOL_VERS 0x06
 /** Maximum Defined Message ID */
@@ -1090,8 +1090,12 @@ typedef struct {
 typedef enum {
   QMILOCSPECIALREQENUMT_MIN_ENUM_VAL_V02 = -2147483647, /**< To force a 32 bit signed enum.  Do not change or use*/
   eQMI_LOC_SPECIAL_REQUEST_SHORT_CODE_V02 = 1, /**<  QMI_LOC client requests for location fix with special
-       service type set with short code, allow even when GPS and privacy NVs
-       do not allow fix requests for this client.  */
+       service type set with short code, honor even when GPS and privacy NVs
+       do not allow fix requests for this client. Not applicable for BAP request. */
+  eQMI_LOC_SPECIAL_REQUEST_UNPROPAGATED_BAP_FIX_V02 = 2, /**<  QMI_LOC client requests a Best Available Position fix with special
+       service type set for unpropagated BAP fix. This returns the
+       cached location report containing unpropagated timestamp and uncertainty.
+       Only applicable for Best Available Position requests and not for normal session. */
   QMILOCSPECIALREQENUMT_MAX_ENUM_VAL_V02 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
 }qmiLocSpecialReqEnumT_v02;
 /**
@@ -1105,7 +1109,7 @@ typedef enum {
   QMILOCACTIVITYTYPEENUMT_MIN_ENUM_VAL_V02 = -2147483647, /**< To force a 32 bit signed enum.  Do not change or use*/
   eQMI_LOC_ACTIVITY_TYPE_DEFAULT_V02 = 0, /**<  Default Activity Type for all GNSS use cases  */
   eQMI_LOC_ACTIVITY_TYPE_SWIMMING_V02 = 1, /**<  Use this activity type for Swimming specific use cases  */
-  eQMI_LOC_ACTIVITY_TYPE_STAMINA_V02 = 2, /**<  Use this activity type for Stamina specific use cases  */
+  eQMI_LOC_ACTIVITY_TYPE_ENERGY_EFFICIENT_V02 = 2, /**<  Use this activity type for Energy Efficient use cases  */
   QMILOCACTIVITYTYPEENUMT_MAX_ENUM_VAL_V02 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
 }qmiLocActivityTypeEnumT_v02;
 /**
@@ -1256,14 +1260,19 @@ typedef struct {
   uint8_t specialReqType_valid;  /**< Must be set to true if specialReqType is being passed */
   qmiLocSpecialReqEnumT_v02 specialReqType;
   /**<   QMI_LOC client requests for location fix with Special
- Service request types set, honor even when GPS and Privacy NVs
- do not allow fix requests for this client.
+ Service request types configured to short code, honor even when GPS
+ and Privacy NVs do not allow fix requests for this client.
+ Special Request for unpropagated bap fix is not applicable here.
  If not set, ignore the field and process the client request
  according to GPS lock and privacy settings.
  Values: \n
       - eQMI_LOC_SPECIAL_REQUEST_SHORT_CODE (1) --  QMI_LOC client requests for location fix with special
-       service type set with short code, allow even when GPS and privacy NVs
-       do not allow fix requests for this client.
+       service type set with short code, honor even when GPS and privacy NVs
+       do not allow fix requests for this client. Not applicable for BAP request.
+      - eQMI_LOC_SPECIAL_REQUEST_UNPROPAGATED_BAP_FIX (2) --  QMI_LOC client requests a Best Available Position fix with special
+       service type set for unpropagated BAP fix. This returns the
+       cached location report containing unpropagated timestamp and uncertainty.
+       Only applicable for Best Available Position requests and not for normal session.
  */
 
   /* Optional */
@@ -1276,7 +1285,7 @@ typedef struct {
  Values: \n
       - eQMI_LOC_ACTIVITY_TYPE_DEFAULT (0) --  Default Activity Type for all GNSS use cases
       - eQMI_LOC_ACTIVITY_TYPE_SWIMMING (1) --  Use this activity type for Swimming specific use cases
-      - eQMI_LOC_ACTIVITY_TYPE_STAMINA (2) --  Use this activity type for Stamina specific use cases
+      - eQMI_LOC_ACTIVITY_TYPE_ENERGY_EFFICIENT (2) --  Use this activity type for Energy Efficient use cases
  */
 }qmiLocStartReqMsgT_v02;  /* Message */
 /**
@@ -1329,7 +1338,8 @@ typedef enum {
   eQMI_LOC_SESS_STATUS_BAD_PARAMETER_V02 = 5, /**<  Fix request failed due to bad parameters in the request \n */
   eQMI_LOC_SESS_STATUS_PHONE_OFFLINE_V02 = 6, /**<  Fix request failed because the phone is offline \n  */
   eQMI_LOC_SESS_STATUS_ENGINE_LOCKED_V02 = 7, /**<  Fix request failed because the engine is locked \n */
-  eQMI_LOC_SESS_STATUS_BACKGROUND_ENGAGE_ERR_V02 = 8, /**<  Background session cannot engage or continue  */
+  eQMI_LOC_SESS_STATUS_BACKGROUND_ENGAGE_ERR_V02 = 8, /**<  Background session cannot engage or continue \n */
+  eQMI_LOC_SESS_STATUS_ENGINE_BLOCKED_V02 = 9, /**<  Fix request failed because the engine is blocked  */
   QMILOCSESSIONSTATUSENUMT_MAX_ENUM_VAL_V02 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
 }qmiLocSessionStatusEnumT_v02;
 /**
@@ -1735,7 +1745,8 @@ typedef struct {
       - eQMI_LOC_SESS_STATUS_BAD_PARAMETER (5) --  Fix request failed due to bad parameters in the request \n
       - eQMI_LOC_SESS_STATUS_PHONE_OFFLINE (6) --  Fix request failed because the phone is offline \n
       - eQMI_LOC_SESS_STATUS_ENGINE_LOCKED (7) --  Fix request failed because the engine is locked \n
-      - eQMI_LOC_SESS_STATUS_BACKGROUND_ENGAGE_ERR (8) --  Background session cannot engage or continue
+      - eQMI_LOC_SESS_STATUS_BACKGROUND_ENGAGE_ERR (8) --  Background session cannot engage or continue \n
+      - eQMI_LOC_SESS_STATUS_ENGINE_BLOCKED (9) --  Fix request failed because the engine is blocked
  */
 
   /* Mandatory */
@@ -2005,21 +2016,11 @@ typedef struct {
        for each successive position report for a particular session. */
 
   /* Optional */
-  /*  SVs Used to Calculate the Fix */
+  /*  SVs Used to Calculate the Fix (Deprecated) */
   uint8_t gnssSvUsedList_valid;  /**< Must be set to true if gnssSvUsedList is being passed */
   uint32_t gnssSvUsedList_len;  /**< Must be set to # of elements in gnssSvUsedList */
   uint16_t gnssSvUsedList[QMI_LOC_MAX_SV_USED_LIST_LENGTH_V02];
-  /**<   Each entry in the list contains the SV ID of a satellite
-       used for calculating this position report. The following
-       information is associated with each SV ID. \n
-       Range: \n
-       - GPS --     1 to 32 \n
-       - GLONASS -- 65 to 96 \n
-       - QZSS --    193 to 197 \n
-       - BDS --     201 to 263 \n
-       - Galileo -- 301 to 336 \n
-       - NavIC --   401 to 420
-      */
+  /**<   This TLV is deprecated. Please use expandedGnssSvUsedList instead. */
 
   /* Optional */
   /*  Altitude Assumed */
@@ -2483,6 +2484,20 @@ typedef struct {
   /**<   Indicates the RF loss from antenna to baseband of each satellite in expandedSvList.
        rfLoss is aligned with the SVs in expandedSvList.\n
        - Units -- dB-Hz
+  */
+
+  /* Optional */
+  /*  Receiver Tick at Frame Count */
+  uint8_t refCountTicks_valid;  /**< Must be set to true if refCountTicks is being passed */
+  uint64_t refCountTicks;
+  /**<   Receiver frame counter value in ticks. */
+
+  /* Optional */
+  /*  Uncertainty for Receiver Tick at Frame Count */
+  uint8_t refCountTicksUnc_valid;  /**< Must be set to true if refCountTicksUnc is being passed */
+  float refCountTicksUnc;
+  /**<   Uncertainty for receiver frame counter value. \n
+       - Units -- milliseconds
   */
 }qmiLocEventGnssSvInfoIndMsgT_v02;  /* Message */
 /**
@@ -3808,11 +3823,11 @@ typedef struct {
        - 0x00 (FALSE) -- Civic address is not needed \n
        - 0x01 (TRUE) -- Civic address is needed
 
-    Note: If the civic address is available with the AP, the AP shall inject
-    the same using the new QMI_LOC_INJECT_LOCATION_ CIVIC_ADDRESS command.
+	Note: If the civic address is available with the AP, the AP shall inject
+	the same using the new QMI_LOC_INJECT_LOCATION_ CIVIC_ADDRESS command.
 
         If the civic address is not available, the AP shall NOT use the new
-    QMI_LOC_INJECT_LOCATION_ CIVIC_ADDRESS command. The existing DBH injection API should
+	QMI_LOC_INJECT_LOCATION_ CIVIC_ADDRESS command. The existing DBH injection API should
         be used to inject hybrid location if available.
   */
 }qmiLocEventWifiReqIndMsgT_v02;  /* Message */
@@ -4602,22 +4617,11 @@ typedef struct {
   /**<   \vspace{0.06in} \n Dilution of precision associated with this position. */
 
   /* Optional */
-  /*  SVs Used to Calculate the Fix */
+  /*  SVs Used to Calculate the Fix (Deprecated) */
   uint8_t gnssSvUsedList_valid;  /**< Must be set to true if gnssSvUsedList is being passed */
   uint32_t gnssSvUsedList_len;  /**< Must be set to # of elements in gnssSvUsedList */
   uint16_t gnssSvUsedList[QMI_LOC_MAX_SV_USED_LIST_LENGTH_V02];
-  /**<   Each entry in the list contains the SV ID of a satellite
-       used for calculating this position report. The following
-       information is associated with each SV ID.
-       Range:    \n
-       - GPS --     1 to 32 \n
-       - GLONASS -- 65 to 96  \n
-       - SBAS --    120 to 158 and 183 to 191  \n
-       - QZSS --    193 to 197 \n
-       - BDS --     201 to 263 \n
-       - Galileo -- 301 to 336 \n
-       - NavIC --   401 to 420
-        */
+  /**<   This TLV is deprecated. Please use expandedGnssSvUsedList instead. */
 
   /* Optional */
   /*  Extended Dilution of Precision */
@@ -4822,22 +4826,11 @@ typedef struct {
   /**<   \vspace{0.06in} \n Dilution of precision associated with this position. */
 
   /* Optional */
-  /*  SVs Used to Calculate the Fix */
+  /*  SVs Used to Calculate the Fix (Deprecated) */
   uint8_t gnssSvUsedList_valid;  /**< Must be set to true if gnssSvUsedList is being passed */
   uint32_t gnssSvUsedList_len;  /**< Must be set to # of elements in gnssSvUsedList */
   uint16_t gnssSvUsedList[QMI_LOC_MAX_SV_USED_LIST_LENGTH_V02];
-  /**<   Each entry in the list contains the SV ID of a satellite
-       used for calculating this position report. The following
-       information is associated with each SV ID.
-       Range:    \n
-       - GPS --     1 to 32 \n
-       - GLONASS -- 65 to 96 \n
-       - SBAS --    120 to 158 and 183 to 191 \n
-       - QZSS --    193 to 197 \n
-       - BDS --     201 to 263 \n
-       - Galileo -- 301 to 336 \n
-       - NavIC --   401 to 420
-        */
+  /**<   This TLV is deprecated. Please use expandedGnssSvUsedList instead. */
 
   /* Optional */
   /*  Extended Dilution of Precision */
@@ -6158,7 +6151,7 @@ typedef struct {
   /**<   Each entry in the list contains the SV ID of a satellite
        used for calculating this position report. The following
        information is associated with each SV ID. \n
-       Range: \n
+	   Range: \n
       - GPS --     1 to 32 \n
       - GLONASS -- 65 to 96 \n
       - QZSS --    193 to 197 \n
@@ -6630,7 +6623,7 @@ typedef uint64_t qmiLocExtendedNmeaSentenceMaskT_v02;
 /** @addtogroup loc_qmi_messages
     @{
   */
-/** Request Message; Sets the NMEA types. */
+/** Request Message; Sets the NMEA types. (Deprecated) */
 typedef struct {
 
   /* Mandatory */
@@ -6693,7 +6686,7 @@ typedef struct {
 /** @addtogroup loc_qmi_messages
     @{
   */
-/** Indication Message; Sets the NMEA types. */
+/** Indication Message; Sets the NMEA types. (Deprecated) */
 typedef struct {
 
   /* Mandatory */
@@ -11698,14 +11691,19 @@ typedef struct {
   uint8_t specialReqType_valid;  /**< Must be set to true if specialReqType is being passed */
   qmiLocSpecialReqEnumT_v02 specialReqType;
   /**<   QMI_LOC client requests for best available location with special
- service request types set, honor this request even when GPS and privacy NVs
- do not allow fix requests for this client.
- If not set, ignore the field and process the client request
- according to GPS lock and privacy settings.
+ service request types configured to unpropagated BAP fix. This returns the
+ cached location report containing unpropagated timestamp and uncertainty.
+ Special Request for short code is not applicable here.
+ If not set, ignore the field and return best available position
+ with propagated timestamp and uncertainity.
  Values: \n
       - eQMI_LOC_SPECIAL_REQUEST_SHORT_CODE (1) --  QMI_LOC client requests for location fix with special
-       service type set with short code, allow even when GPS and privacy NVs
-       do not allow fix requests for this client.
+       service type set with short code, honor even when GPS and privacy NVs
+       do not allow fix requests for this client. Not applicable for BAP request.
+      - eQMI_LOC_SPECIAL_REQUEST_UNPROPAGATED_BAP_FIX (2) --  QMI_LOC client requests a Best Available Position fix with special
+       service type set for unpropagated BAP fix. This returns the
+       cached location report containing unpropagated timestamp and uncertainty.
+       Only applicable for Best Available Position requests and not for normal session.
  */
 }qmiLocGetBestAvailablePositionReqMsgT_v02;  /* Message */
 /**
@@ -12000,22 +11998,11 @@ typedef struct {
   qmiLocSensorUsageIndicatorStructT_v02 sensorDataUsage;
 
   /* Optional */
-  /*  SVs Used to Calculate the Fix */
+  /*  SVs Used to Calculate the Fix (Deprecated) */
   uint8_t gnssSvUsedList_valid;  /**< Must be set to true if gnssSvUsedList is being passed */
   uint32_t gnssSvUsedList_len;  /**< Must be set to # of elements in gnssSvUsedList */
   uint16_t gnssSvUsedList[QMI_LOC_MAX_SV_USED_LIST_LENGTH_V02];
-  /**<   Each entry in the list contains the SV ID of a satellite
-       used for calculating this position report. The following
-       information is associated with each SV ID. \n
-       Range: \n
-       - GPS --     1 to 32 \n
-       - GLONASS -- 65 to 96  \n
-       - SBAS --    120 to 158 and 183 to 191 \n
-       - QZSS --    193 to 197 \n
-       - BDS --     201 to 263 \n
-       - Galileo -- 301 to 336 \n
-       - NavIC --   401 to 420
-       */
+  /**<   This TLV is deprecated. Please use expandedGnssSvUsedList instead. */
 
   /* Optional */
   /*  Extended Dilution of Precision */
@@ -13480,7 +13467,7 @@ typedef struct {
        - 0x01 (TRUE) -- GPS engine is in E911 mode \n
        - 0x00 (FALSE) -- GPS engine is not in E911 mode
 
-       Note: e911Mode shall be set as TRUE for non-E911 Wi-Fi AP injections.
+	   Note: e911Mode shall be set as TRUE for non-E911 Wi-Fi AP injections.
     */
 }qmiLocEventInjectWifiApDataReqIndMsgT_v02;  /* Message */
 /**
@@ -15683,7 +15670,7 @@ typedef struct {
        to the SV measurements in the TLV svMeasurement.
        The elements QMI_LOC_SV_MEAS_LIST_MAX_SIZE to (QMI_LOC_ML_INFER_SV_MEAS_LIST_MAX_SIZE - 1) of
        this array correspond to the SV measurements in the TLV extSvMeasurement.
-          */
+      	*/
 
   /* Optional */
   /*  Automatic gain control(AGC) Status */
@@ -16100,7 +16087,7 @@ typedef struct {
   uint32_t toc;
   /**<   Clock data reference time of week.  \n
        - Units -- Seconds \n
-       If source is ephemeris: \n
+	   If source is ephemeris: \n
          - Value for GPS, QZSS, BDS, Galileo, and NavIC is decoded OTA in full GPS seconds. \n
          - Value for GLONASS is the same as GLONASS TOE in full GPS seconds. \n
        If source is XTRA: \n
@@ -16119,7 +16106,7 @@ typedef struct {
   uint32_t toe;
   /**<   Reference time of ephemeris. \n
        - Units -- Seconds \n
-       If source is ephemeris: \n
+	   If source is ephemeris: \n
          - Value for GPS, QZSS, Galileo, and BDS is decoded OTA. \n
          - Value for GLONASS corresponds to ephemeris Tb. \n
        If source is XTRA: \n
@@ -17538,22 +17525,11 @@ typedef struct {
   /**<   \vspace{0.06in} \n Dilution of precision associated with this position. */
 
   /* Optional */
-  /*  SVs Used to Calculate the Fix */
+  /*  SVs Used to Calculate the Fix (Deprecated) */
   uint8_t gnssSvUsedList_valid;  /**< Must be set to true if gnssSvUsedList is being passed */
   uint32_t gnssSvUsedList_len;  /**< Must be set to # of elements in gnssSvUsedList */
   uint16_t gnssSvUsedList[QMI_LOC_MAX_SV_USED_LIST_LENGTH_V02];
-  /**<   Each entry in the list contains the SV ID of a satellite
-       used for calculating this position report. The following
-       information is associated with each SV ID. \n
-       Range:    \n
-      - GPS --     1 to 32 \n
-      - GLONASS -- 65 to 96 \n
-      - SBAS --    120 to 158 and 183 to 191 \n
-      - QZSS --    193 to 197 \n
-      - BDS --     201 to 263 \n
-      - Galileo -- 301 to 336 \n
-      - NavIC --   401 to 420
-  */
+  /**<   This TLV is deprecated. Please use expandedGnssSvUsedList instead. */
 
   /* Optional */
   /*  Position Source */
@@ -18020,7 +17996,8 @@ typedef struct {
       - eQMI_LOC_SESS_STATUS_BAD_PARAMETER (5) --  Fix request failed due to bad parameters in the request \n
       - eQMI_LOC_SESS_STATUS_PHONE_OFFLINE (6) --  Fix request failed because the phone is offline \n
       - eQMI_LOC_SESS_STATUS_ENGINE_LOCKED (7) --  Fix request failed because the engine is locked \n
-      - eQMI_LOC_SESS_STATUS_BACKGROUND_ENGAGE_ERR (8) --  Background session cannot engage or continue
+      - eQMI_LOC_SESS_STATUS_BACKGROUND_ENGAGE_ERR (8) --  Background session cannot engage or continue \n
+      - eQMI_LOC_SESS_STATUS_ENGINE_BLOCKED (9) --  Fix request failed because the engine is blocked
  */
 
   /* Mandatory */
@@ -18704,6 +18681,28 @@ typedef struct {
   uint8_t fileInfo_valid;  /**< Must be set to true if fileInfo is being passed */
   qmiLocPredictedOrbitsSpecialFileTypeStructT_v02 fileInfo;
   /**<   File type and download interval information. */
+
+  /* Optional */
+  /*  Gnss Constellation Type for XTRA */
+  uint8_t consType_valid;  /**< Must be set to true if consType is being passed */
+  qmiLocGNSSConstellEnumT_v02 consType;
+  /**<   Gnss Constellation type for injected XTRA
+ Values: \n
+      - eQMI_SYSTEM_GPS (0x01) --  Enable GPS \n
+      - eQMI_SYSTEM_GLO (0x02) --  Enable GLONASS \n
+      - eQMI_SYSTEM_BDS (0x04) --  Enable BDS \n
+      - eQMI_SYSTEM_GAL (0x08) --  Enable Galileo \n
+      - eQMI_SYSTEM_QZSS (0x10) --  Enable QZSS \n
+      - eQMI_SYSTEM_NAVIC (0x20) --  Enable NavIC
+ */
+
+  /* Optional */
+  /*  track the last constellation injection */
+  uint8_t lastConsData_valid;  /**< Must be set to true if lastConsData is being passed */
+  uint8_t lastConsData;
+  /**<   Xtra Data belongs to last constellation in sequence.
+       possible values 0 or 1
+  */
 }qmiLocInjectXtraDataReqMsgT_v02;  /* Message */
 /**
     @}
@@ -18845,6 +18844,7 @@ typedef enum {
   eQMI_LOC_SUPPORTED_FEATURE_DYNAMIC_FEATURE_STATUS_V02 = 19, /**<  Support the feature to dynamically report feature status on update */
   eQMI_LOC_SUPPORTED_FEATURE_GNSS_BANDS_SUPPORTED_V02 = 20, /**<  Support the feature to report Supported GNSS Bands \n */
   eQMI_LOC_SUPPORTED_FEATURE_GNSS_CONSTELLATION_DISABLEMENT_V02 = 21, /**<  Support the feature to disable GNSS constellations \n */
+  eQMI_LOC_SUPPORTED_FEATURE_POWER_MODE_SESSION_CONTINUITY_V02 = 22, /**<  Supports session continuity between power modes M1 and M2  */
   QMILOCSUPPORTEDFEATUREENUMT_MAX_ENUM_VAL_V02 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
 }qmiLocSupportedFeatureEnumT_v02;
 /**
@@ -19495,6 +19495,12 @@ typedef uint32_t qmiLocXtraInfoMaskT_v02;
 #define QMI_LOC_XTRA_INFO_MASK_NAVIC_EPH_ASSIST_V02 ((qmiLocXtraInfoMaskT_v02)0x00000040) /**<  Support for NavIC ephemeris assistance data \n  */
 #define QMI_LOC_XTRA_INFO_MASK_XTRA_DISABLED_V02 ((qmiLocXtraInfoMaskT_v02)0x00000080) /**<  XTRA disabled if set \n  */
 #define QMI_LOC_XTRA_INFO_MASK_PRECISE_XTRA_ENABLED_V02 ((qmiLocXtraInfoMaskT_v02)0x00000100) /**<  Support for Precise Xtra corrections data  */
+#define QMI_LOC_XTRA_INFO_MASK_PREF_QSOCKETS_COMM_V02 ((qmiLocXtraInfoMaskT_v02)0x00000200) /**<   Prefer for Qsockets based communication   */
+#define QMI_LOC_XTRA_INFO_MASK_PREF_QMI_COMM_V02 ((qmiLocXtraInfoMaskT_v02)0x00000400) /**<   Prefer for QMI based communication   */
+#define QMI_LOC_XTRA_INFO_MASK_MAX_PART_SIZE_ALLOWED_V02 ((qmiLocXtraInfoMaskT_v02)0x00000800) /**<   Max part size allowed for XTRA injection   */
+#define QMI_LOC_XTRA_INFO_MASK_MAX_FILE_SIZE_ALLOWED_V02 ((qmiLocXtraInfoMaskT_v02)0x00001000) /**<   Max file size allowed for XTRA injection   */
+#define QMI_LOC_XTRA_INFO_MASK_SERIALIZATION_PROT_PB_V02 ((qmiLocXtraInfoMaskT_v02)0x00002000) /**<   Protobuf to be used for serialization over qsockets  */
+#define QMI_LOC_XTRA_INFO_MASK_SERIALIZATION_PROT_BERTLV_V02 ((qmiLocXtraInfoMaskT_v02)0x00004000) /**<   BER-TLV codecs to be used for serialization over qsockets  */
 /** @addtogroup loc_qmi_aggregates
     @{
   */
@@ -19512,7 +19518,13 @@ typedef struct {
       - QMI_LOC_XTRA_INFO_MASK_PREF_VALID_AGE (0x00000020) --  Preferred valid age \n
       - QMI_LOC_XTRA_INFO_MASK_NAVIC_EPH_ASSIST (0x00000040) --  Support for NavIC ephemeris assistance data \n
       - QMI_LOC_XTRA_INFO_MASK_XTRA_DISABLED (0x00000080) --  XTRA disabled if set \n
-      - QMI_LOC_XTRA_INFO_MASK_PRECISE_XTRA_ENABLED (0x00000100) --  Support for Precise Xtra corrections data  */
+      - QMI_LOC_XTRA_INFO_MASK_PRECISE_XTRA_ENABLED (0x00000100) --  Support for Precise Xtra corrections data
+      - QMI_LOC_XTRA_INFO_MASK_PREF_QSOCKETS_COMM (0x00000200) --   Prefer for Qsockets based communication
+      - QMI_LOC_XTRA_INFO_MASK_PREF_QMI_COMM (0x00000400) --   Prefer for QMI based communication
+      - QMI_LOC_XTRA_INFO_MASK_MAX_PART_SIZE_ALLOWED (0x00000800) --   Max part size allowed for XTRA injection
+      - QMI_LOC_XTRA_INFO_MASK_MAX_FILE_SIZE_ALLOWED (0x00001000) --   Max file size allowed for XTRA injection
+      - QMI_LOC_XTRA_INFO_MASK_SERIALIZATION_PROT_PB (0x00002000) --   Protobuf to be used for serialization over qsockets
+      - QMI_LOC_XTRA_INFO_MASK_SERIALIZATION_PROT_BERTLV (0x00004000) --   BER-TLV codecs to be used for serialization over qsockets  */
 
   uint16_t absAgeHrs;
   /**<   Number of hours for which the current XTRA information is valid.
@@ -19581,6 +19593,11 @@ typedef struct {
   /*  XTRA Client Version */
   uint8_t xcVersion_valid;  /**< Must be set to true if xcVersion is being passed */
   qmiLocVersionStructT_v02 xcVersion;
+
+  /* Optional */
+  /*  XTRA MP events mask */
+  uint8_t xtraMpEventMask_valid;  /**< Must be set to true if xtraMpEventMask is being passed */
+  qmiLocEventRegMaskT_v02 xtraMpEventMask;
 }qmiLocQueryXtraInfoReqMsgT_v02;  /* Message */
 /**
     @}
@@ -19684,6 +19701,16 @@ typedef struct {
   /*  XTRA Remaining Valid Age in Minutes */
   uint8_t xtraRemValidDuration_valid;  /**< Must be set to true if xtraRemValidDuration is being passed */
   uint32_t xtraRemValidDuration;
+
+  /* Optional */
+  /*  XTRA Max File Size supported by gnssAiding */
+  uint8_t maxXtraFileSizeSupported_valid;  /**< Must be set to true if maxXtraFileSizeSupported is being passed */
+  uint32_t maxXtraFileSizeSupported;
+
+  /* Optional */
+  /*  XTRA Max part Size supported by gnssAiding */
+  uint8_t maxXtraPartSizeSupported_valid;  /**< Must be set to true if maxXtraPartSizeSupported is being passed */
+  uint32_t maxXtraPartSizeSupported;
 }qmiLocQueryXtraInfoIndMsgT_v02;  /* Message */
 /**
     @}
@@ -20632,6 +20659,7 @@ typedef struct {
        - TRUE --  Resets the GNSS constellation control to NV default. \n
                   Optional TLVs are disregarded.\n
        - FALSE -- Does not reset GNSS constellation control.
+       Note: This TLV does not reset the preferredConstellation
   */
 
   /* Optional */
@@ -20663,6 +20691,21 @@ typedef struct {
       - QMI_LOC_CONSTELLATION_GAL (0x00000008) --  Enable Galileo. \n
       - QMI_LOC_CONSTELLATION_NAVIC (0x00000010) --  Enable NavIC.
       - QMI_LOC_CONSTELLATION_GPS (0x00000020) --  Enable GPS.  */
+
+  /* Optional */
+  /*  Preferred GNSS Constellation */
+  uint8_t preferredConstellation_valid;  /**< Must be set to true if preferredConstellation is being passed */
+  qmiLocGNSSConstellEnumT_v02 preferredConstellation;
+  /**<   Specifies the preferred constellation satellite system.
+ Note: Only GPS and BDS constellations are supported currently.
+ Note: Valid only when resetConstellations is FALSE.
+ Values: \n
+      - eQMI_SYSTEM_GPS (0x01) --  Enable GPS \n
+      - eQMI_SYSTEM_GLO (0x02) --  Enable GLONASS \n
+      - eQMI_SYSTEM_BDS (0x04) --  Enable BDS \n
+      - eQMI_SYSTEM_GAL (0x08) --  Enable Galileo \n
+      - eQMI_SYSTEM_QZSS (0x10) --  Enable QZSS \n
+      - eQMI_SYSTEM_NAVIC (0x20) --  Enable NavIC  */
 }qmiLocSetConstellationConfigReqMsgT_v02;  /* Message */
 /**
     @}
@@ -21011,7 +21054,7 @@ typedef struct {
   /**<   Upcoming leap second information.
          Reported only when receiver has information
          on an upcoming change event.
-         The GNSS leap second field will always be sourced from the primary constellation.\n
+		 The GNSS leap second field will always be sourced from the primary constellation.\n
          - Units -- Seconds */
 
   /* Optional */
@@ -21165,6 +21208,19 @@ typedef struct {
       - eQMI_LOC_CONSTELLATION_DISABLED_BY_CLIENT (102) --  Disabled by the external client \n
       - eQMI_LOC_CONSTELLATION_DISABLED_NO_MEMORY (103) --  Could not be enabled due to memory allocation failure
  */
+
+  /* Optional */
+  /*  Preferred GNSS Constellation */
+  uint8_t preferredConstellation_valid;  /**< Must be set to true if preferredConstellation is being passed */
+  qmiLocGNSSConstellEnumT_v02 preferredConstellation;
+  /**<   Specifies the preferred constellation satellite system.
+ Values: \n
+      - eQMI_SYSTEM_GPS (0x01) --  Enable GPS \n
+      - eQMI_SYSTEM_GLO (0x02) --  Enable GLONASS \n
+      - eQMI_SYSTEM_BDS (0x04) --  Enable BDS \n
+      - eQMI_SYSTEM_GAL (0x08) --  Enable Galileo \n
+      - eQMI_SYSTEM_QZSS (0x10) --  Enable QZSS \n
+      - eQMI_SYSTEM_NAVIC (0x20) --  Enable NavIC  */
 }qmiLocGetConstellationConfigIndMsgT_v02;  /* Message */
 /**
     @}
@@ -21694,20 +21750,20 @@ typedef struct {
   uint16_t validityMask;
   /**<   Specifies validity of all the fields.  \n
         - iscL1ca -- 0x0001 \n
-        - iscL2c  -- 0x0002 \n
-        - iscL5I5  -- 0x0004  \n
-        - iscL5Q5 --  0x0008  \n
+		- iscL2c  -- 0x0002 \n
+		- iscL5I5  -- 0x0004  \n
+		- iscL5Q5 --  0x0008  \n
         - alert   -- 0x0010 \n
-        - uraNed0  -- 0x0020 \n
-        - uraNed1  -- 0x0040  \n
-        - uraNed2 --  0x0080  \n
+		- uraNed0  -- 0x0020 \n
+		- uraNed1  -- 0x0040  \n
+		- uraNed2 --  0x0080  \n
         - top     -- 0x0100 \n
-        - topClock  -- 0x0200 \n
-        - validityPeriod  -- 0x0400  \n
-        - deltaNdot --  0x0800  \n
-        - deltaA    --  0x1000  \n
-        - adot      --  0x2000  \n
-    */
+		- topClock  -- 0x0200 \n
+		- validityPeriod  -- 0x0400  \n
+		- deltaNdot --  0x0800  \n
+		- deltaA    --  0x1000  \n
+		- adot      --  0x2000  \n
+	*/
 
   float iscL1ca;
   /**<   InterSignal Correction between L1ca Data and Pilot channels in milliseconds, always zero for QZSS. \n
@@ -22010,16 +22066,16 @@ typedef struct {
   uint16_t validityMask;
   /**<   Specifies validity of all the fields.  \n
         - iscB2a -- 0x0001   \n
-        - iscB1c -- 0x0002  \n
+		- iscB1c -- 0x0002  \n
         - tgdB2a -- 0x0004   \n
-        - tgdB1c -- 0x0008  \n
+		- tgdB1c -- 0x0008  \n
         - svType -- 0x0010   \n
-        - validityPeriod  -- 0x0020  \n
+		- validityPeriod  -- 0x0020  \n
         - integrityFlags -- 0x0040   \n
-        - deltaNdot  -- 0x0080  \n
+		- deltaNdot  -- 0x0080  \n
         - deltaA -- 0x0100   \n
-        - adot  -- 0x0200  \n
-    */
+		- adot  -- 0x0200  \n
+	*/
 
   float tgdB2a;
   /**<   Time of Group Delay For B2a in milliseconds. \n
@@ -22045,11 +22101,11 @@ typedef struct {
   uint8_t integrityFlags;
   /**<   Satellite Integrity Flags consists data integrity Flag(DIF), Signal Integrity Flag(SIF), Accuracy Integrity Flag (AIF). \n
        Values: \n
-       - b0 - AIF, The signal is Valid(0) or Invalid (1). \n
-       - b1 - SIF, The signal is Normal(0) or Abnormal (1). \n
-       - b2 - DIF, The error of message parameters in this signal doesnot exceeds the prediction accuracy (0)/ Exceeds the prediction accuracy (1). \n
-       - b3 - B1I, ephemeris health (unitless). \n
-       */
+	   - b0 - AIF, The signal is Valid(0) or Invalid (1). \n
+	   - b1 - SIF, The signal is Normal(0) or Abnormal (1). \n
+	   - b2 - DIF, The error of message parameters in this signal doesnot exceeds the prediction accuracy (0)/ Exceeds the prediction accuracy (1). \n
+	   - b3 - B1I, ephemeris health (unitless). \n
+	   */
 
   double deltaNdot;
   /**<   Rate of Mean motion difference from computed value [semi-circle/sec^2] (unitless).
@@ -24607,7 +24663,7 @@ typedef struct {
         - Units -- Degrees \n
         - Range -- -90.0 to 90.0 \n
         Positive values indicate northern latitude.
-        Negative values indicate southern latitude.
+		Negative values indicate southern latitude.
    */
 
   /* Optional */
@@ -24617,8 +24673,8 @@ typedef struct {
   /**<   Latitude (specified in WGS84 datum).\n
         - Units -- Degrees \n
         - Range -- -180.0 to 180.0 \n
-        Positive values indicate eastern longitude.
-        Negative values indicate western longitude.
+		Positive values indicate eastern longitude.
+		Negative values indicate western longitude.
    */
 
   /* Optional */
@@ -24637,7 +24693,7 @@ typedef struct {
         - Units -- Percent (1 to 99)\n
         - 0, 101 to 255 -- Invalid value\n
         - If 100 is received, reinterpret to 99 \n
-        Note: This field must be specified with horizontal uncertainty.
+		Note: This field must be specified with horizontal uncertainty.
         If not specified when horUncCircular is set, the default value is 50.
    */
 
@@ -24647,8 +24703,8 @@ typedef struct {
   float altitudeWrtEllipsoid;
   /**<   Altitude with respect to the WGS84 ellipsoid.\n
         - Units -- Meters \n
-        - Positive -- Height \n
-        - Negative -- Depth
+		- Positive -- Height \n
+		- Negative -- Depth
    */
 
   /* Optional */
@@ -24674,12 +24730,12 @@ typedef struct {
   uint8_t vertConfidence;
   /**<   Vertical confidence, as defined by ETSI TS 101 109 (3GPP \hyperref[TS 03.32]{TS 03.32}). \n
         - Units -- Percent (0 to 99)\n
-        - 0 -- Invalid value \n
-        - 100 to 256 -- Not used \n
-        - If 100 is received, reinterpret to 99 \n
-        Note: This field must be specified with the vertical uncertainty.
+		- 0 -- Invalid value \n
+		- 100 to 256 -- Not used \n
+		- If 100 is received, reinterpret to 99 \n
+		Note: This field must be specified with the vertical uncertainty.
         If not specified, the default value is 50.
-    */
+	*/
 
   /* Optional */
   /*  Altitude Source */
@@ -26758,7 +26814,7 @@ typedef struct {
   /**<   Each entry in the list contains the SV ID of a satellite
        used for calculating this position report. The following
        information is associated with each SV ID. \n
-       Range: \n
+	   Range: \n
       - GPS --     1 to 32 \n
       - GLONASS -- 65 to 96 \n
       - QZSS --    193 to 197 \n
@@ -26809,7 +26865,7 @@ typedef enum {
     @{
   */
 /** Request Message; Used by the control point to enable, disable, Precise
-                     Positioning features. */
+	                 Positioning features. */
 typedef struct {
 
   /* Optional */
