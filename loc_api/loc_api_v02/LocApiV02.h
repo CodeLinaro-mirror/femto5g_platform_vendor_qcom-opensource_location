@@ -239,10 +239,14 @@ private:
       qmiLocGnssSignalTypeMaskT_v02 signalType,
       uint8_t gloFrequency);
 
-  /*convert GnssMeasurement type from QMI LOC to loc eng format*/
+  /*convert GnssSvMeasurement type from QMI LOC to loc eng format*/
+  void convertGnssMeasurementsForEngineService (
+      const qmiLocEventGnssSvMeasInfoIndMsgT_v02& gnss_measurement_report_ptr,
+      int index, bool isExt, bool validDgnssSvMeas, bool validMlInference, bool isStale);
+  /*convert GnssMeasurement type from QMI LOC to location data type format*/
   void convertGnssMeasurements (
       const qmiLocEventGnssSvMeasInfoIndMsgT_v02& gnss_measurement_report_ptr,
-      int index, bool isExt, bool validDgnssSvMeas, bool validMlInference);
+      int index, bool isExt, bool isStale);
 
   /* Convert APN Type mask */
   static qmiLocApnTypeMaskT_v02 convertLocApnTypeMask(LocApnTypeMask mask);
@@ -403,6 +407,7 @@ private:
 
   bool isMeasurementRefreshForSv(uint16_t gnssSvId,
                                  GnssSignalTypeMask gnssSignalTypeMask);
+  bool isStaleMeasurement(const qmiLocSVMeasurementStructT_v02& svMeas);
 
   bool isTOAValid(const qmiLocEventPositionReportIndMsgT_v02 *location_report_ptr,
           const GnssBasicMeasurementsInfo *pOneHzMeasurements);
