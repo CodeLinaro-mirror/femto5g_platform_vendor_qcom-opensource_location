@@ -201,6 +201,9 @@ private:
                          (ts.tv_sec * 1000ULL + ts.tv_nsec/1000000));
             }
             return retVal;
+        } else {
+            LOC_LOGe("ipc sender is NULL!");
+            return false;
         }
     }
 
