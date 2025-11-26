@@ -1258,10 +1258,7 @@ SynergyLocApi::open(LOC_API_ADAPTER_EVENT_MASK_T mask) {
                 LOC_LOGd ("SLL Requested Configuration 0x%" PRIx64 ","
                         " Supported Configuration 0x%" PRIx64 "",
                         mask, supportedMask);
-                if ((LOC_API_ADAPTER_BIT_GNSS_MEASUREMENT ==
-                        (supportedMask & LOC_API_ADAPTER_BIT_GNSS_MEASUREMENT)) ||
-                    (LOC_API_ADAPTER_BIT_GNSS_MEASUREMENT_REPORT ==
-                        (supportedMask & LOC_API_ADAPTER_BIT_GNSS_MEASUREMENT))) {
+                if (supportedMask & LOC_API_ADAPTER_BIT_GNSS_MEASUREMENT_REPORT) {
                     gnssMeasurementSupported = true;
                 }
             mContext->setEngineCapabilities((getSllFeatures.feature_len != 0 ?

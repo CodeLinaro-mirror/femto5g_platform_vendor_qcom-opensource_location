@@ -1889,9 +1889,6 @@ locClientEventMaskType LocApiV02 :: convertLocClientEventMask(
   if(mask & LOC_API_ADAPTER_BIT_GNSS_SV_EPHEMERIS_REPORT)
         eventMask |= QMI_LOC_EVENT_MASK_EPHEMERIS_REPORT_V02;
 
-  if (mask & LOC_API_ADAPTER_BIT_GNSS_MEASUREMENT)
-      eventMask |= QMI_LOC_EVENT_MASK_GNSS_MEASUREMENT_REPORT_V02;
-
   if(mask & LOC_API_ADAPTER_BIT_REQUEST_TIMEZONE)
       eventMask |= QMI_LOC_EVENT_MASK_GET_TIME_ZONE_REQ_V02;
 
@@ -4955,7 +4952,7 @@ void LocApiV02::reportGnssMeasurementData(
     }
 
     LOC_LOGd("[SvMeas] nHz (%d, %d), SeqNum: %d, MaxMsgNum: %d, "
-             "SubSeqNum: %d, MaxSubMsgNum: %d, "
+             "SubSeqNum: %d, MaxSubSeqNum: %d, "
              "SvSystem: %d SignalType: %" PRIu64 " MeasValid: %d, #of SV: %d, "
              "leap second info (valid:%d leap sec:%d, unc: %d)",
              gnss_measurement_report_ptr.nHzMeasurement_valid,
@@ -4979,6 +4976,15 @@ void LocApiV02::reportGnssMeasurementData(
             return;
         }
         resetSvMeasurementReport();
+        // when engine service enabled, initialize GnssSvMeasurementSet for population
+        if (ContextBase::mIzat_process_conf.engineServiceEnabled) {
+            mGnssMeasurements->gnssSvMeasurementSet = (GnssSvMeasurementSet*)malloc(
+                    sizeof(GnssSvMeasurementSet));
+            memset(mGnssMeasurements->gnssSvMeasurementSet, 0, sizeof(GnssSvMeasurementSet));
+            mGnssMeasurements->gnssSvMeasurementSet->size = sizeof(GnssSvMeasurementSet);
+            mGnssMeasurements->gnssSvMeasurementSet->svMeasSetHeader.size =
+                    sizeof(GnssSvMeasurementHeader);
+        }
         newMeasProcessed = false;
     }
 
@@ -5006,7 +5012,9 @@ void LocApiV02::reportGnssMeasurementData(
         prevRefFCount = gnss_measurement_report_ptr.systemTimeExt.refFCount;
         if (gnss_measurement_report_ptr.nHzMeasurement_valid &&
             gnss_measurement_report_ptr.nHzMeasurement) {
-            mGnssMeasurements->gnssSvMeasurementSet.isNhz = true;
+            if (mGnssMeasurements->gnssSvMeasurementSet) {
+                mGnssMeasurements->gnssSvMeasurementSet->isNhz = true;
+            }
             measData.isNhz = true;
         }
     }
@@ -5020,7 +5028,6 @@ void LocApiV02::reportGnssMeasurementData(
 
     // set up indication that we have processed some new measurement
     newMeasProcessed = true;
-
     // meas for primary constellation always come first, also, in case there
     // are more than 24 SVs in the preferred signal type, we only need to
     // process the first sub sequence
@@ -5084,6 +5091,14 @@ void LocApiV02::reportGnssMeasurementData(
                 convertGnssMeasurementsForEngineService(gnss_measurement_report_ptr, index, false,
                         validDgnssMeas, validMlInference, isStale);
                 convertGnssMeasurements(gnss_measurement_report_ptr, index, false, isStale);
+                if (validDgnssMeas) {
+                    const qmiLocDgnssSVMeasurementStructT_v02* dgnss_sv_meas_ptr =
+                            &gnss_measurement_report_ptr.dgnssSvMeasurement[index];
+                    if (dgnss_sv_meas_ptr->dgnssMeasStatus > 0) {
+                        measData.dgnssDataUsage = true;
+                    }
+
+                }
             }
 
             /* now check if more measurements are available (some constellations such
@@ -5101,6 +5116,14 @@ void LocApiV02::reportGnssMeasurementData(
                     convertGnssMeasurementsForEngineService(gnss_measurement_report_ptr, index,
                             true, validDgnssMeas, validMlInference, isStale);
                     convertGnssMeasurements(gnss_measurement_report_ptr, index, true, isStale);
+                    if (validDgnssMeas) {
+                        const qmiLocDgnssSVMeasurementStructT_v02* dgnss_sv_meas_ptr =
+                                &gnss_measurement_report_ptr.dgnssSvMeasurement[index +
+                                gnss_measurement_report_ptr.svMeasurement_len];
+                        if (dgnss_sv_meas_ptr->dgnssMeasStatus > 0) {
+                            measData.dgnssDataUsage = true;
+                        }
+                    }
                 }
             }
         }
@@ -5128,7 +5151,7 @@ void LocApiV02::reportGnssMeasurementData(
              measData.gnssAgc[agcCount].carrierFrequencyHz);
     measData.agcCount++;
     if (gnss_measurement_report_ptr.maxMessageNum == gnss_measurement_report_ptr.seqNum &&
-            !mGnssMeasurements->gnssSvMeasurementSet.isNhz) {
+            !measData.isNhz) {
         // Copy only required information
         GnssMeasurementsNotification &measInfo = measData;
         m1HzMeasurementsInfo.clock.flags = measInfo.clock.flags;
@@ -5366,7 +5389,7 @@ void LocApiV02::setGnssBiasesForL1CA() {
 
 void LocApiV02 ::reportSvMeasurementInternal() {
     if (mGnssMeasurements) {
-        if (mGnssMeasurements->gnssSvMeasurementSet.isNhz) {
+        if (mGnssMeasurements->gnssMeasNotification.isNhz) {
             mPrevNhzSlipCountMap = mCurrentCycleSlipCountMapNHz;
             //Clear current epoch data
             mCurrentCycleSlipCountMapNHz.clear();
@@ -5375,30 +5398,28 @@ void LocApiV02 ::reportSvMeasurementInternal() {
             //Clear current epoch data
             mCurrentCycleSlipCountMap1Hz.clear();
         }
-        GnssSvMeasurementHeader &svMeasSetHead =
-            mGnssMeasurements->gnssSvMeasurementSet.svMeasSetHeader;
+        if (mGnssMeasurements->gnssSvMeasurementSet) {
+            GnssSvMeasurementHeader &svMeasSetHead =
+                    mGnssMeasurements->gnssSvMeasurementSet->svMeasSetHeader;
+            // when we received the last sequence, timestamp the packet with AP time
+            struct timespec apTimestamp = {};
+            if (clock_gettime(CLOCK_BOOTTIME, &apTimestamp)== 0) {
+                svMeasSetHead.apBootTimeStamp.apTimeStamp.tv_sec = apTimestamp.tv_sec;
+                svMeasSetHead.apBootTimeStamp.apTimeStamp.tv_nsec = apTimestamp.tv_nsec;
 
-        // when we received the last sequence, timestamp the packet with AP time
-        struct timespec apTimestamp = {};
-        if (clock_gettime(CLOCK_BOOTTIME, &apTimestamp)== 0) {
-            svMeasSetHead.apBootTimeStamp.apTimeStamp.tv_sec = apTimestamp.tv_sec;
-            svMeasSetHead.apBootTimeStamp.apTimeStamp.tv_nsec = apTimestamp.tv_nsec;
-
-            // use the time uncertainty configured in gps.conf
-            svMeasSetHead.apBootTimeStamp.apTimeStampUncertaintyMs =
+                // use the time uncertainty configured in gps.conf
+                svMeasSetHead.apBootTimeStamp.apTimeStampUncertaintyMs =
                     (float)ap_timestamp_uncertainty;
-            svMeasSetHead.flags |= GNSS_SV_MEAS_HEADER_HAS_AP_TIMESTAMP;
-        } else {
-            svMeasSetHead.apBootTimeStamp.apTimeStampUncertaintyMs = FLT_MAX;
-            LOC_LOGe("Error in clock_gettime() ");
+                svMeasSetHead.flags |= GNSS_SV_MEAS_HEADER_HAS_AP_TIMESTAMP;
+            } else {
+                svMeasSetHead.apBootTimeStamp.apTimeStampUncertaintyMs = FLT_MAX;
+                LOC_LOGe("Error in clock_gettime() ");
+            }
+            LOC_LOGd("report %d sv meas to engine service",
+                    mGnssMeasurements->gnssSvMeasurementSet->svMeasCount);
         }
-
         setGnssBiasesForL1CA();
-
-        LOC_LOGd("report %d sv in sv meas with %d fresh ones",
-                mGnssMeasurements->gnssMeasNotification.count,
-                mGnssMeasurements->gnssSvMeasurementSet.svMeasCount);
-
+        LOC_LOGd("report %d sv in sv meas", mGnssMeasurements->gnssMeasNotification.count);
         for (uint32_t i = 0; i < mGnssMeasurements->gnssMeasNotification.count; i++) {
            LOC_LOGa("measurements[%d].flags=0x%08x "
                     "measurements[%d].gnssSignalType=%d "
@@ -5483,8 +5504,11 @@ void LocApiV02::convertSvType(
 void LocApiV02::convertGnssMeasurementsHeader(const Gnss_LocSvSystemEnumType locSvSystemType,
     const qmiLocEventGnssSvMeasInfoIndMsgT_v02& gnss_measurement_info)
 {
+    if (!mGnssMeasurements->gnssSvMeasurementSet) {
+        return;
+    }
     GnssSvMeasurementHeader &svMeasSetHead =
-        mGnssMeasurements->gnssSvMeasurementSet.svMeasSetHeader;
+        mGnssMeasurements->gnssSvMeasurementSet->svMeasSetHeader;
 
     // The refCountTicks for each constellation sent for one meas report is the same
     // always. It does not matter if it gets overwritten.
@@ -6235,7 +6259,8 @@ void LocApiV02::wifiStatusInformSync()
 void LocApiV02 :: convertGnssMeasurementsForEngineService(
     const qmiLocEventGnssSvMeasInfoIndMsgT_v02& gnss_measurement_report_ptr,
     int index, bool isExt, bool validDgnssSvMeas, bool validMlInference, bool isStale) {
-    if (mGnssMeasurements->gnssSvMeasurementSet.svMeasCount ==
+    if (!mGnssMeasurements->gnssSvMeasurementSet ||
+            mGnssMeasurements->gnssSvMeasurementSet->svMeasCount ==
             GNSS_LOC_SV_MEAS_LIST_MAX_SIZE) {
         return;
     }
@@ -6247,8 +6272,8 @@ void LocApiV02 :: convertGnssMeasurementsForEngineService(
     const qmiLocSVMeasurementStructT_v02 &gnss_measurement_info = isExt ?
             gnss_measurement_report_ptr.extSvMeasurement[index] :
             gnss_measurement_report_ptr.svMeasurement[index];
-    Gnss_SVMeasurementStructType& svMeas = mGnssMeasurements->gnssSvMeasurementSet.svMeas[
-            mGnssMeasurements->gnssSvMeasurementSet.svMeasCount++];
+    Gnss_SVMeasurementStructType& svMeas = mGnssMeasurements->gnssSvMeasurementSet->svMeas[
+            mGnssMeasurements->gnssSvMeasurementSet->svMeasCount++];
 
     svMeas.size = sizeof(Gnss_SVMeasurementStructType);
     svMeas.gnssSystem = getLocApiSvSystemType(gnss_measurement_report_ptr.system);
@@ -6838,10 +6863,7 @@ void LocApiV02 :: convertGnssMeasurements(
     }
 
     if (bFound && nullptr != locApiProxyObj) {
-        bool ret = locApiProxyObj->getSatellitePVT(
-                        svPolynomial,
-                        mGnssMeasurements->gnssSvMeasurementSet.svMeasSetHeader,
-                        measurementData);
+        bool ret = locApiProxyObj->getSatellitePVT(svPolynomial, measurementData);
         if (ret) {
             measurementData.flags |= GNSS_MEASUREMENTS_DATA_SATELLITE_PVT_BIT;
         }
@@ -6994,11 +7016,9 @@ void LocApiV02 :: convertGnssClock (GnssMeasurementsClock& clock,
                         gnss_measurement_info.gpsBdsInterSystemBias.timeBias,
                         gnss_measurement_info.gpsBdsInterSystemBias.timeBiasUnc,
                         gpsTimeNs);
-
-                if (mGnssMeasurements->gnssSvMeasurementSet.svMeasSetHeader.flags &
-                    GNSS_SV_MEAS_HEADER_HAS_LEAP_SECOND) {
-                    clock.leapSecond = mGnssMeasurements->
-                            gnssSvMeasurementSet.svMeasSetHeader.leapSec.leapSec;
+               if ((1 == gnss_measurement_info.leapSecondInfo_valid) &&
+                       (0 == gnss_measurement_info.leapSecondInfo.leapSecUnc)) {
+                    clock.leapSecond = gnss_measurement_info.leapSecondInfo.leapSec;
                     flags |= GNSS_MEASUREMENTS_CLOCK_FLAGS_LEAP_SECOND_BIT;
                     LOC_LOGa("clock.leapSecond: %d", clock.leapSecond);
                 }
@@ -10097,7 +10117,6 @@ void
 LocApiV02::stopTimeBasedTracking(LocApiResponse* adapterResponse)
 {
     sendMsg(new LocApiMsg([this, adapterResponse] () {
-
     LOC_LOGD("stopTimeBasedTracking enter");
     loc_boot_kpi_marker("L - LocApiV02 stop Fix session");
     LocationError err = LOCATION_ERROR_SUCCESS;
@@ -10122,6 +10141,15 @@ LocApiV02::stopTimeBasedTracking(LocApiResponse* adapterResponse)
 
     if (adapterResponse != NULL) {
         adapterResponse->returnToSender(err);
+    }
+    // deallocate GnssMeasurements when tracking session stops
+    if (mGnssMeasurements) {
+        if (mGnssMeasurements->gnssSvMeasurementSet) {
+            free(mGnssMeasurements->gnssSvMeasurementSet);
+            mGnssMeasurements->gnssSvMeasurementSet = nullptr;
+        }
+        free(mGnssMeasurements);
+        mGnssMeasurements = nullptr;
     }
     }));
 }
