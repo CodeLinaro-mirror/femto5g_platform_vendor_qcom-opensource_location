@@ -26,12 +26,17 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
 SPDX-License-Identifier: BSD-3-Clause-Clear
 */
+
+/*
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -50,6 +55,7 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #include <loc_misc_utils.h>
 #include <thread>
 #include <unordered_map>
+#include <iostream>
 #include <algorithm>
 
 #include <LocationClientApi.h>
@@ -139,9 +145,9 @@ enum TrackingSessionType {
 #define CONFIG_ENGINE_RUN_STATE    "configEngineRunState"
 #define CONFIG_ENGINE_INTEGRITY_RISK "configEngineIntegrityRisk"
 #define SET_USER_CONSENT           "setUserConsentForTerrestrialPositioning"
-#define GET_SINGLE_GTP_WWAN_FIX    "getSingleGtpWwanFix"
-#define GET_MULTIPLE_GTP_WWAN_FIXES  "getMultipleGtpWwanFixes"
-#define CANCEL_SINGLE_GTP_WWAN_FIX "cancelSingleGtpWwanFix"
+#define GET_SINGLE_TERRESTRIAL_FIX "getSingleTerrestrialFix"
+#define GET_MULTIPLE_TERRESTRIAL_FIXES "getMultipleTerrestrialFixes"
+#define CANCEL_SINGLE_TERRESTRIAL_FIX "cancelSingleTerrestrialFix"
 #define CONFIG_NMEA_TYPES          "configOutputNmeaTypes"
 #define GET_ENERGY_CONSUMED        "getEnergyConsumed"
 #define INJECT_LOCATION            "injectLocation"
@@ -160,7 +166,7 @@ enum TrackingSessionType {
 #define MODIFY_GEOFENCES            "modifyGeofences"
 #define REMOVE_GEOFENCES            "removeGeofences"
 #define SET_XTRA_END_USER_CONSENT   "setXtraEndUserConsent"
-
+#define SET_NETWORK_INFO            "setNetworkInfo"
 
 static bool openPort(void)
 {
@@ -312,12 +318,13 @@ static void onGtpLocationCb(const location_client::Location& location) {
     if (detailedOutputEnabled) {
         printf("<<< onGtpLocationCb: %s\n", location.toString().c_str());
     } else {
-        printf("<<< onGtpLocationCb time=%" PRIu64" mask=0x%x lat=%f lon=%f alt=%f\n",
+        printf("<<< onGtpLocationCb time=%" PRIu64" mask=0x%x lat=%f lon=%f alt=%f horAcc=%f\n",
                location.timestamp,
                location.flags,
                location.latitude,
                location.longitude,
-               location.altitude);
+               location.altitude,
+               location.horizontalAccuracy);
     }
 }
 
@@ -638,9 +645,9 @@ static void printHelp() {
     printf("%s: get min sv elevation angle\n", GET_MIN_SV_ELEVATION);
     printf("%s: config engine run state\n", CONFIG_ENGINE_RUN_STATE);
     printf("%s: set user consent for terrestrial positioning 0/1\n", SET_USER_CONSENT);
-    printf("%s: get single shot wwan fix, timeout_msec 0.0 1\n", GET_SINGLE_GTP_WWAN_FIX);
-    printf("%s: get multiple wan fix: numOfFixes tbfMsec timeout_msec 0.0 1\n",
-           GET_MULTIPLE_GTP_WWAN_FIXES);
+    printf("%s: get single terrestrial fix, timeout_msec 0.0 1\n", GET_SINGLE_TERRESTRIAL_FIX);
+    printf("%s: get multiple terrestrial fix: numOfFixes tbfMsec timeout_msec 0.0 1\n",
+           GET_MULTIPLE_TERRESTRIAL_FIXES);
     printf("%s: config nmea types \n", CONFIG_NMEA_TYPES);
     printf("%s: config engine integrity risk \n", CONFIG_ENGINE_INTEGRITY_RISK);
     printf("%s: get gnss energy consumed \n", GET_ENERGY_CONSUMED);
@@ -662,6 +669,7 @@ static void printHelp() {
             MODIFY_GEOFENCES );
     printf("%s: remove geofences with indexes\n", REMOVE_GEOFENCES );
     printf("%s: Set xtra end user consent \n", SET_XTRA_END_USER_CONSENT);
+    printf("%s: set external network info \n", SET_NETWORK_INFO );
 }
 
 void setRequiredPermToRunAsLocClient() {
@@ -1075,7 +1083,7 @@ void parseXtraConfig(char* buf, bool &xtraEnabled, XtraConfigParams& oemConfig) 
     }
 }
 
-void getGtpWwanFixes (bool multipleFixes, char* buf) {
+void getTerrestrialFixes (bool multipleFixes, char* buf) {
     uint32_t gtpFixTbfMsec  = 0;
     uint32_t gtpTimeoutMsec = 0;
     float    gtpHorQoS      = 0.0;
@@ -2126,9 +2134,9 @@ int main(int argc, char *argv[]) {
     while (1) {
         bool retVal = true;
         char buf[1500];
-        std::string strBuf(buf);
         memset (buf, 0, sizeof(buf));
         fgets(buf, sizeof(buf), stdin);
+        std::string strBuf(buf);
 
         printf("execute command %s\n", buf);
         if (!pIntClient) {
@@ -2335,15 +2343,16 @@ int main(int argc, char *argv[]) {
             }
             printf("userConsent %d\n", userConsent);
             retVal = pIntClient->setUserConsentForTerrestrialPositioning(userConsent);
-        } else if (strncmp(buf, GET_SINGLE_GTP_WWAN_FIX, strlen(GET_SINGLE_GTP_WWAN_FIX)) == 0) {
+        } else if (strncmp(
+                    buf, GET_SINGLE_TERRESTRIAL_FIX, strlen(GET_SINGLE_TERRESTRIAL_FIX)) == 0) {
             // get single-shot gtp fixes
-            getGtpWwanFixes(false, buf);
-        } else if (strncmp(buf, GET_MULTIPLE_GTP_WWAN_FIXES,
-                           strlen(GET_MULTIPLE_GTP_WWAN_FIXES)) == 0) {
+            getTerrestrialFixes(false, buf);
+        } else if (strncmp(buf, GET_MULTIPLE_TERRESTRIAL_FIXES,
+                           strlen(GET_MULTIPLE_TERRESTRIAL_FIXES)) == 0) {
             // get multiple gtp fixes
-            getGtpWwanFixes(true, buf);
-        } else if (strncmp(buf, CANCEL_SINGLE_GTP_WWAN_FIX,
-                           strlen(CANCEL_SINGLE_GTP_WWAN_FIX)) == 0) {
+            getTerrestrialFixes(true, buf);
+        } else if (strncmp(buf, CANCEL_SINGLE_TERRESTRIAL_FIX,
+                           strlen(CANCEL_SINGLE_TERRESTRIAL_FIX)) == 0) {
             if (!pLcaClient) {
                 pLcaClient = new LocationClientApi(onCapabilitiesCb);
             }
@@ -2567,6 +2576,55 @@ int main(int argc, char *argv[]) {
             printf("xtrauserConsent %d\n", xtraUserConsent);
             if (pIntClient) {
                 pIntClient->setUserConsentForXtra(xtraUserConsent);
+            }
+        } else if (strBuf.compare(0, strlen(SET_NETWORK_INFO),
+                SET_NETWORK_INFO) == 0) {
+            if (pIntClient) {
+                NetworkInfoData nwData = {};
+                int32_t nwStatus = 0, nwType = 0;
+                std::cout << "Enter Connection Status  " << std::endl;
+                std::cout << "0 for Unknown, 1 for CONNECTED, 2 for DISCONNECTED: ";
+                std::cin >> nwStatus;
+                if (std::cin.fail()) {
+                    std::cerr << "Invalid input for Connection Status" << std::endl;
+                }
+                nwData.connection = static_cast<NetworkConnection>(nwStatus);
+
+                std::cout << "Enter Country: ";
+                std::cin.ignore(); // To ignore the newline character left in the buffer
+                std::getline(std::cin, nwData.country);
+                if (nwData.country.empty()) {
+                    std::cerr << "Invalid input for Country" << std::endl;
+                    nwData.country = " ";
+                }
+
+                std::cout << "Enter MccMnc: ";
+                std::getline(std::cin, nwData.mccmnc);
+                if (nwData.mccmnc.empty()) {
+                     std::cerr << "Invalid input for MccMnc" << std::endl;
+                     nwData.mccmnc = " ";
+                }
+
+                std::cout << "Enter Network Type (0 for UNKNOWN, 1 for WWAN, 2 for WLAN): ";
+                std::cin >> nwType;
+                if (std::cin.fail()) {
+                     std::cerr << "Invalid input for Network Type" << std::endl;
+                }
+                nwData.networkType = static_cast<NetworkType>(nwType);
+
+                // Output the collected data
+                std::cout << "Network Info:" << std::endl;
+                std::cout << "Connection Status: "
+                        << (nwData.connection == NET_CONNECTED ? "Connected"
+                        : (nwData.connection == NET_DISCONNECTED ? "Disconnected" : "Unknown"))
+                        << std::endl;
+                std::cout << "Country: " << nwData.country << std::endl;
+                std::cout << "MccMnc: " << nwData.mccmnc << std::endl;
+                std::cout << "Network Type: "
+                        << (nwData.networkType == TYPE_WWAN ? "WWAN"
+                        : (nwData.networkType == TYPE_WLAN ? "WLAN": "Unknown")) << std::endl;
+
+                pIntClient->updateNetworkInfo(nwData);
             }
         } else {
             int command = buf[0];
