@@ -25,42 +25,11 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
 /*
-Changes from Qualcomm Innovation Center are provided under the following license:
-
-Copyright (c) 2022-2024, 2025 Qualcomm Innovation Center, Inc. All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted (subject to the limitations in the
-disclaimer below) provided that the following conditions are met:
-
-    * Redistributions of source code must retain the above copyright
-      notice, this list of conditions and the following disclaimer.
-
-    * Redistributions in binary form must reproduce the above
-      copyright notice, this list of conditions and the following
-      disclaimer in the documentation and/or other materials provided
-      with the distribution.
-
-    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
-      contributors may be used to endorse or promote products derived
-      from this software without specific prior written permission.
-
-NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
-WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
-GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
-IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
-OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
 
 #define LOG_NDEBUG 0
 #define LOG_TAG "LocSvc_ApiV02"
@@ -2296,7 +2265,6 @@ void LocApiV02 :: reportPosition (
     memset(&location, 0, sizeof (UlpLocation));
     location.size = sizeof(location);
     location.unpropagatedPosition = unpropagatedPosition;
-    GnssDataNotification dataNotify = {};
     uint16_t meaAvailForPVT[eQMI_LOC_SV_SYSTEM_NAVIC_V02] = {};
 
     GpsLocationExtended locationExtended;
@@ -2324,47 +2292,6 @@ void LocApiV02 :: reportPosition (
                  locationExtended.timeStamp.apTimeStamp.tv_sec,
                  locationExtended.timeStamp.apTimeStamp.tv_nsec);
 
-    // Process the position from final and intermediate reports
-    memset(&dataNotify, 0, sizeof(dataNotify));
-
-    if (location_report_ptr->jammerIndicatorListExt_valid) {
-        for (uint32_t i = 0; i < location_report_ptr->jammerIndicatorListExt_len; i++) {
-            int signalId = log2(location_report_ptr->jammerIndicatorListExt[i].gnssSignalType);
-            if (signalId < GNSS_LOC_MAX_NUMBER_OF_SIGNAL_TYPES) {
-                LOC_LOGa("signal type %d, agcMetricDb=%d, bpMetricDb=%d",
-                        signalId, -location_report_ptr->jammerIndicatorListExt[i].bpMetricDb,
-                        location_report_ptr->jammerIndicatorListExt[i].bpMetricDb);
-                dataNotify.gnssDataMask[signalId] |=
-                    GNSS_LOC_DATA_AGC_BIT | GNSS_LOC_DATA_JAMMER_IND_BIT;
-                dataNotify.agc[signalId] =
-                    -(double)location_report_ptr->jammerIndicatorListExt[i].bpMetricDb / 100.0;
-                dataNotify.jammerInd[signalId] =
-                    (double)location_report_ptr->jammerIndicatorListExt[i].bpMetricDb / 100.0;
-            }
-        }
-    } else if (location_report_ptr->jammerIndicatorList_valid) {
-        LOC_LOGa("jammerIndicator is present len=%d",
-                 location_report_ptr->jammerIndicatorList_len);
-        for (uint32_t i = 1; i < location_report_ptr->jammerIndicatorList_len; i++) {
-            dataNotify.gnssDataMask[i-1] = 0;
-            dataNotify.agc[i-1] = 0.0;
-            dataNotify.jammerInd[i-1] = 0.0;
-            if (GNSS_INVALID_JAMMER_IND !=
-                location_report_ptr->jammerIndicatorList[i].bpMetricDb) {
-                LOC_LOGa("agcMetricDb[%d]=%d; bpMetricDb[%d]=%d",
-                         i, -location_report_ptr->jammerIndicatorList[i].bpMetricDb,
-                         i, location_report_ptr->jammerIndicatorList[i].bpMetricDb);
-                dataNotify.gnssDataMask[i-1] |=
-                        GNSS_LOC_DATA_AGC_BIT | GNSS_LOC_DATA_JAMMER_IND_BIT;
-                dataNotify.agc[i-1] =
-                        -(double)location_report_ptr->jammerIndicatorList[i].bpMetricDb / 100.0;
-                dataNotify.jammerInd[i-1] =
-                        (double)location_report_ptr->jammerIndicatorList[i].bpMetricDb / 100.0;
-            }
-        }
-    } else {
-        LOC_LOGa("jammerIndicator is not present");
-    }
 
     if ((false == mIsFirstFinalFixReported) &&
             (eQMI_LOC_SESS_STATUS_SUCCESS_V02 == location_report_ptr->sessionStatus)) {
@@ -2391,8 +2318,6 @@ void LocApiV02 :: reportPosition (
                     locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_ALTITUDE_MEAN_SEA_LEVEL;
                 }
             }
-        } else {
-            LocApiBase::reportData(dataNotify);
         }
 
         // Time stamp (UTC)
@@ -3113,15 +3038,14 @@ void LocApiV02 :: reportPosition (
         LocApiBase::reportPosition(location,
                                    locationExtended,
                                    sessStatus,
-                                   locationExtended.tech_mask, &dataNotify);
+                                   locationExtended.tech_mask);
     }
     else
     {
         LocApiBase::reportPosition(location,
                                    locationExtended,
                                    LOC_SESS_FAILURE,
-                                   LOC_POS_TECH_MASK_DEFAULT,
-                                   &dataNotify);
+                                   LOC_POS_TECH_MASK_DEFAULT);
     }
 }
 
@@ -4108,6 +4032,11 @@ void LocApiV02::populateFeatureStatusReport
         featureMap[LOCATION_QWES_FEATURE_TYPE_WOCS] = true;
     } else {
         featureMap[LOCATION_QWES_FEATURE_TYPE_WOCS] = false;
+    }
+    if (featureStatusReport & QMI_LOC_FEATURE_STATUS_QPPE_V02) {
+        featureMap[LOCATION_QWES_FEATURE_TYPE_PPE] = true;
+    } else {
+        featureMap[LOCATION_QWES_FEATURE_TYPE_PPE] = false;
     }
 }
 
@@ -7532,7 +7461,7 @@ void LocApiV02 :: errorCb(locClientHandleType /*handle*/,
 }
 
 bool LocApiV02::getBestAvailableZppFixSync(LocGpsLocation &zppLoc,
-        LocPosTechMask &tech_mask) {
+        LocPosTechMask &tech_mask, float* vertUnc) {
 
     qmiLocGetBestAvailablePositionReqMsgT_v02 zpp_req;
     qmiLocGetBestAvailablePositionIndMsgT_v02 zpp_ind;
@@ -7598,6 +7527,10 @@ bool LocApiV02::getBestAvailableZppFixSync(LocGpsLocation &zppLoc,
             if (zpp_ind.technologyMask_valid) {
                 tech_mask = zpp_ind.technologyMask;
             }
+        }
+
+        if (nullptr != vertUnc && zpp_ind.vertUnc_valid) {
+            *vertUnc = zpp_ind.vertUnc;
         }
         return true;
     }
@@ -7929,14 +7862,44 @@ void LocApiV02::reportEngineLockStatus(const qmiLocEngineLockStateEnumT_v02 engi
 void LocApiV02::reportEngDebugDataInfo(const qmiLocEngineDebugDataIndMsgT_v02*
         pLocEngDbgDataInfoIndMsg) {
     GnssEngineDebugDataInfo gnssEngineDebugDataInfo = {};
+    GnssDataNotification gnssDataNotification = {};
+
+    gnssDataNotification.size = sizeof(gnssDataNotification);
+
+    if (pLocEngDbgDataInfoIndMsg->jammerIndicatorList_valid) {
+        for (uint32_t i = 0; i < pLocEngDbgDataInfoIndMsg->jammerIndicatorList_len; i++) {
+            int signalId = log2(pLocEngDbgDataInfoIndMsg->jammerIndicatorList[i].gnssSignalType);
+            if (signalId < GNSS_LOC_MAX_NUMBER_OF_SIGNAL_TYPES) {
+                LOC_LOGa("signal type %d, agcMetricDb=%d, bpMetricDb=%d",
+                        signalId, -pLocEngDbgDataInfoIndMsg->jammerIndicatorList[i].bpMetricDb,
+                        pLocEngDbgDataInfoIndMsg->jammerIndicatorList[i].bpMetricDb);
+                gnssDataNotification.gnssDataValidityMask |=
+                    GNSS_LOC_DATA_AGC_ARRAY_BIT | GNSS_LOC_DATA_JAMMER_IND_ARRAY_BIT;
+                gnssDataNotification.gnssDataMask[signalId] |=
+                    GNSS_LOC_DATA_AGC_BIT | GNSS_LOC_DATA_JAMMER_IND_BIT;
+                gnssDataNotification.agc[signalId] =
+                    -(double)pLocEngDbgDataInfoIndMsg->jammerIndicatorList[i].bpMetricDb / 100.0;
+                gnssDataNotification.jammerInd[signalId] =
+                    (double)pLocEngDbgDataInfoIndMsg->jammerIndicatorList[i].bpMetricDb / 100.0;
+            }
+        }
+    } else {
+        LOC_LOGa("jammerIndicator is not present");
+    }
 
     if (pLocEngDbgDataInfoIndMsg->week_valid) {
         gnssEngineDebugDataInfo.timeValid = 1;
         gnssEngineDebugDataInfo.gpsWeek = pLocEngDbgDataInfoIndMsg->week;
+
+        gnssDataNotification.gpsSystemTime.validityMask |= GNSS_SYSTEM_TIME_WEEK_VALID;
+        gnssDataNotification.gpsSystemTime.systemWeek = pLocEngDbgDataInfoIndMsg->week;
     }
 
     if (pLocEngDbgDataInfoIndMsg->timeOfWeek_valid) {
         gnssEngineDebugDataInfo.gpsTowMs = pLocEngDbgDataInfoIndMsg->timeOfWeek;
+
+        gnssDataNotification.gpsSystemTime.validityMask |= GNSS_SYSTEM_TIME_WEEK_MS_VALID;
+        gnssDataNotification.gpsSystemTime.systemMsec = pLocEngDbgDataInfoIndMsg->timeOfWeek;
     }
 
     if (pLocEngDbgDataInfoIndMsg->sourceOfTime_valid) {
@@ -7945,6 +7908,10 @@ void LocApiV02::reportEngDebugDataInfo(const qmiLocEngineDebugDataIndMsgT_v02*
 
     if (pLocEngDbgDataInfoIndMsg->clkTimeUnc_valid) {
         gnssEngineDebugDataInfo.clkTimeUnc = pLocEngDbgDataInfoIndMsg->clkTimeUnc;
+
+        gnssDataNotification.gpsSystemTime.validityMask |= GNSS_SYSTEM_CLK_TIME_BIAS_UNC_VALID;
+        gnssDataNotification.gpsSystemTime.systemClkTimeUncMs =
+            pLocEngDbgDataInfoIndMsg->clkTimeUnc;
     }
 
     if (pLocEngDbgDataInfoIndMsg->clkFreqBias_valid) {
@@ -7957,6 +7924,32 @@ void LocApiV02::reportEngDebugDataInfo(const qmiLocEngineDebugDataIndMsgT_v02*
 
     if (pLocEngDbgDataInfoIndMsg->xoState_valid) {
         gnssEngineDebugDataInfo.xoState = pLocEngDbgDataInfoIndMsg->xoState;
+    }
+
+    if (pLocEngDbgDataInfoIndMsg->xoTemp_valid) {
+        gnssEngineDebugDataInfo.xoTemp = pLocEngDbgDataInfoIndMsg->xoTemp;
+    }
+
+    if (pLocEngDbgDataInfoIndMsg->xoTempSlope_valid) {
+        gnssEngineDebugDataInfo.xoTempSlope = pLocEngDbgDataInfoIndMsg->xoTempSlope;
+    }
+
+    if (pLocEngDbgDataInfoIndMsg->xoTempAccel_valid) {
+        gnssEngineDebugDataInfo.xoTempAccel = pLocEngDbgDataInfoIndMsg->xoTempAccel;
+    }
+
+    if (pLocEngDbgDataInfoIndMsg->xoCalResetCount_valid) {
+        gnssEngineDebugDataInfo.xoCalResetCount = pLocEngDbgDataInfoIndMsg->xoCalResetCount;
+    }
+
+    if (pLocEngDbgDataInfoIndMsg->xoRotatorQuality_valid) {
+        gnssEngineDebugDataInfo.xoRotatorQuality =
+            (GnssRotatorQuality)(pLocEngDbgDataInfoIndMsg->xoRotatorQuality);
+    }
+
+    if (pLocEngDbgDataInfoIndMsg->timeInconsistencyStatus_valid) {
+        gnssEngineDebugDataInfo.timeInconsistencyStatus =
+            pLocEngDbgDataInfoIndMsg->timeInconsistencyStatus;
     }
 
     if (pLocEngDbgDataInfoIndMsg->rcvrErrRecovery_valid) {
@@ -8267,6 +8260,27 @@ void LocApiV02::reportEngDebugDataInfo(const qmiLocEngineDebugDataIndMsgT_v02*
         gnssEngineDebugDataInfo.fixHepeLimit = pLocEngDbgDataInfoIndMsg->fixHepeLimit;
     }
 
+    if (pLocEngDbgDataInfoIndMsg->GpsClkTimeBias_valid) {
+        gnssDataNotification.gpsSystemTime.validityMask |= GNSS_SYSTEM_CLK_TIME_BIAS_VALID;
+        gnssDataNotification.gpsSystemTime.systemClkTimeBias =
+            pLocEngDbgDataInfoIndMsg->GpsClkTimeBias;
+    }
+
+    if (pLocEngDbgDataInfoIndMsg->systemTickAtGpsTime_valid) {
+        gnssDataNotification.gnssDataValidityMask |= GNSS_LOC_DATA_SYSTEM_TICK_AT_GPS_TIME_BIT;
+        gnssDataNotification.systemTickAtGpsTime = pLocEngDbgDataInfoIndMsg->systemTickAtGpsTime;
+    }
+
+    if (pLocEngDbgDataInfoIndMsg->HwClkFreqCorrection_valid) {
+        gnssDataNotification.gnssDataValidityMask |= GNSS_LOC_DATA_HW_CLK_FREQ_CORRECTION_BIT;
+        gnssDataNotification.hwClkFreqCorrection = pLocEngDbgDataInfoIndMsg->HwClkFreqCorrection;
+    }
+
+    if (gnssDataNotification.gpsSystemTime.validityMask > 0) {
+        gnssDataNotification.gnssDataValidityMask |= GNSS_LOC_DATA_GPS_SYSTEM_TIME_BIT;
+    }
+
+    LocApiBase::reportData(gnssDataNotification);
     LocApiBase::reportEngDebugDataInfo(gnssEngineDebugDataInfo);
 }
 
@@ -9884,7 +9898,10 @@ LocApiV02::addGeofence(uint32_t clientId,
         data.hwId = ind.geofenceId;
         err = LOCATION_ERROR_SUCCESS;
     } else {
-        if (eQMI_LOC_MAX_GEOFENCE_PROGRAMMED_V02 == ind.status) {
+        if (eLOC_CLIENT_FAILURE_UNSUPPORTED == st) {
+            err = LOCATION_ERROR_NOT_SUPPORTED;
+            LOC_LOGd("Geofence feature is not supported");
+        } else if (eQMI_LOC_MAX_GEOFENCE_PROGRAMMED_V02 == ind.status) {
             err = LOCATION_ERROR_GEOFENCES_AT_MAX;
         }
         LOC_LOGE("addGeofence: failed! rv is %d, ind.geofenceId_valid is %d",
@@ -10177,15 +10194,17 @@ LocApiV02::startTimeBasedTracking(const TrackingOptions& options, LocApiResponse
         eQMI_LOC_ALTITUDE_ASSUMED_IN_GNSS_SV_INFO_DISABLED_V02;
 
     // power mode
-    mPowerMode = options.powerMode;
+    if (options.powerMode >= GNSS_POWER_MODE_M1 && options.powerMode <= GNSS_POWER_MODE_M5) {
+        mPowerMode = options.powerMode;
 
-    start_msg.powerMode_valid = 1;
-    start_msg.powerMode.powerMode = convertPowerMode(options.powerMode);
-    // Force low accuracy for background power modes
-    if (GNSS_POWER_MODE_M3 == options.powerMode ||
-            GNSS_POWER_MODE_M4 == options.powerMode ||
-            GNSS_POWER_MODE_M5 == options.powerMode) {
-        start_msg.horizontalAccuracyLevel =  eQMI_LOC_ACCURACY_LOW_V02;
+        start_msg.powerMode_valid = 1;
+        start_msg.powerMode.powerMode = convertPowerMode(options.powerMode);
+        // Force low accuracy for background power modes
+        if (GNSS_POWER_MODE_M3 == options.powerMode ||
+                GNSS_POWER_MODE_M4 == options.powerMode ||
+                GNSS_POWER_MODE_M5 == options.powerMode) {
+            start_msg.horizontalAccuracyLevel =  eQMI_LOC_ACCURACY_LOW_V02;
+        }
     }
 
     start_msg.powerMode.timeBetweenMeasurement = start_msg.minInterval;

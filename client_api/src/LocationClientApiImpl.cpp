@@ -27,39 +27,9 @@
  */
 
 /*
-Changes from Qualcomm Innovation Center are provided under the following license:
-
-Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted (subject to the limitations in the
-disclaimer below) provided that the following conditions are met:
-
-    * Redistributions of source code must retain the above copyright
-      notice, this list of conditions and the following disclaimer.
-
-    * Redistributions in binary form must reproduce the above
-      copyright notice, this list of conditions and the following
-      disclaimer in the documentation and/or other materials provided
-      with the distribution.
-
-    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
-      contributors may be used to endorse or promote products derived
-      from this software without specific prior written permission.
-
-NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
-WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
-GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
-IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
-OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
 #define LOG_TAG "LocSvc_LocationClientApi"
@@ -1086,21 +1056,49 @@ GnssData LocationClientApiImpl::parseGnssData(const ::GnssDataNotification &halG
 
     GnssData gnssData = {};
 
-    for (int sig = GNSS_LOC_SIGNAL_TYPE_GPS_L1CA;
-         sig < GNSS_LOC_MAX_NUMBER_OF_SIGNAL_TYPES; sig++) {
-        gnssData.gnssDataMask[sig] =
-                (location_client::GnssDataMask) halGnssData.gnssDataMask[sig];
-        gnssData.jammerInd[sig] = halGnssData.jammerInd[sig];
-        gnssData.agc[sig] = halGnssData.agc[sig];
-        if (0 != gnssData.gnssDataMask[sig]) {
-            LOC_LOGv("gnssDataMask[%d]=0x%X", sig, gnssData.gnssDataMask[sig]);
-            LOC_LOGv("jammerInd[%d]=%f", sig, gnssData.jammerInd[sig]);
-            LOC_LOGv("agc[%d]=%f", sig, gnssData.agc[sig]);
+    if (::GNSS_LOC_DATA_JAMMER_IND_ARRAY_BIT & halGnssData.gnssDataValidityMask &&
+        ::GNSS_LOC_DATA_AGC_ARRAY_BIT & halGnssData.gnssDataValidityMask) {
+        gnssData.gnssDataValidityMask |= (GNSS_DATA_JAMMER_IND_ARRAY_BIT | GNSS_DATA_AGC_ARRAY_BIT);
+        for (int sig = GNSS_LOC_SIGNAL_TYPE_GPS_L1CA; sig < GNSS_LOC_MAX_NUMBER_OF_SIGNAL_TYPES;
+             sig++) {
+            gnssData.gnssDataMask[sig] =
+                (location_client::GnssDataMask)halGnssData.gnssDataMask[sig];
+            gnssData.jammerInd[sig] = halGnssData.jammerInd[sig];
+            gnssData.agc[sig]       = halGnssData.agc[sig];
+            if (0 != gnssData.gnssDataMask[sig]) {
+                LOC_LOGv("gnssDataMask[%d]=0x%X", sig, gnssData.gnssDataMask[sig]);
+                LOC_LOGv("jammerInd[%d]=%f", sig, gnssData.jammerInd[sig]);
+                LOC_LOGv("agc[%d]=%f", sig, gnssData.agc[sig]);
+            }
         }
     }
-    gnssData.agcStatusL1 = parseAgcStatus(halGnssData.agcStatusL1);
-    gnssData.agcStatusL2 = parseAgcStatus(halGnssData.agcStatusL2);
-    gnssData.agcStatusL5 = parseAgcStatus(halGnssData.agcStatusL5);
+
+    if (::GNSS_LOC_DATA_AGC_STATUS_L1_BIT & halGnssData.gnssDataValidityMask) {
+        gnssData.agcStatusL1 = parseAgcStatus(halGnssData.agcStatusL1);
+        gnssData.gnssDataValidityMask |= GNSS_DATA_AGC_STATUS_L1_BIT;
+    }
+    if (::GNSS_LOC_DATA_AGC_STATUS_L2_BIT & halGnssData.gnssDataValidityMask) {
+        gnssData.agcStatusL2 = parseAgcStatus(halGnssData.agcStatusL2);
+        gnssData.gnssDataValidityMask |= GNSS_DATA_AGC_STATUS_L2_BIT;
+    }
+    if (::GNSS_LOC_DATA_AGC_STATUS_L5_BIT & halGnssData.gnssDataValidityMask) {
+        gnssData.agcStatusL5 = parseAgcStatus(halGnssData.agcStatusL5);
+        gnssData.gnssDataValidityMask |= GNSS_DATA_AGC_STATUS_L5_BIT;
+    }
+
+    if (::GNSS_LOC_DATA_GPS_SYSTEM_TIME_BIT & halGnssData.gnssDataValidityMask) {
+        gnssData.gpsSystemTime = parseGnssTime(halGnssData.gpsSystemTime);
+        gnssData.gnssDataValidityMask |= GNSS_DATA_GPS_SYSTEM_TIME_BIT;
+    }
+    if (::GNSS_LOC_DATA_SYSTEM_TICK_AT_GPS_TIME_BIT & halGnssData.gnssDataValidityMask) {
+        gnssData.systemTickAtGpsTime = halGnssData.systemTickAtGpsTime;
+        gnssData.gnssDataValidityMask |= GNSS_DATA_SYSTEM_TICK_AT_GPS_TIME_BIT;
+    }
+    if (::GNSS_LOC_DATA_HW_CLK_FREQ_CORRECTION_BIT & halGnssData.gnssDataValidityMask) {
+        gnssData.hwClkFreqCorrection = halGnssData.hwClkFreqCorrection;
+        gnssData.gnssDataValidityMask |= GNSS_DATA_HW_CLK_FREQ_CORRECTION_BIT;
+    }
+
     return gnssData;
 }
 
