@@ -1,0 +1,42 @@
+prebuilt_etc {
+    name: "geofences.txt",
+    proprietary: true,
+    owner: "qti",
+    src: "src/geofences.txt",
+}
+
+cc_binary {
+    name: "qsh_geofence_test",
+    owner: "qti",
+    proprietary: true,
+    srcs: [
+        "src/qsh_geofence_test.cpp",
+    ],
+    cflags: [
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-Wno-missing-field-initializers",
+        "-Wno-maybe-uninitialized",
+        "-Wunused-private-field",
+        "-Wno-writable-strings",
+    ] + GNSS_CFLAGS,
+    cppflags: ["-fexceptions"],
+    header_libs: [
+        "libgps.utils_headers",
+        "libloc_pla_headers",
+        "libsensinghubcommon_headers",
+        "libqshutils_headers"
+    ],
+    shared_libs: [
+        "libutils",
+        "libcutils",
+        "liblog",
+        "libgps.utils",
+        "libsensinghubsession",
+        "libsensinghubapi",
+        "libqshgeofence",
+        "libqshutils",
+        "libprotobuf-cpp-lite"
+    ],
+}
