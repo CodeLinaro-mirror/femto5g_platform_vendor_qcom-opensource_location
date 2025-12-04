@@ -456,9 +456,6 @@ static const locClientRespIndTableStructT locClientRespIndTable[]= {
    { QMI_LOC_INJECT_XTRA_DATA_IND_V02,
      sizeof(qmiLocInjectXtraDataIndMsgT_v02) },
 
-   { QMI_LOC_INJECT_XTRA_PCID_IND_V02,
-     sizeof(qmiLocInjectXtraPcidIndMsgT_v02) },
-
    //xtra config data
    { QMI_LOC_QUERY_XTRA_INFO_IND_V02,
      sizeof(qmiLocQueryXtraInfoIndMsgT_v02) },

@@ -7926,6 +7926,32 @@ void LocApiV02::reportEngDebugDataInfo(const qmiLocEngineDebugDataIndMsgT_v02*
         gnssEngineDebugDataInfo.xoState = pLocEngDbgDataInfoIndMsg->xoState;
     }
 
+    if (pLocEngDbgDataInfoIndMsg->xoTemp_valid) {
+        gnssEngineDebugDataInfo.xoTemp = pLocEngDbgDataInfoIndMsg->xoTemp;
+    }
+
+    if (pLocEngDbgDataInfoIndMsg->xoTempSlope_valid) {
+        gnssEngineDebugDataInfo.xoTempSlope = pLocEngDbgDataInfoIndMsg->xoTempSlope;
+    }
+
+    if (pLocEngDbgDataInfoIndMsg->xoTempAccel_valid) {
+        gnssEngineDebugDataInfo.xoTempAccel = pLocEngDbgDataInfoIndMsg->xoTempAccel;
+    }
+
+    if (pLocEngDbgDataInfoIndMsg->xoCalResetCount_valid) {
+        gnssEngineDebugDataInfo.xoCalResetCount = pLocEngDbgDataInfoIndMsg->xoCalResetCount;
+    }
+
+    if (pLocEngDbgDataInfoIndMsg->xoRotatorQuality_valid) {
+        gnssEngineDebugDataInfo.xoRotatorQuality =
+            (GnssRotatorQuality)(pLocEngDbgDataInfoIndMsg->xoRotatorQuality);
+    }
+
+    if (pLocEngDbgDataInfoIndMsg->timeInconsistencyStatus_valid) {
+        gnssEngineDebugDataInfo.timeInconsistencyStatus =
+            pLocEngDbgDataInfoIndMsg->timeInconsistencyStatus;
+    }
+
     if (pLocEngDbgDataInfoIndMsg->rcvrErrRecovery_valid) {
         gnssEngineDebugDataInfo.rcvrErrRecovery = pLocEngDbgDataInfoIndMsg->rcvrErrRecovery;
     }
@@ -9872,7 +9898,10 @@ LocApiV02::addGeofence(uint32_t clientId,
         data.hwId = ind.geofenceId;
         err = LOCATION_ERROR_SUCCESS;
     } else {
-        if (eQMI_LOC_MAX_GEOFENCE_PROGRAMMED_V02 == ind.status) {
+        if (eLOC_CLIENT_FAILURE_UNSUPPORTED == st) {
+            err = LOCATION_ERROR_NOT_SUPPORTED;
+            LOC_LOGd("Geofence feature is not supported");
+        } else if (eQMI_LOC_MAX_GEOFENCE_PROGRAMMED_V02 == ind.status) {
             err = LOCATION_ERROR_GEOFENCES_AT_MAX;
         }
         LOC_LOGE("addGeofence: failed! rv is %d, ind.geofenceId_valid is %d",
@@ -10165,15 +10194,17 @@ LocApiV02::startTimeBasedTracking(const TrackingOptions& options, LocApiResponse
         eQMI_LOC_ALTITUDE_ASSUMED_IN_GNSS_SV_INFO_DISABLED_V02;
 
     // power mode
-    mPowerMode = options.powerMode;
+    if (options.powerMode >= GNSS_POWER_MODE_M1 && options.powerMode <= GNSS_POWER_MODE_M5) {
+        mPowerMode = options.powerMode;
 
-    start_msg.powerMode_valid = 1;
-    start_msg.powerMode.powerMode = convertPowerMode(options.powerMode);
-    // Force low accuracy for background power modes
-    if (GNSS_POWER_MODE_M3 == options.powerMode ||
-            GNSS_POWER_MODE_M4 == options.powerMode ||
-            GNSS_POWER_MODE_M5 == options.powerMode) {
-        start_msg.horizontalAccuracyLevel =  eQMI_LOC_ACCURACY_LOW_V02;
+        start_msg.powerMode_valid = 1;
+        start_msg.powerMode.powerMode = convertPowerMode(options.powerMode);
+        // Force low accuracy for background power modes
+        if (GNSS_POWER_MODE_M3 == options.powerMode ||
+                GNSS_POWER_MODE_M4 == options.powerMode ||
+                GNSS_POWER_MODE_M5 == options.powerMode) {
+            start_msg.horizontalAccuracyLevel =  eQMI_LOC_ACCURACY_LOW_V02;
+        }
     }
 
     start_msg.powerMode.timeBetweenMeasurement = start_msg.minInterval;
