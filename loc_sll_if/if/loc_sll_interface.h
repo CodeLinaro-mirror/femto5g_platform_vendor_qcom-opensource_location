@@ -50,6 +50,7 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 
 
 #define SLL_LOC_SUPPORTED_FEATURE_LENGTH_V02 (100)
+typedef uint16_t LocGpsStatusValue;
 
 typedef struct {
     LocPositionMode mode;
