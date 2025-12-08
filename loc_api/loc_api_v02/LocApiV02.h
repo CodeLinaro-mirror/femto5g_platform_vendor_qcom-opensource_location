@@ -344,10 +344,6 @@ private:
       if (mGnssMeasurements) {
           memset(mGnssMeasurements, 0, sizeof(GnssMeasurements));
           mGnssMeasurements->size = sizeof(GnssMeasurements);
-          mGnssMeasurements->gnssSvMeasurementSet.size = sizeof(GnssSvMeasurementSet);
-          mGnssMeasurements->gnssSvMeasurementSet.isNhz = false;
-          mGnssMeasurements->gnssSvMeasurementSet.svMeasSetHeader.size =
-              sizeof(GnssSvMeasurementHeader);
       }
       memset(&mTimeBiases, 0, sizeof(mTimeBiases));
   }
