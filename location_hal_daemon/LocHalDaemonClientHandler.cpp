@@ -27,9 +27,9 @@
  */
 
 /*
-Changes from Qualcomm Technologies, Inc. are provided under the following license:
-Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
-SPDX-License-Identifier: BSD-3-Clause-Clear
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
 #include <cinttypes>
@@ -428,13 +428,10 @@ void LocHalDaemonClientHandler::cleanup(bool forceRemove) {
     }
 
     if (mLocationApi) {
-        mLocationApi->destroy([this]() {onLocationApiDestroyCompleteCb();});
-        mLocationApi = nullptr;
-    } else {
-        // For location integration api client handler, it does not
-        // instantiate LocationApi interface and can be freed right away
-        LOC_LOGe("delete LocHalDaemonClientHandler");
-        delete this;
+        mLocationApi->destroy([self = shared_from_this()]() {
+            self->onLocationApiDestroyCompleteCb();
+            self->mLocationApi.reset();
+        });
     }
 }
 
@@ -1275,9 +1272,6 @@ void LocHalDaemonClientHandler::onLocationApiDestroyCompleteCb() {
             LOC_LOGe("LocAPIGenericRespMsg serializeToProtobuf failed");
         }
     }
-
-    delete this;
-    // PLEASE NOTE: no more code after this, including print for class variable
 }
 
 /******************************************************************************
