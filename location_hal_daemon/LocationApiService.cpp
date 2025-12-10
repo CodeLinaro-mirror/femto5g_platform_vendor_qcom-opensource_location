@@ -1865,12 +1865,36 @@ void LocationApiService::onCollectiveResponseCallback(
 }
 
 void LocationApiService::onGnssSignalTypesCb(const GnssCapabNotification& gnssCapabNotification) {
-    std::lock_guard<std::recursive_mutex> lock(mMutex);
-    mLocHalSignalTypeMask = gnssCapabNotification.gnssSupportedSignals;
-    LOC_LOGd("--< supported GNSS signal types: 0x%x", mLocHalSignalTypeMask);
-    for (auto each : mClients) {
-        // deliver the GNSS signal types to registered client
-        each.second->onGnssSignalTypesCb(mLocHalSignalTypeMask);
+    const uint32_t mask = gnssCapabNotification.gnssSupportedSignals;
+
+    // Build a local snapshot under lock
+    std::vector<std::pair<std::string, std::shared_ptr<LocHalDaemonClientHandler>>> targets;
+    {
+        std::lock_guard<std::recursive_mutex> lock(mMutex);
+
+        mLocHalSignalTypeMask = mask;
+        LOC_LOGd("--< supported GNSS signal types: 0x%08x",
+                 static_cast<unsigned>(mLocHalSignalTypeMask));
+
+        targets.reserve(mClients.size());
+        for (const auto& [id, handler] : mClients) {
+            if (!id.empty() && handler) {
+                // Copy the key and copy the shared_ptr (increments ref-count)
+                targets.emplace_back(id, handler);
+            } else if (id.empty()) {
+                LOC_LOGe("Client ID is empty or corrupted");
+            } else {
+                LOC_LOGw("Null client handler for client (skipped)");
+            }
+        }
+    } // mMutex released; no references/iterators to mClients are kept
+
+    // Dispatch using the snapshot
+    for (const auto& [id, handler] : targets) {
+        if (handler) {  // Additional null check before callback
+            LOC_LOGd("Delivering GNSS signal types to client: %s", id.c_str());
+            handler->onGnssSignalTypesCb(mask);
+        }
     }
 }
 
@@ -1929,14 +1953,28 @@ void LocationApiService::onGnssLocationInfoCb(const GnssLocationInfoNotification
 LocationApiService - on query callback from location engines
 ******************************************************************************/
 void LocationApiService::onGnssEnergyConsumedCb(uint64_t totalGnssEnergyConsumedSinceFirstBoot) {
-    std::lock_guard<std::recursive_mutex> lock(mMutex);
     LOC_LOGd("--< onGnssEnergyConsumedCb");
-
+    // Build a local snapshot under lock
+    std::vector<std::pair<std::string, std::shared_ptr<LocHalDaemonClientHandler>>> targets;
+    {
+        std::lock_guard<std::recursive_mutex> lock(mMutex);
+        targets.reserve(mClients.size());
+        for (const auto& [id, handler] : mClients) {
+            if (!id.empty() && handler) {
+                // Copy the key and copy the shared_ptr (increments ref-count)
+                targets.emplace_back(id, handler);
+            } else if (id.empty()) {
+                LOC_LOGe("Client ID is empty or corrupted");
+            } else {
+                LOC_LOGw("Null client handler for client (skipped)");
+            }
+        }
+    } // mMutex released; no references/iterators to mClients are kept
     LocAPIGnssEnergyConsumedIndMsg msg(SERVICE_NAME, totalGnssEnergyConsumedSinceFirstBoot,
             &mPbufMsgConv);
-    for (auto each : mClients) {
-        // deliver the engergy info to registered client
-        each.second->onGnssEnergyConsumedInfoAvailable(msg);
+    // Dispatch using the snapshot
+    for (const auto& [id, handler] : targets) {
+        handler->onGnssEnergyConsumedInfoAvailable(msg); // safe even if it unregisters itself
     }
 }
 
