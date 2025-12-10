@@ -4658,22 +4658,22 @@ void LocApiV02 :: reportAtlRequest(
 
   if (server_request_ptr->requestType == eQMI_LOC_SERVER_REQUEST_OPEN_V02)
   {
-    LocAGpsType agpsType = LOC_AGPS_TYPE_ANY;
+    LocAGpsType agpsType = AGPS_TYPE_ANY;
     LocApnTypeMask apnTypeMask = 0;
 
     switch (server_request_ptr->wwanType)
     {
       case eQMI_LOC_WWAN_TYPE_INTERNET_V02:
-        agpsType = LOC_AGPS_TYPE_WWAN_ANY;
+        agpsType = AGPS_TYPE_WWAN_ANY;
         break;
       case eQMI_LOC_WWAN_TYPE_AGNSS_V02:
-        agpsType = LOC_AGPS_TYPE_SUPL;
+        agpsType = AGPS_TYPE_SUPL;
         break;
       case eQMI_LOC_WWAN_TYPE_AGNSS_EMERGENCY_V02:
-        agpsType = LOC_AGPS_TYPE_SUPL_ES;
+        agpsType = AGPS_TYPE_SUPL_ES;
         break;
       default:
-        agpsType = LOC_AGPS_TYPE_WWAN_ANY;
+        agpsType = AGPS_TYPE_WWAN_ANY;
         break;
     }
 
