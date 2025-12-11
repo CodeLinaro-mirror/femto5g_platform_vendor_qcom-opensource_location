@@ -9592,15 +9592,17 @@ LocApiV02::startTimeBasedTracking(const TrackingOptions& options, LocApiResponse
     start_msg.fixRecurrence = eQMI_LOC_RECURRENCE_PERIODIC_V02;
 
     // power mode
-    mPowerMode = options.powerMode;
+    if (options.powerMode >= GNSS_POWER_MODE_M1 && options.powerMode <= GNSS_POWER_MODE_M5) {
+        mPowerMode = options.powerMode;
 
-    start_msg.powerMode_valid = 1;
-    start_msg.powerMode.powerMode = convertPowerMode(options.powerMode);
-    // Force low accuracy for background power modes
-    if (GNSS_POWER_MODE_M3 == options.powerMode ||
-            GNSS_POWER_MODE_M4 == options.powerMode ||
-            GNSS_POWER_MODE_M5 == options.powerMode) {
-        start_msg.horizontalAccuracyLevel =  eQMI_LOC_ACCURACY_LOW_V02;
+        start_msg.powerMode_valid = 1;
+        start_msg.powerMode.powerMode = convertPowerMode(options.powerMode);
+        // Force low accuracy for background power modes
+        if (GNSS_POWER_MODE_M3 == options.powerMode ||
+                GNSS_POWER_MODE_M4 == options.powerMode ||
+                GNSS_POWER_MODE_M5 == options.powerMode) {
+            start_msg.horizontalAccuracyLevel =  eQMI_LOC_ACCURACY_LOW_V02;
+        }
     }
 
     start_msg.powerMode.timeBetweenMeasurement = start_msg.minInterval;
