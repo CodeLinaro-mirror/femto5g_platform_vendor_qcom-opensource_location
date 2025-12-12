@@ -27,7 +27,6 @@ public:
   explicit TimeDiff (const bool validity = true);
   int add_sec(const int sec);
   int add_msec(const int msec);
-  int add_nsec(const int nsec);
   float get_total_sec() const;
   float get_total_msec() const;
   const timespec * getTimeDiffPtr() const;
@@ -47,32 +46,14 @@ public:
   explicit Timestamp (const bool set_to_default_clock = true);
 
   // use this if you want to set it to some specific clock type using clock id (defined in time.h)
-  explicit Timestamp (const int clock_id);
-
+  explicit Timestamp (int clock_id);
   // use this if you want to initialize it with pre-existing timespec acquired using some clock type
   Timestamp (const int clock_id, const timespec & src);
-
   // copy constructor
   Timestamp (const Timestamp & rhs);
 
-  timespec * getTimestampPtr();
   const timespec * getTimestampPtr() const;
-
-  // use this one for most cases, which uses BOOTTIME if available, otherwise MONOTONIC
-  int reset_to_default_clock();
-
-  // CLOCK_MONOTONIC, this might be subjected to NTP clock modulation, and might stop counting
-  // when the device is sleeping
-  int reset_to_monotonic();
-
-  // CLOCK_BOOTTIME, same as CLOCK_MONOTONIC, but should count sleeping time as well
-  // currently not supported
-  int reset_to_boottime();
-
-  int reset_to_clock_id(const int clock_id);
-
   bool is_valid() const;
-  bool is_valid_and_default() const;
   void invalidate();
   Timestamp operator + (const TimeDiff & rhs) const;
   Timestamp operator - (const TimeDiff & rhs) const;
