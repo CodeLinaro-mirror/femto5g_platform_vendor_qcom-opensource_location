@@ -261,6 +261,9 @@ public:
                 std::vector<QzssEphemeris>& lcaEphInfo);
     static void parseNavicEphemeris(const NavicEphemerisResponse& halEph,
                 std::vector<NavicEphemeris>& lcaEphInfo);
+    static void parseSvResidualReport(
+        const ::GnssSvResidualReport &halSvResidualInfo,
+        SvResidualReport &svResidualReportOut);
 
     void logLocation(const Location &location,
                      LocReportTriggerType reportTriggerType);

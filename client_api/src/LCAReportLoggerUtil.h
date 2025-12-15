@@ -89,6 +89,7 @@ public:
     typedef void (*LogGnssData)(const GnssData& gnssData);
     typedef void (*LogGnssExtendedDataInfo)(uint8_t type,
             const std::vector<uint8_t> &gnssExtendedDataVector);
+    typedef void (*LogGnssSvResidualReport)(const SvResidualReport& residualReport);
 
     LCAReportLoggerUtil();
     void log(const GnssLocation& gnssLocation,
@@ -102,6 +103,7 @@ public:
     void log(const GnssEphemeris& ephInfo);
     void log(const GnssData& gnssData);
     void log(uint8_t type, const std::vector<uint8_t> &gnssExtendedDataVector);
+    void log(const SvResidualReport& residualReport);
 
 private:
     LogGnssLocation mLogLocation;
@@ -113,6 +115,7 @@ private:
     LogGnssEphemeris mLogEph;
     LogGnssData mLogGnssData;
     LogGnssExtendedDataInfo mLogOemDREInfo;
+    LogGnssSvResidualReport mLogSvResidualReport;
 };
 
 

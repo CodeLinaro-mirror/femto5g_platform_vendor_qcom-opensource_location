@@ -175,6 +175,7 @@ class TrackingSessCbHandler {
                     }
                 };
             }
+
             if (!engineReportCbs.nmeaSentencesCallback && !engineReportCbs.engineNmeaCallback
                     && engineReportCbs.gnssNmeaCallback) {
                 initializeCommonCbs(pClientApiImpl, rspCb,
@@ -229,6 +230,18 @@ class TrackingSessCbHandler {
                     pClientApiImpl->getLogger().log(timestamp, nmea.size(), nmea.c_str(),
                             locOutputEngType);
                };
+            }
+
+            if (engineReportCbs.svResidualReportCallback) {
+                LOC_LOGd("Registered for ResidualReport");
+                mCallbackOptions.svResidualDataCb =
+                        [pClientApiImpl, residualCb = engineReportCbs.svResidualReportCallback]
+                        (::GnssSvResidualReport n) {
+                    SvResidualReport svResidualReport;
+                    LocationClientApiImpl::parseSvResidualReport(n, svResidualReport);
+                    residualCb(svResidualReport);
+                    pClientApiImpl->getLogger().log(svResidualReport);
+                };
             }
         }
 

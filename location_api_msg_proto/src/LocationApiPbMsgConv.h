@@ -152,6 +152,17 @@ public:
     // GnssDcReportInfo to PBGnssDcReportInfo
     int convertGnssDcReportToPB(const GnssDcReportInfo &dcReportInfo,
             PBGnssDcReportInfo *pbDcReportInfo) const;
+    uint32_t pbToGnssResidualValidity(const uint32_t &pbMask) const;
+    uint32_t gnssToPbResidualValidity(const uint32_t &gnssMask) const;
+    // Convert GnssSvResidualReport in to PBSvResidualReport
+    int convertGnssSvResidualReportToPB(
+           const GnssSvResidualReport &svResidualReport,
+           PBSvResidualReport *pbSvResidualReport) const;
+    // Convert PBSvResidualReport in to GnssSvResidualReport
+    int pbConvertToGnssSvResidualReport(
+           const PBSvResidualReport &pbSvResidualReport,
+           GnssSvResidualReport &svResidualReport) const;
+
     // AntennaInformation to PBAntennaInformation
     int convertAntennaInfoToPB(const AntennaInformation& antennaInfo,
             PBAntennaInformation* pbAntennaInfo) const;
