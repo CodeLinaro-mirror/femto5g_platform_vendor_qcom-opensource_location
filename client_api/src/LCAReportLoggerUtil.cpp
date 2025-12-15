@@ -73,7 +73,8 @@ LCAReportLoggerUtil::LCAReportLoggerUtil():
         mLogSv(nullptr),
         mLogNmea(nullptr),
         mLogMeas(nullptr),
-        mLogDcReport(nullptr) {
+        mLogDcReport(nullptr),
+        mLogSvResidualReport(nullptr) {
 
     int loadDiagIfaceLib = 1;
     const loc_param_s_type gps_conf_params[] = {
@@ -111,6 +112,11 @@ LCAReportLoggerUtil::LCAReportLoggerUtil():
         if (nullptr == mLogDcReport) {
             LOC_LOGw("DiagIface mLogDcReport is null");
         }
+        mLogSvResidualReport = (LogGnssSvResidualReport)dlGetSymFromLib(
+                libHandle, libname, "LogGnssSvResidualReport");
+        if (nullptr == mLogSvResidualReport) {
+            LOC_LOGw("DiagIface mLogSvResidualReport is null");
+        }
     }
 }
 
@@ -145,4 +151,10 @@ void LCAReportLoggerUtil::log(const GnssDcReport& gnssDcReport) {
         mLogDcReport(gnssDcReport);
     }
 }
+
+void LCAReportLoggerUtil::log(const SvResidualReport& svResidualReport) {
+    if (mLogSvResidualReport != nullptr) {
+        mLogSvResidualReport(svResidualReport);
+    }
 }
+} // namespace loc_client

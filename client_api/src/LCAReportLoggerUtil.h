@@ -82,6 +82,7 @@ public:
     typedef void (*LogGnssNmea)(uint64_t timestamp, uint32_t length, const char* nmea);
     typedef void (*LogGnssMeas)(const GnssMeasurements& gnssMeasurements);
     typedef void (*LogGnssDcReport)(const GnssDcReport& gnssDcReport);
+    typedef void (*LogGnssSvResidualReport)(const SvResidualReport& residualReport);
 
     LCAReportLoggerUtil();
     void log(const GnssLocation& gnssLocation,
@@ -90,6 +91,7 @@ public:
     void log(uint64_t timestamp, uint32_t length, const char* nmea);
     void log(const GnssMeasurements& gnssMeasurements);
     void log(const GnssDcReport& gnssDcReport);
+    void log(const SvResidualReport& residualReport);
 
 private:
     LogGnssLocation mLogLocation;
@@ -97,6 +99,7 @@ private:
     LogGnssNmea mLogNmea;
     LogGnssMeas mLogMeas;
     LogGnssDcReport mLogDcReport;
+    LogGnssSvResidualReport mLogSvResidualReport;
 };
 
 

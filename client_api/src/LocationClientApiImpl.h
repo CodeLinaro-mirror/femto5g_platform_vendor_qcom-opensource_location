@@ -241,6 +241,9 @@ public:
             ::GnssMeasurementsDataFlagsMask in);
     static GnssEnergyConsumedInfo parseGnssConsumedInfo(::GnssEnergyConsumedInfo);
     static GnssDcReport parseDcReport(const::GnssDcReportInfo &halDcReport);
+    static void parseSvResidualReport(
+        const ::GnssSvResidualReport &halSvResidualInfo,
+        SvResidualReport &svResidualReportOut);
 
     // utilities
     void logLocation(const Location &location,
