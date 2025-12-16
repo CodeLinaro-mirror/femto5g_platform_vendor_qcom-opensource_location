@@ -204,7 +204,6 @@ static void location_tracking_callback(
         mTimer.stop();
         bIsSingleShot = true;
     }
-    qLocation.size = sizeof(qapi_Location_t);
     qLocation.timestamp = location.timestamp;
     qLocation.latitude = location.latitude;
     qLocation.longitude = location.longitude;
@@ -261,7 +260,6 @@ static void gnss_location_tracking_callback(
         mTimer.stop();
         bIsSingleShot = true;
     }
-    qLocation.size = sizeof(qapi_Location_t);
     qLocation.timestamp = gnsslocation.timestamp;
     qLocation.latitude = gnsslocation.latitude;
     qLocation.longitude = gnsslocation.longitude;
@@ -306,7 +304,6 @@ static void loc_passive_capabilities_callback(
 static void loc_passive_tracking_callback(
     GnssLocation gnsslocation)
 {
-    qCacheLocation.size = sizeof(qapi_Location_t);
     qCacheLocation.timestamp = gnsslocation.timestamp;
     qCacheLocation.latitude = gnsslocation.latitude;
     qCacheLocation.longitude = gnsslocation.longitude;

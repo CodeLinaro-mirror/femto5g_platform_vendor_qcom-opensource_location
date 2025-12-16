@@ -55,10 +55,6 @@ void LocHalDaemonClientHandler::updateSubscription(uint32_t mask) {
 
     // update my subscription mask
     mSubscriptionMask = mask;
-
-    // set callback functions for Location API
-    mCallbacks.size = sizeof(mCallbacks);
-
     // mandatory callback
     mCallbacks.capabilitiesCb = [this](LocationCapabilitiesMask mask) {
         onCapabilitiesCallback(mask);
@@ -286,10 +282,8 @@ uint32_t LocHalDaemonClientHandler::startBatching(uint32_t minInterval, uint32_t
     if (mBatchingId == 0 && mLocationApi) {
         // update option
         LocationOptions locOption = {};
-        locOption.size = sizeof(locOption);
         locOption.minInterval = minInterval;
         locOption.mode = GNSS_SUPL_MODE_STANDALONE;
-        mBatchOptions.size = sizeof(mBatchOptions);
         mBatchOptions.batchingMode = batchMode;
         mBatchOptions.setLocationOptions(locOption);
 
@@ -311,10 +305,8 @@ void LocHalDaemonClientHandler::updateBatchingOptions(uint32_t minInterval, uint
     if (mBatchingId != 0 && mLocationApi) {
         // update option
         LocationOptions locOption = {};
-        locOption.size = sizeof(locOption);
         locOption.minInterval = minInterval;
         locOption.mode = GNSS_SUPL_MODE_STANDALONE;
-        mBatchOptions.size = sizeof(mBatchOptions);
         mBatchOptions.batchingMode = batchMode;
         mBatchOptions.setLocationOptions(locOption);
 

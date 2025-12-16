@@ -5583,8 +5583,6 @@ int LocationApiPbMsgConv::pbConvertToCollectiveResPayload(
 }
 
 int LocationApiPbMsgConv::pbConvertToLocation(const PBLocation &pbLoc, Location &loc) const {
-    loc.size = sizeof(Location);
-
     // uint32 flags = 1; - Bitwise OR of PBLocationFlagsMask
     loc.flags = getLocationFlagsMaskFromPB(pbLoc.flags());
 
@@ -5880,8 +5878,6 @@ int LocationApiPbMsgConv::pbConvertToGnssLocInfoNotif(
 
 int LocationApiPbMsgConv::pbConvertToGnssSvNotif(const PBLocApiGnssSvNotification &pbGnssSvNotif,
             GnssSvNotification &gnssSvNotif) const {
-    gnssSvNotif.size = sizeof(GnssSvNotification);
-
     // bool gnssSignalTypeMaskValid = 1;
     gnssSvNotif.gnssSignalTypeMaskValid = pbGnssSvNotif.gnsssignaltypemaskvalid();
 
@@ -5891,7 +5887,6 @@ int LocationApiPbMsgConv::pbConvertToGnssSvNotif(const PBLocApiGnssSvNotificatio
     LOC_LOGv("LocApiPB: pbGnssSvNotif- num svs %d", gnssSvNotif.count);
     for (int i=0; i < gnssSvNotif.count; i++) {
         PBLocApiGnssSv pPbGnssSv = pbGnssSvNotif.gnsssvs(i);
-        gnssSvNotif.gnssSvs[i].size = sizeof(GnssSv);
         // uint32 svId = 1;
         gnssSvNotif.gnssSvs[i].svId = pPbGnssSv.svid();
 
@@ -5953,8 +5948,6 @@ int LocationApiPbMsgConv::pbConvertToLocAPINmeaSerializedPayload(
 int LocationApiPbMsgConv::pbConvertToGnssDataNotification(
         const PBGnssDataNotification &pbGnssDataNotif,
         GnssDataNotification &gnssDataNotif) const {
-    gnssDataNotif.size = sizeof(GnssDataNotification);
-
     // uint32 numberSignalTypes = 1
     uint32_t i = 0;
     uint32_t arrMaxLen = min(pbGnssDataNotif.numbersignaltypes(),
@@ -5994,7 +5987,6 @@ int LocationApiPbMsgConv::pbConvertToGnssDataNotification(
 int LocationApiPbMsgConv::pbConvertToGnssMeasNotification(
         const PBGnssMeasurementsNotification &pbGnssMeasNotif,
         GnssMeasurementsNotification &gnssMeasNotif) const {
-    gnssMeasNotif.size = sizeof(GnssMeasurementsNotification);
     // repeated PBGnssMeasurementsData measurements = 1; - Max array len - GNSS_MEASUREMENTS_MAX
     uint32_t count = pbGnssMeasNotif.measurements_size();
     gnssMeasNotif.count = count;
@@ -6035,7 +6027,6 @@ int LocationApiPbMsgConv::pbConvertToLocationSystemInfo(const PBLocationSystemIn
 
 int LocationApiPbMsgConv::pbConvertToLocationOptions(const PBLocationOptions &pbLocOpt,
         LocationOptions &locOpt) const {
-    locOpt.size = sizeof(LocationOptions);
     // uint32 minInterval = 1;
     locOpt.minInterval = pbLocOpt.mininterval();
     // PBGnssSuplMode mode = 3;
@@ -6094,7 +6085,6 @@ int LocationApiPbMsgConv::pbConvertToGfReqClientIdPayload(
 
 int LocationApiPbMsgConv::pbConvertToGnssSvTypeConfig(const PBGnssSvTypeConfig &pbGnssSvTypeConfig,
         GnssSvTypeConfig &gnssSvTypeConfig) const {
-    gnssSvTypeConfig.size = sizeof(GnssSvTypeConfig);
     // Enabled Constellations - bitwise OR of PBGnssSvTypesMask
     // uint64 enabledSvTypesMask = 1;
     gnssSvTypeConfig.enabledSvTypesMask = getGnssSvTypesMaskFromPB(
@@ -6113,7 +6103,6 @@ int LocationApiPbMsgConv::pbConvertToGnssSvTypeConfig(const PBGnssSvTypeConfig &
 
 int LocationApiPbMsgConv::pbConvertToGnssSvIdConfig(const PBGnssSvIdConfig &pbGnssSvIdConfig,
         GnssSvIdConfig &gnssSvIdConfig) const {
-    gnssSvIdConfig.size = sizeof(GnssSvIdConfig);
     // uint64 gloBlacklistSvMask = 1;
     gnssSvIdConfig.gloBlacklistSvMask = pbGnssSvIdConfig.globlacklistsvmask();
 
@@ -6383,7 +6372,6 @@ GnssMeasurementsCodeType LocationApiPbMsgConv::getMeasCodeTypeFromPB(
 int LocationApiPbMsgConv::pbConvertToGnssMeasurementsData(
         const PBGnssMeasurementsData &pbGnssMeasData,
         GnssMeasurementsData &gnssMeasData) const {
-    gnssMeasData.size = sizeof(GnssMeasurementsData);
     // uint32 flags = 1; - bitwise OR of PBGnssMeasurementsDataFlagsMask
     gnssMeasData.flags = getGnssMeasurementsDataFlagsMaskFromPB(pbGnssMeasData.flags());
 
@@ -6503,7 +6491,6 @@ int LocationApiPbMsgConv::pbConvertToGnssMeasurementsData(
 int LocationApiPbMsgConv::pbConvertToGnssMeasurementsClock(
         const PBGnssMeasurementsClock &pbGnssMeasClock,
         GnssMeasurementsClock &gnssMeasClock) const {
-    gnssMeasClock.size = sizeof(GnssMeasurementsClock);
     // uint32 flags = 1; - bitwise OR of PBGnssMeasurementsClockFlagsMask
     gnssMeasClock.flags = getGnssMeasurementsClockFlagsMaskFromPB(pbGnssMeasClock.flags());
     // int32 leapSecond = 2;
@@ -6757,7 +6744,6 @@ int LocationApiPbMsgConv::pbConvertToGnssGloTimeStructType(
 
 int LocationApiPbMsgConv::pbConvertToGeofenceOption(const PBGeofenceOption &pbGfOpt,
         GeofenceOption &gfOpt) const {
-    gfOpt.size = sizeof(GeofenceOption);
     // bitwise OR of PBGeofenceBreachTypeMask
     // uint32 breachTypeMask = 1;
     gfOpt.breachTypeMask = getGfBreachTypeMaskFromPB(pbGfOpt.breachtypemask());
@@ -6772,7 +6758,6 @@ int LocationApiPbMsgConv::pbConvertToGeofenceOption(const PBGeofenceOption &pbGf
 
 int LocationApiPbMsgConv::pbConvertToGeofenceInfo(const PBGeofenceInfo &pbGfInfo,
         GeofenceInfo &gfInfo) const {
-    gfInfo.size = sizeof(GeofenceInfo);
     // double latitude = 1;
     gfInfo.latitude = pbGfInfo.latitude();
     // double longitude = 2;

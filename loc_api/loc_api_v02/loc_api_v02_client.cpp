@@ -1442,8 +1442,7 @@ locClientStatusEnumType locClientOpenInstance (
 
   // check input parameters
   if( (NULL == pLocClientCallbacks) || (NULL == pLocClientHandle)
-      || (NULL == pLocClientCallbacks->respIndCb) ||
-      (pLocClientCallbacks->size != sizeof(locClientCallbacksType)))
+      || (NULL == pLocClientCallbacks->respIndCb))
   {
     LOC_LOGe("Invalid parameters in locClientOpen");
     return eLOC_CLIENT_FAILURE_INVALID_PARAMETER;
