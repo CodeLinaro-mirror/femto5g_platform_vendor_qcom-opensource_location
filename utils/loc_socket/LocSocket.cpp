@@ -26,12 +26,11 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-
 /*
-Changes from Qualcomm Technologies, Inc. are provided under the following license:
-Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
-SPDX-License-Identifier: BSD-3-Clause-Clear
-*/
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
 
 #include <unistd.h>
 #include <memory>
@@ -266,6 +265,12 @@ public:
             LocIpcSender(), mServiceInfo(0, 0),
             mSock(make_shared<Sock>(::socket(AF_QIPCRTR, SOCK_DGRAM, 0))),
             mAddr(destAddr), mCtrlPkt({}), mLookupPending(false) {
+        // set timeout so if failed to send, call will return after SOCKET_TIMEOUT_MSEC
+        // otherwise, call may never return
+        timeval timeout;
+        timeout.tv_sec = SOCKET_SENDER_SEND_TIMEOUT_MSEC / 1000;
+        timeout.tv_usec = SOCKET_SENDER_SEND_TIMEOUT_MSEC % 1000 * 1000;
+        setsockopt(mSock->mSid, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
     }
     inline LocIpcQrtrSender(int service, int instance) : LocIpcSender(),
             mServiceInfo(service, instance),
