@@ -28,9 +28,9 @@
  */
 
 /*
-Changes from Qualcomm Technologies, Inc. are provided under the following license:
-Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
-SPDX-License-Identifier: BSD-3-Clause-Clear
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
 #include <stdio.h>
@@ -51,6 +51,7 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #include <thread>
 #include <unordered_map>
 #include <algorithm>
+#include <future>
 
 #include <LocationClientApi.h>
 #include <LocationIntegrationApi.h>
@@ -88,6 +89,7 @@ static int autoTestTimeoutSec = 0x7FFFFFFF;
 static uint32_t gtpFixCnt = 0;
 static uint32_t singleShotFixCnt = 0;
 vector<Geofence> sGeofences;
+std::promise<std::vector<std::pair<Geofence, LocationResponse>>> gGeofencePrm;
 
 static char NMEA_PORT[] = "/dev/at_usb1";
 static char nmeaBuffer[4097] = {0};
@@ -1275,6 +1277,57 @@ void getFusedFixes(char* buf) {
     }
 }
 
+void printCurrentGeofences() {
+    printf("currently there are %ld geofences available\n", sGeofences.size());
+    for (size_t i = 0; i < sGeofences.size(); i++) {
+        printf(
+            "id=%ld, lat=%f lon=%f rad=%f, breachType: %d, responsiveness: %u, dwellTime: %u\n\n",
+            i, sGeofences[i].getLatitude(), sGeofences[i].getLongitude(), sGeofences[i].getRadius(),
+            sGeofences[i].getBreachType(), sGeofences[i].getResponsiveness(),
+            sGeofences[i].getDwellTime());
+    }
+}
+
+void addGeofenceInternal(std::vector<Geofence>& addGfVec) {
+    if (!pLcaClient) {
+        pLcaClient = new LocationClientApi(onCapabilitiesCb);
+        sleep(1); // wait for capability callback
+    }
+
+    gGeofencePrm = std::promise<std::vector<std::pair<Geofence, LocationResponse>>>();
+    std::future<std::vector<std::pair<Geofence, LocationResponse>>> ft = gGeofencePrm.get_future();
+    pLcaClient->addGeofences(
+        addGfVec, onGeofenceBreachCb,
+        [&gGeofencePrm](std::vector<std::pair<Geofence, LocationResponse>>& responses) {
+            printf("Received onCollectiveResponseCb\n");
+            gGeofencePrm.set_value(std::move(responses));
+        });
+
+    try {
+        printf("Waiting for onCollectiveResponseCb\n");
+        std::vector<std::pair<Geofence, LocationResponse>> responses (std::move(ft.get()));
+        printf("Got responses, responses size: %d\n", responses.size());
+        // check response code and insert based on that
+        for (auto& response : responses) {
+            printf("lat=%f lon=%f rad=%f, breachType: %d, responsiveness: %u, dwellTime: %u\n",
+                   response.first.getLatitude(), response.first.getLongitude(),
+                   response.first.getRadius(), response.first.getBreachType(),
+                   response.first.getResponsiveness(), response.first.getDwellTime());
+            if (LOCATION_RESPONSE_SUCCESS == response.second) {
+                printf("successfully addeed geofence\n");
+                sGeofences.push_back(std::move(response.first));
+            } else {
+                printf("Adding geofence failed, response: %d\n", response.second);
+            }
+            printf("\n");
+        }
+    } catch (const std::exception& e) {
+        printf("Caught exception: %s\n", e.what());
+    }
+
+    printCurrentGeofences();
+}
+
 void addGeofences(char* buf) {
     double latitude = 32.896535;
     double longitude = -117.201025;
@@ -1346,14 +1399,47 @@ void addGeofences(char* buf) {
         }
     }
 
+    addGeofenceInternal(addGfVec);
+}
+
+void modifyGeofencesInternal(std::vector<Geofence>& modifyGfVec) {
     if (!pLcaClient) {
         pLcaClient = new LocationClientApi(onCapabilitiesCb);
-        sleep(1); // wait for capability callback
     }
-    pLcaClient->addGeofences(addGfVec, onGeofenceBreachCb, onCollectiveResponseCb);
-    sGeofences.insert(sGeofences.end(), addGfVec.begin(), addGfVec.end());
-    printf("currently there are %d geofences available, please input index and the "
-            "latitude/longitude/radius/breachType/responsiveness/dwelltime\n", sGeofences.size());
+
+    gGeofencePrm = std::promise<std::vector<std::pair<Geofence, LocationResponse>>>();
+    std::future<std::vector<std::pair<Geofence, LocationResponse>>> ft = gGeofencePrm.get_future();
+    pLcaClient->modifyGeofences(modifyGfVec);
+
+    try {
+        printf("Waiting for onCollectiveResponseCb\n");
+        std::vector<std::pair<Geofence, LocationResponse>> responses (std::move(ft.get()));
+        printf("Got responses, responses size: %d\n", responses.size());
+        // check response code and insert based on that
+        for (auto& response : responses) {
+            printf("lat=%f lon=%f rad=%f, breachType: %d, responsiveness: %u, dwellTime: %u\n",
+                   response.first.getLatitude(), response.first.getLongitude(),
+                   response.first.getRadius(), response.first.getBreachType(),
+                   response.first.getResponsiveness(), response.first.getDwellTime());
+            if (LOCATION_RESPONSE_SUCCESS == response.second) {
+                for (size_t i = 0; i < sGeofences.size(); i++) {
+                    if (response.first == sGeofences[i]) {
+                        printf("Found and successfully modified geofence\n");
+                        sGeofences[i].setBreachType(response.first.getBreachType());
+                        sGeofences[i].setResponsiveness(response.first.getResponsiveness());
+                        sGeofences[i].setDwellTime(response.first.getDwellTime());
+                    }
+                }
+            } else {
+                printf("Modifying geofence failed, response: %d\n", response.second);
+            }
+            printf("\n");
+        }
+    } catch (const std::exception& e) {
+        printf("Caught exception: %s\n", e.what());
+    }
+
+    printCurrentGeofences();
 }
 
 void modifyGeofences(char* buf) {
@@ -1403,17 +1489,43 @@ void modifyGeofences(char* buf) {
                " Updated breachType: %d, responsivenessMs: %d, dwellTimeSec: %d\n", seqNum,
                sGeofences[seqNum].getLatitude(), sGeofences[seqNum].getLongitude(),
                sGeofences[seqNum].getRadius(), breachType, responsivenessMs, dwellTimeSec);
-        sGeofences[seqNum].setBreachType(breachType);
-        sGeofences[seqNum].setResponsiveness(responsivenessMs);
-        sGeofences[seqNum].setDwellTime(dwellTimeSec);
         modifyGfVec.push_back(sGeofences[seqNum]);
+        modifyGfVec.back().setBreachType(breachType);
+        modifyGfVec.back().setResponsiveness(responsivenessMs);
+        modifyGfVec.back().setDwellTime(dwellTimeSec);
     }
+    modifyGeofencesInternal(modifyGfVec);
+}
 
+void pauseGeofencesInternal(std::vector<Geofence>& pauseGfVec) {
     if (!pLcaClient) {
         pLcaClient = new LocationClientApi(onCapabilitiesCb);
     }
-    pLcaClient->modifyGeofences(modifyGfVec);
+    gGeofencePrm = std::promise<std::vector<std::pair<Geofence, LocationResponse>>>();
+    std::future<std::vector<std::pair<Geofence, LocationResponse>>> ft = gGeofencePrm.get_future();
+    pLcaClient->pauseGeofences(pauseGfVec);
+
+    try {
+        printf("Waiting for onCollectiveResponseCb\n");
+        std::vector<std::pair<Geofence, LocationResponse>> responses(std::move(ft.get()));
+        printf("Got responses for pauseGeofences\n");
+
+        for (const auto& response : responses) {
+            printf("lat=%f lon=%f rad=%f, breachType: %d, responsiveness: %u, dwellTime: %u\n",
+                   response.first.getLatitude(), response.first.getLongitude(),
+                   response.first.getRadius(), response.first.getBreachType(),
+                   response.first.getResponsiveness(), response.first.getDwellTime());
+            if (LOCATION_RESPONSE_SUCCESS == response.second) {
+                printf("successfully paused geofence");
+            } else {
+                printf("Pause geofence failed, response: %d\n", response.second);
+            }
+        }
+    } catch (const std::exception& e) {
+        printf("Caught exception: %s\n", e.what());
+    }
 }
+
 void pauseGeofences(char* buf) {
     static char *save = nullptr;
     char* token = strtok_r(buf, " ", &save); // skip first token
@@ -1437,10 +1549,36 @@ void pauseGeofences(char* buf) {
         pauseGfVec.push_back(sGeofences[seqNum]);
     }
 
+    pauseGeofencesInternal(pauseGfVec);
+}
+
+void resumeGeofencesInternal(std::vector<Geofence>& resumeGfVec) {
     if (!pLcaClient) {
         pLcaClient = new LocationClientApi(onCapabilitiesCb);
     }
-    pLcaClient->pauseGeofences(pauseGfVec);
+    gGeofencePrm = std::promise<std::vector<std::pair<Geofence, LocationResponse>>>();
+    std::future<std::vector<std::pair<Geofence, LocationResponse>>> ft = gGeofencePrm.get_future();
+    pLcaClient->resumeGeofences(resumeGfVec);
+
+    try {
+        printf("Waiting for onCollectiveResponseCb\n");
+        std::vector<std::pair<Geofence, LocationResponse>> responses(std::move(ft.get()));
+        printf("Got responses for resumeGeofences\n");
+
+        for (const auto& response : responses) {
+            printf("lat=%f lon=%f rad=%f, breachType: %d, responsiveness: %u, dwellTime: %u\n",
+                   response.first.getLatitude(), response.first.getLongitude(),
+                   response.first.getRadius(), response.first.getBreachType(),
+                   response.first.getResponsiveness(), response.first.getDwellTime());
+            if (LOCATION_RESPONSE_SUCCESS == response.second) {
+                printf("successfully resumed geofence");
+            } else {
+                printf("Resume geofence failed, response: %d\n", response.second);
+            }
+        }
+    } catch (const std::exception& e) {
+        printf("Caught exception: %s\n", e.what());
+    }
 }
 
 void resumeGeofences(char* buf) {
@@ -1466,17 +1604,51 @@ void resumeGeofences(char* buf) {
         resumeGfVec.push_back(sGeofences[seqNum]);
     }
 
+    resumeGeofencesInternal(resumeGfVec);
+}
+
+void removeGeofencesInternal(std::vector<Geofence>& removeGfVec) {
     if (!pLcaClient) {
         pLcaClient = new LocationClientApi(onCapabilitiesCb);
     }
-    pLcaClient->resumeGeofences(resumeGfVec);
+    gGeofencePrm = std::promise<std::vector<std::pair<Geofence, LocationResponse>>>();
+    std::future<std::vector<std::pair<Geofence, LocationResponse>>> ft = gGeofencePrm.get_future();
+    pLcaClient->removeGeofences(removeGfVec);
+
+    try {
+        printf("Waiting for onCollectiveResponseCb\n");
+        std::vector<std::pair<Geofence, LocationResponse>> responses(std::move(ft.get()));
+        printf("Got responses for removeGeofences\n");
+
+        for (auto& response : responses) {
+            if (LOCATION_RESPONSE_SUCCESS == response.second) {
+                if (sGeofences.size() > 0) {
+                    for (size_t i = 0; i < sGeofences.size(); i++) {
+                        if (response.first == sGeofences[i]) {
+                            printf("Found Geofence\n");
+                            sGeofences.erase(sGeofences.begin() + i);
+                            break;
+                        }
+                    }
+                } else {
+                    break;
+                }
+            } else {
+                printf("Removing geofence failed, response: %d\n", response.second);
+            }
+        }
+    } catch (const std::exception& e) {
+        printf("Caught exception: %s\n", e.what());
+    }
+
+    printCurrentGeofences();
 }
+
 void removeGeofences(char* buf) {
     static char *save = nullptr;
     char* token = strtok_r(buf, " ", &save); // skip first token
     int32_t seqNum = 0;
     vector<Geofence> removeGfVec;
-    vector<int> seqNumVec;
 
     printf("currently there are %d geofences available, please input index \n",
             sGeofences.size());
@@ -1493,20 +1665,8 @@ void removeGeofences(char* buf) {
                 sGeofences[seqNum].getRadius(), sGeofences[seqNum].getBreachType(),
                 sGeofences[seqNum].getResponsiveness(), sGeofences[seqNum].getDwellTime());
         removeGfVec.push_back(sGeofences[seqNum]);
-        seqNumVec.push_back(seqNum);
     }
-
-    if (!pLcaClient) {
-        pLcaClient = new LocationClientApi(onCapabilitiesCb);
-    }
-    pLcaClient->removeGeofences(removeGfVec);
-
-    std::sort(seqNumVec.begin(), seqNumVec.end());
-    std::reverse(seqNumVec.begin(), seqNumVec.end());
-    for (int seq: seqNumVec) {
-        printf("geofenceSeq: %d \n", seq);
-        sGeofences.erase(sGeofences.begin()+seq);
-    }
+    removeGeofencesInternal(removeGfVec);
 }
 
 static bool checkForAutoStart(int argc, char *argv[]) {
@@ -1882,8 +2042,7 @@ void menuAddGeofence() {
                 dwellTimeSec);
         addGfVec.push_back(gf);
     }
-    sGeofences.insert(sGeofences.end(), addGfVec.begin(), addGfVec.end());
-    pLcaClient->addGeofences(addGfVec, onGeofenceBreachCb, onCollectiveResponseCb);
+    addGeofenceInternal(addGfVec);
 }
 
 void menuModifyGeofence() {
@@ -1939,12 +2098,12 @@ void menuModifyGeofence() {
         if (atoi(p) != 0) {
             dwellTimeSec = atoi(p);
         }
-        sGeofences[seqNum].setBreachType(breachType);
-        sGeofences[seqNum].setResponsiveness(responsivenessMs);
-        sGeofences[seqNum].setDwellTime(dwellTimeSec);
         modifyGfVec.push_back(sGeofences[seqNum]);
+        modifyGfVec.back().setBreachType(breachType);
+        modifyGfVec.back().setResponsiveness(responsivenessMs);
+        modifyGfVec.back().setDwellTime(dwellTimeSec);
     }
-    pLcaClient->modifyGeofences(modifyGfVec);
+    modifyGeofencesInternal(modifyGfVec);
 }
 
 void menuPauseGeofence() {
@@ -1966,7 +2125,7 @@ void menuPauseGeofence() {
         }
         pauseGfVec.push_back(sGeofences[seqNum]);
     }
-    pLcaClient->pauseGeofences(pauseGfVec);
+    pauseGeofencesInternal(pauseGfVec);
 }
 
 void menuResumeGeofence() {
@@ -1987,7 +2146,7 @@ void menuResumeGeofence() {
         }
         resumeGfVec.push_back(sGeofences[seqNum]);
     }
-    pLcaClient->resumeGeofences(resumeGfVec);
+    resumeGeofencesInternal(resumeGfVec);
 }
 
 void menuRemoveGeofence() {
@@ -2008,7 +2167,7 @@ void menuRemoveGeofence() {
         }
         removeGfVec.push_back(sGeofences[seqNum]);
     }
-    pLcaClient->removeGeofences(removeGfVec);
+    removeGeofencesInternal(removeGfVec);
 }
 void geofenceTestMenu() {
     char buf[16], *p = NULL;
@@ -2511,7 +2670,7 @@ int main(int argc, char *argv[]) {
         } else if (strncmp(buf, ADD_GEOFENCES,
                            strlen(ADD_GEOFENCES)) == 0) {
             printf("usage: addGeofences "
-                    "[lat lon radius breachType responsiveness dwellTime ] ...\n");
+                    "[lat lon radius breachType responsiveness dwellTime ], ...\n");
             if (!pLcaClient) {
                 pLcaClient = new LocationClientApi(onCapabilitiesCb);
             }
