@@ -51,6 +51,16 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 
 #define SLL_LOC_SUPPORTED_FEATURE_LENGTH_V02 (100)
 typedef uint16_t LocGpsStatusValue;
+/** GPS status unknown. */
+#define LOC_GPS_STATUS_NONE             0
+/** GPS has begun navigating. */
+#define LOC_GPS_STATUS_SESSION_BEGIN    1
+/** GPS has stopped navigating. */
+#define LOC_GPS_STATUS_SESSION_END      2
+/** GPS has powered on but is not navigating. */
+#define LOC_GPS_STATUS_ENGINE_ON        3
+/** GPS is powered off. */
+#define LOC_GPS_STATUS_ENGINE_OFF       4
 
 typedef struct {
     LocPositionMode mode;
