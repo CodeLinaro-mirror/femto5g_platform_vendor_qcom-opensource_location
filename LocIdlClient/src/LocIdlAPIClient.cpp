@@ -1291,7 +1291,7 @@ int main(int argc, char* argv[])
 {
     int delay;
 
-    setenv("VSOMEIP_CONFIGURATION", "/vendor/etc/vsomeip_vlan1500.json", 1);
+    setenv("VSOMEIP_CONFIGURATION", "/vendor/etc/vsomeip_eth0.json", 1);
     setenv("COMMONAPI_CONFIG", "/vendor/etc/commonapi4someip.ini" ,1);
 
     if (isIdlTestClientRunning()) {
