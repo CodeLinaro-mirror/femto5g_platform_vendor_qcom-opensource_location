@@ -9261,6 +9261,39 @@ void LocApiV02::injectSuplCert(int32_t suplCertId, const std::vector<uint8_t>& s
     }));
 }
 
+void LocApiV02::setPreferredConstellation(Gnss_LocSvSystemEnumType type,
+        LocApiResponse* adapterResponse) {
+    sendMsg(new LocApiMsg([this, type, adapterResponse] () {
+    LOC_LOGd("setPreferredConstellation - Gnss Constellation type: %u", type);
+    LocationError err = LOCATION_ERROR_INVALID_PARAMETER;
+    locClientReqUnionType req_union = {};
+    qmiLocSetConstellationConfigReqMsgT_v02 typeReq = {};
+    qmiLocGenReqStatusIndMsgT_v02 typeInd = {};
+
+    if (type == GNSS_LOC_SV_SYSTEM_GPS) {
+        typeReq.preferredConstellation_valid = true;
+        typeReq.preferredConstellation = eQMI_SYSTEM_GPS_V02;
+    } else if (type == GNSS_LOC_SV_SYSTEM_BDS) {
+        typeReq.preferredConstellation_valid = true;
+        typeReq.preferredConstellation = eQMI_SYSTEM_BDS_V02;
+    } else {
+        LOC_LOGe("Unsupported Gnss Constellation type");
+    }
+
+    if (typeReq.preferredConstellation_valid == true) {
+        req_union.pSetConstellationConfigReq = &typeReq;
+        err = locSyncSendReq(QMI_LOC_SET_CONSTELLATION_CONTROL_REQ_V02,
+                            req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
+                            QMI_LOC_SET_CONSTELLATION_CONTROL_IND_V02,
+                            &typeInd);
+    }
+
+    if (adapterResponse != NULL) {
+        adapterResponse->returnToSender(err);
+    }
+    }));
+}
+
 void LocApiV02::convertQmiSecondaryConfigToGnssConfig(
         qmiLocGNSSConstellEnumT_v02 qmiSecondaryBandConfig,
         GnssSvTypeConfig& secondaryBandConfig) {

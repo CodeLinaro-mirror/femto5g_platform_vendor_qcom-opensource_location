@@ -565,6 +565,9 @@ public:
   virtual void injectSuplCert(int32_t suplCertId, const std::vector<uint8_t>& suplCertData,
             LocApiResponse* adapterResponse=nullptr);
 
+  virtual void setPreferredConstellation(Gnss_LocSvSystemEnumType type,
+            LocApiResponse *adapterResponse=nullptr);
+
   LocationError locSyncSendReq(uint32_t req_id, locClientReqUnionType req_payload,
           uint32_t timeout_msec, uint32_t ind_id, void* ind_payload_ptr);
 
