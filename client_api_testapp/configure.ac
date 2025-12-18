@@ -92,6 +92,10 @@ fi
 
 AM_CONDITIONAL(USE_GLIB, test "x${with_glib}" = "xyes")
 
+PKG_CHECK_MODULES([LIBCAP], [libcap])
+AC_SUBST([LIBCAP_CFLAGS])
+AC_SUBST([LIBCAP_LIBS])
+
 AC_CONFIG_FILES([ \
         Makefile \
         location_client_api_testapp.pc

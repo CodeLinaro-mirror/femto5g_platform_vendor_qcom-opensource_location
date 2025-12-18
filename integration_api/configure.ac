@@ -43,6 +43,12 @@ AC_ARG_WITH([external_ap],
     [],
     with_external_ap=no)
 
+if test "x$with_external_ap" != "xno"; then
+    CPPFLAGS="${CPPFLAGS} -DFEATURE_EXTERNAL_AP"
+	PKG_CHECK_MODULES([ABSEIL_LOG],   [absl_log],   [], [AC_MSG_ERROR([absl_log not found])])
+    PKG_CHECK_MODULES([ABSEIL_CHECK], [absl_check], [], [AC_MSG_ERROR([absl_check not found])])
+fi
+
 AM_CONDITIONAL(USE_EXTERNAL_AP, test "x${with_external_ap}" = "xyes")
 
 AC_ARG_WITH([glib],
@@ -83,7 +89,6 @@ AC_ARG_WITH([locpla_includes],
 if test "x$with_locpla_includes" != "xno"; then
    AC_SUBST(LOCPLA_CFLAGS, "-I${locpla_incdir}")
 fi
-
 
 AC_CONFIG_FILES([ \
         Makefile \
