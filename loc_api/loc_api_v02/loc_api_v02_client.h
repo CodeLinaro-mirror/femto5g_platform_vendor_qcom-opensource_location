@@ -1040,7 +1040,6 @@ typedef void  (*locClientErrorCbType)(
 */
 typedef struct
 {
-    uint32_t size;                       /**< Size of the structure. */
     locClientEventIndCbType eventIndCb;  /**< Event indication callback. */
     locClientRespIndCbType respIndCb;    /**< Response indication callback. */
     locClientErrorCbType errorCb;        /**< Error indication callback.

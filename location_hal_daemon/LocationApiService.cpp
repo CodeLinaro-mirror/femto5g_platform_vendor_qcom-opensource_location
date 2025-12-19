@@ -178,7 +178,6 @@ LocationApiService::LocationApiService(const configParamToRead & configParamRead
     mGnssInterface = getGnssInterfaceFromLibGnss();
 
     // create Location control API
-    mControlCallabcks.size = sizeof(mControlCallabcks);
     mControlCallabcks.responseCb = [this](LocationError err, uint32_t id) {
         onControlResponseCallback(err, id);
     };
@@ -237,7 +236,6 @@ LocationApiService::LocationApiService(const configParamToRead & configParamRead
                 E_LOC_CB_GNSS_LOCATION_INFO_BIT | E_LOC_CB_GNSS_SV_BIT);
 
         LocationOptions locationOption = {};
-        locationOption.size = sizeof(locationOption);
         locationOption.minInterval = configParamRead.gnssSessionTbfMs;
         locationOption.mode = mPositionMode;
 
@@ -1082,9 +1080,6 @@ void LocationApiService::registerGnssSignalTypesUpdate(
     std::lock_guard<std::recursive_mutex> lock(mMutex);
     if (pReqMsg->mRegisterUpdate) { // register
         if (mSignalTypesLocationApi == nullptr) {
-            // set callback functions for Location API
-            mSignalTypesLocationApiCallbacks.size = sizeof(mSignalTypesLocationApiCallbacks);
-
             // mandatory callback
             mSignalTypesLocationApiCallbacks.capabilitiesCb = [this](
                     LocationCapabilitiesMask mask) {
@@ -1375,7 +1370,8 @@ void LocationApiService::configConstellations(const LocConfigSvConstellationReqM
 
     LOC_LOGi(">-- reset sv type config: %d, enable constellations: 0x%" PRIx64 ", "
              "blacklisted consteallations: 0x%" PRIx64 ", ",
-             (pMsg->mConstellationEnablementConfig.size == 0),
+             (pMsg->mConstellationEnablementConfig.enabledSvTypesMask == 0 &&
+              pMsg->mConstellationEnablementConfig.blacklistedSvTypesMask == 0),
              pMsg->mConstellationEnablementConfig.enabledSvTypesMask,
              pMsg->mConstellationEnablementConfig.blacklistedSvTypesMask);
     addConfigRequestToMap(sessionId, pMsg);
@@ -1392,9 +1388,8 @@ void LocationApiService::configConstellationSecondaryBand(
     uint32_t sessionId = mLocationControlApi->configConstellationSecondaryBand(
             pMsg->mSecondaryBandConfig);
 
-    LOC_LOGi(">-- secondary band size %d, enabled constellation: 0x%" PRIx64 ", "
+    LOC_LOGi(">-- secondary band enabled constellation: 0x%" PRIx64 ", "
              "secondary band disabed constellation: 0x%" PRIx64 "",
-             pMsg->mSecondaryBandConfig.size,
              pMsg->mSecondaryBandConfig.enabledSvTypesMask,
              pMsg->mSecondaryBandConfig.blacklistedSvTypesMask);
     addConfigRequestToMap(sessionId, pMsg);
@@ -1496,9 +1491,6 @@ void LocationApiService::configUserConsentTerrestrialPositioning(
 
     mOptInTerrestrialService = pMsg->mUserConsent;
     if ((mOptInTerrestrialService == 1) && (mGtpWwanSsLocationApi == nullptr)) {
-        // set callback functions for Location API
-        mGtpWwanSsLocationApiCallbacks.size = sizeof(mGtpWwanSsLocationApiCallbacks);
-
         // mandatory callback
         mGtpWwanSsLocationApiCallbacks.capabilitiesCb = [this](LocationCapabilitiesMask mask) {
             onCapabilitiesCallback(mask);
@@ -2022,9 +2014,6 @@ void LocationApiService::getSinglePos(LocAPIGetSinglePosReqMsg* pReqMsg) {
 
     std::lock_guard<std::recursive_mutex> lock(mMutex);
     if (mSingleFixLocationApi == nullptr) {
-        // set callback functions for Location API
-        mSingleFixLocationApiCallbacks.size = sizeof(mSingleFixLocationApiCallbacks);
-
         // mandatory callback
         mSingleFixLocationApiCallbacks.capabilitiesCb = [this](LocationCapabilitiesMask mask) {
             onCapabilitiesCallback(mask);
@@ -2064,7 +2053,6 @@ void LocationApiService::getSinglePos(LocAPIGetSinglePosReqMsg* pReqMsg) {
         // start tracking with TBF of 1 second
         if (mSingleFixLocationApi && !mSingleFixTrackingSessionId) {
             TrackingOptions options = {};
-            options.size = sizeof(options);
             options.minInterval = 1000;
             options.qualityLevelAccepted = QUALITY_ANY_OR_FAILED_FIX;
             mSingleFixTrackingSessionId = mSingleFixLocationApi->startTracking(options);

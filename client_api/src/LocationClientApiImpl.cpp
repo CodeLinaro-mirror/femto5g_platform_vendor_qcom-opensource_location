@@ -2675,12 +2675,10 @@ void LocationClientApiImpl::addGeofences(const LocationCallbacks& callbacksOptio
                     gfOptions[i].breachTypeMask = mGeofences[i].getBreachType();
                     gfOptions[i].responsiveness = mGeofences[i].getResponsiveness();
                     gfOptions[i].dwellTime = mGeofences[i].getDwellTime();
-                    gfOptions[i].size = sizeof(gfOptions[i]);
 
                     gfInfos[i].latitude = mGeofences[i].getLatitude();
                     gfInfos[i].longitude = mGeofences[i].getLongitude();
                     gfInfos[i].radius = mGeofences[i].getRadius();
-                    gfInfos[i].size = sizeof(gfInfos[i]);
 
                     uint32_t clientId = mGeofences[i].mGeofenceImpl->getClientId();
                     mApiImpl->mLastAddedClientIds.push_back(clientId);
@@ -3254,12 +3252,10 @@ void LocationClientApiImpl::capabilitesCallback(ELocMsgID msgId, const void* msg
                 gfOptions[i].breachTypeMask = it->second.getBreachType();
                 gfOptions[i].responsiveness = it->second.getResponsiveness();
                 gfOptions[i].dwellTime = it->second.getDwellTime();
-                gfOptions[i].size = sizeof(gfOptions[i]);
 
                 gfInfos[i].latitude = it->second.getLatitude();
                 gfInfos[i].longitude = it->second.getLongitude();
                 gfInfos[i].radius = it->second.getRadius();
-                gfInfos[i].size = sizeof(gfInfos[i]);
                 ++i;
             }
             addGeofences(count, gfOptions, gfInfos);
@@ -3566,7 +3562,6 @@ void IpcListener::onReceive(const char* data, uint32_t length,
                         (LocAPIGeofenceBreachIndMsg*)(&msg);
 
                     GeofenceBreachNotification gfBrNotif;
-                    gfBrNotif.size = sizeof(GeofenceBreachNotification);
                     gfBrNotif.count = pGfBreachIndMsg->gfBreachNotification.id.size();
                     gfBrNotif.timestamp = pGfBreachIndMsg->gfBreachNotification.timestamp;
                     gfBrNotif.location = pGfBreachIndMsg->gfBreachNotification.location;
@@ -3679,7 +3674,6 @@ void IpcListener::onReceive(const char* data, uint32_t length,
                     // nmea is variable length, can not be checked
                     const LocAPINmeaIndMsg* pNmeaIndMsg = (LocAPINmeaIndMsg*)(&msg);
                     ::GnssNmeaNotification nmeaNotif = {};
-                    nmeaNotif.size = sizeof(GnssNmeaNotification);
                     nmeaNotif.timestamp = pNmeaIndMsg->gnssNmeaNotification.timestamp;
                     nmeaNotif.locOutputEngType =
                             pNmeaIndMsg->gnssNmeaNotification.locOutputEngType;

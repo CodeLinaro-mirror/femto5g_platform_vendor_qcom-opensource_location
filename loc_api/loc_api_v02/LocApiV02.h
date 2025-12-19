@@ -343,7 +343,6 @@ private:
   inline void resetSvMeasurementReport(){
       if (mGnssMeasurements) {
           memset(mGnssMeasurements, 0, sizeof(GnssMeasurements));
-          mGnssMeasurements->size = sizeof(GnssMeasurements);
       }
       memset(&mTimeBiases, 0, sizeof(mTimeBiases));
   }

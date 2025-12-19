@@ -59,7 +59,6 @@ class TrackingSessCbHandler {
                 GnssReportCbs gnssReportCbs, uint32_t intervalInMs) {
 
             memset(&mCallbackOptions, 0, sizeof(LocationCallbacks));
-            mCallbackOptions.size =  sizeof(LocationCallbacks);
             if (gnssReportCbs.gnssLocationCallback) {
                 mCallbackOptions.gnssLocationInfoCb =
                         [pClientApiImpl, gnssLocCb=gnssReportCbs.gnssLocationCallback]
@@ -101,7 +100,6 @@ class TrackingSessCbHandler {
                 EngineReportCbs engineReportCbs, uint32_t intervalInMs) {
 
             memset(&mCallbackOptions, 0, sizeof(LocationCallbacks));
-            mCallbackOptions.size =  sizeof(LocationCallbacks);
             if (engineReportCbs.engLocationsCallback) {
                 mCallbackOptions.engineLocationsInfoCb =
                         [pClientApiImpl, engineLocCb=engineReportCbs.engLocationsCallback,
@@ -372,7 +370,6 @@ bool LocationClientApi::startPositionSession(
 
     // callback masks
     LocationCallbacks callbacksOption = {};
-    callbacksOption.size =  sizeof(LocationCallbacks);
 
     if (responseCallback) {
         callbacksOption.responseCb = [responseCallback](::LocationError err, uint32_t id) {
@@ -389,7 +386,6 @@ bool LocationClientApi::startPositionSession(
 
     // options
     LocationOptions locationOption;
-    locationOption.size = sizeof(locationOption);
     locationOption.minInterval = intervalInMs;
     locationOption.qualityLevelAccepted = QUALITY_ANY_OR_FAILED_FIX;
 
@@ -416,7 +412,6 @@ bool LocationClientApi::startPositionSession(
 
     // options
     LocationOptions locationOption;
-    locationOption.size = sizeof(locationOption);
     locationOption.minInterval = intervalInMs;
     locationOption.qualityLevelAccepted = QUALITY_ANY_OR_FAILED_FIX;
 
@@ -442,7 +437,6 @@ bool LocationClientApi::startPositionSession(
 
     // options
     LocationOptions locationOption;
-    locationOption.size = sizeof(locationOption);
     locationOption.minInterval = intervalInMs;
     locationOption.locReqEngTypeMask =(::LocReqEngineTypeMask)locEngReqMask;
     locationOption.qualityLevelAccepted = QUALITY_ANY_OR_FAILED_FIX;
@@ -473,7 +467,6 @@ bool LocationClientApi::startTripBatchingSession(uint32_t minInterval, uint32_t 
 
     // callback masks
     LocationCallbacks callbacksOption = {};
-    callbacksOption.size = sizeof(LocationCallbacks);
 
     if (rspCb) {
         callbacksOption.responseCb = [rspCb] (::LocationError err, uint32_t id) {
@@ -502,12 +495,10 @@ bool LocationClientApi::startTripBatchingSession(uint32_t minInterval, uint32_t 
     };
 
     LocationOptions locOption = {};
-    locOption.size = sizeof(locOption);
     locOption.minInterval = minInterval;
     locOption.mode = GNSS_SUPL_MODE_STANDALONE;
 
     BatchingOptions     batchOption = {};
-    batchOption.size = sizeof(batchOption);
     batchOption.setLocationOptions(locOption);
 
     mApiImpl->startBatchingSession(callbacksOption, batchOption);
@@ -529,7 +520,6 @@ bool LocationClientApi::startRoutineBatchingSession(uint32_t minInterval, uint32
 
     // callback masks
     LocationCallbacks callbacksOption = {};
-    callbacksOption.size =  sizeof(LocationCallbacks);
 
     if (rspCb) {
         callbacksOption.responseCb = [rspCb](::LocationError err, uint32_t id) {
@@ -554,12 +544,10 @@ bool LocationClientApi::startRoutineBatchingSession(uint32_t minInterval, uint32
     };
 
     LocationOptions locOption = {};
-    locOption.size = sizeof(locOption);
     locOption.minInterval = minInterval;
     locOption.mode = GNSS_SUPL_MODE_STANDALONE;
 
     BatchingOptions     batchOption = {};
-    batchOption.size = sizeof(batchOption);
     batchOption.batchingMode = BATCHING_MODE_ROUTINE;
     batchOption.setLocationOptions(locOption);
     mApiImpl->startBatchingSession(callbacksOption, batchOption);
@@ -587,8 +575,6 @@ void LocationClientApi::addGeofences(std::vector<Geofence>& geofences,
 
     // callback masks
     LocationCallbacks callbacksOption = {};
-    callbacksOption.size =  sizeof(LocationCallbacks);
-
     callbacksOption.responseCb = [](LocationError err, uint32_t id) {};
 
     if (collRspCb) {
@@ -686,7 +672,6 @@ void LocationClientApi::modifyGeofences(std::vector<Geofence>& geofences) {
             gfOptions[i].breachTypeMask = geofences[i].getBreachType();
             gfOptions[i].responsiveness = geofences[i].getResponsiveness();
             gfOptions[i].dwellTime = geofences[i].getDwellTime();
-            gfOptions[i].size = sizeof(gfOptions[i]);
             if (!geofences[i].mGeofenceImpl) {
                 LOC_LOGe ("Geofence not added yet");
                 free(gfIds);

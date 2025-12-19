@@ -77,7 +77,6 @@ void LocationIntegrationApi::destroy(LocIntegrationDestroyCb destroyCompleteCb) 
 
 bool LocationIntegrationApi::configConstellations(
         const LocConfigBlacklistedSvIdList* blacklistedSvIds){
-
     if (nullptr == mApiImpl) {
         LOC_LOGe ("NULL mApiImpl");
         return false;
@@ -86,18 +85,12 @@ bool LocationIntegrationApi::configConstellations(
     GnssSvTypeConfig constellationEnablementConfig = {};
     GnssSvIdConfig   blacklistSvConfig = {};
     if (nullptr == blacklistedSvIds) {
-        // set size field in constellationEnablementConfig to 0 to indicate
-        // to restore to modem default
-        constellationEnablementConfig.size = 0;
-        // all fields in blacklistSvConfig has already been initialized to 0
-        blacklistSvConfig.size = sizeof(GnssSvIdConfig);
+        // empty constellationEnablementConfig to indicate to restore to modem default
     } else {
-        constellationEnablementConfig.size = sizeof(constellationEnablementConfig);
         constellationEnablementConfig.enabledSvTypesMask =
                 GNSS_SV_TYPES_MASK_GPS_BIT|
                 GNSS_SV_TYPES_MASK_GLO_BIT|GNSS_SV_TYPES_MASK_BDS_BIT|
                 GNSS_SV_TYPES_MASK_QZSS_BIT|GNSS_SV_TYPES_MASK_GAL_BIT;
-        blacklistSvConfig.size = sizeof(GnssSvIdConfig);
 
         for (GnssSvIdInfo it : *blacklistedSvIds) {
             LOC_LOGv("constellation %d, sv id %u", (int) it.constellation, it.svId);
@@ -181,12 +174,12 @@ bool LocationIntegrationApi::configConstellations(
         }
     }
 
-    LOC_LOGd("constellation config size=%d, enabledMask=0x%" PRIx64 ", disabledMask=0x%" PRIx64 ", "
+    LOC_LOGd("constellation config enabledMask=0x%" PRIx64 ", disabledMask=0x%" PRIx64 ", "
              "gps blacklist mask =0x%" PRIx64 ", "
              "glo blacklist mask =0x%" PRIx64 ", qzss blacklist mask =0x%" PRIx64 ", "
              "bds blacklist mask =0x%" PRIx64 ", gal blacklist mask =0x%" PRIx64 ", "
              "sbas blacklist mask =0x%" PRIx64 ", Navic blacklist mask =0x%" PRIx64 ", ",
-             constellationEnablementConfig.size, constellationEnablementConfig.enabledSvTypesMask,
+             constellationEnablementConfig.enabledSvTypesMask,
              constellationEnablementConfig.blacklistedSvTypesMask,
              blacklistSvConfig.gpsBlacklistSvMask,
              blacklistSvConfig.gloBlacklistSvMask, blacklistSvConfig.qzssBlacklistSvMask,
@@ -200,7 +193,6 @@ bool LocationIntegrationApi::configConstellations(
 
 bool LocationIntegrationApi::configConstellationSecondaryBand(
             const ConstellationSet* secondaryBandDisablementSet) {
-
     GnssSvTypeConfig secondaryBandConfig = {};
     if (nullptr == mApiImpl) {
         LOC_LOGe ("NULL mApiImpl");
@@ -242,15 +234,13 @@ bool LocationIntegrationApi::configConstellationSecondaryBand(
         }
     }
 
-    secondaryBandConfig.size = sizeof (secondaryBandConfig);
     secondaryBandConfig.enabledSvTypesMask =
             (GNSS_SV_TYPES_MASK_GLO_BIT | GNSS_SV_TYPES_MASK_BDS_BIT |
              GNSS_SV_TYPES_MASK_QZSS_BIT | GNSS_SV_TYPES_MASK_GAL_BIT |
              GNSS_SV_TYPES_MASK_NAVIC_BIT | GNSS_SV_TYPES_MASK_GPS_BIT);
     secondaryBandConfig.enabledSvTypesMask ^= secondaryBandConfig.blacklistedSvTypesMask;
-    LOC_LOGd("secondary band config size=%d, enableMask=0x%" PRIx64 ", disabledMask=0x%" PRIx64 "",
-            secondaryBandConfig.size, secondaryBandConfig.enabledSvTypesMask,
-            secondaryBandConfig.blacklistedSvTypesMask);
+    LOC_LOGd("secondary band config enableMask=0x%" PRIx64 ", disabledMask=0x%" PRIx64 "",
+            secondaryBandConfig.enabledSvTypesMask, secondaryBandConfig.blacklistedSvTypesMask);
 
     mApiImpl->configConstellationSecondaryBand(secondaryBandConfig);
     return true;
@@ -692,8 +682,6 @@ static void convertLocation(const location_client::Location& location,
                             ::Location& halLocation) {
 
     halLocation = {};
-    halLocation.size = sizeof(halLocation);
-
     uint32_t flags = 0;
     halLocation.timestamp = location.timestamp;
     halLocation.timeUncMs = location.timeUncMs;

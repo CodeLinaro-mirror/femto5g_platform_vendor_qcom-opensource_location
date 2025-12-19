@@ -1502,7 +1502,8 @@ void LocationIntegrationApiImpl::processHalReadyMsg() {
         }
     }
 
-    if (mSvConfigInfo.secondaryBandConfig.size != 0) {
+    if (mSvConfigInfo.secondaryBandConfig.enabledSvTypesMask ||
+            mSvConfigInfo.secondaryBandConfig.blacklistedSvTypesMask) {
         string pbStr;
         LocConfigConstellationSecondaryBandReqMsg msg(
                     mSocketName, mSvConfigInfo.secondaryBandConfig, &mPbufMsgConv);
@@ -1777,7 +1778,8 @@ void LocationIntegrationApiImpl::processGetConstellationSecondaryBandConfigRespC
     if (mIntegrationCbs.getConstellationSecondaryBandConfigCb) {
         ConstellationSet secondaryBandDisablementSet;
 
-        if (pRespMsg->mSecondaryBandConfig.size != 0) {
+        if (pRespMsg->mSecondaryBandConfig.enabledSvTypesMask ||
+                pRespMsg->mSecondaryBandConfig.blacklistedSvTypesMask) {
             uint32_t constellationType = 0;
             GnssSvTypesMask secondaryBandDisabledMask =
                     pRespMsg->mSecondaryBandConfig.blacklistedSvTypesMask;

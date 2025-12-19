@@ -102,7 +102,6 @@ extern "C" {
 
     /** Structure for location information. */
     typedef struct {
-        size_t                     size;  /**< Size. Set to the size of qapi_Location_t. */
         qapi_Location_Flags_Mask_t flags; /**< Bitwise OR of qapi_Location_Flags_t. */
         uint64_t
                timestamp; /**< UTC timestamp for a location fix; milliseconds since Jan. 1, 1970. */
@@ -120,7 +119,6 @@ extern "C" {
 
     /** Structure for location options. */
     typedef struct {
-        size_t   size;        /**< Size. Set to the size of #qapi_Location_Options_t. */
         uint32_t minInterval; /**<  There are three different interpretations of this field,
                               depending if minDistance is 0 or not:
                               1. Time-based tracking (minDistance = 0). minInterval is the minimum
@@ -221,8 +219,6 @@ extern "C" {
 
     /** Location callbacks requirements. */
     typedef struct {
-        size_t size;
-        /**< Size. Set to the size of qapi_Location_Callbacks_t. */
         qapi_Capabilities_Callback      capabilitiesCb;
         /**< Capabilities callback is mandatory. */
         qapi_Response_Callback          responseCb;
