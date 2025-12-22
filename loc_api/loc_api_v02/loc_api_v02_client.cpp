@@ -58,17 +58,8 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 
 #include "loc_cfg.h"
 
-#ifdef LOC_UTIL_TARGET_OFF_TARGET
-
-// timeout in ms before send_msg_sync should return
-#define LOC_CLIENT_ACK_TIMEOUT (5000)
-
-#else
-
 // timeout in ms before send_msg_sync should return
 #define LOC_CLIENT_ACK_TIMEOUT (1000)
-
-#endif //LOC_UTIL_TARGET_OFF_TARGET
 
 #define LOC_CLIENT_MAX_OPEN_RETRIES (20)
 #define LOC_CLIENT_TIME_BETWEEN_OPEN_RETRIES (1)

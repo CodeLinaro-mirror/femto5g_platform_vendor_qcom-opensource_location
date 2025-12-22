@@ -25,6 +25,11 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+/*
+Changes from Qualcomm Technologies, Inc. are provided under the following license:
+Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
 #ifndef SYNERGY_LOCATION_UTIL_LOG_H
 #define SYNERGY_LOCATION_UTIL_LOG_H
 
@@ -63,21 +68,6 @@
 #define loc_get_v02_client_status_name(X) #X
 
 #define loc_get_v02_qmi_status_name(X)  #X
-
-//specific to OFF TARGET
-#ifdef LOC_UTIL_TARGET_OFF_TARGET
-
-# include <stdio.h>
-# include <asm/errno.h>
-# include <sys/time.h>
-
-// get around strl*: not found in glibc
-// TBD:look for presence of eglibc other libraries
-// with strlcpy supported.
-#define strlcpy(X, Y, Z) strcpy(X, Y)
-#define strlcat(X, Y, Z) strcat(X, Y)
-
-#endif //LOC_UTIL_TARGET_OFF_TARGET
 
 #endif //_ANDROID_
 

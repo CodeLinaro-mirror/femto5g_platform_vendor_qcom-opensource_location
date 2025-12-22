@@ -18,14 +18,6 @@
 #include <base_util/log.h>
 #include "log_util.h"
 
-#ifdef CLOCK_BOOTTIME
-#define ENABLED_BOOTTIME_SUPPORT 1
-#else
-#define ENABLED_BOOTTIME_SUPPORT 0
-#endif
-
-#define TIME_RTC_MS_AS_OF_12_1_2014 (1417569370000)
-
 const int NANO_PER_SEC = 1000000000;
 
 namespace qc_loc_fw
@@ -165,40 +157,32 @@ int TimeDiff::add_msec(const int msec)
   return result;
 }
 
-int TimeDiff::add_nsec(const int nsec)
-{
-  int result = 1;
-  do
-  {
-    if(!m_is_valid)
-    {
-      result = 2;
-      break;
-    }
-
-    m_timediff.tv_nsec += nsec;
-    while (m_timediff.tv_nsec >= NANO_PER_SEC)
-    {
-      ++m_timediff.tv_sec;
-      m_timediff.tv_nsec -= NANO_PER_SEC;
-    }
-
-    result = 0;
-  } while (0);
-
-  if(0 != result)
-  {
-    log_error(TAG, "add_nsec failed %d", result);
-  }
-  return result;
-}
-
+// need both true and false
 Timestamp::Timestamp(bool set_to_default_clock)
 {
   invalidate();
-  if(set_to_default_clock)
+  if (set_to_default_clock)
   {
-    (void) reset_to_default_clock();
+    if (0 == clock_gettime(CLOCK_BOOTTIME, &m_timestamp))
+    {
+      m_clock_id = CLOCK_BOOTTIME;
+      m_is_valid = true;
+    } else {
+      log_error(TAG, "set_to_clock_id failed: id(%d) errno(%d)(%s)",
+                CLOCK_BOOTTIME, errno, strerror(errno));
+    }
+  }
+}
+
+Timestamp::Timestamp(int clock_id)
+{
+  invalidate();
+  if(0 == clock_gettime(clock_id, &m_timestamp))
+  {
+    m_clock_id = clock_id;
+    m_is_valid = true;
+  } else {
+    log_error(TAG, "clock_gettime failed: id(%d) errno(%d)(%s)", clock_id, errno, strerror(errno));
   }
 }
 
@@ -214,32 +198,9 @@ Timestamp::Timestamp(const Timestamp & rhs)
   *this = rhs;
 }
 
-Timestamp::Timestamp(const int clock_id)
-{
-  reset_to_clock_id(clock_id);
-}
-
 bool Timestamp::is_valid() const
 {
   return m_is_valid;
-}
-
-bool Timestamp::is_valid_and_default() const
-{
-  bool result = false;
-  if(is_valid())
-  {
-#if ENABLED_BOOTTIME_SUPPORT
-    const int default_clock_id = CLOCK_BOOTTIME;
-#else
-    const int default_clock_id = CLOCK_MONOTONIC;
-#endif //#if ENABLED_BOOTTIME_SUPPORT
-    if(default_clock_id == m_clock_id)
-    {
-      result = true;
-    }
-  }
-  return result;
 }
 
 void Timestamp::invalidate()
@@ -249,12 +210,6 @@ void Timestamp::invalidate()
   memset(&m_timestamp, 0, sizeof(m_timestamp));
 }
 
-timespec * Timestamp::getTimestampPtr()
-{
-  const timespec * const ptr = static_cast<const Timestamp *>(this)->getTimestampPtr();
-  return const_cast<timespec *>(ptr);
-}
-
 const timespec * Timestamp::getTimestampPtr() const
 {
   if(!m_is_valid)
@@ -262,44 +217,6 @@ const timespec * Timestamp::getTimestampPtr() const
     log_warning(TAG, "getTimestampPtr timestamp is invalid");
   }
   return &m_timestamp;
-}
-
-int Timestamp::reset_to_default_clock()
-{
-#if ENABLED_BOOTTIME_SUPPORT
-  return reset_to_boottime();
-#else
-  return reset_to_monotonic();
-#endif
-}
-
-int Timestamp::reset_to_monotonic()
-{
-  return reset_to_clock_id(CLOCK_MONOTONIC);
-}
-
-int Timestamp::reset_to_boottime()
-{
-#if ENABLED_BOOTTIME_SUPPORT
-  return reset_to_clock_id(CLOCK_BOOTTIME);
-#else
-  invalidate();
-  log_error(TAG, "reset_to_boottime not supported");
-  return 2;
-#endif
-}
-
-int Timestamp::reset_to_clock_id(const int clock_id)
-{
-  invalidate();
-  if(0 == clock_gettime(clock_id, &m_timestamp))
-  {
-    m_clock_id = clock_id;
-    m_is_valid = true;
-    return 0;
-  }
-  log_error(TAG, "reset_to_clock_id failed: id(%d) errno(%d)(%s)", clock_id, errno, strerror(errno));
-  return 1;
 }
 
 Timestamp Timestamp::operator -(const TimeDiff & rhs) const
@@ -448,7 +365,7 @@ TimeDiff Timestamp::operator -(const Timestamp & rhs) const
     // set the diff to valid now
     delta.reset(true);
     BREAK_IF_NON_ZERO(10, delta.add_sec(time_delta.tv_sec));
-    BREAK_IF_NON_ZERO(11, delta.add_nsec(time_delta.tv_nsec));
+    BREAK_IF_NON_ZERO(11, delta.add_msec(time_delta.tv_nsec/1e6f));
 
     result = 0;
   } while (0);
@@ -553,7 +470,6 @@ long long get_time_rtc_ms()
 // Returns monotonic time
 long long get_time_boot_ms()
 {
-#ifdef CLOCK_BOOTTIME
   uint64_t current_time_msec = 0;
   struct timespec tp = {};
 
@@ -564,10 +480,6 @@ long long get_time_boot_ms()
 
   current_time_msec += ((tp.tv_nsec + 500000) / 1000000);
   return current_time_msec;
-#else
-  return get_time_rtc_ms();
-#endif
 }
 
 } // namespace qc_loc_fw
-
