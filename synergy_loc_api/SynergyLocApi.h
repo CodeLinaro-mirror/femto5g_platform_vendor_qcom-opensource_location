@@ -106,9 +106,6 @@ public:
     virtual void
         deleteAidingData(const GnssAidingData& data, LocApiResponse *adapterResponse);
 
-    virtual void
-        informNiResponse(GnssNiResponse userResponse, const void* passThroughData);
-
     virtual LocationError
         setServerSync(const char* url, int len, LocServerType type);
 

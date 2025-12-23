@@ -415,29 +415,6 @@ void handleSllReleaseATL(int connHandle, void *context) {
 }
 
 /**
-   Request to indicate NI-SUPL User notification, this is received from SLL Hardware.
-   This event is to indicate NI-SUPL User notification.
-
-   @param notify[Input]   NI SUPL User indication.
-   @param context[Input]    Context Pointer of Synergy Location API.
-
-   @return
-       None.
-
-   @dependencies
-       None.
-*/
-void handleSllRequestNiNotify(GnssNiNotification &notify, const void* data,
-        void *context) {
-
-    if (nullptr != context) {
-        LOC_LOGd ("handleSllRequestNiNotify");
-    } else {
-        LOC_LOGw ("Context is NULL");
-    }
-}
-
-/**
    Request to indicate measurement report, this is received from SLL Hardware.
    This event is to indicate measurement reprot.
 
@@ -687,7 +664,6 @@ const SllInterfaceEvent sllEventCb = {
     handleSllRequestLocation,
     handleSllRequestATL,
     handleSllReleaseATL,
-    handleSllRequestNiNotify,
     handleSllReportGnssMeasurementData,
     handleSllReportWwanZppFix,
     handleSllReportZppBestAvailableFix,
@@ -805,15 +781,6 @@ enum loc_api_adapter_err defaultSllSetPositionMode(sllPosMode& posMode, void *co
 */
 enum loc_api_adapter_err defaultSllSetServerSync(const char* url, int len, LocServerType type,
         void *context) {
-    SLL_DEFAULT_IMPL();
-}
-
-/**
-    Default Implantation of inform NI reponse command;
-    to indicate the command is not supported.
-*/
-enum loc_api_adapter_err defaultSllInformNiResponse(GnssNiResponse userResponse,
-        const void* passThroughData, void *context) {
     SLL_DEFAULT_IMPL();
 }
 
@@ -1091,7 +1058,6 @@ const SllInterfaceReq sllDefultReq = {
     defaultSllAtlCloseStatus,
     defaultSllSetPositionMode,
     defaultSllSetServerSync,
-    defaultSllInformNiResponse,
     defaultSllSetSUPLVersionSync,
     defaultSllSetNMEATypesSync,
     defaultSllSetLPPConfigSync,
@@ -1506,37 +1472,6 @@ SynergyLocApi::deleteAidingData(const GnssAidingData& data, LocApiResponse *adap
         }
     }));
 }
-
-
-/**
-   This API provides NI user response to the engine
-
-   @param GnssNiResponse[Input]  GNSS NI Response.
-   @param LocApiResponse[Input]  Pass Through Data.
-
-   @return
-        None.
-
-   @dependencies
-       None.
-*/
-void
-SynergyLocApi::informNiResponse(GnssNiResponse userResponse, const void* passThroughData) {
-
-    sendMsg(new LocApiMsg([this, userResponse, passThroughData] () {
-
-        if ((nullptr != sllReqIf) && (nullptr != sllReqIf->sllInformNiResponse)) {
-            enum loc_api_adapter_err rtv = LOC_API_ADAPTER_ERR_SUCCESS;
-            rtv = sllReqIf->sllInformNiResponse(userResponse, passThroughData, ((void *)this));
-            if (LOC_API_ADAPTER_ERR_SUCCESS != rtv) {
-                LOC_LOGe ("Error: %d", rtv);
-            }
-        }
-        free((void *)passThroughData);
-    }));
-
-}
-
 
 /**
    This API provides Set UMTs SLP server URL

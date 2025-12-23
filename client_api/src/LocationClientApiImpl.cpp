@@ -3911,11 +3911,4 @@ void IpcListener::onReceive(const char* data, uint32_t length,
     };
     mMsgTask.sendMsg(new (nothrow) OnReceiveHandler(mApiImpl, *this, data, length));
 }
-
-/******************************************************************************
-LocationClientApiImpl - Not implemented overrides
-******************************************************************************/
-
-void LocationClientApiImpl::gnssNiResponse(uint32_t id, GnssNiResponse response) {
-}
 } // namespace location_client

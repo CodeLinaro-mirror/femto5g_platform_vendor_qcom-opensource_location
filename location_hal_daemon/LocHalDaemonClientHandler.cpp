@@ -209,7 +209,6 @@ void LocHalDaemonClientHandler::updateSubscription(uint32_t mask) {
     }
 
     // following callbacks are not supported
-    mCallbacks.gnssNiCb = nullptr;
     mCallbacks.geofenceStatusCb = nullptr;
 
     // call location API if already created
@@ -1007,12 +1006,6 @@ void LocHalDaemonClientHandler::onEngLocationsInfoCb(
             }
         }
     }
-}
-
-void LocHalDaemonClientHandler::onGnssNiCb(uint32_t id, GnssNiNotification gnssNiNotification) {
-
-    std::lock_guard<std::recursive_mutex> lock(LocationApiService::mMutex);
-    LOC_LOGd("--< onGnssNiCb");
 }
 
 void LocHalDaemonClientHandler::onGnssSvCb(const GnssSvNotification &notification) {
