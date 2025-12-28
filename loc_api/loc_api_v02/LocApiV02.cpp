@@ -517,12 +517,19 @@ locClientEventMaskType LocApiV02::adjustLocClientEventMask(locClientEventMaskTyp
                                            QMI_LOC_EVENT_MASK_GNSS_MEASUREMENT_REPORT_V02 |
                                            QMI_LOC_EVENT_MASK_GNSS_NHZ_MEASUREMENT_REPORT_V02 |
                                            QMI_LOC_EVENT_MASK_GNSS_SV_POLYNOMIAL_REPORT_V02 |
-                                           QMI_LOC_EVENT_MASK_EPHEMERIS_REPORT_V02 |
                                            QMI_LOC_EVENT_DWELL_TIME_ALIGNMENT_INFO_V02 |
 #ifdef __ANDROID__
                                            QMI_LOC_EVENT_MASK_NEXT_LS_INFO_REPORT_V02 |
 #endif
-                                           QMI_LOC_EVENT_MASK_ENGINE_DEBUG_DATA_REPORT_V02;
+                                           QMI_LOC_EVENT_MASK_EPHEMERIS_REPORT_V02;
+
+#ifndef FEATURE_WEAR_OS
+        // If this is not wear platform, always disbable debug reports when no HLOS session
+        // is in progress. For wear platforms, there can be non-HLOS sessions for which
+        // we need debug reports to be available on HLOS.
+        clearMask |= QMI_LOC_EVENT_MASK_ENGINE_DEBUG_DATA_REPORT_V02;
+#endif
+
         // clear GNSS_EVENT_REPORT mask because QMI_LOC_EVENT_MASK_FEATURE_STATUS_V02 is set
         // when LOC_SUPPORTED_FEATURE_DYNAMIC_FEATURE_STATUS is supported
         if (ContextBase::isFeatureSupported(LOC_SUPPORTED_FEATURE_DYNAMIC_FEATURE_STATUS)) {

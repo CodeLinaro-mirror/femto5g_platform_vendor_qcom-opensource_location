@@ -27,6 +27,10 @@ LOCAL_SRC_FILES := \
 LOCAL_CFLAGS += \
     -fno-short-enums
 
+ifeq ($(TARGET_SUPPORTS_WEAR_OS),true)
+    LOCAL_CFLAGS += -DFEATURE_WEAR_OS
+endif
+
 LOCAL_HEADER_LIBRARIES := \
     libloc_core_headers \
     libgps.utils_headers \
