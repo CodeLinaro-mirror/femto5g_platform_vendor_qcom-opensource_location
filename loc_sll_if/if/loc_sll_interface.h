@@ -63,6 +63,11 @@ typedef uint16_t LocGpsStatusValue;
 #define LOC_GPS_STATUS_ENGINE_OFF       4
 
 typedef struct {
+    size_t  length;
+    u_char* data;
+} LocDerEncodedCertificate;
+
+typedef struct {
     LocPositionMode mode;
     LocGpsPositionRecurrence recurrence;
     uint32_t min_interval;
