@@ -1400,40 +1400,20 @@ void LocApiV02 :: atlOpenStatus(
                 sizeof(conn_status_req.apnProfile.apnName) );
     }
 
-    switch(bear)
-    {
-    case AGPS_APN_BEARER_IPV4:
-        conn_status_req.apnProfile.pdnType =
-            eQMI_LOC_APN_PROFILE_PDN_TYPE_IPV4_V02;
-        conn_status_req.apnProfile_valid = 1;
-        break;
-
-    case AGPS_APN_BEARER_IPV6:
-        conn_status_req.apnProfile.pdnType =
-            eQMI_LOC_APN_PROFILE_PDN_TYPE_IPV6_V02;
-        conn_status_req.apnProfile_valid = 1;
-        break;
-
-    case AGPS_APN_BEARER_IPV4V6:
-        conn_status_req.apnProfile.pdnType =
-            eQMI_LOC_APN_PROFILE_PDN_TYPE_IPV4V6_V02;
-        conn_status_req.apnProfile_valid = 1;
-        break;
-
-    case AGPS_APN_BEARER_INVALID:
-        conn_status_req.apnProfile_valid = 0;
-        break;
-
-    default:
+    // Handle invalid bearer type
+    if (bear < 0 || bear > 3) {
         LOC_LOGE("atlOpenStatus: invalid bearer type");
         conn_status_req.apnProfile_valid = 0;
-        return;
+    } else {
+        // Direct cast - enum values match exactly (1-3)
+        conn_status_req.apnProfile.pdnType = (qmiLocServerPDNEnumT_v02)bear;
+        conn_status_req.apnProfile_valid = 1;
     }
 
     // Populate apnTypeMask
     if (0 != apnTypeMask) {
         conn_status_req.apnTypeMask_valid = true;
-        conn_status_req.apnTypeMask = convertLocApnTypeMask(apnTypeMask);
+        conn_status_req.apnTypeMask = (qmiLocApnTypeMaskT_v02)apnTypeMask;
     }
 
   }
@@ -1965,17 +1945,6 @@ qmiLocClientsMaskT_v02 LocApiV02::convertGpsLock(GnssConfigGpsLock lock) {
         nfwControlBits |= QMI_LOC_MASK_UTH_CLIENT_NTN_V02;
     }
     return nfwControlBits;
-}
-
-EngineLockState LocApiV02::convertEngineLockState(qmiLocEngineLockStateEnumT_v02 LockState) {
-    switch (LockState) {
-      case eQMI_LOC_ENGINE_LOCK_STATE_ENABLED_V02:
-        return ENGINE_LOCK_STATE_ENABLED;
-      case eQMI_LOC_ENGINE_LOCK_STATE_DISABLED_V02:
-        return ENGINE_LOCK_STATE_DISABLED;
-      default:
-        return ENGINE_LOCK_STATE_INVALID;
-    }
 }
 
 // Convert error from loc_api_v02 to LocationError
@@ -4621,7 +4590,7 @@ void LocApiV02 :: reportAtlRequest(
     }
 
     if (server_request_ptr->apnTypeMask_valid) {
-        apnTypeMask = convertQmiLocApnTypeMask(server_request_ptr->apnTypeMask);
+        apnTypeMask = (LocApnTypeMask)server_request_ptr->apnTypeMask;
     }
     LOC_LOGd("handle=%d agpsType=0x%X apnTypeMask=0x%X",
         connHandle, agpsType, apnTypeMask);
@@ -7297,7 +7266,7 @@ void LocApiV02 :: getEngineLockStateSync() {
             ret = getEngineLockInd.engineLockState;
         }
     }
-    EngineLockState lockState = convertEngineLockState(ret);
+    EngineLockState lockState = (EngineLockState)ret;
     setEngineLockState(lockState);
     LocApiBase::reportEngineLockStatus(lockState);
 }
@@ -7439,26 +7408,9 @@ void LocApiV02 :: updateSystemPowerState(PowerStateType powerState){
     locClientReqUnionType req_union;
 
     LOC_LOGi("updatePowerState: power state %d", powerState);
-    qmiLocPlatformPowerStateEnumT_v02 qmiPowerState = eQMI_LOC_POWER_STATE_UNKNOWN_V02;
-    switch (powerState) {
-    case POWER_STATE_SUSPEND:
-        qmiPowerState = eQMI_LOC_POWER_STATE_SUSPENDED_V02;
-        break;
-    case POWER_STATE_RESUME:
-        qmiPowerState = eQMI_LOC_POWER_STATE_RESUME_V02;
-        break;
-    case POWER_STATE_SHUTDOWN:
-        qmiPowerState = eQMI_LOC_POWER_STATE_SHUTDOWN_V02;
-        break;
-    case POWER_STATE_DEEP_SLEEP_ENTRY:
-        qmiPowerState = eQMI_LOC_POWER_STATE_DEEP_SLEEP_ENTRY_V02;
-        break;
-    case POWER_STATE_DEEP_SLEEP_EXIT:
-        qmiPowerState = eQMI_LOC_POWER_STATE_DEEP_SLEEP_EXIT_V02;
-        break;
-    default:
-        break;
-    }
+
+    // Direct cast - enum values match exactly (0-5)
+    qmiLocPlatformPowerStateEnumT_v02 qmiPowerState = (qmiLocPlatformPowerStateEnumT_v02)powerState;
 
     // unknown power state will not be injected to modem
     if (eQMI_LOC_POWER_STATE_UNKNOWN_V02 != qmiPowerState) {
@@ -7492,7 +7444,7 @@ void LocApiV02::updatePowerConnectState(bool connected) {
 
 void LocApiV02::reportEngineLockStatus(const qmiLocEngineLockStateEnumT_v02 engineLockState) {
     LOC_LOGd("Engine Lock State %d", engineLockState);
-    EngineLockState lockState = convertEngineLockState(engineLockState);
+    EngineLockState lockState = (EngineLockState)engineLockState;
     // allowing to set engine lock state to INVALID to
     // handle backward compatibility in cases of older modem
     if (lockState != getEngineLockState()) {
@@ -8230,80 +8182,6 @@ LocNavSolutionMask LocApiV02 :: convertNavSolutionMask(
       locNavMask |= LOC_NAV_MASK_ONLY_SBAS_CORRECTED_SV_USED;
 
    return locNavMask;
-}
-
-qmiLocApnTypeMaskT_v02 LocApiV02::convertLocApnTypeMask(LocApnTypeMask mask) {
-    qmiLocApnTypeMaskT_v02 qmiMask = 0;
-
-    if (mask & LOC_APN_TYPE_MASK_DEFAULT) {
-        qmiMask |= QMI_LOC_APN_TYPE_MASK_DEFAULT_V02;
-    }
-    if (mask & LOC_APN_TYPE_MASK_IMS) {
-        qmiMask |= QMI_LOC_APN_TYPE_MASK_IMS_V02;
-    }
-    if (mask & LOC_APN_TYPE_MASK_MMS) {
-        qmiMask |= QMI_LOC_APN_TYPE_MASK_MMS_V02;
-    }
-    if (mask & LOC_APN_TYPE_MASK_DUN) {
-        qmiMask |= QMI_LOC_APN_TYPE_MASK_DUN_V02;
-    }
-    if (mask & LOC_APN_TYPE_MASK_SUPL) {
-        qmiMask |= QMI_LOC_APN_TYPE_MASK_SUPL_V02;
-    }
-    if (mask & LOC_APN_TYPE_MASK_HIPRI) {
-        qmiMask |= QMI_LOC_APN_TYPE_MASK_HIPRI_V02;
-    }
-    if (mask & LOC_APN_TYPE_MASK_FOTA) {
-        qmiMask |= QMI_LOC_APN_TYPE_MASK_FOTA_V02;
-    }
-    if (mask & LOC_APN_TYPE_MASK_CBS) {
-        qmiMask |= QMI_LOC_APN_TYPE_MASK_CBS_V02;
-    }
-    if (mask & LOC_APN_TYPE_MASK_IA) {
-        qmiMask |= QMI_LOC_APN_TYPE_MASK_IA_V02;
-    }
-    if (mask & LOC_APN_TYPE_MASK_EMERGENCY) {
-        qmiMask |= QMI_LOC_APN_TYPE_MASK_EMERGENCY_V02;
-    }
-
-    return qmiMask;
-}
-
-LocApnTypeMask LocApiV02::convertQmiLocApnTypeMask(qmiLocApnTypeMaskT_v02 qmiMask) {
-    LocApnTypeMask mask = 0;
-
-    if (qmiMask & QMI_LOC_APN_TYPE_MASK_DEFAULT_V02) {
-        mask |= LOC_APN_TYPE_MASK_DEFAULT;
-    }
-    if (qmiMask & QMI_LOC_APN_TYPE_MASK_IMS_V02) {
-        mask |= LOC_APN_TYPE_MASK_IMS;
-    }
-    if (qmiMask & QMI_LOC_APN_TYPE_MASK_MMS_V02) {
-        mask |= LOC_APN_TYPE_MASK_MMS;
-    }
-    if (qmiMask & QMI_LOC_APN_TYPE_MASK_DUN_V02) {
-        mask |= LOC_APN_TYPE_MASK_DUN;
-    }
-    if (qmiMask & QMI_LOC_APN_TYPE_MASK_SUPL_V02) {
-        mask |= LOC_APN_TYPE_MASK_SUPL;
-    }
-    if (qmiMask & QMI_LOC_APN_TYPE_MASK_HIPRI_V02) {
-        mask |= LOC_APN_TYPE_MASK_HIPRI;
-    }
-    if (qmiMask & QMI_LOC_APN_TYPE_MASK_FOTA_V02) {
-        mask |= LOC_APN_TYPE_MASK_FOTA;
-    }
-    if (qmiMask & QMI_LOC_APN_TYPE_MASK_CBS_V02) {
-        mask |= LOC_APN_TYPE_MASK_CBS;
-    }
-    if (qmiMask & QMI_LOC_APN_TYPE_MASK_IA_V02) {
-        mask |= LOC_APN_TYPE_MASK_IA;
-    }
-    if (qmiMask & QMI_LOC_APN_TYPE_MASK_EMERGENCY_V02) {
-        mask |= LOC_APN_TYPE_MASK_EMERGENCY;
-    }
-
-    return mask;
 }
 
 GnssConfigSuplVersion
@@ -9471,7 +9349,7 @@ LocApiV02::startTimeBasedTracking(const TrackingOptions& options, LocApiResponse
         mPowerMode = options.powerMode;
 
         start_msg.powerMode_valid = 1;
-        start_msg.powerMode.powerMode = convertPowerMode(options.powerMode);
+        start_msg.powerMode.powerMode = (qmiLocPowerModeEnumT_v02)options.powerMode;
         // Force low accuracy for background power modes
         if (GNSS_POWER_MODE_M3 == options.powerMode ||
                 GNSS_POWER_MODE_M4 == options.powerMode ||
@@ -9479,7 +9357,6 @@ LocApiV02::startTimeBasedTracking(const TrackingOptions& options, LocApiResponse
             start_msg.horizontalAccuracyLevel =  eQMI_LOC_ACCURACY_LOW_V02;
         }
     }
-
     start_msg.powerMode.timeBetweenMeasurement = start_msg.minInterval;
 
     //special req type
@@ -9963,26 +9840,6 @@ void LocApiV02::configPrecisePositioning(PreciseType preciseType, bool enable,
     }));
 }
 
-qmiLocPowerModeEnumT_v02
-LocApiV02::convertPowerMode(GnssPowerMode powerMode) {
-    switch(powerMode) {
-    case GNSS_POWER_MODE_M1:
-        return eQMI_LOC_POWER_MODE_IMPROVED_ACCURACY_V02;
-    case GNSS_POWER_MODE_M2:
-        return eQMI_LOC_POWER_MODE_NORMAL_V02;
-    case GNSS_POWER_MODE_M3:
-        return eQMI_LOC_POWER_MODE_BACKGROUND_DEFINED_POWER_V02;
-    case GNSS_POWER_MODE_M4:
-        return eQMI_LOC_POWER_MODE_BACKGROUND_DEFINED_TIME_V02;
-    case GNSS_POWER_MODE_M5:
-        return eQMI_LOC_POWER_MODE_BACKGROUND_KEEP_WARM_V02;
-    default:
-        LOC_LOGE("Invalid power mode %d", powerMode);
-    }
-
-    return QMILOCPOWERMODEENUMT_MIN_ENUM_VAL_V02;
-}
-
 void
 LocApiV02::stopTimeBasedTracking(LocApiResponse* adapterResponse) {
     sendMsg(new LocApiMsg([this, adapterResponse] () {
@@ -10451,80 +10308,17 @@ GnssSignalTypeMask LocApiV02::convertQmiGnssSignalType(
 
 Gnss_LocSignalEnumType LocApiV02::convertQmiGnssSignalEnumType(
         qmiLocGnssSignalTypeEnumT_v02 qmiGnssSignalType) {
-    Gnss_LocSignalEnumType gnssSignalType = GNSS_LOC_MAX_NUMBER_OF_SIGNAL_TYPES;
 
-    switch (qmiGnssSignalType) {
-        case eQMI_LOC_GNSS_SIGNAL_TYPE_GPS_L1CA_V02:
-            gnssSignalType = GNSS_LOC_SIGNAL_TYPE_GPS_L1CA;
-            break;
-        case eQMI_LOC_GNSS_SIGNAL_TYPE_GPS_L1C_V02:
-            gnssSignalType = GNSS_LOC_SIGNAL_TYPE_GPS_L1C;
-            break;
-        case eQMI_LOC_GNSS_SIGNAL_TYPE_GPS_L2C_L_V02:
-            gnssSignalType = GNSS_LOC_SIGNAL_TYPE_GPS_L2C_L;
-            break;
-        case eQMI_LOC_GNSS_SIGNAL_TYPE_GPS_L5_Q_V02:
-            gnssSignalType = GNSS_LOC_SIGNAL_TYPE_GPS_L5_Q;
-            break;
-        case eQMI_LOC_GNSS_SIGNAL_TYPE_GLONASS_G1_V02:
-            gnssSignalType = GNSS_LOC_SIGNAL_TYPE_GLONASS_G1;
-            break;
-        case eQMI_LOC_GNSS_SIGNAL_TYPE_GLONASS_G2_V02:
-            gnssSignalType = GNSS_LOC_SIGNAL_TYPE_GLONASS_G2;
-            break;
-        case eQMI_LOC_GNSS_SIGNAL_TYPE_GALILEO_E1_C_V02:
-            gnssSignalType = GNSS_LOC_SIGNAL_TYPE_GALILEO_E1_C;
-            break;
-        case eQMI_LOC_GNSS_SIGNAL_TYPE_GALILEO_E5A_Q_V02:
-            gnssSignalType = GNSS_LOC_SIGNAL_TYPE_GALILEO_E5A_Q;
-            break;
-        case eQMI_LOC_GNSS_SIGNAL_TYPE_GALILEO_E5B_Q_V02:
-            gnssSignalType = GNSS_LOC_SIGNAL_TYPE_GALILEO_E5B_Q;
-            break;
-        case eQMI_LOC_GNSS_SIGNAL_TYPE_BEIDOU_B1_I_V02:
-            gnssSignalType = GNSS_LOC_SIGNAL_TYPE_BEIDOU_B1_I;
-            break;
-        case eQMI_LOC_GNSS_SIGNAL_TYPE_BEIDOU_B1C_V02:
-            gnssSignalType = GNSS_LOC_SIGNAL_TYPE_BEIDOU_B1C;
-            break;
-        case eQMI_LOC_GNSS_SIGNAL_TYPE_BEIDOU_B2_I_V02:
-            gnssSignalType = GNSS_LOC_SIGNAL_TYPE_BEIDOU_B2_I;
-            break;
-        case eQMI_LOC_GNSS_SIGNAL_TYPE_BEIDOU_B2A_I_V02:
-            gnssSignalType = GNSS_LOC_SIGNAL_TYPE_BEIDOU_B2A_I;
-            break;
-        case eQMI_LOC_GNSS_SIGNAL_TYPE_QZSS_L1CA_V02:
-            gnssSignalType = GNSS_LOC_SIGNAL_TYPE_QZSS_L1CA;
-            break;
-        case eQMI_LOC_GNSS_SIGNAL_TYPE_QZSS_L1S_V02:
-            gnssSignalType = GNSS_LOC_SIGNAL_TYPE_QZSS_L1S;
-            break;
-        case eQMI_LOC_GNSS_SIGNAL_TYPE_QZSS_L2C_L_V02:
-            gnssSignalType = GNSS_LOC_SIGNAL_TYPE_QZSS_L2C_L;
-            break;
-        case eQMI_LOC_GNSS_SIGNAL_TYPE_QZSS_L5_Q_V02:
-            gnssSignalType = GNSS_LOC_SIGNAL_TYPE_QZSS_L5_Q;
-            break;
-        case eQMI_LOC_GNSS_SIGNAL_TYPE_SBAS_L1_CA_V02:
-            gnssSignalType = GNSS_LOC_SIGNAL_TYPE_SBAS_L1_CA;
-            break;
-        case eQMI_LOC_GNSS_SIGNAL_TYPE_NAVIC_L5_V02:
-            gnssSignalType = GNSS_LOC_SIGNAL_TYPE_NAVIC_L5;
-            break;
-        case eQMI_LOC_GNSS_SIGNAL_TYPE_BEIDOU_B2A_Q_V02:
-            gnssSignalType = GNSS_LOC_SIGNAL_TYPE_BEIDOU_B2A_Q;
-            break;
-        case eQMI_LOC_GNSS_SIGNAL_TYPE_BEIDOU_B2B_I_V02:
-            gnssSignalType = GNSS_LOC_SIGNAL_TYPE_BEIDOU_B2B_I;
-            break;
-        case eQMI_LOC_GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q_V02:
-            gnssSignalType = GNSS_LOC_SIGNAL_TYPE_BEIDOU_B2B_Q;
-            break;
-        case eQMI_LOC_GNSS_SIGNAL_TYPE_NAVIC_L1_V02:
-            gnssSignalType = GNSS_LOC_SIGNAL_TYPE_NAVIC_L1;
-            break;
+    // Validate range: QMI values 1-23 map to HLOS 0-22
+    // Ensure result is within valid enum range
+    if (qmiGnssSignalType < 1 || qmiGnssSignalType > 23 ||
+        (qmiGnssSignalType - 1) >= GNSS_LOC_MAX_NUMBER_OF_SIGNAL_TYPES) {
+        LOC_LOGE("Invalid QMI signal type: %d", qmiGnssSignalType);
+        return GNSS_LOC_MAX_NUMBER_OF_SIGNAL_TYPES;
     }
-    return gnssSignalType;
+
+    // Direct conversion with offset -1
+    return (Gnss_LocSignalEnumType)(qmiGnssSignalType - 1);
 }
 
 AgcStatus LocApiV02::convertQmiAgcStatusType(qmiLocAgcStatusEnumT_v02 qmiAgcStatus) {

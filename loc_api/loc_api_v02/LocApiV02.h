@@ -217,9 +217,6 @@ private:
   /* Convert GPS LOCK to QMI Client Config Mask */
   static qmiLocClientsMaskT_v02 convertGpsLock(GnssConfigGpsLock lock);
 
-  /* Convert Engine Lock State from QMI format to LocationAPI format */
-  static EngineLockState convertEngineLockState(qmiLocEngineLockStateEnumT_v02 LockState);
-
   /* Convert error from loc_api_v02 to loc eng format*/
   static LocationError convertErr(locClientStatusEnumType status);
 
@@ -244,13 +241,6 @@ private:
   void convertGnssMeasurements (
       const qmiLocEventGnssSvMeasInfoIndMsgT_v02& gnss_measurement_report_ptr,
       int index, bool isExt, bool isStale);
-
-  /* Convert APN Type mask */
-  static qmiLocApnTypeMaskT_v02 convertLocApnTypeMask(LocApnTypeMask mask);
-  static LocApnTypeMask convertQmiLocApnTypeMask(qmiLocApnTypeMaskT_v02 mask);
-
-  /* Convert GnssPowerMode to QMI Loc Power Mode Enum */
-  static qmiLocPowerModeEnumT_v02 convertPowerMode(GnssPowerMode powerMode);
 
   void convertGnssMeasurementsHeader(const Gnss_LocSvSystemEnumType locSvSystemType,
       const qmiLocEventGnssSvMeasInfoIndMsgT_v02& gnss_measurement_info);
