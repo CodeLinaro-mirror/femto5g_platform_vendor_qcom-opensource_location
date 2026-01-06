@@ -26,6 +26,12 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/*
+Changes from Qualcomm Technologies, Inc. are provided under the following license:
+Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
+
 #ifndef NLP_API_H
 #define NLP_API_H
 
@@ -59,7 +65,6 @@ typedef struct {
     void (*onLocationOptInUpdate)(OptInStatus optInStatus, const void* clientData);
     void (*onNetworkStatusUpdate)(bool isConected, const NlpNetwork* networksAvailable,
             uint8_t networksAvailableCount, const void* clientData);
-    void (*onLocationChange)(const NlpLocation* location, const void* clientData);
 } SystemStatusListener;
 
 /** @brief
@@ -75,24 +80,17 @@ typedef struct {
 
 typedef struct {
     /** @brief
-        Provides an instance of SystemRequester object with
-        the specified listener and clientData. The registered
-        SystemStatusListener will get updates on changes, with
-        clientData being passed back to the client. Support
-        multiple clients identified by listener, pertaining to
-        calls maked to SystemRequester calls.
+        The registered SystemStatusListener will
+        get updates on changes. Support
+        multiple clients identified by listener.
 
         @param
         listener: instance of SystemStatusListener,
         implementing the required callback functions.
         Should be valid until disconnect function is called.
-
-        @param
-        clientData: opaque client data bundle, will be passed
-        back to client with all listener callbacks.
     */
-    const SystemRequester* (*connectToSystemStatus)(
-            const SystemStatusListener* listener, const void* clientData);
+    bool (*connectToSystemStatus)(
+            const SystemStatusListener* listener);
 
     /** @brief
         Provides an instance of WiFiDBReceiver object with
@@ -132,7 +130,7 @@ typedef struct {
         or if one instance has already registered.
     */
     const WiFiDBProvider* (*connectToWiFiDBProvider)(
-            const WiFiDBProviderResponseListener* listener,
+            const void* listener,
             const void* clientData);
 
     /** @brief
@@ -194,7 +192,7 @@ typedef struct {
         clientData: opaque client data bundle, previously provided
         in the connectToWiFiDBProvider call.
     */
-    void (*disconnectFromWiFiDBProvider)(const WiFiDBProviderResponseListener* listene);
+    void (*disconnectFromWiFiDBProvider)(const void* listener);
 
     /** @brief
         Disconnect the AltitudeReceiver associated with the provided listener.

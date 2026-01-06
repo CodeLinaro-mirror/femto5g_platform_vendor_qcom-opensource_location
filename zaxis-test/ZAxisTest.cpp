@@ -67,14 +67,6 @@ static void onAlititudeLookupRequest(const LocationExt* location, bool isEmergen
     t.detach();
 }
 
-static void onLocationChange(const NlpLocation* location, const void* clientData) {
-    if (location) {
-        LOC_LOGi("latitude:%lf, longitude:%lf, altitude:%lf, accuracy:%lf, timestamp:%" PRIu64,
-                location->latitude, location->longitude, location->altitude,
-                location->accuracy, location->timestamp);
-    }
-}
-
 static void onLocationOptInUpdate(OptInStatus optInStatus, const void* clientData) {
 
 }
@@ -89,14 +81,13 @@ int main() {
     AltitudeReceiverResponseListener altListener;
     SystemStatusListener sysListener;
     altListener.onAltitudeLookupRequest = onAlititudeLookupRequest;
-    sysListener.onLocationChange = onLocationChange;
     sysListener.onLocationOptInUpdate = onLocationOptInUpdate;
     sysListener.onNetworkStatusUpdate = onNetworkStatusUpdate;
     const NLPApi* nlpApi = nullptr;
     nlpApi = linkGetNLPApi();
     if (nullptr != nlpApi) {
         altReceiver = nlpApi->connectToAltitudeReceiver(&altListener, nullptr);
-        sysRequester = nlpApi->connectToSystemStatus(&sysListener, nullptr);
+        nlpApi->connectToSystemStatus(&sysListener);
     } else {
         LOC_LOGe("NLP API is nullptr");
     }
