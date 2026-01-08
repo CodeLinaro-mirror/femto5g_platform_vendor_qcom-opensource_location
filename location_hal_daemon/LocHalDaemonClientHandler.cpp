@@ -1246,7 +1246,6 @@ void LocHalDaemonClientHandler::onDcReportCb(const GnssDcReportInfo& dcReportInf
 }
 
 void LocHalDaemonClientHandler::onGnssSignalTypesCb(GnssSignalTypeMask signalType) {
-    std::lock_guard<std::recursive_mutex> lock(LocationApiService::mMutex);
     LOC_LOGd("--< client name %s, ipc valid %d, supported GNSS signal types 0x%x",
              mName.c_str(), (nullptr != mIpcSender), signalType);
 
