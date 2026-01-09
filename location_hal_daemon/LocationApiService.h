@@ -281,6 +281,8 @@ private:
     void deregisterXtraStatusUpdate(
             const LocConfigDeregisterXtraStatusUpdateReqMsg * pReqMsg);
 
+    void provideNetworkInfoStatus(const UpdateNetworkInfoReq* pNwData);
+
     // Location configuration API util routines
     void addConfigRequestToMap(uint32_t sessionId,
                                const LocAPIMsgHeader* pMsg);

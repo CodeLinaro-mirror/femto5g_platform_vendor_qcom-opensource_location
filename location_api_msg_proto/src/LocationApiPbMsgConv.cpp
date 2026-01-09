@@ -296,6 +296,9 @@ ELocMsgID LocationApiPbMsgConv::getEnumForPBELocMsgID(const PBELocMsgID &pbLocMs
         case PB_E_INTAPI_CONFIG_XTRA_USER_CONSENT_MSG_ID:
             eLocMsgId = E_INTAPI_CONFIG_XTRA_USER_CONSENT_MSG_ID;
             break;
+        case PB_E_INTAPI_NETWORK_UPDATE_INFO_MSG_ID:
+            eLocMsgId = E_INTAPI_NETWORK_UPDATE_INFO_MSG_ID;
+            break;
         default:
             break;
     }
@@ -1086,7 +1089,9 @@ PBELocMsgID LocationApiPbMsgConv::getPBEnumForELocMsgID(const ELocMsgID &eLocMsg
         case E_INTAPI_CONFIG_XTRA_USER_CONSENT_MSG_ID:
             pbLocMsgId = PB_E_INTAPI_CONFIG_XTRA_USER_CONSENT_MSG_ID;
             break;
-
+        case E_INTAPI_NETWORK_UPDATE_INFO_MSG_ID:
+            pbLocMsgId = PB_E_INTAPI_NETWORK_UPDATE_INFO_MSG_ID;
+            break;
         default:
             break;
     }
@@ -8023,5 +8028,107 @@ int LocationApiPbMsgConv::pbConvertToGnssMmfData(const PBGnssMapMatchedData& pbM
 
     // float  bearingAccuracy = 10;
     mmfData.bearingAccuracy = pbMmfData.bearingaccuracy();
+    return 0;
+}
+
+PBNetworkConnection LocationApiPbMsgConv::getPBConnectionStatusEnum(
+        NetworkConnectionStatus nwConn) const {
+    PBNetworkConnection pbNwConn = PB_NET_CONNECTION_UNKNOWN;
+    switch (nwConn) {
+        case NET_CONNECTED:
+            pbNwConn = PB_NET_CONNECTED;
+            break;
+        case NET_DISCONNECTED:
+            pbNwConn = PB_NET_DISCONNECTED;
+            break;
+        default:
+            break;
+    }
+    return pbNwConn;
+}
+
+NetworkConnectionStatus LocationApiPbMsgConv::getConnectionStatusEnum (
+        PBNetworkConnection pbNwConn) const {
+    NetworkConnectionStatus nwConnType = NET_CONNECTION_UNKNOWN;
+    switch (pbNwConn) {
+        case PB_NET_CONNECTED:
+            nwConnType = NET_CONNECTED;
+            break;
+        case PB_NET_DISCONNECTED:
+            nwConnType = NET_DISCONNECTED;
+            break;
+        default:
+            break;
+    }
+    return nwConnType;
+}
+
+PBNetworkType LocationApiPbMsgConv::getPBNwTypeEnum (NetworkTypeInfo nwType) const {
+    PBNetworkType pbNwType = PB_TYPE_UNKNOWN;
+    switch (nwType) {
+        case TYPE_WWAN:
+            pbNwType = PB_TYPE_WWAN;
+            break;
+        case TYPE_WLAN:
+            pbNwType = PB_TYPE_WLAN;
+            break;
+        default:
+            break;
+    }
+    return pbNwType;
+}
+
+NetworkTypeInfo LocationApiPbMsgConv::getNwTypeEnum(PBNetworkType pbNwType) const {
+    NetworkTypeInfo nwType = TYPE_UNKNOWN_NETWORK;
+    switch (pbNwType) {
+        case PB_TYPE_WWAN:
+            nwType = TYPE_WWAN;
+            break;
+        case PB_TYPE_WLAN:
+            nwType = TYPE_WLAN;
+            break;
+        default:
+            break;
+    }
+    return nwType;
+}
+
+int LocationApiPbMsgConv::convertNetworkInfoMsgToPB(const NetworkInfo& nwInfo,
+        PBNetworkInfoData* pbNwInfo) const {
+
+    if (pbNwInfo) {
+        pbNwInfo->set_connection(getPBConnectionStatusEnum(nwInfo.connection));
+        pbNwInfo->set_networktype(getPBNwTypeEnum(nwInfo.networkType));
+        if (nwInfo.country.length()) {
+            pbNwInfo->set_country(nwInfo.country);
+        } else {
+            pbNwInfo->set_country("");
+        }
+        if (nwInfo.mccmnc.length()) {
+            pbNwInfo->set_mccmnc(nwInfo.mccmnc);
+        } else {
+            pbNwInfo->set_mccmnc("");
+        }
+        LOC_LOGe("exit");
+        return 0;
+    } else {
+        return 1;
+    }
+}
+
+int LocationApiPbMsgConv::pbConvertToNetworkDataInfo(const PBNetworkInfoData& pbNwInfo,
+        NetworkInfo& nwInfo) const {
+
+    // PBNetworkConnection connection = 1;
+    nwInfo.connection = getConnectionStatusEnum(pbNwInfo.connection());
+
+    // PBNetworkType networkType = 2;
+    nwInfo.networkType = getNwTypeEnum(pbNwInfo.networktype());
+
+    // string country = 3;
+    nwInfo.country = pbNwInfo.country();
+
+    // string mccmnc = 4;
+    nwInfo.mccmnc = pbNwInfo.mccmnc();
     return 0;
 }
