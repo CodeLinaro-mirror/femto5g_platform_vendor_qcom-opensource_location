@@ -332,7 +332,11 @@ private:
 
   inline void resetSvMeasurementReport(){
       if (mGnssMeasurements) {
-          memset(mGnssMeasurements, 0, sizeof(GnssMeasurements));
+          if (mGnssMeasurements->gnssSvMeasurementSet) {
+              memset(mGnssMeasurements->gnssSvMeasurementSet, 0, sizeof(GnssSvMeasurementSet));
+          }
+          memset(&(mGnssMeasurements->gnssMeasNotification), 0,
+                 sizeof(GnssMeasurementsNotification));
       }
       memset(&mTimeBiases, 0, sizeof(mTimeBiases));
   }
