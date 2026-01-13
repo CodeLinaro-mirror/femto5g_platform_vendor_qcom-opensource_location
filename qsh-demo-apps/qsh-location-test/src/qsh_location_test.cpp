@@ -60,6 +60,11 @@ sigset_t newmask;
 siginfo_t info;
 bool bVerboseMode = true;
 
+//pdr mode related
+static qsh_location_pdr_mode g_pdr_mode = QSH_LOCATION_PDR_MODE_CASUAL;
+// Session‑mode handling
+static qsh_location_session_mode g_session_mode = QSH_LOCATION_SESSION_MODE_NORMAL;
+
 #define GNSS_MAX_MEASUREMENT  128
 
 typedef struct {
@@ -380,20 +385,30 @@ static void event_cb(const uint8_t *data, size_t size, uint64_t ts) {
 
             if (bVerboseMode) {
                 printf("Received position event\n");
-                printf("session status=%d clock: t=%" PRIu64" lat=%d lon=%d alt=%.2f hacc=%.2f"
-                        "vacc=%.2f sp=%.2f sacc=%.2f b=%.2f bacc=%.2f ci=%.2f\n",
-                        posEvent.session_status(), posEvent.timestamp(), posEvent.latitude(),
-                        posEvent.longitude(), posEvent.altitude(), posEvent.horizontal_accuracy(),
-                        posEvent.vertical_accuracy(),
-                        posEvent.speed(), posEvent.speed_accuracy(), posEvent.bearing(),
-                        posEvent.bearing_accuracy(), posEvent.conformity_index());
+                printf("session status=%d clock: t=%" PRIu64" lat=%d lon=%d alt=%.2f "
+                       "altWrtMeanSeaLevel=%.2f hacc=%.2f vacc=%.2f sp=%.2f "
+                       "sacc=%.2f b=%.2f bacc=%.2f ci=%.2f\n",
+                       posEvent.session_status(),
+                       posEvent.timestamp(),
+                       posEvent.latitude(),
+                       posEvent.longitude(),
+                       posEvent.altitude(),
+                       posEvent.altitudewrtmeansealevel(),
+                       posEvent.horizontal_accuracy(),
+                       posEvent.vertical_accuracy(),
+                       posEvent.speed(),
+                       posEvent.speed_accuracy(),
+                       posEvent.bearing(),
+                       posEvent.bearing_accuracy(),
+                       posEvent.conformity_index());
             }
             LOC_LOGd("timestamp=%" PRIu64" latitude=%d",
                      posEvent.timestamp(),
                      posEvent.latitude());
-            LOC_LOGd("longitude=%d altitude=%f",
+            LOC_LOGd("longitude=%d altitude=%f altitudeWrtMeanSeaLevel=%f",
                      posEvent.longitude(),
-                     posEvent.altitude());
+                     posEvent.altitude(),
+                     posEvent.altitudewrtmeansealevel());
             LOC_LOGd("horizontal_accuracy=%f vertical_accuracy=%f",
                      posEvent.horizontal_accuracy(),
                      posEvent.vertical_accuracy());
@@ -410,7 +425,7 @@ static void event_cb(const uint8_t *data, size_t size, uint64_t ts) {
             measClkEvent.ParseFromString(pb_event.payload());
             parse_meas_and_clk(&measClkEvent);
         } else {
-            LOC_LOGe("Unsupprted message ID", pb_event.msg_id());
+            LOC_LOGe("Unsupprted message ID: %d", pb_event.msg_id());
         }
     }
 }
@@ -540,6 +555,11 @@ static void send_update_req(bool start,
     location_update.set_start(start);
     location_update.set_location_request(request);
     location_update.set_interval(interval);
+    printf("Setting pdr mode to %d", g_pdr_mode);
+    location_update.set_pdrmode(g_pdr_mode);
+    printf("Setting session mode to %d", g_session_mode);
+    location_update.set_sessionmode(g_session_mode);
+
     location_update.SerializeToString(&location_update_encoded);
 
     pb_req_msg.set_msg_id(QSH_LOCATION_MSGID_QSH_LOCATION_UPDATE);
@@ -803,10 +823,14 @@ static int loadReqFromFile(string inputKey) {
     if ((gf_fp = fopen("/vendor/etc/qsh_location_test.txt", "r")) != NULL) {
         while (fgets(line, sizeof(line), gf_fp)) {
             char key[50];
-            int val1, val2, val3;
+            int val1, val2, val3, val4, val5;
 
-            if (sscanf(line, "%s = %d,%d,%d", key, &val1, &val2, &val3) == 4) {
-                data[key] = {val1, val2, val3};
+            //   File format:
+            //   key = case,rate,duration,pdrMode,sessionMode
+            //   pdrMode: 1 = CASUAL, 2 = FITNESS
+            //   sessionMode: 1 = NORMAL, 2 = SWIM, 3 = STAMINA
+            if (sscanf(line, "%s = %d,%d,%d,%d,%d", key, &val1, &val2, &val3, &val4, &val5) == 6){
+                data[key] = {val1, val2, val3, val4, val5};
             }
         }
         fclose(gf_fp);
@@ -814,6 +838,38 @@ static int loadReqFromFile(string inputKey) {
             vector<int> values = data[inputKey];
             switch (values[0]) {
             case 1:
+                if (values.size() >= 5) {
+                    // ----- PDR mode -----
+                    int pdrMode = values[3];
+                    if (pdrMode == 1) {
+                        g_pdr_mode = QSH_LOCATION_PDR_MODE_CASUAL;
+                    } else if (pdrMode == 2) {
+                        g_pdr_mode = QSH_LOCATION_PDR_MODE_FITNESS;
+                    } else {
+                        LOC_LOGw("Invalid PDR mode %d in test file, defaulting to CASUAL",
+                            pdrMode);
+                        g_pdr_mode = QSH_LOCATION_PDR_MODE_CASUAL;
+                    }
+
+                    // ----- Session mode -----
+                    int sessMode = values[4];
+                    switch (sessMode) {
+                        case 1:
+                            g_session_mode = QSH_LOCATION_SESSION_MODE_NORMAL;
+                            break;
+                        case 2:
+                            g_session_mode = QSH_LOCATION_SESSION_MODE_SWIM;
+                            break;
+                        case 3:
+                            g_session_mode = QSH_LOCATION_SESSION_MODE_STAMINA;
+                            break;
+                        default:
+                            LOC_LOGw("Invalid session mode %d in test file, defaulting to NORMAL",
+                                sessMode);
+                            g_session_mode = QSH_LOCATION_SESSION_MODE_NORMAL;
+                            break;
+                    }
+                }
                 ret = test_loc_start(LOCATION_START_REQUEST, values[1]);
                 if (0 == ret) {
                     printf("success - start location request\n");
@@ -847,7 +903,7 @@ static int loadReqFromFile(string inputKey) {
                 break;
             default:
                 break;
-                }
+            }
         } else {
             printf("test not defined\n");
         }
@@ -937,6 +993,40 @@ int main(int argc, char *argv[]) {
                     if (pch != NULL) {
                         locRate = atoi(pch);
                     }
+
+                    //PDR mode selection
+                    char pdrMode_buf[8];
+                    printf("Enter PDR mode (c for casual, f for fitness): ");
+                    if (fgets(pdrMode_buf, sizeof(pdrMode_buf), stdin) != NULL) {
+                        if (pdrMode_buf[0] == 'c' || pdrMode_buf[0] == 'C') {
+                            g_pdr_mode = QSH_LOCATION_PDR_MODE_CASUAL;
+                            printf("PDR mode set to CASUAL\n");
+                        } else if (pdrMode_buf[0] == 'f' || pdrMode_buf[0] == 'F') {
+                            g_pdr_mode = QSH_LOCATION_PDR_MODE_FITNESS;
+                            printf("PDR mode set to FITNESS\n");
+                        } else {
+                            printf("Invalid selection, PDR mode unchanged\n");
+                        }
+                    }
+
+                    //Session mode selection
+                    char sessionMode_buf[8];
+                    printf("Enter session mode (n for normal, s for swim, t for stamina): ");
+                    if (fgets(sessionMode_buf, sizeof(sessionMode_buf), stdin) != NULL) {
+                        if (sessionMode_buf[0] == 'n' || sessionMode_buf[0] == 'N') {
+                            g_session_mode = QSH_LOCATION_SESSION_MODE_NORMAL;
+                            printf("Session mode set to NORMAL\n");
+                        } else if (sessionMode_buf[0] == 's' || sessionMode_buf[0] == 'S') {
+                            g_session_mode = QSH_LOCATION_SESSION_MODE_SWIM;
+                            printf("Session mode set to SWIM\n");
+                        } else if (sessionMode_buf[0] == 't' || sessionMode_buf[0] == 'T') {
+                            g_session_mode = QSH_LOCATION_SESSION_MODE_STAMINA;
+                            printf("Session mode set to STAMINA\n");
+                        } else {
+                            printf("Invalid selection, session mode unchanged\n");
+                        }
+                    }
+
                     ret = test_loc_start(LOCATION_START_REQUEST, locRate);
                     locInProgress = 1;
                     if (0 == ret) {
