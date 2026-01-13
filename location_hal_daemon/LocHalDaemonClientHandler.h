@@ -165,7 +165,6 @@ private:
     void onGeofenceBreachCb(const GeofenceBreachNotification& geofenceBreachNotification);
     void onEngLocationsInfoCb(uint32_t count,
                               GnssLocationInfoNotification* engLocationsInfoNotification);
-    void onGnssNiCb(uint32_t id, GnssNiNotification gnssNiNotification);
     void onGnssSvCb(const GnssSvNotification &gnssSvNotification);
     void onGnssNmeaCb(const GnssNmeaNotification&);
     void onEngineNmeaCb(const GnssNmeaNotification&);

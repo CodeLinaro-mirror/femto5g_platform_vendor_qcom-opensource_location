@@ -42,9 +42,7 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
  *============================================================================*/
 #include <stdbool.h>
 #include <stdint.h>
-#include "gps_extended_c.h"
-#include "LocationDataTypes.h"
-#include "loc_gps.h"
+#include "gps_extended.h"
 #include "loc_pla.h"
 #include "log_util.h"
 
@@ -425,29 +423,6 @@ typedef struct {
            None.
     */
     void (*sllReleaseATL)(int connHandle, void *context);
-
-    /**
-       The SLL event to indicate NI Notification. This interface API should be call by SLL.
-       The Event processing is done in SLL context and same context Adapter API
-       will called. SLL need to support multiple execution contexts.
-       The execution context will identify using ‘void *context’ variable.
-
-       @datatypes
-       #GnssNiNotification
-
-       @param notify[Input]   GNSS Ni Notification.
-
-       @param data[Input]     Ni Data Pointer.
-
-       @param context[Input]    Context Pointer of Synergy Location API.
-
-       @return
-           None.
-
-       @dependencies
-           None.
-    */
-    void (*sllRequestNiNotify)(GnssNiNotification &notify, const void* data, void *context);
 
     /**
        The SLL event to report GNSS Measurement Data. This interface API should be call by SLL.
@@ -1004,32 +979,6 @@ typedef struct {
    */
    enum loc_api_adapter_err (*sllSetServerSync)(const char* url, int len, LocServerType type,
             void *context);
-
-   /**
-       The SLL interface function to inform NI Response. This interface API should be call
-       by Synergy LOC API. This API will be called multiple times in different execution
-       contexts. The execution context will identify using ‘void *context’ variable.
-
-       @datatypes
-       #GnssNiResponse
-       #loc_api_adapter_err
-
-       @param userResponse[Input]     Ni User Response.
-
-       @param passThroughData[Input]  Pass Through Data.
-
-       @param context[Input]          Context Pointer of Synergy Location API.
-
-       @return
-           loc_api_adapter_err[Output]
-                                The return status LOC_API_ADAPTER_ERR_SUCCESS indicate command
-                                is successfully received and other status indicate as failure.
-
-       @dependencies
-           None.
-   */
-   enum loc_api_adapter_err (*sllInformNiResponse)(GnssNiResponse userResponse,
-            const void* passThroughData, void *context);
 
    /**
        The SLL interface function to configure SUPL version. This interface API should be call

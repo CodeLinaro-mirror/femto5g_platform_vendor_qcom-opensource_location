@@ -139,9 +139,6 @@ public:
 
     virtual void resumeGeofences(size_t count, uint32_t* ids) override;
 
-    //GNSS
-    virtual void gnssNiResponse(uint32_t id, GnssNiResponse response) override;
-
     // other interface
     void startPositionSession(const LocationCallbacks& callbacksOption,
                               const TrackingOptions& trackingOptions);
