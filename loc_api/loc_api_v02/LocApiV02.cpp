@@ -2380,6 +2380,13 @@ void LocApiV02 :: reportPosition (
                                 locationExtended.gnss_mb_sv_used_ids.qzss_l1ca_sv_used_ids_mask
                                         |= bit;
                             }
+
+                            if (locationExtended.measUsageInfo[idx].gnssSignalType &
+                                    GNSS_SIGNAL_QZSS_L1CB) {
+                                locationExtended.gnss_mb_sv_used_ids.qzss_l1cb_sv_used_ids_mask
+                                        |= bit;
+                            }
+
                             if (locationExtended.measUsageInfo[idx].gnssSignalType &
                                     GNSS_SIGNAL_QZSS_L1S) {
                                 locationExtended.gnss_mb_sv_used_ids.qzss_l1s_sv_used_ids_mask
@@ -2776,6 +2783,10 @@ double LocApiV02::convertSignalTypeToCarrierFrequency(
         carrierFrequency = QZSS_L1CA_CARRIER_FREQUENCY;
         break;
 
+    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1_CB_V02:
+        carrierFrequency = QZSS_L1CB_CARRIER_FREQUENCY;
+        break;
+
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1S_V02:
         carrierFrequency = QZSS_L1S_CARRIER_FREQUENCY;
         break;
@@ -2994,6 +3005,7 @@ void  LocApiV02 :: reportSv (
                         case GNSS_SIGNAL_GPS_L1CA:
                         case GNSS_SIGNAL_GPS_L1C:
                         case GNSS_SIGNAL_QZSS_L1CA:
+                        case GNSS_SIGNAL_QZSS_L1CB:
                             rfLoss = rfLossNV[RF_LOSS_GPS_CONF]/10.0;
                             break;
                         case GNSS_SIGNAL_GPS_L5:
@@ -3105,6 +3117,7 @@ static GnssRfBand getLocApiSvRfBand(qmiLocGnssSignalTypeMaskT_v02 qmiGnssSignalT
         case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B1_I_V02:
         case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B1C_V02:
         case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1CA_V02:
+        case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1_CB_V02:
         case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1S_V02:
         case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_SBAS_L1_CA_V02:
             rfBand = GNSS_RF_BAND_L1;
@@ -4930,6 +4943,7 @@ void LocApiV02::setGnssBiasesForL1CA() {
             break;
 
         case GNSS_SIGNAL_QZSS_L1CA:
+        case GNSS_SIGNAL_QZSS_L1CB:
         case GNSS_SIGNAL_QZSS_L1S:
         case GNSS_SIGNAL_SBAS_L1:
             if (mTimeBiases.flags & BIAS_GPSL1_VALID) {
@@ -5776,8 +5790,8 @@ GnssSvType LocApiV02::getSvTypeFromSignalType(qmiLocGnssSignalTypeMaskT_v02 gnss
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q_V02:
         svType = GNSS_SV_TYPE_BEIDOU;
         break;
-
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1CA_V02:
+    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1_CB_V02:
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1S_V02:
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L2C_L_V02:
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L5_Q_V02:
@@ -5822,6 +5836,7 @@ GnssMeasurementsCodeType LocApiV02::getCodeType(qmiLocGnssSignalTypeMaskT_v02 gn
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_SBAS_L1_CA_V02:
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_NAVIC_L5_V02:
         return GNSS_MEASUREMENTS_CODE_TYPE_C;
+
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1S_V02:
         return GNSS_MEASUREMENTS_CODE_TYPE_Z;
 
@@ -5847,6 +5862,9 @@ GnssMeasurementsCodeType LocApiV02::getCodeType(qmiLocGnssSignalTypeMaskT_v02 gn
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L1C_V02:
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_NAVIC_L1_V02:
         return GNSS_MEASUREMENTS_CODE_TYPE_P;
+
+    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1_CB_V02:
+        return GNSS_MEASUREMENTS_CODE_TYPE_E;
 
     /* no plan to support  */
     case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2_I_V02:
@@ -5890,13 +5908,21 @@ void LocApiV02 :: convertGnssMeasurementsForEngineService(
             gnss_measurement_report_ptr.svMeasurement[index];
     Gnss_SVMeasurementStructType& svMeas = mGnssMeasurements->gnssSvMeasurementSet->svMeas[
             mGnssMeasurements->gnssSvMeasurementSet->svMeasCount++];
+    qmiLocSvMeasStatusMaskT_v02 measStatus = gnss_measurement_info.measurementStatus;
 
     svMeas.gnssSystem = getLocApiSvSystemType(gnss_measurement_report_ptr.system);
     svMeas.gnssSvId = gnss_measurement_info.gnssSvId;
     svMeas.gloFrequency = gnss_measurement_info.gloFrequency;
+
     if (gnss_measurement_report_ptr.gnssSignalType_valid) {
-        svMeas.gnssSignalTypeMask =
-                convertQmiGnssSignalType(gnss_measurement_report_ptr.gnssSignalType);
+        qmiLocGnssSignalTypeMaskT_v02 gnssBand = gnss_measurement_report_ptr.gnssSignalType;
+        // Special case handling for QZSS L1CB: if meas signal type is QZSS L1CA but CB bit is set.
+        // then treat signal type as QZSS L1CB
+        if ((gnssBand == QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1CA_V02) &&
+                (measStatus & QMI_LOC_MASK_MEAS_STATUS_L1_CB_SIGNAL_BIT_VALID_V02)) {
+            gnssBand = QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1_CB_V02;
+        }
+        svMeas.gnssSignalTypeMask = convertQmiGnssSignalType(gnssBand);
     } else {
         svMeas.gnssSignalTypeMask =
                 getDefaultGnssSignalTypeMask(gnss_measurement_report_ptr.system);
@@ -5928,7 +5954,6 @@ void LocApiV02 :: convertGnssMeasurementsForEngineService(
     svMeas.dopplerAccel = gnss_measurement_info.svTimeSpeed.dopplerAccel;
 
     svMeas.validMeasStatusMask = gnss_measurement_info.validMeasStatusMask;
-    qmiLocSvMeasStatusMaskT_v02 measStatus = gnss_measurement_info.measurementStatus;
     svMeas.measurementStatus = GNSS_LOC_MEAS_STATUS_NULL;
     // Convert qmiSvMeas.measurementStatus to svMeas.measurementStatus
     if (QMI_LOC_MASK_MEAS_STATUS_SM_VALID_V02 & measStatus) {
@@ -6078,10 +6103,19 @@ void LocApiV02 :: convertGnssMeasurements(
                           QMI_LOC_MASK_MEAS_STATUS_SB_VALID_V02;
     double gpsTowUncNs = (double)gnss_measurement_info.svTimeSpeed.svTimeUncMs * 1e6;
     bool bBandNotAvailable = !gnss_measurement_report_ptr.gnssSignalType_valid;
-    qmiLocGnssSignalTypeMaskT_v02 gnssBand;
+    qmiLocGnssSignalTypeMaskT_v02 gnssBand = 0;
+    GnssSignalTypeMask gnssSignalType = 0;
+    qmiLocSvMeasStatusMaskT_v02 measStatus = gnss_measurement_info.measurementStatus;
+
     if (gnss_measurement_report_ptr.gnssSignalType_valid) {
         gnssBand = gnss_measurement_report_ptr.gnssSignalType;
+        if ((gnssBand == QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1CA_V02) &&
+                (measStatus & QMI_LOC_MASK_MEAS_STATUS_L1_CB_SIGNAL_BIT_VALID_V02)) {
+            gnssBand = QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1_CB_V02;
+        }
+        gnssSignalType = convertQmiGnssSignalType(gnssBand);
     }
+
     measurementData.stateMask = GNSS_MEASUREMENTS_STATE_UNKNOWN_BIT;
     measurementData.receivedSvTimeNs = 0;
     measurementData.receivedSvTimeUncertaintyNs = 0;
@@ -6092,12 +6126,10 @@ void LocApiV02 :: convertGnssMeasurements(
         (bBandNotAvailable ||
         (QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GALILEO_E1_C_V02 == gnssBand))) {
         galSVstateMask = GNSS_MEASUREMENTS_STATE_GAL_E1BC_CODE_LOCK_BIT;
-        if (gnss_measurement_info.measurementStatus &
-            QMI_LOC_MASK_MEAS_STATUS_100MS_STAT_BIT_VALID_V02) {
+        if (measStatus & QMI_LOC_MASK_MEAS_STATUS_100MS_STAT_BIT_VALID_V02) {
             galSVstateMask |= GNSS_MEASUREMENTS_STATE_GAL_E1C_2ND_CODE_LOCK_BIT;
         }
-        if (gnss_measurement_info.measurementStatus &
-            QMI_LOC_MASK_MEAS_STATUS_2S_STAT_BIT_VALID_V02) {
+        if (measStatus & QMI_LOC_MASK_MEAS_STATUS_2S_STAT_BIT_VALID_V02) {
             galSVstateMask |= GNSS_MEASUREMENTS_STATE_GAL_E1B_PAGE_SYNC_BIT;
         }
     }
@@ -6209,7 +6241,7 @@ void LocApiV02 :: convertGnssMeasurements(
     measurementData.flags |= GNSS_MEASUREMENTS_DATA_CARRIER_TO_NOISE_BIT;
 
     if (QMI_LOC_MASK_MEAS_STATUS_VELOCITY_FINE_V02 ==
-        (gnss_measurement_info.measurementStatus & QMI_LOC_MASK_MEAS_STATUS_VELOCITY_FINE_V02)) {
+        (measStatus & QMI_LOC_MASK_MEAS_STATUS_VELOCITY_FINE_V02)) {
 
         // pseudorangeRateMps
         measurementData.pseudorangeRateMps = gnss_measurement_info.fineSpeed;
@@ -6231,7 +6263,7 @@ void LocApiV02 :: convertGnssMeasurements(
     // carrier frequency
     if (gnss_measurement_report_ptr.gnssSignalType_valid) {
         measurementData.carrierFrequencyHz = convertSignalTypeToCarrierFrequency(
-                gnss_measurement_report_ptr.gnssSignalType, gnss_measurement_info.gloFrequency);
+                gnssBand, gnss_measurement_info.gloFrequency);
         measurementData.flags |= GNSS_MEASUREMENTS_DATA_CARRIER_FREQUENCY_BIT;
     } else {
         measurementData.carrierFrequencyHz = 0;
@@ -6374,8 +6406,7 @@ void LocApiV02 :: convertGnssMeasurements(
                            measurementData.flags, true);
 
     if (gnss_measurement_report_ptr.gnssSignalType_valid) {
-        measurementData.gnssSignalType =
-                convertQmiGnssSignalType(gnss_measurement_report_ptr.gnssSignalType);
+        measurementData.gnssSignalType = gnssSignalType;
         measurementData.flags |= GNSS_MEASUREMENTS_DATA_GNSS_SIGNAL_TYPE_BIT;
     }
 
@@ -6446,8 +6477,7 @@ void LocApiV02 :: convertGnssMeasurements(
     if (gnss_measurement_report_ptr.gnssSignalType_valid &&
         (gnss_measurement_report_ptr.systemTime_valid ||
          gnss_measurement_report_ptr.gloTime_valid)) {
-        measurementData.gnssSignalType =
-                convertQmiGnssSignalType(gnss_measurement_report_ptr.gnssSignalType);
+        measurementData.gnssSignalType = gnssSignalType;
     }
 
     // satellite PVT
@@ -10006,6 +10036,9 @@ GnssSignalTypeMask LocApiV02::convertQmiGnssSignalType(
     }
     if (qmiGnssSignalType & QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1CA_V02) {
         gnssSignalType |= GNSS_SIGNAL_QZSS_L1CA;
+    }
+    if (qmiGnssSignalType & QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1_CB_V02) {
+        gnssSignalType |= GNSS_SIGNAL_QZSS_L1CB;
     }
     if (qmiGnssSignalType & QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1S_V02) {
         gnssSignalType |=  GNSS_SIGNAL_QZSS_L1S;
