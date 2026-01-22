@@ -157,6 +157,8 @@ public:
 
     void triggerAutoStartSession() const;
 
+    bool resetLocIdlServiceCapabillities() const;
+
 #ifdef POWER_DAEMON_MGR_ENABLED
     LocIdlPowerEvtHandler* mPowerEventObserver;
 #endif
