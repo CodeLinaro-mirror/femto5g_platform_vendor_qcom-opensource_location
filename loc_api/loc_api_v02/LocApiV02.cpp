@@ -6625,7 +6625,9 @@ void LocApiV02 :: convertGnssClock (GnssMeasurementsClock& clock,
             uint32_t systemMsec = gnss_measurement_info.systemTime.systemMsec;
             float sysClkBiasMs = gnss_measurement_info.systemTime.systemClkTimeBias;
             float sysClkUncMs = gnss_measurement_info.systemTime.systemClkTimeUncMs;
-            bool isTimeValid = (sysClkUncMs <= 16.0f); // 16ms
+            bool isTimeValid =
+                    (sysClkUncMs <= (system == eQMI_LOC_SV_SYSTEM_GPS_V02 ? 16.0f:25.0f));
+            // 16ms for GPS and 25ms for BDS
 
             if (systemWeek != C_GPS_WEEK_UNKNOWN && isTimeValid) {
                 // fullBiasNs, biasNs & biasUncertaintyNs
