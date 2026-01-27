@@ -397,6 +397,7 @@ private:
   GnssSvType getSvTypeFromSignalType(qmiLocGnssSignalTypeMaskT_v02 gnssSignalType);
   void updateGnssCapabNotification(GnssCapabNotification& gnssCapabNotification,
                                    qmiLocGnssSignalTypeMaskT_v02 gnssSignalType);
+  void convertEphAction(qmiLocEphUpdateActionEnumT_v02 qmiAction, GnssEphAction &ephAction);
 
   LocationError setSvMeasurementConstellation(const locClientEventMaskType mask);
 
