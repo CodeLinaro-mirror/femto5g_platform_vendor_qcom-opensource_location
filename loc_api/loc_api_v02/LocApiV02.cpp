@@ -7534,6 +7534,7 @@ void LocApiV02 :: getRobustLocationConfig(uint32_t sessionId, LocApiResponse *ad
     }));
 }
 
+#ifdef USE_GLIB
 void LocApiV02::configMinGpsWeek(uint16_t minGpsWeek, LocApiResponse *adapterResponse) {
 
     sendMsg(new LocApiMsg([this, minGpsWeek, adapterResponse] () {
@@ -7557,6 +7558,7 @@ void LocApiV02::configMinGpsWeek(uint16_t minGpsWeek, LocApiResponse *adapterRes
     }
     }));
 }
+#endif
 
 void LocApiV02 :: getMinGpsWeek(uint32_t sessionId, LocApiResponse *adapterResponse) {
     sendMsg(new LocApiMsg([this, sessionId, adapterResponse] () {
@@ -7895,6 +7897,7 @@ LocApiV02::setEmergencyExtensionWindowSync(const uint32_t emergencyExtensionSeco
                          &eCbW_ind);
 }
 
+#ifdef _ANDROID_
 void
 LocApiV02::setMeasurementCorrections(const GnssMeasurementCorrections& gnssMeasurementCorrections) {
     sendMsg(new LocApiMsg([this, gnssMeasurementCorrections] {
@@ -8083,6 +8086,7 @@ LocApiV02::setMeasurementCorrections(const GnssMeasurementCorrections& gnssMeasu
 
     }));
 }
+#endif
 
 LocationError
 LocApiV02::setBlacklistSvSync(const GnssSvIdConfig& config) {
@@ -9178,6 +9182,7 @@ void LocApiV02::configOsnmaEnablement(bool enable, LocApiResponse* adapterRespon
     }));
 }
 
+#ifdef _ANDROID_
 void LocApiV02::getNtnConfigSignalMask(LocApiResponse* adapterResponse) {
     sendMsg(new LocApiMsg([this, adapterResponse] () {
     LocationError err = LOCATION_ERROR_SUCCESS;
@@ -9200,6 +9205,7 @@ void LocApiV02::getNtnConfigSignalMask(LocApiResponse* adapterResponse) {
     }
     }));
 }
+#endif
 
 void LocApiV02::setNtnConfigSignalMask(GnssSignalTypeMask gpsSignalTypeConfigMask,
         LocApiResponse* adapterResponse) {
@@ -9232,6 +9238,7 @@ void LocApiV02::setNtnConfigSignalMask(GnssSignalTypeMask gpsSignalTypeConfigMas
     }));
 }
 
+#ifdef _ANDROID_
 void LocApiV02::injectSuplCert(int32_t suplCertId, const std::vector<uint8_t>& suplCertData,
             LocApiResponse* adapterResponse) {
     sendMsg(new LocApiMsg([this, suplCertId, suplCertData, adapterResponse] () {
@@ -9293,6 +9300,7 @@ void LocApiV02::setPreferredConstellation(Gnss_LocSvSystemEnumType type,
     }
     }));
 }
+#endif
 
 void LocApiV02::convertQmiSecondaryConfigToGnssConfig(
         qmiLocGNSSConstellEnumT_v02 qmiSecondaryBandConfig,

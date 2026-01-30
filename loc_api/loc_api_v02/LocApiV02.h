@@ -522,8 +522,10 @@ public:
   virtual void configRobustLocation(bool enable, bool enableForE911,
                                     LocApiResponse *adapterResponse=nullptr,
                                     bool enableForE911Valid = false);
+#ifdef USE_GLIB
   virtual void configMinGpsWeek(uint16_t minGpsWeek,
                                 LocApiResponse *adapterResponse=nullptr);
+#endif
   virtual LocationError setParameterSync(const GnssConfig & gnssConfig);
 
   virtual void getParameter(uint32_t sessionId, GnssConfigFlagsMask flags,
@@ -534,8 +536,10 @@ public:
   virtual GnssConfigLppeControlPlaneMask convertLppeCp(const uint32_t lppeControlPlaneMask);
   virtual GnssConfigLppeUserPlaneMask convertLppeUp(const uint32_t lppeUserPlaneMask);
   virtual LocationError setEmergencyExtensionWindowSync(const uint32_t emergencyExtensionSeconds);
+#ifdef _ANDROID_
   virtual void setMeasurementCorrections(
         const GnssMeasurementCorrections& gnssMeasurementCorrections);
+#endif
   virtual void configPrecisePositioning(PreciseType preciseType, bool enable,
           LocApiResponse* adapterResponse=nullptr);
   /* Requests for SV/Constellation Control */
@@ -554,7 +558,9 @@ public:
 
   virtual void configOsnmaEnablement(bool enable, LocApiResponse* adapterResponse=nullptr);
 
+#ifdef _ANDROID_
   virtual void getNtnConfigSignalMask(LocApiResponse* adapterResponse = nullptr);
+#endif
 
   virtual void setNtnConfigSignalMask(GnssSignalTypeMask gpsSignalTypeConfigMask,
           LocApiResponse* adapterResponse = nullptr);
@@ -562,11 +568,13 @@ public:
   virtual void getConstellationMultiBandConfig(uint32_t sessionId,
                                       LocApiResponse* adapterResponse=nullptr);
 
+#ifdef _ANDROID_
   virtual void injectSuplCert(int32_t suplCertId, const std::vector<uint8_t>& suplCertData,
             LocApiResponse* adapterResponse=nullptr);
 
   virtual void setPreferredConstellation(Gnss_LocSvSystemEnumType type,
             LocApiResponse *adapterResponse=nullptr);
+#endif
 
   LocationError locSyncSendReq(uint32_t req_id, locClientReqUnionType req_payload,
           uint32_t timeout_msec, uint32_t ind_id, void* ind_payload_ptr);
