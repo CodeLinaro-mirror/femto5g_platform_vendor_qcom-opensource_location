@@ -1243,6 +1243,10 @@ bool locClientRegisterEventMask(
       strlcpy(regEventsReq.clientStrId, HAL,
               sizeof(regEventsReq.clientStrId));
   }
+
+  regEventsReq.clientType_valid = true;
+  regEventsReq.clientType = eQMI_LOC_CLIENT_AFW_V02;
+
   reqUnion.pRegEventsReq = &regEventsReq;
 
   status = locClientSendReq(clientHandle,
