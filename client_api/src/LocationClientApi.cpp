@@ -835,8 +835,7 @@ void LocationClientApi::getSingleTerrestrialPosition(
 
     // null terrestrialPositionCallback means cancelling request
     if ((terrestrialPositionCb != nullptr) &&
-            ((timeoutMsec == 0) || (techMask != TERRESTRIAL_TECH_GTP_WWAN) ||
-             (horQoS != 0.0))) {
+            ((timeoutMsec == 0) || (horQoS != 0.0))) {
         LOC_LOGe("invalid parameter: timeout %d msec, tech mask 0x%x, horQoS %f",
                  timeoutMsec, techMask, horQoS);
         if (responseCb) {
@@ -861,8 +860,8 @@ void LocationClientApi::getSingleTerrestrialPosition(
             };
         }
 
-        mApiImpl->getSingleTerrestrialPos(timeoutMsec, ::TERRESTRIAL_TECH_GTP_WWAN, horQoS,
-                trackingCbFn, responseCbFn);
+        mApiImpl->getSingleTerrestrialPos(timeoutMsec, static_cast<TerrestrialTechMask>(techMask),
+                 horQoS, trackingCbFn, responseCbFn);
     } else {
         LOC_LOGe ("NULL mApiImpl");
     }
