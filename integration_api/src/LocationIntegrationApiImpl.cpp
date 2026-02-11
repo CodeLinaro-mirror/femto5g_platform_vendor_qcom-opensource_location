@@ -31,6 +31,10 @@ Changes from Qualcomm Technologies, Inc. are provided under the following licens
 Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
 SPDX-License-Identifier: BSD-3-Clause-Clear
 */
+/******************************************************************************
+Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+SPDX-License-Identifier: BSD-3-Clause-Clear
+*******************************************************************************/
 
 #define LOG_TAG "LocSvc_LocationIntegrationApiImpl"
 
@@ -45,6 +49,9 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 
 static uint32_t sXtraTestEnabled = 0;
 static uint32_t sSleepTime = 800000;
+
+// For HALD restart wait time for XTRA INIT to complete
+#define XTRA_INIT_WAIT_TIME_MSEC (200)
 
 namespace location_integration {
 
@@ -1305,7 +1312,8 @@ uint32_t LocationIntegrationApiImpl::getXtraStatus() {
     return 0;
 }
 
-uint32_t LocationIntegrationApiImpl::registerXtraStatusUpdate(bool registerUpdate) {
+uint32_t LocationIntegrationApiImpl::registerXtraStatusUpdate(bool registerUpdate,
+        uint32_t delayInMsec) {
 
     struct RegisterXtraStatusUpdateReq : public LocMsg {
         RegisterXtraStatusUpdateReq(LocationIntegrationApiImpl* apiImpl,
@@ -1344,7 +1352,10 @@ uint32_t LocationIntegrationApiImpl::registerXtraStatusUpdate(bool registerUpdat
         // return 1 to signal error
         return 1;
     }
-    mMsgTask.sendMsg(new (nothrow) RegisterXtraStatusUpdateReq(this, registerUpdate));
+    RegisterXtraStatusUpdateReq* pLocMsg = new RegisterXtraStatusUpdateReq(this,
+                registerUpdate);
+    mMsgTask.sendMsg((const LocMsg*)pLocMsg, delayInMsec);
+
     return 0;
 }
 
@@ -1644,11 +1655,7 @@ void LocationIntegrationApiImpl::processHalReadyMsg() {
 
     // resend XTRA status registration message request
     if (mRegisterXtraUpdate) {
-        string pbStr;
-        LocConfigRegisterXtraStatusUpdateReqMsg msg(mSocketName, &mPbufMsgConv);
-        if (msg.serializeToProtobuf(pbStr)) {
-            sendConfigMsgToHalDaemon(REGISTER_XTRA_STATUS_UPDATE, pbStr, false);
-        }
+        registerXtraStatusUpdate(mRegisterXtraUpdate, XTRA_INIT_WAIT_TIME_MSEC);
     }
 }
 
