@@ -26,6 +26,12 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/*
+Changes from Qualcomm Technologies, Inc. are provided under the following license:
+Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+SPDX-License-Identifier: BSD-3-Clause-Clear
+*/
+
 #ifndef WIFI_DB_PROV_H
 #define WIFI_DB_PROV_H
 
@@ -42,13 +48,6 @@ typedef struct {
 /******************************************************************************
 ResponseListener
 ******************************************************************************/
-typedef struct {
-    uint8_t macAddress[6];
-    float rssi;
-    uint64_t deltaTime;
-    char ssid[8];
-    uint16_t channelNumber;
-} ApScan;
 
 typedef struct {
     uint8_t macAddress[6];
@@ -63,14 +62,6 @@ typedef struct {
 
 typedef struct {
     NlpLocation location;
-    CellInfo cellInfo;
-    uint64_t scanTimestamp;
-    ApScan* ap_scan_list;
-    uint16_t ap_scan_list_count;
-} APObsLocData;
-
-typedef struct {
-    NlpLocation location;
     CellInfoExt cellInfo;
     uint64_t scanTimestamp;
     ApScanExt* ap_scan_list;
@@ -82,11 +73,6 @@ typedef struct {
     All the memory pointers returned in these callbacks will be freed after call returns.
     Implementation of these callbacks shall copy the needed data before returning.
 */
-typedef struct {
-    void (*onApObsLocDataAvailable)(const APObsLocData* ap_obs_list, uint16_t ap_obs_list_count,
-            ApBsListStatus ap_status, const void* clientData);
-    void (*onServiceRequest)(const void* clientData);
-} WiFiDBProviderResponseListener;
 
 typedef struct {
     void (*onApObsLocDataAvailableExt)(const APObsLocDataExt* ap_obs_list,
