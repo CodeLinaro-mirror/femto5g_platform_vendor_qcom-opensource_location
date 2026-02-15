@@ -2321,11 +2321,10 @@ struct LocationSystemInfo {
 
 /** Specify the set of terrestrial technologies to be used when
  *  invoking getSingleTerrestrialPosition(). <br/>
- *
- *  Currently, only TERRESTRIAL_TECH_GTP_WWAN is supported.
- *  <br/> */
+**/
 enum TerrestrialTechnologyMask {
     TERRESTRIAL_TECH_GTP_WWAN = 1 << 0,
+    TERRESTRIAL_TECH_GTP_WIFI = 1 << 1,
 };
 
 /** Specify the batching status in BatchingCb. <br/> */
@@ -3825,7 +3824,7 @@ public:
         LocationIntegrationApi::setUserConsentForTerrestrialPositioning() <br/>
 
         This API can be invoked with on-going tracking session
-        initiated via startPositionSession() and single shot
+        initiated via startPositionSession() and/or single shot
         terrestrial fix request initiated via
         getSingleTerrestrialPosition(). <br/>
 
@@ -3839,7 +3838,7 @@ public:
         with LOCATION_RESPONSE_PARAM_INVALID. <br/>
 
         @param horQoS
-        horizontal accuracy requirement for the terrestrial fix. If
+        horizontal accuracy requirement for the position fix. If
         horQoS is set to 0, responseCallback will get invoked with
         LOCATION_RESPONSE_PARAM_INVALID. <br/>
 
@@ -3872,7 +3871,7 @@ public:
         will be delivered to the client and responseCallback is
         invoked with processing status set to
         LOCATION_RESPONSE_TIMEOUT. Please note that the position
-        received for timeout scenarion may not be fresh and it will
+        received for timeout scenario may not be fresh and it will
         not satisfy the QoS requirement. <br/>
 
         If this API is invoked with invalid parameter, e.g.: 0
