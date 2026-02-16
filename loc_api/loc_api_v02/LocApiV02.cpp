@@ -3098,7 +3098,17 @@ void  LocApiV02 :: reportSvPolynomial(const qmiLocEventGnssSvPolyIndMsgT_v02 *gn
     svPolynomial.is_valid = 0;
 
     if (0 != gnss_sv_poly_ptr->gnssSvId) {
-        svPolynomial.gnssSvId       = gnss_sv_poly_ptr->gnssSvId;
+        // first deterimine if sv is of QZSS constellation as per special logic below.
+        // when modem add constellation type to sv poly, this special handling
+        // can be removed.
+        if (gnss_sv_poly_ptr->svPolyFlagValid & QMI_LOC_SV_POLY_SRC_QZSS_L1_CB_VALID_V02) {
+            svPolynomial.gnssConstellation = GNSS_LOC_SV_SYSTEM_QZSS;
+        } else {
+            svPolynomial.gnssConstellation = getSvSystemFromSvId(
+                    gnss_sv_poly_ptr->gnssSvId);
+        }
+        svPolynomial.gnssSvId = gnss_sv_poly_ptr->gnssSvId;
+
         svPolynomial.T0             = gnss_sv_poly_ptr->T0;
         svPolynomial.is_valid |= ULP_GNSS_SV_POLY_BIT_T0;
 
@@ -5716,6 +5726,52 @@ GnssSvType LocApiV02::getSvTypeFromSignalType(qmiLocGnssSignalTypeMaskT_v02 gnss
     return svType;
 }
 
+/* this function is called when the QZSS SV and BDS SV id
+   does not overlap*/
+GnssSvType LocApiV02 :: getSvTypeFromSvId(uint16_t gnssSvId) {
+    GnssSvType svType = GNSS_SV_TYPE_UNKNOWN;
+
+    if ((gnssSvId >= GPS_SV_PRN_MIN) && (gnssSvId <= GPS_SV_PRN_MAX)) {
+        svType = GNSS_SV_TYPE_GPS;
+    } else if ((gnssSvId >= GAL_SV_PRN_MIN) && (gnssSvId <= GAL_SV_PRN_MAX)) {
+        svType = GNSS_SV_TYPE_GALILEO;
+    } else if ((gnssSvId >= SBAS_SV_PRN_MIN) && (gnssSvId <= SBAS_SV_PRN_MAX)) {
+        svType = GNSS_SV_TYPE_SBAS;
+    } else if ((gnssSvId >= GLO_SV_PRN_MIN) && (gnssSvId <= GLO_SV_PRN_MAX)) {
+        svType = GNSS_SV_TYPE_GLONASS;
+    } else if ((gnssSvId >= NAVIC_SV_PRN_MIN) && (gnssSvId <= NAVIC_SV_PRN_MAX)) {
+        svType = GNSS_SV_TYPE_NAVIC;
+    } else if ((gnssSvId >= BDS_SV_PRN_MIN) && (gnssSvId <= BDS_SV_PRN_MAX)) {
+        svType =GNSS_SV_TYPE_BEIDOU;
+    } else if ((gnssSvId >= QZSS_SV_PRN_MIN) && (gnssSvId <= QZSS_SV_PRN_MAX)) {
+        svType = GNSS_SV_TYPE_QZSS;
+    }
+    return svType;
+}
+
+/* this function is called when the supported QZSS SV and BDS SV ids
+   do not overlap*/
+Gnss_LocSvSystemEnumType LocApiV02 :: getSvSystemFromSvId(uint16_t gnssSvId) {
+    Gnss_LocSvSystemEnumType svSystem = GNSS_LOC_SV_SYSTEM_UNKNOWN;
+
+    if ((gnssSvId >= GPS_SV_PRN_MIN) && (gnssSvId <= GPS_SV_PRN_MAX)) {
+        svSystem = GNSS_LOC_SV_SYSTEM_GPS;
+    } else if ((gnssSvId >= GAL_SV_PRN_MIN) && (gnssSvId <= GAL_SV_PRN_MAX)) {
+        svSystem = GNSS_LOC_SV_SYSTEM_GALILEO;
+    } else if ((gnssSvId >= SBAS_SV_PRN_MIN) && (gnssSvId <= SBAS_SV_PRN_MAX)) {
+        svSystem = GNSS_LOC_SV_SYSTEM_SBAS;
+    } else if ((gnssSvId >= GLO_SV_PRN_MIN) && (gnssSvId <= GLO_SV_PRN_MAX)) {
+        svSystem = GNSS_LOC_SV_SYSTEM_GLONASS;
+    } else if ((gnssSvId >= NAVIC_SV_PRN_MIN) && (gnssSvId <= NAVIC_SV_PRN_MAX)) {
+        svSystem = GNSS_LOC_SV_SYSTEM_NAVIC;
+    } else if ((gnssSvId >= BDS_SV_PRN_MIN) && (gnssSvId <= BDS_SV_PRN_MAX)) {
+        svSystem = GNSS_LOC_SV_SYSTEM_BDS;
+    } else if ((gnssSvId >= QZSS_SV_PRN_MIN) && (gnssSvId <= QZSS_SV_PRN_MAX)) {
+        svSystem = GNSS_LOC_SV_SYSTEM_QZSS;
+    }
+    return svSystem;
+}
+
 void LocApiV02::updateGnssCapabNotification(GnssCapabNotification& gnssCapabNotification,
                                             qmiLocGnssSignalTypeMaskT_v02 gnssSignalType) {
 
@@ -7415,6 +7471,15 @@ void LocApiV02::reportEngDebugDataInfo(const qmiLocEngineDebugDataIndMsgT_v02*
     gnssEngineDebugDataInfo.navDataLen = 0;
     if (pLocEngDbgDataInfoIndMsg->navData_valid) {
         for (int i = 0; i < pLocEngDbgDataInfoIndMsg->navData_len ; i++) {
+            if (pLocEngDbgDataInfoIndMsg->navDataSignalType_valid &&
+                    (pLocEngDbgDataInfoIndMsg->navData_len ==
+                            pLocEngDbgDataInfoIndMsg->navDataSignalType_len)) {
+                gnssEngineDebugDataInfo.navData[i].gnssSvType =
+                    getSvTypeFromSignalType(pLocEngDbgDataInfoIndMsg->navDataSignalType[i]);
+            } else {
+                gnssEngineDebugDataInfo.navData[i].gnssSvType =
+                    getSvTypeFromSvId(pLocEngDbgDataInfoIndMsg->navData[i].gnssSvId);
+            }
             gnssEngineDebugDataInfo.navData[i].gnssSvId =
                 pLocEngDbgDataInfoIndMsg->navData[i].gnssSvId;
             gnssEngineDebugDataInfo.navData[i].type = pLocEngDbgDataInfoIndMsg->navData[i].type;

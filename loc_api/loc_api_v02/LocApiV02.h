@@ -395,6 +395,8 @@ private:
 
   GnssMeasurementsCodeType getCodeType(qmiLocGnssSignalTypeMaskT_v02 gnssSignalType);
   GnssSvType getSvTypeFromSignalType(qmiLocGnssSignalTypeMaskT_v02 gnssSignalType);
+  GnssSvType getSvTypeFromSvId(uint16_t gnssSvId);
+  Gnss_LocSvSystemEnumType getSvSystemFromSvId(uint16_t gnssSvId);
   void updateGnssCapabNotification(GnssCapabNotification& gnssCapabNotification,
                                    qmiLocGnssSignalTypeMaskT_v02 gnssSignalType);
   void convertEphAction(qmiLocEphUpdateActionEnumT_v02 qmiAction, GnssEphAction &ephAction);
