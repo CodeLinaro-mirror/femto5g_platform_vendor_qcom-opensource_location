@@ -67,8 +67,8 @@
  *THIS IS AN AUTO GENERATED FILE. DO NOT ALTER IN ANY WAY
  *====*====*====*====*====*====*====*====*====*====*====*====*====*====*====*/
 
-/* This file was generated with Tool version 6.14.9
-   It was generated on: Fri Dec 19 2025 (Spin 0)
+/* This file was generated with Tool version 6.14.7
+   It was generated on: Tue Jan 20 2026 (Spin 0)
    From IDL File: location_service_v02.idl */
 
 /** @defgroup loc_qmi_consts Constant values defined in the IDL */
@@ -25803,7 +25803,7 @@ typedef struct {
   /* Optional */
   /*  GPS Clock Time Bias */
   uint8_t GpsClkTimeBias_valid;  /**< Must be set to true if GpsClkTimeBias is being passed */
-  uint32_t GpsClkTimeBias;
+  float GpsClkTimeBias;
 
   /* Optional */
   /*  XO Temperature */
