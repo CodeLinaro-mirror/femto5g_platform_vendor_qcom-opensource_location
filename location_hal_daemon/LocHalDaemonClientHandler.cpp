@@ -945,6 +945,7 @@ void LocHalDaemonClientHandler::onEngLocationsInfoCb(
 
         int reportCount = 0;
         GnssLocationInfoNotification engineLocationInfoNotification[LOC_OUTPUT_ENGINE_COUNT];
+        memset(engineLocationInfoNotification, 0, sizeof(engineLocationInfoNotification));
         for (int i = 0; i < count; i++) {
             GnssLocationInfoNotification* locPtr = engLocationsInfoNotification+i;
 

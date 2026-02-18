@@ -848,6 +848,16 @@ GnssLocation LocationClientApiImpl::parseLocationInfo(
         flags |= GNSS_LOCATION_INFO_DGNSS_STATION_ID_BIT;
     }
 
+    if (::GNSS_LOCATION_INFO_BASE_LINE_LENGTH_BIT & halLocationInfo.flags) {
+        flags |= GNSS_LOCATION_INFO_BASE_LINE_LENGTH_BIT;
+        locationInfo.baseLineLength = halLocationInfo.baseLineLength;
+    }
+
+    if (::GNSS_LOCATION_INFO_AGE_OF_CORRECTION_BIT & halLocationInfo.flags) {
+        flags |= GNSS_LOCATION_INFO_AGE_OF_CORRECTION_BIT;
+        locationInfo.ageMsecOfCorrections = halLocationInfo.ageMsecOfCorrections;
+    }
+
     locationInfo.gnssInfoFlags = (GnssLocationInfoFlagMask)flags;
     locationInfo.altitudeMeanSeaLevel = halLocationInfo.altitudeMeanSeaLevel;
     locationInfo.pdop = halLocationInfo.pdop;
