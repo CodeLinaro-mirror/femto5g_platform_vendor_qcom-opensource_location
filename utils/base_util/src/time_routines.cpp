@@ -457,8 +457,9 @@ TimeDiff Timestamp::operator -(const Timestamp & rhs) const
         log_error(TAG,
                   "operator - ts returning -ve value probable time rollover: sec:%" PRId64
                   "/%" PRId64 "/%d, nsec:%d/%d/%d",
-                  m_timestamp.tv_sec, rhs.m_timestamp.tv_sec, (int)time_delta.tv_sec,
-                  (int)m_timestamp.tv_nsec, (int)rhs.m_timestamp.tv_nsec, (int)time_delta.tv_nsec);
+                  (int64_t)m_timestamp.tv_sec, (int64_t)rhs.m_timestamp.tv_sec,
+                  (int)time_delta.tv_sec, (int)m_timestamp.tv_nsec, (int)rhs.m_timestamp.tv_nsec,
+                  (int)time_delta.tv_nsec);
     }
 
     // set the diff to valid now
