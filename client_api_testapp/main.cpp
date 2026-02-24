@@ -51,6 +51,7 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #include <thread>
 #include <unordered_map>
 #include <algorithm>
+#include <log_util.h>
 
 #include <LocationClientApi.h>
 #include <LocationIntegrationApi.h>
@@ -2082,10 +2083,28 @@ void liaDestroyCompleteCb() {
     sem_post(&semLiaDestroyCompleted);
 }
 
+static inline void makeAppIdFromPid(char appid[5]) {
+    // Example: 'L' + 3 hex nibbles of pid (4 chars total)
+    unsigned pid = static_cast<unsigned>(getpid()) & 0xFFF; // 12 bits
+    const char hex[] = "0123456789ABCDEF";
+    appid[0] = 'L';
+    appid[1] = hex[(pid >> 8) & 0xF];
+    appid[2] = hex[(pid >> 4) & 0xF];
+    appid[3] = hex[(pid >> 0) & 0xF];
+    appid[4] = '\0';
+}
+
 /******************************************************************************
 Main function
 ******************************************************************************/
 int main(int argc, char *argv[]) {
+
+#ifdef LOC_USE_DLT
+    char appId[5];
+    makeAppIdFromPid(appId);
+    registerDltApp(appId, "Location Client API TestApp (per-instance)");
+    registerDltContexts(LCA_CONTEXTS, LCA_CONTEXTS_COUNT);
+#endif
 
     setRequiredPermToRunAsLocClient();
     checkForAutoStart(argc, argv);
@@ -2696,6 +2715,10 @@ int main(int argc, char *argv[]) {
     }//while(1)
 
 EXIT:
+#ifdef LOC_USE_DLT
+    deregisterDltContexts(LCA_CONTEXTS, LCA_CONTEXTS_COUNT);
+    deregisterDltApp();
+#endif
     if (nullptr != pLcaClient) {
         pLcaClient->stopPositionSession();
         pLcaClient->destroy(lcaDestroyCompleteCb);
