@@ -217,6 +217,9 @@ ELocMsgID LocationApiPbMsgConv::getEnumForPBELocMsgID(const PBELocMsgID &pbLocMs
         case PB_E_LOCAPI_GET_SINGLE_POS_RESP_MSG_ID:
             eLocMsgId = E_LOCAPI_GET_SINGLE_POS_RESP_MSG_ID;
             break;
+        case PB_E_LOCAPI_RESIDUAL_REPORT_MSG_ID:
+            eLocMsgId = E_LOCAPI_RESIDUAL_REPORT_MSG_ID;
+            break;
         case PB_E_LOCAPI_PINGTEST_MSG_ID:
             eLocMsgId = E_LOCAPI_PINGTEST_MSG_ID;
             break;
@@ -994,6 +997,9 @@ PBELocMsgID LocationApiPbMsgConv::getPBEnumForELocMsgID(const ELocMsgID &eLocMsg
         case E_LOCAPI_GET_SINGLE_POS_RESP_MSG_ID:
             pbLocMsgId = PB_E_LOCAPI_GET_SINGLE_POS_RESP_MSG_ID;
             break;
+        case E_LOCAPI_RESIDUAL_REPORT_MSG_ID:
+            pbLocMsgId = PB_E_LOCAPI_RESIDUAL_REPORT_MSG_ID;
+            break;
         case E_LOCAPI_PINGTEST_MSG_ID:
             pbLocMsgId = PB_E_LOCAPI_PINGTEST_MSG_ID;
             break;
@@ -1403,7 +1409,10 @@ uint32_t LocationApiPbMsgConv::getPBMaskForLocationCallbacksMask(const uint32_t 
     if (locCbMask & E_LOC_CB_GNSS_DC_REPORT_BIT) {
         pbLocCbMask |= PB_E_LOC_CB_GNSS_DC_REPORT_BIT;
     }
-    LocApiPb_LOGv("LocApiPB: locCbMask:%x, pbLocCbMask:%x", locCbMask, pbLocCbMask);
+    if (locCbMask & E_LOC_CB_RESIDUAL_REPORT_BIT) {
+        pbLocCbMask |= PB_E_LOC_CB_RESIDUAL_REPORT_BIT;
+    }
+    LocApiPb_LOGd("LocApiPB: locCbMask:%x, pbLocCbMask:%x", locCbMask, pbLocCbMask);
     return pbLocCbMask;
 }
 
@@ -2525,7 +2534,10 @@ uint32_t LocationApiPbMsgConv::getLocationCallbacksMaskFromPB(const uint32_t &pb
     if (pbLocCbMask & PB_E_LOC_CB_GNSS_DC_REPORT_BIT) {
         locCbMask |= E_LOC_CB_GNSS_DC_REPORT_BIT;
     }
-    LocApiPb_LOGv("LocApiPB: pbLocCbMask:%x, locCbMask:%x", pbLocCbMask, locCbMask);
+    if (pbLocCbMask & PB_E_LOC_CB_RESIDUAL_REPORT_BIT) {
+        locCbMask |= E_LOC_CB_RESIDUAL_REPORT_BIT;
+    }
+    LocApiPb_LOGd("LocApiPB: pbLocCbMask:%x, locCbMask:%x", pbLocCbMask, locCbMask);
     return locCbMask;
 }
 
@@ -4259,6 +4271,197 @@ int LocationApiPbMsgConv::pbConvertToDcReport(
     }
     return 0;
 }
+
+int LocationApiPbMsgConv::convertGnssSvResidualReportToPB(
+    const GnssSvResidualReport &svResidualReport,
+    PBSvResidualReport *pbSvResidualReport) const
+{
+    if (!pbSvResidualReport) {
+        LOC_LOGe("pbSvResidualReport is NULL!");
+        return 1;
+    }
+
+    // 1. GNSS System Time
+    PBLocApiGnssSystemTime *pbSysTime = pbSvResidualReport->mutable_gnsssystemtime();
+    if (pbSysTime) {
+        pbSysTime->set_gnsssystemtimesrc(getPBEnumForGnssLocSvSystem(
+            svResidualReport.gnssSystemTime.gnssSystemTimeSrc));
+        convertSystemTimeStructUnionToPB(
+            svResidualReport.gnssSystemTime.gnssSystemTimeSrc,
+            svResidualReport.gnssSystemTime.u,
+            pbSysTime->mutable_u());
+    }
+
+    // 2. Residual PVT Data
+    PBResidualPVTData *pbPvt = pbSvResidualReport->mutable_residualpvtdata();
+    if (pbPvt) {
+        pbPvt->set_validitymask(svResidualReport.residualPvtData.validityMask);
+        pbPvt->set_poslatrad(svResidualReport.residualPvtData.posLla[0]);
+        pbPvt->set_poslonrad(svResidualReport.residualPvtData.posLla[1]);
+        pbPvt->set_posaltmeters(svResidualReport.residualPvtData.posLla[2]);
+        pbPvt->set_veleast(svResidualReport.residualPvtData.velEnu[0]);
+        pbPvt->set_velnorth(svResidualReport.residualPvtData.velEnu[1]);
+        pbPvt->set_velup(svResidualReport.residualPvtData.velEnu[2]);
+        pbPvt->set_headingrad(svResidualReport.residualPvtData.headingRad);
+        pbPvt->set_headinguncrad(svResidualReport.residualPvtData.headingUncRad);
+        pbPvt->set_punclatmeters(svResidualReport.residualPvtData.puncLatLonMeters[0]);
+        pbPvt->set_punclonmeters(svResidualReport.residualPvtData.puncLatLonMeters[1]);
+        pbPvt->set_puncvertmeters(svResidualReport.residualPvtData.puncVertMeters);
+        pbPvt->set_vunceastmps(svResidualReport.residualPvtData.vuncEastNorthMps[0]);
+        pbPvt->set_vuncnorthmps(svResidualReport.residualPvtData.vuncEastNorthMps[1]);
+        pbPvt->set_vuncvertmps(svResidualReport.residualPvtData.vuncVertMps);
+        pbPvt->set_clockbias(svResidualReport.residualPvtData.clockBias);
+        pbPvt->set_clockbiasuncms(svResidualReport.residualPvtData.clockBiasUncMs);
+        pbPvt->set_clockdriftrate(svResidualReport.residualPvtData.clockDriftRate);
+        pbPvt->set_clockdriftrateuncmps(svResidualReport.residualPvtData.clockDriftRateUncMps);
+        pbPvt->set_pdop(svResidualReport.residualPvtData.pdop);
+    }
+
+    // 3. SV Residual Info (vector)
+    pbSvResidualReport->clear_svresidualinfo();
+    uint32_t count = svResidualReport.numSvs;
+    LOC_LOGe("sv Count %d", count);
+    for (uint32_t i = 0; i < count && i < GNSS_MEASUREMENTS_MAX; i++) {
+        const GnssSvResidualInfo &info = svResidualReport.svResidualInfo[i];
+        PBSvResidualInfo *pbInfo = pbSvResidualReport->add_svresidualinfo();
+        pbInfo->set_svid(info.svId);
+        pbInfo->set_signaltypemask(info.signalTypeMask);
+        pbInfo->set_validitymask(info.validityMask);
+        pbInfo->set_prres(info.prRes);
+        pbInfo->set_prunc(info.prUnc);
+        pbInfo->set_cpres(info.cpRes);
+        pbInfo->set_cpunc(info.cpUnc);
+        pbInfo->set_dopplerres(info.dopplerRes);
+        pbInfo->set_dopplerunc(info.dopplerUnc);
+        pbInfo->set_iode(info.iode);
+        pbInfo->set_glotb(info.gloTb);
+        pbInfo->set_freqnum(info.freqNum);
+        pbInfo->set_cno(info.cNo);
+        pbInfo->set_azim(info.azim);
+        pbInfo->set_elev(info.elev);
+    }
+
+    // 4. SV Available/Used Info
+    PBSvAvailableUsedInfo *pbAvail = pbSvResidualReport->mutable_svavailableusedinfo();
+    if (pbAvail) {
+        pbAvail->set_validitymask(svResidualReport.svAvailableUsedInfo.validityMask);
+        pbAvail->set_gpsnumsvmeas(svResidualReport.svAvailableUsedInfo.gpsNumSvMeas);
+        pbAvail->set_gpsnumsvposfix(svResidualReport.svAvailableUsedInfo.gpsNumSvPosFix);
+        pbAvail->set_gpsnumsvvelfix(svResidualReport.svAvailableUsedInfo.gpsNumSvVelFix);
+        pbAvail->set_gpssvmaskused(svResidualReport.svAvailableUsedInfo.gpsSvMaskUsed);
+        pbAvail->set_glonumsvmeas(svResidualReport.svAvailableUsedInfo.gloNumSvMeas);
+        pbAvail->set_glonumsvposfix(svResidualReport.svAvailableUsedInfo.gloNumSvPosFix);
+        pbAvail->set_glonumsvvelfix(svResidualReport.svAvailableUsedInfo.gloNumSvVelFix);
+        pbAvail->set_glosvmaskused(svResidualReport.svAvailableUsedInfo.gloSvMaskUsed);
+        pbAvail->set_bdsnumsvmeas(svResidualReport.svAvailableUsedInfo.bdsNumSvMeas);
+        pbAvail->set_bdsnumsvposfix(svResidualReport.svAvailableUsedInfo.bdsNumSvPosFix);
+        pbAvail->set_bdsnumsvvelfix(svResidualReport.svAvailableUsedInfo.bdsNumSvVelFix);
+        pbAvail->set_bdssvmaskused(svResidualReport.svAvailableUsedInfo.bdsSvMaskUsed);
+        pbAvail->set_galnumsvmeas(svResidualReport.svAvailableUsedInfo.galNumSvMeas);
+        pbAvail->set_galnumsvposfix(svResidualReport.svAvailableUsedInfo.galNumSvPosFix);
+        pbAvail->set_galnumsvvelfix(svResidualReport.svAvailableUsedInfo.galNumSvVelFix);
+        pbAvail->set_galsvmaskused(svResidualReport.svAvailableUsedInfo.galSvMaskUsed);
+        pbAvail->set_qzssnumsvmeas(svResidualReport.svAvailableUsedInfo.qzssNumSvMeas);
+        pbAvail->set_qzssnumsvposfix(svResidualReport.svAvailableUsedInfo.qzssNumSvPosFix);
+        pbAvail->set_qzssnumsvvelfix(svResidualReport.svAvailableUsedInfo.qzssNumSvVelFix);
+        pbAvail->set_qzsssvmaskused(svResidualReport.svAvailableUsedInfo.qzssSvMaskUsed);
+        pbAvail->set_navicnumsvmeas(svResidualReport.svAvailableUsedInfo.navicNumSvMeas);
+        pbAvail->set_navicnumsvposfix(svResidualReport.svAvailableUsedInfo.navicNumSvPosFix);
+        pbAvail->set_navicnumsvvelfix(svResidualReport.svAvailableUsedInfo.navicNumSvVelFix);
+        pbAvail->set_navicsvmaskused(svResidualReport.svAvailableUsedInfo.navicSvMaskUsed);
+    }
+
+    return 0;
+}
+
+int LocationApiPbMsgConv::pbConvertToGnssSvResidualReport(
+    const PBSvResidualReport &pbSvResidualReport,
+    GnssSvResidualReport &svResidualReport) const
+{
+    // 1. GNSS System Time
+    svResidualReport.gnssSystemTime.gnssSystemTimeSrc =
+        getEnumForPBGnssLocSvSystem(pbSvResidualReport.gnsssystemtime().gnsssystemtimesrc());
+    pbConvertToSystemTimeStructUnion(
+        svResidualReport.gnssSystemTime.gnssSystemTimeSrc,
+        pbSvResidualReport.gnsssystemtime().u(),
+        svResidualReport.gnssSystemTime.u);
+
+    // 2. Residual PVT Data
+    const PBResidualPVTData &pbPvt = pbSvResidualReport.residualpvtdata();
+    svResidualReport.residualPvtData.validityMask = pbPvt.validitymask();
+    svResidualReport.residualPvtData.posLla[0] = pbPvt.poslatrad();
+    svResidualReport.residualPvtData.posLla[1] = pbPvt.poslonrad();
+    svResidualReport.residualPvtData.posLla[2] = pbPvt.posaltmeters();
+    svResidualReport.residualPvtData.velEnu[0] = pbPvt.veleast();
+    svResidualReport.residualPvtData.velEnu[1] = pbPvt.velnorth();
+    svResidualReport.residualPvtData.velEnu[2] = pbPvt.velup();
+    svResidualReport.residualPvtData.headingRad = pbPvt.headingrad();
+    svResidualReport.residualPvtData.headingUncRad = pbPvt.headinguncrad();
+    svResidualReport.residualPvtData.puncLatLonMeters[0] = pbPvt.punclatmeters();
+    svResidualReport.residualPvtData.puncLatLonMeters[1] = pbPvt.punclonmeters();
+    svResidualReport.residualPvtData.puncVertMeters = pbPvt.puncvertmeters();
+    svResidualReport.residualPvtData.vuncEastNorthMps[0] = pbPvt.vunceastmps();
+    svResidualReport.residualPvtData.vuncEastNorthMps[1] = pbPvt.vuncnorthmps();
+    svResidualReport.residualPvtData.vuncVertMps = pbPvt.vuncvertmps();
+    svResidualReport.residualPvtData.clockBias = pbPvt.clockbias();
+    svResidualReport.residualPvtData.clockBiasUncMs = pbPvt.clockbiasuncms();
+    svResidualReport.residualPvtData.clockDriftRate = pbPvt.clockdriftrate();
+    svResidualReport.residualPvtData.clockDriftRateUncMps = pbPvt.clockdriftrateuncmps();
+    svResidualReport.residualPvtData.pdop = pbPvt.pdop();
+
+    // 3. SV Residual Info (vector)
+    memset(&svResidualReport.svResidualInfo, 0, sizeof(svResidualReport.svResidualInfo));
+    svResidualReport.numSvs = pbSvResidualReport.svresidualinfo_size();
+    for (int i = 0; i < pbSvResidualReport.svresidualinfo_size(); ++i) {
+        const PBSvResidualInfo &pbInfo = pbSvResidualReport.svresidualinfo(i);
+        GnssSvResidualInfo &info = svResidualReport.svResidualInfo[i];
+        info.svId = pbInfo.svid();
+        info.signalTypeMask = pbInfo.signaltypemask();
+        info.validityMask = pbInfo.validitymask();
+        info.prRes = pbInfo.prres();
+        info.prUnc = pbInfo.prunc();
+        info.cpRes = pbInfo.cpres();
+        info.cpUnc = pbInfo.cpunc();
+        info.dopplerRes = pbInfo.dopplerres();
+        info.dopplerUnc = pbInfo.dopplerunc();
+        info.iode = pbInfo.iode();
+        info.gloTb = pbInfo.glotb();
+        info.freqNum = pbInfo.freqnum();
+        info.cNo = pbInfo.cno();
+        info.azim = pbInfo.azim();
+        info.elev = pbInfo.elev();
+    }
+    // 4. SV Available/Used Info
+    const PBSvAvailableUsedInfo &pbAvail = pbSvResidualReport.svavailableusedinfo();
+    svResidualReport.svAvailableUsedInfo.validityMask = pbAvail.validitymask();
+    svResidualReport.svAvailableUsedInfo.gpsNumSvMeas = pbAvail.gpsnumsvmeas();
+    svResidualReport.svAvailableUsedInfo.gpsNumSvPosFix = pbAvail.gpsnumsvposfix();
+    svResidualReport.svAvailableUsedInfo.gpsNumSvVelFix = pbAvail.gpsnumsvvelfix();
+    svResidualReport.svAvailableUsedInfo.gpsSvMaskUsed = pbAvail.gpssvmaskused();
+    svResidualReport.svAvailableUsedInfo.gloNumSvMeas = pbAvail.glonumsvmeas();
+    svResidualReport.svAvailableUsedInfo.gloNumSvPosFix = pbAvail.glonumsvposfix();
+    svResidualReport.svAvailableUsedInfo.gloNumSvVelFix = pbAvail.glonumsvvelfix();
+    svResidualReport.svAvailableUsedInfo.gloSvMaskUsed = pbAvail.glosvmaskused();
+    svResidualReport.svAvailableUsedInfo.bdsNumSvMeas = pbAvail.bdsnumsvmeas();
+    svResidualReport.svAvailableUsedInfo.bdsNumSvPosFix = pbAvail.bdsnumsvposfix();
+    svResidualReport.svAvailableUsedInfo.bdsNumSvVelFix = pbAvail.bdsnumsvvelfix();
+    svResidualReport.svAvailableUsedInfo.bdsSvMaskUsed = pbAvail.bdssvmaskused();
+    svResidualReport.svAvailableUsedInfo.galNumSvMeas = pbAvail.galnumsvmeas();
+    svResidualReport.svAvailableUsedInfo.galNumSvPosFix = pbAvail.galnumsvposfix();
+    svResidualReport.svAvailableUsedInfo.galNumSvVelFix = pbAvail.galnumsvvelfix();
+    svResidualReport.svAvailableUsedInfo.galSvMaskUsed = pbAvail.galsvmaskused();
+    svResidualReport.svAvailableUsedInfo.qzssNumSvMeas = pbAvail.qzssnumsvmeas();
+    svResidualReport.svAvailableUsedInfo.qzssNumSvPosFix = pbAvail.qzssnumsvposfix();
+    svResidualReport.svAvailableUsedInfo.qzssNumSvVelFix = pbAvail.qzssnumsvvelfix();
+    svResidualReport.svAvailableUsedInfo.qzssSvMaskUsed = pbAvail.qzsssvmaskused();
+    svResidualReport.svAvailableUsedInfo.navicNumSvMeas = pbAvail.navicnumsvmeas();
+    svResidualReport.svAvailableUsedInfo.navicNumSvPosFix = pbAvail.navicnumsvposfix();
+    svResidualReport.svAvailableUsedInfo.navicNumSvVelFix = pbAvail.navicnumsvvelfix();
+    svResidualReport.svAvailableUsedInfo.navicSvMaskUsed = pbAvail.navicsvmaskused();
+
+    return 0;
+}
+
 
 int LocationApiPbMsgConv::convertGnssMeasNotifToPB(
         const GnssMeasurementsNotification &gnssMeasNotif,

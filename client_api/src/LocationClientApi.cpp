@@ -133,7 +133,17 @@ class TrackingSessCbHandler {
                     engineLocCb(engLocationsVector);
                 };
             }
-
+            if (engineReportCbs.svResidualReportCallback) {
+                LOC_LOGd("Registered for ResidualReport");
+                mCallbackOptions.svResidualDataCb =
+                        [pClientApiImpl, residualCb = engineReportCbs.svResidualReportCallback]
+                        (::GnssSvResidualReport n) {
+                    SvResidualReport svResidualReport;
+                    LocationClientApiImpl::parseSvResidualReport(n, svResidualReport);
+                    residualCb(svResidualReport);
+                    pClientApiImpl->getLogger().log(svResidualReport);
+                };
+            }
             initializeCommonCbs(pClientApiImpl, rspCb,
                                 engineReportCbs.gnssSvCallback,
                                 engineReportCbs.gnssNmeaCallback,

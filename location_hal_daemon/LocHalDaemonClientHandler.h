@@ -212,6 +212,7 @@ private:
     void onGnssMeasurementsCb(GnssMeasurementsNotification gnssMeasurementsNotification);
     void onLocationSystemInfoCb(LocationSystemInfo systemInfo);
     void onDcReportCb(const GnssDcReportInfo& dcReportInfo);
+    void onSvResidualReportCb(const GnssSvResidualReport &svResReport);
     void onLocationApiDestroyCompleteCb();
     void onAntennaInfoCb(std::vector<GnssAntennaInformation>& gnssAntennaInformations);
 
