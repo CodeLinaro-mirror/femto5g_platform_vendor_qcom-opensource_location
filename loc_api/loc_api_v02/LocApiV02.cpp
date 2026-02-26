@@ -5663,7 +5663,7 @@ void LocApiV02::processGnssBandsSupportedInd(
                 LOC_LOGv("cap[%d] sv type=%d freq=%.2f code type=%d",
                         i, gnssCapabNotification.gnssSignalType[i].svType,
                         gnssCapabNotification.gnssSignalType[i].carrierFrequencyHz,
-                        gnssCapabNotification.gnssSignalType[i].codeType);
+                        gnssCapabNotification.gnssSignalType[i].signalType);
             }
         }
 
@@ -5779,58 +5779,9 @@ void LocApiV02::updateGnssCapabNotification(GnssCapabNotification& gnssCapabNoti
            getSvTypeFromSignalType(gnssSignalType);
     gnssCapabNotification.gnssSignalType[gnssCapabNotification.count].carrierFrequencyHz =
             convertSignalTypeToCarrierFrequency(gnssSignalType, 8);
-    gnssCapabNotification.gnssSignalType[gnssCapabNotification.count].codeType =
-            getCodeType(gnssSignalType);
+    gnssCapabNotification.gnssSignalType[gnssCapabNotification.count].signalType =
+            convertQmiGnssSignalType(gnssSignalType);
     gnssCapabNotification.count++;
-}
-
-GnssMeasurementsCodeType LocApiV02::getCodeType(qmiLocGnssSignalTypeMaskT_v02 gnssSignalType) {
-
-    switch (gnssSignalType) {
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L1CA_V02:
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GLONASS_G1_V02:
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GLONASS_G2_V02:
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GALILEO_E1_C_V02:
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1CA_V02:
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_SBAS_L1_CA_V02:
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_NAVIC_L5_V02:
-        return GNSS_MEASUREMENTS_CODE_TYPE_C;
-
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1S_V02:
-        return GNSS_MEASUREMENTS_CODE_TYPE_Z;
-
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L2C_L_V02:
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L2C_L_V02:
-        return GNSS_MEASUREMENTS_CODE_TYPE_L;
-
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L5_Q_V02:
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GALILEO_E5A_Q_V02:
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GALILEO_E5B_Q_V02:
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L5_Q_V02:
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q_V02:
-        return GNSS_MEASUREMENTS_CODE_TYPE_Q;
-
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2B_I_V02:
-        return GNSS_MEASUREMENTS_CODE_TYPE_D;
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B1_I_V02:
-        return GNSS_MEASUREMENTS_CODE_TYPE_I;
-
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B1C_V02:
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2A_Q_V02:
-    // this one is not yet supported
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L1C_V02:
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_NAVIC_L1_V02:
-        return GNSS_MEASUREMENTS_CODE_TYPE_P;
-
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1_CB_V02:
-        return GNSS_MEASUREMENTS_CODE_TYPE_E;
-
-    /* no plan to support  */
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2_I_V02:
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2A_I_V02:
-    default:
-        return GNSS_MEASUREMENTS_CODE_TYPE_OTHER;
-    }
 }
 
 void LocApiV02::wifiStatusInformSync() {
@@ -6619,7 +6570,7 @@ void LocApiV02 :: convertGnssClock (GnssMeasurementsClock& clock,
     // referenceSignalTypeForIsb
     clock.referenceSignalTypeForIsb.svType = GNSS_SV_TYPE_GPS;
     clock.referenceSignalTypeForIsb.carrierFrequencyHz = GPS_L1CA_CARRIER_FREQUENCY;
-    clock.referenceSignalTypeForIsb.codeType = GNSS_MEASUREMENTS_CODE_TYPE_C;
+    clock.referenceSignalTypeForIsb.signalType = GNSS_SIGNAL_GPS_L1CA;
 
     clock.referenceSignalTypeForIsb.otherCodeTypeName[0] = '\0';
 
@@ -6656,7 +6607,7 @@ void LocApiV02 :: convertGnssClock (GnssMeasurementsClock& clock,
     LOC_LOGa("  svType=%d carrierFrequencyHz=%f codeType=%d\n",
              clock.referenceSignalTypeForIsb.svType,
              clock.referenceSignalTypeForIsb.carrierFrequencyHz,
-             clock.referenceSignalTypeForIsb.codeType);
+             clock.referenceSignalTypeForIsb.signalType);
     LOC_LOGa(" Output => timeNs=%" PRId64 "\n",
         clock.timeNs);                       // %PRId64
 
