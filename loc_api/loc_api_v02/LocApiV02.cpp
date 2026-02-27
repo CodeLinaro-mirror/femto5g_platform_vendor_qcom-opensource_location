@@ -783,31 +783,31 @@ void LocApiV02::injectPosition(const GnssLocationInfoNotification &locationInfo,
     }
 
     // GPS time
-    if (locationInfo.gnssSystemTime.gnssSystemTimeSrc == GNSS_LOC_SV_SYSTEM_GPS) {
+    if (locationInfo.gnssSystemTime.gnssSystemTimeSrc == GNSS_SV_TYPE_GPS) {
         injectPositionReq.gpsTime_valid = 1;
         injectPositionReq.gpsTime.gpsWeek =
                 locationInfo.gnssSystemTime.u.gpsSystemTime.systemWeek;
         injectPositionReq.gpsTime.gpsTimeOfWeekMs =
                 locationInfo.gnssSystemTime.u.gpsSystemTime.systemMsec;
-    } else if (locationInfo.gnssSystemTime.gnssSystemTimeSrc == GNSS_LOC_SV_SYSTEM_GALILEO) {
+    } else if (locationInfo.gnssSystemTime.gnssSystemTimeSrc == GNSS_SV_TYPE_GALILEO) {
         injectPositionReq.gpsTime_valid = 1;
         injectPositionReq.gpsTime.gpsWeek =
                 locationInfo.gnssSystemTime.u.galSystemTime.systemWeek;
         injectPositionReq.gpsTime.gpsTimeOfWeekMs =
                 locationInfo.gnssSystemTime.u.gpsSystemTime.systemMsec;
-    } else if (locationInfo.gnssSystemTime.gnssSystemTimeSrc == GNSS_LOC_SV_SYSTEM_BDS) {
+    } else if (locationInfo.gnssSystemTime.gnssSystemTimeSrc == GNSS_SV_TYPE_BEIDOU) {
         injectPositionReq.gpsTime_valid = 1;
         injectPositionReq.gpsTime.gpsWeek =
                 locationInfo.gnssSystemTime.u.bdsSystemTime.systemWeek;
         injectPositionReq.gpsTime.gpsTimeOfWeekMs =
                 locationInfo.gnssSystemTime.u.bdsSystemTime.systemMsec;
-    } else if (locationInfo.gnssSystemTime.gnssSystemTimeSrc == GNSS_LOC_SV_SYSTEM_QZSS) {
+    } else if (locationInfo.gnssSystemTime.gnssSystemTimeSrc == GNSS_SV_TYPE_QZSS) {
         injectPositionReq.gpsTime_valid = 1;
         injectPositionReq.gpsTime.gpsWeek =
                 locationInfo.gnssSystemTime.u.qzssSystemTime.systemWeek;
         injectPositionReq.gpsTime.gpsTimeOfWeekMs =
                 locationInfo.gnssSystemTime.u.qzssSystemTime.systemMsec;
-     } else if (locationInfo.gnssSystemTime.gnssSystemTimeSrc == GNSS_LOC_SV_SYSTEM_GLONASS) {
+     } else if (locationInfo.gnssSystemTime.gnssSystemTimeSrc == GNSS_SV_TYPE_GLONASS) {
          if (LDT_GNSS_LOCATION_INFO_LEAP_SECONDS_BIT & locationInfo.flags) {
              const GnssGloTimeStructType &gloSystemTime =
                      locationInfo.gnssSystemTime.u.gloSystemTime;
@@ -823,7 +823,7 @@ void LocApiV02::injectPosition(const GnssLocationInfoNotification &locationInfo,
              injectPositionReq.gpsTime.gpsWeek = msecTotal / WEEK_MSECS;
              injectPositionReq.gpsTime.gpsTimeOfWeekMs = msecTotal % WEEK_MSECS;
          }
-    } else if (locationInfo.gnssSystemTime.gnssSystemTimeSrc == GNSS_LOC_SV_SYSTEM_NAVIC) {
+    } else if (locationInfo.gnssSystemTime.gnssSystemTimeSrc == GNSS_SV_TYPE_NAVIC) {
         injectPositionReq.gpsTime_valid = 1;
         injectPositionReq.gpsTime.gpsWeek =
                 locationInfo.gnssSystemTime.u.navicSystemTime.systemWeek;
@@ -2186,7 +2186,7 @@ void LocApiV02 :: reportPosition (
                         uint64_t bit = (1ULL << (gnssSvIdUsed - GPS_SV_PRN_MIN));
                         locationExtended.gnss_sv_used_ids.gpsSvUsedIdsMask |= bit;
                         locationExtended.measUsageInfo[idx].gnssConstellation =
-                                GNSS_LOC_SV_SYSTEM_GPS;
+                                GNSS_SV_TYPE_GPS;
                         if (multiBandTypesAvailable) {
                             locationExtended.measUsageInfo[idx].gnssSignalType =
                                     gnssSignalTypeMask;
@@ -2220,7 +2220,7 @@ void LocApiV02 :: reportPosition (
                         uint64_t bit = (1ULL << (gnssSvIdUsed - GLO_SV_PRN_MIN));
                         locationExtended.gnss_sv_used_ids.gloSvUsedIdsMask |= bit;
                         locationExtended.measUsageInfo[idx].gnssConstellation =
-                                GNSS_LOC_SV_SYSTEM_GLONASS;
+                                GNSS_SV_TYPE_GLONASS;
                         if (multiBandTypesAvailable) {
                             locationExtended.measUsageInfo[idx].gnssSignalType =
                                     gnssSignalTypeMask;
@@ -2245,7 +2245,7 @@ void LocApiV02 :: reportPosition (
                         uint64_t bit = (1ULL << (gnssSvIdUsed - BDS_SV_PRN_MIN));
                         locationExtended.gnss_sv_used_ids.bdsSvUsedIdsMask |= bit;
                         locationExtended.measUsageInfo[idx].gnssConstellation =
-                                GNSS_LOC_SV_SYSTEM_BDS;
+                                GNSS_SV_TYPE_BEIDOU;
                         if (multiBandTypesAvailable) {
                             locationExtended.measUsageInfo[idx].gnssSignalType =
                                     gnssSignalTypeMask;
@@ -2294,7 +2294,7 @@ void LocApiV02 :: reportPosition (
                         uint64_t bit = (1ULL << (gnssSvIdUsed - GAL_SV_PRN_MIN));
                         locationExtended.gnss_sv_used_ids.galSvUsedIdsMask |= bit;
                         locationExtended.measUsageInfo[idx].gnssConstellation =
-                                GNSS_LOC_SV_SYSTEM_GALILEO;
+                                GNSS_SV_TYPE_GALILEO;
                         if (multiBandTypesAvailable) {
                             locationExtended.measUsageInfo[idx].gnssSignalType =
                                     gnssSignalTypeMask;
@@ -2324,7 +2324,7 @@ void LocApiV02 :: reportPosition (
                         uint64_t bit = (1ULL << (gnssSvIdUsed - QZSS_SV_PRN_MIN));
                         locationExtended.gnss_sv_used_ids.qzssSvUsedIdsMask |= bit;
                         locationExtended.measUsageInfo[idx].gnssConstellation =
-                                GNSS_LOC_SV_SYSTEM_QZSS;
+                                GNSS_SV_TYPE_QZSS;
                         if (multiBandTypesAvailable) {
                             locationExtended.measUsageInfo[idx].gnssSignalType =
                                     gnssSignalTypeMask;
@@ -2366,7 +2366,7 @@ void LocApiV02 :: reportPosition (
                         uint64_t bit = (1ULL << (gnssSvIdUsed - NAVIC_SV_PRN_MIN));
                         locationExtended.gnss_sv_used_ids.navicSvUsedIdsMask |= bit;
                         locationExtended.measUsageInfo[idx].gnssConstellation =
-                                GNSS_LOC_SV_SYSTEM_NAVIC;
+                                GNSS_SV_TYPE_NAVIC;
 
                         locationExtended.measUsageInfo[idx].gnssSignalType = GNSS_SIGNAL_NAVIC_L5;
                         if (multiBandTypesAvailable) {
@@ -2488,10 +2488,10 @@ void LocApiV02 :: reportPosition (
             locationExtended.upVelocityStdDeviation = location_report_ptr->velUncEnu[2];
         }
         // fill in GnssSystemTime based on gps timestamp and time uncertainty
-        locationExtended.gnssSystemTime.gnssSystemTimeSrc = (Gnss_LocSvSystemEnumType)0;
+        locationExtended.gnssSystemTime.gnssSystemTimeSrc = GNSS_SV_TYPE_UNKNOWN;
         if (location_report_ptr->gpsTime_valid)
         {
-            locationExtended.gnssSystemTime.gnssSystemTimeSrc = GNSS_LOC_SV_SYSTEM_GPS;
+            locationExtended.gnssSystemTime.gnssSystemTimeSrc = GNSS_SV_TYPE_GPS;
             locationExtended.gnssSystemTime.u.gpsSystemTime.validityMask = 0x0;
 
             locationExtended.gnssSystemTime.u.gpsSystemTime.systemWeek =
@@ -3014,37 +3014,37 @@ void  LocApiV02 :: reportSv (
     LocApiBase::reportSv(SvNotify);
 }
 
-static Gnss_LocSvSystemEnumType getLocApiSvSystemType (qmiLocSvSystemEnumT_v02 qmiSvSystemType) {
-    Gnss_LocSvSystemEnumType locSvSystemType = GNSS_LOC_SV_SYSTEM_UNKNOWN;
+static GnssSvType getLocApiSvSystemType (qmiLocSvSystemEnumT_v02 qmiSvSystemType) {
+    GnssSvType locSvSystemType = GNSS_SV_TYPE_UNKNOWN;
 
     switch (qmiSvSystemType) {
     case eQMI_LOC_SV_SYSTEM_GPS_V02:
-        locSvSystemType = GNSS_LOC_SV_SYSTEM_GPS;
+        locSvSystemType = GNSS_SV_TYPE_GPS;
         break;
 
     case eQMI_LOC_SV_SYSTEM_GALILEO_V02:
-        locSvSystemType = GNSS_LOC_SV_SYSTEM_GALILEO;
+        locSvSystemType = GNSS_SV_TYPE_GALILEO;
         break;
 
     case eQMI_LOC_SV_SYSTEM_SBAS_V02:
-        locSvSystemType = GNSS_LOC_SV_SYSTEM_SBAS;
+        locSvSystemType = GNSS_SV_TYPE_SBAS;
         break;
 
     case eQMI_LOC_SV_SYSTEM_GLONASS_V02:
-        locSvSystemType = GNSS_LOC_SV_SYSTEM_GLONASS;
+        locSvSystemType = GNSS_SV_TYPE_GLONASS;
         break;
 
     case eQMI_LOC_SV_SYSTEM_BDS_V02:
     case eQMI_LOC_SV_SYSTEM_COMPASS_V02:
-        locSvSystemType = GNSS_LOC_SV_SYSTEM_BDS;
+        locSvSystemType = GNSS_SV_TYPE_BEIDOU;
         break;
 
     case eQMI_LOC_SV_SYSTEM_QZSS_V02:
-        locSvSystemType = GNSS_LOC_SV_SYSTEM_QZSS;
+        locSvSystemType = GNSS_SV_TYPE_QZSS;
         break;
 
     case eQMI_LOC_SV_SYSTEM_NAVIC_V02:
-        locSvSystemType = GNSS_LOC_SV_SYSTEM_NAVIC;
+        locSvSystemType = GNSS_SV_TYPE_NAVIC;
         break;
 
     default:
@@ -3102,9 +3102,9 @@ void  LocApiV02 :: reportSvPolynomial(const qmiLocEventGnssSvPolyIndMsgT_v02 *gn
         // when modem add constellation type to sv poly, this special handling
         // can be removed.
         if (gnss_sv_poly_ptr->svPolyFlagValid & QMI_LOC_SV_POLY_SRC_QZSS_L1_CB_VALID_V02) {
-            svPolynomial.gnssConstellation = GNSS_LOC_SV_SYSTEM_QZSS;
+            svPolynomial.gnssConstellation = GNSS_SV_TYPE_QZSS;
         } else {
-            svPolynomial.gnssConstellation = getSvSystemFromSvId(
+            svPolynomial.gnssConstellation = getSvTypeFromSvId(
                     gnss_sv_poly_ptr->gnssSvId);
         }
         svPolynomial.gnssSvId = gnss_sv_poly_ptr->gnssSvId;
@@ -3479,23 +3479,23 @@ void LocApiV02::reportLocEvent(const qmiLocEventReportIndMsgT_v02 *event_report_
 
         switch(event_report_ptr->klobucharIonoModel.dataSource) {
             case eQMI_LOC_SV_SYSTEM_GPS_V02:
-                klobucharIonoModel.gnssConstellation = GNSS_LOC_SV_SYSTEM_GPS;
+                klobucharIonoModel.gnssConstellation = GNSS_SV_TYPE_GPS;
                 break;
             case eQMI_LOC_SV_SYSTEM_GALILEO_V02:
-                klobucharIonoModel.gnssConstellation = GNSS_LOC_SV_SYSTEM_GALILEO;
+                klobucharIonoModel.gnssConstellation = GNSS_SV_TYPE_GALILEO;
                 break;
             case eQMI_LOC_SV_SYSTEM_SBAS_V02:
-                klobucharIonoModel.gnssConstellation = GNSS_LOC_SV_SYSTEM_SBAS;
+                klobucharIonoModel.gnssConstellation = GNSS_SV_TYPE_SBAS;
                 break;
             case eQMI_LOC_SV_SYSTEM_GLONASS_V02:
-                klobucharIonoModel.gnssConstellation = GNSS_LOC_SV_SYSTEM_GLONASS;
+                klobucharIonoModel.gnssConstellation = GNSS_SV_TYPE_GLONASS;
                 break;
             case eQMI_LOC_SV_SYSTEM_BDS_V02:
             case eQMI_LOC_SV_SYSTEM_COMPASS_V02:
-                klobucharIonoModel.gnssConstellation = GNSS_LOC_SV_SYSTEM_BDS;
+                klobucharIonoModel.gnssConstellation = GNSS_SV_TYPE_BEIDOU;
                 break;
             case eQMI_LOC_SV_SYSTEM_QZSS_V02:
-                klobucharIonoModel.gnssConstellation = GNSS_LOC_SV_SYSTEM_QZSS;
+                klobucharIonoModel.gnssConstellation = GNSS_SV_TYPE_QZSS;
                 break;
             default:
                 break;
@@ -3634,23 +3634,23 @@ void LocApiV02::reportSvEphemeris (
     switch (eventId)
     {
         case QMI_LOC_EVENT_GPS_EPHEMERIS_REPORT_IND_V02:
-            svEphemeris.gnssConstellation = GNSS_LOC_SV_SYSTEM_GPS;
+            svEphemeris.gnssConstellation = GNSS_SV_TYPE_GPS;
             populateGpsEphemeris(eventPayload.pGpsEphemerisReportEvent, svEphemeris);
             break;
         case QMI_LOC_EVENT_GLONASS_EPHEMERIS_REPORT_IND_V02:
-            svEphemeris.gnssConstellation = GNSS_LOC_SV_SYSTEM_GLONASS;
+            svEphemeris.gnssConstellation = GNSS_SV_TYPE_GLONASS;
             populateGlonassEphemeris(eventPayload.pGloEphemerisReportEvent, svEphemeris);
             break;
         case QMI_LOC_EVENT_BDS_EPHEMERIS_REPORT_IND_V02:
-            svEphemeris.gnssConstellation = GNSS_LOC_SV_SYSTEM_BDS;
+            svEphemeris.gnssConstellation = GNSS_SV_TYPE_BEIDOU;
             populateBdsEphemeris(eventPayload.pBdsEphemerisReportEvent, svEphemeris);
             break;
         case QMI_LOC_EVENT_GALILEO_EPHEMERIS_REPORT_IND_V02:
-            svEphemeris.gnssConstellation = GNSS_LOC_SV_SYSTEM_GALILEO;
+            svEphemeris.gnssConstellation = GNSS_SV_TYPE_GALILEO;
             populateGalEphemeris(eventPayload.pGalEphemerisReportEvent, svEphemeris);
             break;
         case QMI_LOC_EVENT_QZSS_EPHEMERIS_REPORT_IND_V02:
-            svEphemeris.gnssConstellation = GNSS_LOC_SV_SYSTEM_QZSS;
+            svEphemeris.gnssConstellation = GNSS_SV_TYPE_QZSS;
             populateQzssEphemeris(eventPayload.pQzssEphemerisReportEvent, svEphemeris);
     }
 
@@ -4576,10 +4576,8 @@ void LocApiV02::reportGnssMeasurementData(
             measData.isNhz = true;
         }
     }
-
-    Gnss_LocSvSystemEnumType locSvSystemType =
-        getLocApiSvSystemType(gnss_measurement_report_ptr.system);
-    if (GNSS_LOC_SV_SYSTEM_UNKNOWN == locSvSystemType) {
+    GnssSvType locSvSystemType = getLocApiSvSystemType(gnss_measurement_report_ptr.system);
+    if (GNSS_SV_TYPE_UNKNOWN == locSvSystemType) {
         LOC_LOGi("Unknown sv system");
         return;
     }
@@ -5060,7 +5058,7 @@ void LocApiV02::convertSvType(
     }
 }
 
-void LocApiV02::convertGnssMeasurementsHeader(const Gnss_LocSvSystemEnumType locSvSystemType,
+void LocApiV02::convertGnssMeasurementsHeader(const GnssSvType locSvSystemType,
     const qmiLocEventGnssSvMeasInfoIndMsgT_v02& gnss_measurement_info) {
     if (!mGnssMeasurements->gnssSvMeasurementSet) {
         return;
@@ -5442,7 +5440,7 @@ void LocApiV02::convertGnssMeasurementsHeader(const Gnss_LocSvSystemEnumType loc
         GpsSvMeasHeaderFlags systemTimeExtFlags = 0x0;
 
         switch (locSvSystemType) {
-        case GNSS_LOC_SV_SYSTEM_GPS:
+        case GNSS_SV_TYPE_GPS:
             systemTimePtr = &svMeasSetHead.gpsSystemTime;
             systemTimeExtPtr = &svMeasSetHead.gpsSystemTimeExt;
             systemTimeFlags = GNSS_SV_MEAS_HEADER_HAS_GPS_SYSTEM_TIME;
@@ -5455,7 +5453,7 @@ void LocApiV02::convertGnssMeasurementsHeader(const Gnss_LocSvSystemEnumType loc
                 mTimeBiases.flags |= BIAS_GPSL1_UNC_VALID;
             }
             break;
-        case GNSS_LOC_SV_SYSTEM_GALILEO:
+        case GNSS_SV_TYPE_GALILEO:
             systemTimePtr = &svMeasSetHead.galSystemTime;
             systemTimeExtPtr = &svMeasSetHead.galSystemTimeExt;
             systemTimeFlags = GNSS_SV_MEAS_HEADER_HAS_GAL_SYSTEM_TIME;
@@ -5468,7 +5466,7 @@ void LocApiV02::convertGnssMeasurementsHeader(const Gnss_LocSvSystemEnumType loc
                 mTimeBiases.flags |= BIAS_GALE1_UNC_VALID;
             }
             break;
-        case GNSS_LOC_SV_SYSTEM_BDS:
+        case GNSS_SV_TYPE_BEIDOU:
             systemTimePtr = &svMeasSetHead.bdsSystemTime;
             systemTimeExtPtr = &svMeasSetHead.bdsSystemTimeExt;
             systemTimeFlags = GNSS_SV_MEAS_HEADER_HAS_BDS_SYSTEM_TIME;
@@ -5481,17 +5479,17 @@ void LocApiV02::convertGnssMeasurementsHeader(const Gnss_LocSvSystemEnumType loc
                 mTimeBiases.flags |= BIAS_BDSB1_UNC_VALID;
             }
             break;
-        case GNSS_LOC_SV_SYSTEM_QZSS:
+        case GNSS_SV_TYPE_QZSS:
             systemTimePtr = &svMeasSetHead.qzssSystemTime;
             systemTimeExtPtr = &svMeasSetHead.qzssSystemTimeExt;
             systemTimeFlags = GNSS_SV_MEAS_HEADER_HAS_QZSS_SYSTEM_TIME;
             systemTimeExtFlags = GNSS_SV_MEAS_HEADER_HAS_QZSS_SYSTEM_TIME_EXT;
             break;
-        case GNSS_LOC_SV_SYSTEM_GLONASS:
+        case GNSS_SV_TYPE_GLONASS:
             systemTimeExtPtr = &svMeasSetHead.gloSystemTimeExt;
             systemTimeExtFlags = GNSS_SV_MEAS_HEADER_HAS_GLO_SYSTEM_TIME_EXT;
             break;
-        case GNSS_LOC_SV_SYSTEM_NAVIC:
+        case GNSS_SV_TYPE_NAVIC:
             systemTimePtr = &svMeasSetHead.navicSystemTime;
             systemTimeExtPtr = &svMeasSetHead.navicSystemTimeExt;
             systemTimeFlags = GNSS_SV_MEAS_HEADER_HAS_NAVIC_SYSTEM_TIME;
@@ -5754,29 +5752,6 @@ GnssSvType LocApiV02 :: getSvTypeFromSvId(uint16_t gnssSvId) {
         svType = GNSS_SV_TYPE_QZSS;
     }
     return svType;
-}
-
-/* this function is called when the supported QZSS SV and BDS SV ids
-   do not overlap*/
-Gnss_LocSvSystemEnumType LocApiV02 :: getSvSystemFromSvId(uint16_t gnssSvId) {
-    Gnss_LocSvSystemEnumType svSystem = GNSS_LOC_SV_SYSTEM_UNKNOWN;
-
-    if ((gnssSvId >= GPS_SV_PRN_MIN) && (gnssSvId <= GPS_SV_PRN_MAX)) {
-        svSystem = GNSS_LOC_SV_SYSTEM_GPS;
-    } else if ((gnssSvId >= GAL_SV_PRN_MIN) && (gnssSvId <= GAL_SV_PRN_MAX)) {
-        svSystem = GNSS_LOC_SV_SYSTEM_GALILEO;
-    } else if ((gnssSvId >= SBAS_SV_PRN_MIN) && (gnssSvId <= SBAS_SV_PRN_MAX)) {
-        svSystem = GNSS_LOC_SV_SYSTEM_SBAS;
-    } else if ((gnssSvId >= GLO_SV_PRN_MIN) && (gnssSvId <= GLO_SV_PRN_MAX)) {
-        svSystem = GNSS_LOC_SV_SYSTEM_GLONASS;
-    } else if ((gnssSvId >= NAVIC_SV_PRN_MIN) && (gnssSvId <= NAVIC_SV_PRN_MAX)) {
-        svSystem = GNSS_LOC_SV_SYSTEM_NAVIC;
-    } else if ((gnssSvId >= BDS_SV_PRN_MIN) && (gnssSvId <= BDS_SV_PRN_MAX)) {
-        svSystem = GNSS_LOC_SV_SYSTEM_BDS;
-    } else if ((gnssSvId >= QZSS_SV_PRN_MIN) && (gnssSvId <= QZSS_SV_PRN_MAX)) {
-        svSystem = GNSS_LOC_SV_SYSTEM_QZSS;
-    }
-    return svSystem;
 }
 
 void LocApiV02::updateGnssCapabNotification(GnssCapabNotification& gnssCapabNotification,
@@ -9291,7 +9266,7 @@ void LocApiV02::injectSuplCert(int32_t suplCertId, const std::vector<uint8_t>& s
     }));
 }
 
-void LocApiV02::setPreferredConstellation(Gnss_LocSvSystemEnumType type,
+void LocApiV02::setPreferredConstellation(GnssSvType type,
         LocApiResponse* adapterResponse) {
     sendMsg(new LocApiMsg([this, type, adapterResponse] () {
     LOC_LOGd("setPreferredConstellation - Gnss Constellation type: %u", type);
@@ -9300,10 +9275,10 @@ void LocApiV02::setPreferredConstellation(Gnss_LocSvSystemEnumType type,
     qmiLocSetConstellationConfigReqMsgT_v02 typeReq = {};
     qmiLocGenReqStatusIndMsgT_v02 typeInd = {};
 
-    if (type == GNSS_LOC_SV_SYSTEM_GPS) {
+    if (type == GNSS_SV_TYPE_GPS) {
         typeReq.preferredConstellation_valid = true;
         typeReq.preferredConstellation = eQMI_SYSTEM_GPS_V02;
-    } else if (type == GNSS_LOC_SV_SYSTEM_BDS) {
+    } else if (type == GNSS_SV_TYPE_BEIDOU) {
         typeReq.preferredConstellation_valid = true;
         typeReq.preferredConstellation = eQMI_SYSTEM_BDS_V02;
     } else {

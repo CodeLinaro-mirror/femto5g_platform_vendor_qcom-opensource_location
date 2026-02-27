@@ -717,7 +717,7 @@ private:
     int convertGnssMeasUsageInfoToPB(const GnssMeasUsageInfo &gnssMeasUsageInfo,
             PBGnssMeasUsageInfo *pbGnssMeasUsageInfo) const;
     // SystemTimeStructUnion to PBLocApiSystemTimeStructUnion
-    int convertSystemTimeStructUnionToPB(const Gnss_LocSvSystemEnumType &gnssLocSvSysEnumType,
+    int convertSystemTimeStructUnionToPB(const GnssSvType &gnssLocSvSysEnumType,
             const SystemTimeStructUnion &sysTimeStructUnion,
             PBLocApiSystemTimeStructUnion *pbSysTimeStructUnion) const;
     // GeofenceInfo to PBGeofenceInfo
@@ -834,8 +834,6 @@ private:
             const LocOutputEngineType &locOpEng) const;
     PBGnssMeasurementsMultipathIndicator getPBEnumForGnssMeasMultiPathIndic(
             const GnssMeasurementsMultipathIndicator &gnssMeasMultiPathIndic) const;
-    PBLocApiGnss_LocSvSystemEnumType getPBEnumForGnssLocSvSystem(
-            const Gnss_LocSvSystemEnumType &gnssLocSvSysEnumType) const;
     PBAgcStatus getPBEnumForAgcStatus(const AgcStatus &agcStatus) const;
     // PBLocationSessionStatus from/to loc_sess_status
     PBLocationSessionStatus getPBEnumForLocSessionStatus(const loc_sess_status &status) const;
@@ -914,8 +912,6 @@ private:
             const PBGnssMeasurementsMultipathIndicator &pbGnssMeasMultipathIndic) const;
     LocationReliability getEnumForPBLocReliability(
             const PBLocationReliability &locReliability) const;
-    Gnss_LocSvSystemEnumType getEnumForPBGnssLocSvSystem(
-            const PBLocApiGnss_LocSvSystemEnumType &pbGnssLocSvSysEnumType) const;
     LocOutputEngineType getEnumForPBLocOutputEngineType(
             const PBLocApiOutputEngineType &pbLocOpEngType) const;
     loc_sess_status getLocSessionStatusFromPB(const PBLocationSessionStatus &pbStatus) const;
@@ -923,6 +919,7 @@ private:
 
     // ** Special enum conversion
     // PBLocApiGnss_LocSvSystemEnumType to GnssSvType
+
     GnssSvType getGnssSvTypeFromPBGnssLocSvSystemEnumType(
             const PBLocApiGnss_LocSvSystemEnumType &pbGnssLocSvSysEnum) const;
 
@@ -965,7 +962,7 @@ private:
     int pbConvertToGnssMeasUsageInfo(const PBGnssMeasUsageInfo &pbGnssMeasUsageInfo,
             GnssMeasUsageInfo &gnssMeasUsageInfo) const;
     // PBLocApiSystemTimeStructUnion to SystemTimeStructUnion
-    int pbConvertToSystemTimeStructUnion(const Gnss_LocSvSystemEnumType &gnssLocSvSysEnumType,
+    int pbConvertToSystemTimeStructUnion(const GnssSvType &gnssLocSvSysEnumType,
             const PBLocApiSystemTimeStructUnion &pbSysTimeStructUnion,
             SystemTimeStructUnion &sysTimeStructUnion) const;
     // PBLocApiGnssGloTimeStructType to GnssGloTimeStructType
