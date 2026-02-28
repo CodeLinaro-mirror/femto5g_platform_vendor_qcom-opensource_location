@@ -20,6 +20,7 @@ GNSS_CFLAGS = [
     "-Wno-error=undefined-bool-conversion",
     "-Wno-error=tautological-compare",
     "-Wno-error=switch",
+    "-D_ANDROID_",
 ]
 
 

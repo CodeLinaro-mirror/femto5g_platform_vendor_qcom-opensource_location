@@ -59,7 +59,6 @@ cc_library_shared {
 
     cflags: [
         "-fno-short-enums",
-        "-D_ANDROID_",
     ] + GNSS_CFLAGS,
 
     //# Includes

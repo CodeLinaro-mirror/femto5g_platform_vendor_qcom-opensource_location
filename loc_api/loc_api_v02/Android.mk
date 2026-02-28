@@ -25,8 +25,7 @@ LOCAL_SRC_FILES := \
     location_service_v02.c
 
 LOCAL_CFLAGS += \
-    -fno-short-enums \
-    -D_ANDROID_
+    -fno-short-enums
 
 LOCAL_HEADER_LIBRARIES := \
     libloc_core_headers \

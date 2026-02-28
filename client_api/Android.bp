@@ -20,7 +20,6 @@ cc_library_shared {
 
     cflags: [
         "-fno-short-enums",
-        "-D_ANDROID_",
         "-Wno-error=non-virtual-dtor",
     ] + GNSS_CFLAGS,
 

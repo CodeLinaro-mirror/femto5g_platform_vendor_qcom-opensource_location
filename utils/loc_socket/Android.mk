@@ -17,8 +17,7 @@ LOCAL_SRC_FILES := \
     LocSocket.cpp
 
 LOCAL_CFLAGS := \
-    -fno-short-enums \
-    -D_ANDROID_
+    -fno-short-enums
 
 LOCAL_HEADER_LIBRARIES := \
     libqmi_common_headers \

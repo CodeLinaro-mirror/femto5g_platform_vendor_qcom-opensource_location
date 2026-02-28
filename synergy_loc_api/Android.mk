@@ -23,8 +23,7 @@ LOCAL_SRC_FILES := \
     SynergyLocApi.cpp
 
 LOCAL_CFLAGS += \
-    -fno-short-enums \
-    -D_ANDROID_
+    -fno-short-enums
 
 ## Includes
 LOCAL_HEADER_LIBRARIES := \
