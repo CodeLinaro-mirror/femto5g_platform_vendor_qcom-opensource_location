@@ -4529,11 +4529,18 @@ void LocApiV02::reportGnssMeasurementData(
             LOC_LOGe("Malloc failed to allocate heap memory for mGnssMeasurements");
             return;
         }
-        resetSvMeasurementReport();
+        // zero initialize
+        memset(mGnssMeasurements, 0, sizeof(GnssMeasurements));
         // when engine service enabled, initialize GnssSvMeasurementSet for population
         if (ContextBase::mIzat_process_conf.engineServiceEnabled) {
             mGnssMeasurements->gnssSvMeasurementSet = (GnssSvMeasurementSet*)malloc(
                     sizeof(GnssSvMeasurementSet));
+            if (!mGnssMeasurements->gnssSvMeasurementSet) {
+                LOC_LOGe("Malloc failed to allocate heap memory for gnssSvMeasurementSet");
+                free(mGnssMeasurements);
+                mGnssMeasurements = NULL;
+                return;
+            }
             memset(mGnssMeasurements->gnssSvMeasurementSet, 0, sizeof(GnssSvMeasurementSet));
         }
         newMeasProcessed = false;
