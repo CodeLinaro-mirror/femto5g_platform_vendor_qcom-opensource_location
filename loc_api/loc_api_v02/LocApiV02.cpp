@@ -4392,6 +4392,11 @@ void LocApiV02::populateFeatureStatusReport
     } else {
         featureMap[LOCATION_QWES_FEATURE_STATUS_GNSS_NHZ] = false;
     }
+    if (featureStatusReport & QMI_LOC_FEATURE_STATUS_QPPE_V02) {
+        featureMap[LOCATION_QWES_FEATURE_TYPE_PPE] = true;
+    } else {
+        featureMap[LOCATION_QWES_FEATURE_TYPE_PPE] = false;
+    }
 }
 
 void LocApiV02::reportSvEphemeris (
@@ -7662,12 +7667,16 @@ bool LocApiV02 :: convertGnssMeasurements(
 int LocApiV02 :: convertGnssClock (GnssMeasurementsClock& clock,
     const qmiLocEventGnssSvMeasInfoIndMsgT_v02& gnss_measurement_info)
 {
-    static uint32_t oldRefFCount = 0;
-    static uint32_t newRefFCount = 0;
-    static uint32_t oldDiscCount = 0;
-    static uint32_t newDiscCount = 0;
-    static uint32_t localDiscCount = 0;
+
+    static uint32_t oldRefFCount[2] = {0, 0};
+    static uint32_t newRefFCount[2] = {0, 0};
+    static uint32_t oldDiscCount[2] = {0, 0};
+    static uint32_t newDiscCount[2] = {0, 0};
+    static uint32_t localDiscCount[2] = {0, 0};
     int msInWeek = -1;
+
+    // Index: 0 for normal, 1 for NHZ
+    int idx = gnss_measurement_info.nHzMeasurement ? 1 : 0;
 
     // size
     clock.size = sizeof(GnssMeasurementsClock);
@@ -7676,38 +7685,38 @@ int LocApiV02 :: convertGnssClock (GnssMeasurementsClock& clock,
     GnssMeasurementsClockFlagsMask flags = 0;
 
     if (gnss_measurement_info.systemTimeExt_valid && gnss_measurement_info.numClockResets_valid) {
-        newRefFCount = gnss_measurement_info.systemTimeExt.refFCount;
-        newDiscCount = gnss_measurement_info.numClockResets;
+        newRefFCount[idx] = gnss_measurement_info.systemTimeExt.refFCount;
+        newDiscCount[idx] = gnss_measurement_info.numClockResets;
         LOC_LOGa("mFirstMeasurementOfSessionReceived %d,"
-                 "new: ref cnt %d, disc count %d, old: ref cnt %d, disc count %d",
-                 mFirstMeasurementOfSessionReceived,
-                 newRefFCount, newDiscCount, oldRefFCount, oldDiscCount);
+                 "isNhz %d, new: ref cnt %d, disc count %d, old: ref cnt %d, disc count %d",
+                 mFirstMeasurementOfSessionReceived, idx,
+                 newRefFCount[idx], newDiscCount[idx], oldRefFCount[idx], oldDiscCount[idx]);
 
         mIsFullTracking = true;
         if ((true == mFirstMeasurementOfSessionReceived) &&
-                (newDiscCount != oldDiscCount)) {
+                (newDiscCount[idx] != oldDiscCount[idx])) {
             mIsFullTracking = false;
         }
 
         // refFCount roll over, increment local clock dist count to signal this
-        if (newRefFCount <= oldRefFCount) {
-           localDiscCount++;
+        if (newRefFCount[idx] <= oldRefFCount[idx]) {
+           localDiscCount[idx]++;
         } else if ((false == mFirstMeasurementOfSessionReceived) ||
-                   (newDiscCount != oldDiscCount)) {
+                   (newDiscCount[idx] != oldDiscCount[idx])) {
             // do not increment in full power mode
            if (GNSS_POWER_MODE_M1 != mPowerMode) {
-               localDiscCount++;
+               localDiscCount[idx]++;
            }
         }
 
         mFirstMeasurementOfSessionReceived = true;
-        oldDiscCount = newDiscCount;
-        oldRefFCount = newRefFCount;
+        oldDiscCount[idx] = newDiscCount[idx];
+        oldRefFCount[idx] = newRefFCount[idx];
 
         // timeNs & timeUncertaintyNs
         clock.timeNs = (int64_t)gnss_measurement_info.systemTimeExt.refFCount * 1e6;
         flags |= GNSS_MEASUREMENTS_CLOCK_FLAGS_TIME_BIT;
-        clock.hwClockDiscontinuityCount = localDiscCount;
+        clock.hwClockDiscontinuityCount = localDiscCount[idx];
         clock.timeUncertaintyNs = 0.0;
 
         flags |= (GNSS_MEASUREMENTS_CLOCK_FLAGS_TIME_BIT |
