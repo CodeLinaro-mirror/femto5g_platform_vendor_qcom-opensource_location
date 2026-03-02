@@ -393,7 +393,6 @@ private:
   void processGnssBandsSupportedInd(
             const qmiLocGnssBandsSupportedIndMsgT_v02* pGnssBandsSupportedIndMsg);
 
-  GnssMeasurementsCodeType getCodeType(qmiLocGnssSignalTypeMaskT_v02 gnssSignalType);
   GnssSvType getSvTypeFromSignalType(qmiLocGnssSignalTypeMaskT_v02 gnssSignalType);
   GnssSvType getSvTypeFromSvId(uint16_t gnssSvId);
   Gnss_LocSvSystemEnumType getSvSystemFromSvId(uint16_t gnssSvId);
