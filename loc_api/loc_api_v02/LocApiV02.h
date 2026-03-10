@@ -234,7 +234,7 @@ private:
       const qmiLocEventGnssSvMeasInfoIndMsgT_v02& gnss_measurement_report_ptr,
       int index, bool isExt, bool isStale);
 
-  void convertGnssMeasurementsHeader(const Gnss_LocSvSystemEnumType locSvSystemType,
+  void convertGnssMeasurementsHeader(const GnssSvType locSvSystemType,
       const qmiLocEventGnssSvMeasInfoIndMsgT_v02& gnss_measurement_info);
 
   /*convert LocGnssClock type from QMI LOC to loc eng format*/
@@ -395,7 +395,6 @@ private:
 
   GnssSvType getSvTypeFromSignalType(qmiLocGnssSignalTypeMaskT_v02 gnssSignalType);
   GnssSvType getSvTypeFromSvId(uint16_t gnssSvId);
-  Gnss_LocSvSystemEnumType getSvSystemFromSvId(uint16_t gnssSvId);
   void updateGnssCapabNotification(GnssCapabNotification& gnssCapabNotification,
                                    qmiLocGnssSignalTypeMaskT_v02 gnssSignalType);
   void convertEphAction(qmiLocEphUpdateActionEnumT_v02 qmiAction, GnssEphAction &ephAction);
@@ -573,7 +572,7 @@ public:
   virtual void injectSuplCert(int32_t suplCertId, const std::vector<uint8_t>& suplCertData,
             LocApiResponse* adapterResponse=nullptr);
 
-  virtual void setPreferredConstellation(Gnss_LocSvSystemEnumType type,
+  virtual void setPreferredConstellation(GnssSvType type,
             LocApiResponse *adapterResponse=nullptr);
 #endif
 

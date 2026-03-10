@@ -443,42 +443,6 @@ LocationReliability LocationApiPbMsgConv::getEnumForPBLocReliability(
     return locReliability;
 }
 
-Gnss_LocSvSystemEnumType LocationApiPbMsgConv::getEnumForPBGnssLocSvSystem(
-            const PBLocApiGnss_LocSvSystemEnumType &pbGnssLocSvSysEnumType) const {
-    Gnss_LocSvSystemEnumType gnssLocSvSysEnumType = GNSS_LOC_SV_SYSTEM_UNKNOWN;
-    switch (pbGnssLocSvSysEnumType) {
-        case PB_GNSS_LOC_SV_SYSTEM_INVALID:
-            gnssLocSvSysEnumType = GNSS_LOC_SV_SYSTEM_UNKNOWN;
-            break;
-        case PB_GNSS_LOC_SV_SYSTEM_GPS:
-            gnssLocSvSysEnumType = GNSS_LOC_SV_SYSTEM_GPS;
-            break;
-        case PB_GNSS_LOC_SV_SYSTEM_GALILEO:
-            gnssLocSvSysEnumType = GNSS_LOC_SV_SYSTEM_GALILEO;
-            break;
-        case PB_GNSS_LOC_SV_SYSTEM_SBAS:
-            gnssLocSvSysEnumType = GNSS_LOC_SV_SYSTEM_SBAS;
-            break;
-        case PB_GNSS_LOC_SV_SYSTEM_GLONASS:
-            gnssLocSvSysEnumType = GNSS_LOC_SV_SYSTEM_GLONASS;
-            break;
-        case PB_GNSS_LOC_SV_SYSTEM_BDS:
-            gnssLocSvSysEnumType = GNSS_LOC_SV_SYSTEM_BDS;
-            break;
-        case PB_GNSS_LOC_SV_SYSTEM_QZSS:
-            gnssLocSvSysEnumType = GNSS_LOC_SV_SYSTEM_QZSS;
-            break;
-        case PB_GNSS_LOC_SV_SYSTEM_NAVIC:
-            gnssLocSvSysEnumType = GNSS_LOC_SV_SYSTEM_NAVIC;
-            break;
-        default:
-            break;
-    }
-    LocApiPb_LOGv("LocApiPB: pbGnssLocSvSysEnumType:%d, gnssLocSvSysEnumType:%d",
-            pbGnssLocSvSysEnumType, gnssLocSvSysEnumType);
-    return gnssLocSvSysEnumType;
-}
-
 LocOutputEngineType LocationApiPbMsgConv::getEnumForPBLocOutputEngineType(
             const PBLocApiOutputEngineType &pbLocOpEngType) const {
     LocOutputEngineType locOpEngType = LOC_OUTPUT_ENGINE_FUSED;
@@ -1269,39 +1233,6 @@ PBGnssMeasurementsMultipathIndicator LocationApiPbMsgConv::getPBEnumForGnssMeasM
     LocApiPb_LOGv("LocApiPB: gnssMeasMultiPathIndic:%d, pbGnssMeasMultiPathIndic:%d",
             gnssMeasMultiPathIndic, pbGnssMeasMultiPathIndic);
     return pbGnssMeasMultiPathIndic;
-}
-
-PBLocApiGnss_LocSvSystemEnumType LocationApiPbMsgConv::getPBEnumForGnssLocSvSystem(
-            const Gnss_LocSvSystemEnumType &gnssLocSvSysEnumType) const {
-    PBLocApiGnss_LocSvSystemEnumType pbGnssLocSvSysEnumType = PB_GNSS_LOC_SV_SYSTEM_INVALID;
-    switch (gnssLocSvSysEnumType) {
-        case GNSS_LOC_SV_SYSTEM_GPS:
-            pbGnssLocSvSysEnumType = PB_GNSS_LOC_SV_SYSTEM_GPS;
-            break;
-        case GNSS_LOC_SV_SYSTEM_GALILEO:
-            pbGnssLocSvSysEnumType = PB_GNSS_LOC_SV_SYSTEM_GALILEO;
-            break;
-        case GNSS_LOC_SV_SYSTEM_SBAS:
-            pbGnssLocSvSysEnumType = PB_GNSS_LOC_SV_SYSTEM_SBAS;
-            break;
-        case GNSS_LOC_SV_SYSTEM_GLONASS:
-            pbGnssLocSvSysEnumType = PB_GNSS_LOC_SV_SYSTEM_GLONASS;
-            break;
-        case GNSS_LOC_SV_SYSTEM_BDS:
-            pbGnssLocSvSysEnumType = PB_GNSS_LOC_SV_SYSTEM_BDS;
-            break;
-        case GNSS_LOC_SV_SYSTEM_QZSS:
-            pbGnssLocSvSysEnumType = PB_GNSS_LOC_SV_SYSTEM_QZSS;
-            break;
-        case GNSS_LOC_SV_SYSTEM_NAVIC:
-            pbGnssLocSvSysEnumType = PB_GNSS_LOC_SV_SYSTEM_NAVIC;
-            break;
-        default:
-            break;
-    }
-    LocApiPb_LOGv("LocApiPB: gnssLocSvSysEnumType:%d, pbGnssLocSvSysEnumType:%d",
-            gnssLocSvSysEnumType, pbGnssLocSvSysEnumType);
-    return pbGnssLocSvSysEnumType;
 }
 
 PBAgcStatus LocationApiPbMsgConv::getPBEnumForAgcStatus(const AgcStatus &agcStatus) const {
@@ -5018,7 +4949,6 @@ int LocationApiPbMsgConv::convertGnssMeasDataToPB(const GnssMeasurementsData &gn
     // int32 svId = 2;
     pbGnssMeasData->set_svid(gnssMeasData.svId);
 
-    // Use Gnss_LocSvSystemEnumType instead of GnssSvType
     // PBLocApiGnss_LocSvSystemEnumType svType = 3;
     pbGnssMeasData->set_svtype(getPBGnssLocSvSysEnumFromGnssSvType(gnssMeasData.svType));
 
@@ -5263,7 +5193,7 @@ int LocationApiPbMsgConv::convertGnssSystemTimeToPB(const GnssSystemTime &gnssSy
     }
     // PBLocApiGnss_LocSvSystemEnumType gnssSystemTimeSrc = 1;
     pbGnssSysTime->set_gnsssystemtimesrc(
-            getPBEnumForGnssLocSvSystem(gnssSysTime.gnssSystemTimeSrc));
+            getPBGnssLocSvSysEnumFromGnssSvType(gnssSysTime.gnssSystemTimeSrc));
 
     // PBLocApiSystemTimeStructUnion u = 2;
     PBLocApiSystemTimeStructUnion* sysTimeStructUnion = pbGnssSysTime->mutable_u();
@@ -5369,7 +5299,7 @@ int LocationApiPbMsgConv::convertGnssMeasUsageInfoToPB(const GnssMeasUsageInfo &
     }
     // PBLocApiGnss_LocSvSystemEnumType gnssConstellation = 1;
     pbGnssMeasUsageInfo->set_gnssconstellation(
-            getPBEnumForGnssLocSvSystem(gnssMeasUsageInfo.gnssConstellation));
+            getPBGnssLocSvSysEnumFromGnssSvType(gnssMeasUsageInfo.gnssConstellation));
 
     // uint32 gnssSvId = 2;
     pbGnssMeasUsageInfo->set_gnsssvid(gnssMeasUsageInfo.gnssSvId);
@@ -5385,7 +5315,7 @@ int LocationApiPbMsgConv::convertGnssMeasUsageInfoToPB(const GnssMeasUsageInfo &
 }
 
 int LocationApiPbMsgConv::convertSystemTimeStructUnionToPB(
-        const Gnss_LocSvSystemEnumType &gnssLocSvSysEnumType,
+        const GnssSvType &gnssSvType,
         const SystemTimeStructUnion &sysTimeStructUnion,
         PBLocApiSystemTimeStructUnion *pbSysTimeStructUnion) const {
     uint32_t retVal = 0;
@@ -5394,8 +5324,8 @@ int LocationApiPbMsgConv::convertSystemTimeStructUnionToPB(
         return 1;
     }
 
-    switch (gnssLocSvSysEnumType) {
-        case GNSS_LOC_SV_SYSTEM_GPS:
+    switch (gnssSvType) {
+        case GNSS_SV_TYPE_GPS:
             {
                 // PBLocApiGnssSystemTimeStructType gpsSystemTime = 1;
                 PBLocApiGnssSystemTimeStructType* gpsSysTime =
@@ -5413,7 +5343,7 @@ int LocationApiPbMsgConv::convertSystemTimeStructUnionToPB(
                 }
             }
             break;
-        case GNSS_LOC_SV_SYSTEM_GALILEO:
+        case GNSS_SV_TYPE_GALILEO:
             {
                 // PBLocApiGnssSystemTimeStructType galSystemTime = 2;
                 PBLocApiGnssSystemTimeStructType* galSysTime =
@@ -5431,7 +5361,7 @@ int LocationApiPbMsgConv::convertSystemTimeStructUnionToPB(
                 }
             }
             break;
-        case GNSS_LOC_SV_SYSTEM_BDS:
+        case GNSS_SV_TYPE_BEIDOU:
             {
                 // PBLocApiGnssSystemTimeStructType bdsSystemTime = 3;
                 PBLocApiGnssSystemTimeStructType* bdsSysTime =
@@ -5449,7 +5379,7 @@ int LocationApiPbMsgConv::convertSystemTimeStructUnionToPB(
                 }
             }
             break;
-        case GNSS_LOC_SV_SYSTEM_QZSS:
+        case GNSS_SV_TYPE_QZSS:
             {
                 // PBLocApiGnssSystemTimeStructType qzssSystemTime = 4;
                 PBLocApiGnssSystemTimeStructType* qzssSysTime =
@@ -5467,7 +5397,7 @@ int LocationApiPbMsgConv::convertSystemTimeStructUnionToPB(
                 }
             }
             break;
-        case GNSS_LOC_SV_SYSTEM_GLONASS:
+        case GNSS_SV_TYPE_GLONASS:
             {
                 // PBLocApiGnssGloTimeStructType gloSystemTime = 5;
                 PBLocApiGnssGloTimeStructType* gloSysTime =
@@ -5485,7 +5415,7 @@ int LocationApiPbMsgConv::convertSystemTimeStructUnionToPB(
                 }
             }
             break;
-        case GNSS_LOC_SV_SYSTEM_NAVIC:
+        case GNSS_SV_TYPE_NAVIC:
             {
                 // PBLocApiGnssSystemTimeStructType navicSystemTime = 6;
                 PBLocApiGnssSystemTimeStructType* navicSysTime =
@@ -5507,8 +5437,7 @@ int LocationApiPbMsgConv::convertSystemTimeStructUnionToPB(
             retVal = 0;
             break;
     }
-    LocApiPb_LOGv("LocApiPB: sysTimeStructUnion - gnssLocSvSysEnumType:%d, return %d",
-            gnssLocSvSysEnumType, retVal);
+    LocApiPb_LOGv("LocApiPB: sysTimeStructUnion - gnssSvType:%d, return %d", gnssSvType, retVal);
     return retVal;
 }
 
@@ -6647,7 +6576,7 @@ int LocationApiPbMsgConv::pbConvertToGnssSystemTime(const PBLocApiGnssSystemTime
         GnssSystemTime &gnssSysTime) const {
     // PBLocApiGnss_LocSvSystemEnumType gnssSystemTimeSrc = 1;
     gnssSysTime.gnssSystemTimeSrc =
-            getEnumForPBGnssLocSvSystem(pbGnssSysTime.gnsssystemtimesrc());
+            getGnssSvTypeFromPBGnssLocSvSystemEnumType(pbGnssSysTime.gnsssystemtimesrc());
     // PBLocApiSystemTimeStructUnion u = 2;
     pbConvertToSystemTimeStructUnion(gnssSysTime.gnssSystemTimeSrc,
             pbGnssSysTime.u(), gnssSysTime.u);
@@ -6660,7 +6589,7 @@ int LocationApiPbMsgConv::pbConvertToGnssMeasUsageInfo(
         GnssMeasUsageInfo &gnssMeasUsageInfo) const {
     // PBLocApiGnss_LocSvSystemEnumType gnssConstellation = 1;
     gnssMeasUsageInfo.gnssConstellation =
-            getEnumForPBGnssLocSvSystem(pbGnssMeasUsageInfo.gnssconstellation());
+            getGnssSvTypeFromPBGnssLocSvSystemEnumType(pbGnssMeasUsageInfo.gnssconstellation());
 
     // uint32 gnssSvId = 2;
     gnssMeasUsageInfo.gnssSvId = pbGnssMeasUsageInfo.gnsssvid();
@@ -6676,37 +6605,37 @@ int LocationApiPbMsgConv::pbConvertToGnssMeasUsageInfo(
 }
 
 int LocationApiPbMsgConv::pbConvertToSystemTimeStructUnion(
-        const Gnss_LocSvSystemEnumType &gnssLocSvSysEnumType,
+        const GnssSvType &gnssSvType,
         const PBLocApiSystemTimeStructUnion &pbSysTimeStructUnion,
         SystemTimeStructUnion &sysTimeStructUnion) const {
-    LOC_LOGv("LocApiPB: pbSysTimeStructUnion - gnssLocSvSysEnumType:%d", gnssLocSvSysEnumType);
-    switch (gnssLocSvSysEnumType) {
-        case GNSS_LOC_SV_SYSTEM_GPS:
+    LOC_LOGv("LocApiPB: pbSysTimeStructUnion - gnssSvType:%d", gnssSvType);
+    switch (gnssSvType) {
+        case GNSS_SV_TYPE_GPS:
             // PBLocApiGnssSystemTimeStructType gpsSystemTime = 1;
             pbConvertToGnssSystemTimeStructType(pbSysTimeStructUnion.gpssystemtime(),
                     sysTimeStructUnion.gpsSystemTime);
             break;
-        case GNSS_LOC_SV_SYSTEM_GALILEO:
+        case GNSS_SV_TYPE_GALILEO:
             // PBLocApiGnssSystemTimeStructType galSystemTime = 2;
             pbConvertToGnssSystemTimeStructType(pbSysTimeStructUnion.galsystemtime(),
                     sysTimeStructUnion.galSystemTime);
             break;
-        case GNSS_LOC_SV_SYSTEM_BDS:
+        case GNSS_SV_TYPE_BEIDOU:
             // PBLocApiGnssSystemTimeStructType bdsSystemTime = 3;
             pbConvertToGnssSystemTimeStructType(pbSysTimeStructUnion.bdssystemtime(),
                     sysTimeStructUnion.bdsSystemTime);
             break;
-        case GNSS_LOC_SV_SYSTEM_QZSS:
+        case GNSS_SV_TYPE_QZSS:
             // PBLocApiGnssSystemTimeStructType qzssSystemTime = 4;
             pbConvertToGnssSystemTimeStructType(pbSysTimeStructUnion.qzsssystemtime(),
                     sysTimeStructUnion.qzssSystemTime);
             break;
-        case GNSS_LOC_SV_SYSTEM_GLONASS:
+        case GNSS_SV_TYPE_GLONASS:
             // PBLocApiGnssGloTimeStructType gloSystemTime = 5;
             pbConvertToGnssGloTimeStructType(pbSysTimeStructUnion.glosystemtime(),
                     sysTimeStructUnion.gloSystemTime);
             break;
-        case GNSS_LOC_SV_SYSTEM_NAVIC:
+        case GNSS_SV_TYPE_NAVIC:
             // PBLocApiGnssSystemTimeStructType navicSystemTime = 6;
             pbConvertToGnssSystemTimeStructType(pbSysTimeStructUnion.navicsystemtime(),
                     sysTimeStructUnion.navicSystemTime);
@@ -7372,7 +7301,7 @@ int LocationApiPbMsgConv::convertGnssEphNotifToPB(
         return 1;
     }
     pbGnssEphNotif->set_gnssconstellation(
-            getPBEnumForGnssLocSvSystem(gnssEphNotif.gnssConstellation));
+            getPBGnssLocSvSysEnumFromGnssSvType(gnssEphNotif.gnssConstellation));
     pbGnssEphNotif->set_issystemtimevalid(gnssEphNotif.isSystemTimeValid);
 
     PBLocApiGnssSystemTimeStructType*  sysTime = pbGnssEphNotif->mutable_systemtime();
@@ -7390,7 +7319,7 @@ int LocationApiPbMsgConv::convertGnssEphNotifToPB(
     PBEphInfoUnion *ephU = pbGnssEphNotif->mutable_ephunion();
     if (ephU) {
         switch (gnssEphNotif.gnssConstellation) {
-            case GNSS_LOC_SV_SYSTEM_GPS: {
+            case GNSS_SV_TYPE_GPS: {
                 PBGpsEphemerisResponse* ephResp = ephU->mutable_gpsephemeris();
                 if (nullptr != ephResp) {
                     if (convertGpsEphResponseToPB(gnssEphNotif.ephInfo.gpsEphemeris, ephResp)) {
@@ -7404,7 +7333,7 @@ int LocationApiPbMsgConv::convertGnssEphNotifToPB(
                 }
                 break;
             }
-            case GNSS_LOC_SV_SYSTEM_GALILEO: {
+            case GNSS_SV_TYPE_GALILEO: {
                 PBGalileoEphemerisResponse* ephRespGal = ephU->mutable_galileoephemeris();
                 if (nullptr != ephRespGal) {
                     if (convertGalEphResponseToPB(gnssEphNotif.ephInfo.galileoEphemeris,
@@ -7419,7 +7348,7 @@ int LocationApiPbMsgConv::convertGnssEphNotifToPB(
                 }
                 break;
             }
-            case GNSS_LOC_SV_SYSTEM_GLONASS: {
+            case GNSS_SV_TYPE_GLONASS: {
                 PBGlonassEphemerisResponse* ephRespGlo = ephU->mutable_glonassephemeris();
                 if (nullptr != ephRespGlo) {
                     if (convertGloEphResponseToPB(gnssEphNotif.ephInfo.glonassEphemeris,
@@ -7434,7 +7363,7 @@ int LocationApiPbMsgConv::convertGnssEphNotifToPB(
                 }
                 break;
             }
-            case GNSS_LOC_SV_SYSTEM_BDS: {
+            case GNSS_SV_TYPE_BEIDOU: {
                 PBBdsEphemerisResponse* ephRespBds = ephU->mutable_bdsephemeris();
                 if (nullptr != ephRespBds) {
                     if (convertBdsEphResponseToPB(gnssEphNotif.ephInfo.bdsEphemeris, ephRespBds)) {
@@ -7448,7 +7377,7 @@ int LocationApiPbMsgConv::convertGnssEphNotifToPB(
                 }
                 break;
             }
-            case GNSS_LOC_SV_SYSTEM_QZSS: {
+            case GNSS_SV_TYPE_QZSS: {
                 PBQzssEphemerisResponse* ephRespQzss = ephU->mutable_qzssephemeris();
                 if (nullptr != ephRespQzss) {
                     if (convertQzssEphResponseToPB(gnssEphNotif.ephInfo.qzssEphemeris,
@@ -7463,7 +7392,7 @@ int LocationApiPbMsgConv::convertGnssEphNotifToPB(
                 }
                 break;
             }
-            case GNSS_LOC_SV_SYSTEM_NAVIC: {
+            case GNSS_SV_TYPE_NAVIC: {
                 PBNavicEphemerisResponse* ephRespNavic = ephU->mutable_navicephemeris();
                 if (nullptr != ephRespNavic) {
                     if (convertNavicEphResponseToPB(gnssEphNotif.ephInfo.navicEphemeris,
@@ -7920,7 +7849,7 @@ int LocationApiPbMsgConv::pbConvertToGnssEphNotif(
         const PBGnssEphemerisNotification &pbGnssEphNotif,
         GnssSvEphemerisReport &gnssEphNotif) const {
 
-    gnssEphNotif.gnssConstellation =  getEnumForPBGnssLocSvSystem(
+    gnssEphNotif.gnssConstellation =  getGnssSvTypeFromPBGnssLocSvSystemEnumType(
             pbGnssEphNotif.gnssconstellation());
     gnssEphNotif.isSystemTimeValid = pbGnssEphNotif.issystemtimevalid();
 
@@ -7928,27 +7857,27 @@ int LocationApiPbMsgConv::pbConvertToGnssEphNotif(
             gnssEphNotif.systemTime);
 
     switch (gnssEphNotif.gnssConstellation) {
-        case GNSS_LOC_SV_SYSTEM_GPS:
+        case GNSS_SV_TYPE_GPS:
             pbConvertToGpsEphResponse(pbGnssEphNotif.ephunion().gpsephemeris(),
                     gnssEphNotif.ephInfo.gpsEphemeris);
             break;
-        case GNSS_LOC_SV_SYSTEM_GALILEO:
+        case GNSS_SV_TYPE_GALILEO:
             pbConvertToGalEphResponse(pbGnssEphNotif.ephunion().galileoephemeris(),
                     gnssEphNotif.ephInfo.galileoEphemeris);
             break;
-        case GNSS_LOC_SV_SYSTEM_GLONASS:
+        case GNSS_SV_TYPE_GLONASS:
             pbConvertToGloEphResponse(pbGnssEphNotif.ephunion().glonassephemeris(),
                     gnssEphNotif.ephInfo.glonassEphemeris);
             break;
-        case GNSS_LOC_SV_SYSTEM_BDS:
+        case GNSS_SV_TYPE_BEIDOU:
             pbConvertToBdsEphResponse(pbGnssEphNotif.ephunion().bdsephemeris(),
                     gnssEphNotif.ephInfo.bdsEphemeris);
             break;
-        case GNSS_LOC_SV_SYSTEM_QZSS:
+        case GNSS_SV_TYPE_QZSS:
             pbConvertToQzssEphResponse(pbGnssEphNotif.ephunion().qzssephemeris(),
                     gnssEphNotif.ephInfo.qzssEphemeris);
             break;
-        case GNSS_LOC_SV_SYSTEM_NAVIC:
+        case GNSS_SV_TYPE_NAVIC:
             pbConvertToNavicEphResponse(pbGnssEphNotif.ephunion().navicephemeris(),
                     gnssEphNotif.ephInfo.navicEphemeris);
             break;

@@ -457,8 +457,8 @@ void LocationClientApiImpl::parseGnssMeasUsageInfo(
 
             measUsageInfo.gnssSignalType = parseGnssSignalType(
                     halLocationInfo.measUsageInfo[idx].gnssSignalType);
-            measUsageInfo.gnssConstellation = (Gnss_LocSvSystemEnumType)
-                    halLocationInfo.measUsageInfo[idx].gnssConstellation;
+            measUsageInfo.gnssConstellation = parseSystemType(
+                    halLocationInfo.measUsageInfo[idx].gnssConstellation);
             measUsageInfo.gnssSvId = halLocationInfo.measUsageInfo[idx].gnssSvId;
             clientMeasUsageInfo.push_back(measUsageInfo);
         }
@@ -680,30 +680,30 @@ GnssSystemTime LocationClientApiImpl::parseSystemTime(const ::GnssSystemTime &ha
     GnssSystemTime systemTime = {};
 
     switch (halSystemTime.gnssSystemTimeSrc) {
-        case ::GNSS_LOC_SV_SYSTEM_GPS:
+        case ::GNSS_SV_TYPE_GPS:
            systemTime.gnssSystemTimeSrc = GNSS_LOC_SV_SYSTEM_GPS;
            systemTime.u.gpsSystemTime = parseGnssTime(halSystemTime.u.gpsSystemTime);
            break;
-        case ::GNSS_LOC_SV_SYSTEM_GALILEO:
+        case ::GNSS_SV_TYPE_GALILEO:
            systemTime.gnssSystemTimeSrc = GNSS_LOC_SV_SYSTEM_GALILEO;
            systemTime.u.galSystemTime = parseGnssTime(halSystemTime.u.galSystemTime);
            break;
-        case ::GNSS_LOC_SV_SYSTEM_SBAS:
+        case ::GNSS_SV_TYPE_SBAS:
            systemTime.gnssSystemTimeSrc = GNSS_LOC_SV_SYSTEM_SBAS;
            break;
-        case ::GNSS_LOC_SV_SYSTEM_GLONASS:
+        case ::GNSS_SV_TYPE_GLONASS:
            systemTime.gnssSystemTimeSrc = GNSS_LOC_SV_SYSTEM_GLONASS;
            systemTime.u.gloSystemTime = parseGloTime(halSystemTime.u.gloSystemTime);
            break;
-        case ::GNSS_LOC_SV_SYSTEM_BDS:
+        case ::GNSS_SV_TYPE_BEIDOU:
            systemTime.gnssSystemTimeSrc = GNSS_LOC_SV_SYSTEM_BDS;
            systemTime.u.bdsSystemTime = parseGnssTime(halSystemTime.u.bdsSystemTime);
            break;
-        case ::GNSS_LOC_SV_SYSTEM_QZSS:
+        case ::GNSS_SV_TYPE_QZSS:
            systemTime.gnssSystemTimeSrc = GNSS_LOC_SV_SYSTEM_QZSS;
            systemTime.u.qzssSystemTime = parseGnssTime(halSystemTime.u.qzssSystemTime);
            break;
-        case GNSS_LOC_SV_SYSTEM_NAVIC:
+        case ::GNSS_SV_TYPE_NAVIC:
            systemTime.gnssSystemTimeSrc = GNSS_LOC_SV_SYSTEM_NAVIC;
            systemTime.u.navicSystemTime = parseGnssTime(halSystemTime.u.navicSystemTime);
            break;
@@ -712,6 +712,29 @@ GnssSystemTime LocationClientApiImpl::parseSystemTime(const ::GnssSystemTime &ha
     }
 
     return systemTime;
+}
+
+Gnss_LocSvSystemEnumType LocationClientApiImpl::parseSystemType(const ::GnssSvType svType) {
+    switch (svType) {
+        case ::GNSS_SV_TYPE_GPS:
+            return GNSS_LOC_SV_SYSTEM_GPS;
+        case ::GNSS_SV_TYPE_GALILEO:
+            return GNSS_LOC_SV_SYSTEM_GALILEO;
+        case ::GNSS_SV_TYPE_SBAS:
+            return GNSS_LOC_SV_SYSTEM_SBAS;
+        case ::GNSS_SV_TYPE_GLONASS:
+            return GNSS_LOC_SV_SYSTEM_GLONASS;
+        case ::GNSS_SV_TYPE_BEIDOU:
+            // Note the name difference: BEIDOU maps to BDS
+            return GNSS_LOC_SV_SYSTEM_BDS;
+        case ::GNSS_SV_TYPE_QZSS:
+            return GNSS_LOC_SV_SYSTEM_QZSS;
+        case ::GNSS_SV_TYPE_NAVIC:
+            return GNSS_LOC_SV_SYSTEM_NAVIC;
+        case ::GNSS_SV_TYPE_UNKNOWN:
+        default:
+            return (Gnss_LocSvSystemEnumType)0; // Coercing to an "UNKNOWN" value
+    }
 }
 
 GnssLocation LocationClientApiImpl::parseLocationInfo(

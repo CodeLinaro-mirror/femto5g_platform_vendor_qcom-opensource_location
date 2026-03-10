@@ -183,6 +183,7 @@ public:
     static GnssSv parseGnssSv(const ::GnssSv &halGnssSv);
     static GnssLocation parseLocationInfo(const ::GnssLocationInfoNotification &halLocationInfo);
     static GnssSystemTime parseSystemTime(const ::GnssSystemTime &halSystemTime);
+    static Gnss_LocSvSystemEnumType parseSystemType(const ::GnssSvType svType);
     static GnssGloTimeStructType parseGloTime(const ::GnssGloTimeStructType &halGloTime);
     static GnssSystemTimeStructType parseGnssTime(const ::GnssSystemTimeStructType &halGnssTime);
     static LocationReliability parseLocationReliability(
