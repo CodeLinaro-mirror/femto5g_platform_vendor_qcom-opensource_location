@@ -91,6 +91,7 @@ SYSR_INCLUDE_DIR(location-client-api)
 SYSR_INCLUDE_DIR(open-avb)
 SYSR_INCLUDE_DIR(location-integration-api)
 SYSR_INCLUDE_DIR(loc-diag-iface-hdr)
+SYSR_INCLUDE_DIR(libcap)
 
 if (POWER_DAEMON_MGR_ENABLED)
     add_definitions(-DPOWER_DAEMON_MGR_ENABLED)
@@ -154,9 +155,9 @@ link_directories(
 endif()
 
 if (MSVC)
-  set(LINK_LIBRARIES CommonAPI location_client_api gps_utils gptp location_integration_api log)
+  set(LINK_LIBRARIES CommonAPI location_client_api gps_utils gptp location_integration_api log cap)
 else()
-  set(LINK_LIBRARIES -Wl,--as-needed CommonAPI location_client_api gps_utils gptp location_integration_api log)
+  set(LINK_LIBRARIES -Wl,--as-needed CommonAPI location_client_api gps_utils gptp location_integration_api log cap)
 endif()
 
 # Build service
