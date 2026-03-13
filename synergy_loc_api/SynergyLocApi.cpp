@@ -133,7 +133,7 @@ void handleSllReportPosition(UlpLocation& location,
     if (nullptr != context) {
         SynergyLocApi *synergyLocApiInstance = (SynergyLocApi*)context;
         synergyLocApiInstance->reportPosition(location, locationExtended,
-                            status, loc_technology_mask);
+                            status, loc_technology_mask, msInWeek);
     } else {
         LOC_LOGw ("Context is NULL");
     }
@@ -180,7 +180,7 @@ void handleSllReportSvMeasurement(GnssMeasurements &svMeasurementSet, void *cont
 
     if (nullptr != context) {
         SynergyLocApi *synergyLocApiInstance = (SynergyLocApi*)context;
-        synergyLocApiInstance->reportGnssMeasurements(svMeasurementSet);
+        synergyLocApiInstance->reportGnssMeasurements(svMeasurementSet, 0);
     } else {
         LOC_LOGw ("Context is NULL");
     }
@@ -293,7 +293,7 @@ void handleSllReportData(GnssDataNotification& dataNotify, int msInWeek,
 
     if (nullptr != context) {
         SynergyLocApi *synergyLocApiInstance = (SynergyLocApi*)context;
-        synergyLocApiInstance->reportData(dataNotify);
+        synergyLocApiInstance->reportData(dataNotify, msInWeek);
     } else {
         LOC_LOGw ("Context is NULL");
     }
@@ -456,7 +456,7 @@ void handleSllReportGnssMeasurementData(GnssMeasurements &measurements,
 
     if (nullptr != context) {
         SynergyLocApi *synergyLocApiInstance = (SynergyLocApi*)context;
-        synergyLocApiInstance->reportGnssMeasurements(measurements);
+        synergyLocApiInstance->reportGnssMeasurements(measurements, msInWeek);
     } else {
         LOC_LOGw ("Context is NULL");
     }

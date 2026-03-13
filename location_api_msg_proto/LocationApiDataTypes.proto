@@ -48,9 +48,9 @@ enum LocationApiDataTypesVersion {
     // Major changes - compatibility breakage. Bump the first byte of version i.e. 1.x to 2.0
     LOCAPI_DATA_TYPES_VER_MAJOR = 1;
     // Minor - New features / API addition, new message/elemtent addition.
-    // Bump the last byte of version i.e. x.3 to x.4
-    // Minor version 53: Extend Gnss Data to support Debug time
-    LOCAPI_DATA_TYPES_VER_MINOR = 53;
+    // Bump the last byte of version i.e. x.4 to x.5
+    // Minor version 54: Change hwClkFreqCorrection data type from uint32 to int32
+    LOCAPI_DATA_TYPES_VER_MINOR = 54;
 }
 
 // ============================================================================
@@ -1275,7 +1275,7 @@ message PBGnssDataNotification {
     // System Tick at GPS time
     uint64 systemTickAtGpsTime = 10;
     // Hardware clock frequency correction
-    uint32 hwClkFreqCorrection = 11;
+    int32 hwClkFreqCorrection = 11;
 }
 
 message PBGnssMeasurementsNotification {

@@ -1752,7 +1752,7 @@ struct GnssData {
     /** System Tick at GPS Time  <br/>  */
     uint64_t                 systemTickAtGpsTime;
     /** Hardware clock frequency correction  <br/>  */
-    uint32_t                 hwClkFreqCorrection;
+    int32_t                  hwClkFreqCorrection;
     /** Method to print the struct to human readable form, for logging.
      *  <br/> */
     string toString() const;

@@ -140,13 +140,12 @@ static void print_qLocation_array(qapi_Location_t* qLocationArray, uint32_t leng
             (int)qLocationArray[i].altitudeMeanSeaLevel,
             (abs((int)(qLocationArray[i].altitudeMeanSeaLevel * 100))) % 100);
 
-        LOC_LOGv("SPEED: %d.%d BEAR: %d.%d TIME: 0x%x%x FLAGS: %u",
+        LOC_LOGv("SPEED: %d.%d BEAR: %d.%d TIME: %" PRIu64 " FLAGS: %u",
             (int)qLocationArray[i].speed,
             (abs((int)(qLocationArray[i].speed * 100))) % 100,
             (int)qLocationArray[i].bearing,
             (abs((int)(qLocationArray[i].bearing * 100))) % 100,
-            (int)(qLocationArray[i].timestamp >> 32),
-            (int)qLocationArray[i].timestamp, qLocationArray[i].flags);
+            qLocationArray[i].timestamp, qLocationArray[i].flags);
 
         LOC_LOGv("ACC: %d.%d VERT_ACC: %d.%d SPEED_ACC: %d.%d BEAR_ACC: %d.%d",
             (int)qLocationArray[i].accuracy,

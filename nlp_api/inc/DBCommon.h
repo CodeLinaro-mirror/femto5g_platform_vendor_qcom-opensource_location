@@ -26,6 +26,12 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/*
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ * */
+
 #ifndef WIFI_DB_COMMON_H
 #define WIFI_DB_COMMON_H
 
@@ -57,7 +63,7 @@ typedef struct {
     uint16_t regionId2;
     uint16_t regionId3;
     uint16_t regionId4;
-    uint32_t timestamp;
+    uint64_t timestamp;
 } CellInfo;
 
 // Extended cell info
