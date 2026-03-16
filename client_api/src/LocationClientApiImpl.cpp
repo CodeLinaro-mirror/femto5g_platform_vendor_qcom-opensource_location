@@ -155,25 +155,25 @@ GnssMeasurementsDataFlagsMask LocationClientApiImpl::parseMeasurementsDataMask(
 LocationCapabilitiesMask LocationClientApiImpl::parseCapabilitiesMask(
         ::LocationCapabilitiesMask mask) {
     LocationCapabilitiesMask capsMask = 0;
-    if (LOCATION_CAPABILITIES_TIME_BASED_TRACKING_BIT & mask) {
+    if (LOCATION_CAPABILITIES_TIME_BASED_TRACKING & mask) {
         capsMask |= LOCATION_CAPS_TIME_BASED_TRACKING_BIT;
     }
-    if (LOCATION_CAPABILITIES_TIME_BASED_BATCHING_BIT & mask) {
+    if (LOCATION_CAPABILITIES_TIME_BASED_BATCHING & mask) {
         capsMask |=  LOCATION_CAPS_TIME_BASED_BATCHING_BIT;
     }
-    if (LOCATION_CAPABILITIES_GEOFENCE_BIT & mask) {
+    if (LOCATION_CAPABILITIES_GEOFENCE & mask) {
         capsMask |=  LOCATION_CAPS_GEOFENCE_BIT;
     }
-    if (LOCATION_CAPABILITIES_GNSS_MEASUREMENTS_BIT & mask) {
+    if (LOCATION_CAPABILITIES_GNSS_MEASUREMENTS & mask) {
         capsMask |=  LOCATION_CAPS_GNSS_MEASUREMENTS_BIT;
     }
-    if (LOCATION_CAPABILITIES_CONSTELLATION_ENABLEMENT_BIT & mask) {
+    if (LOCATION_CAPABILITIES_CONSTELLATION_ENABLEMENT & mask) {
         capsMask |=  LOCATION_CAPS_CONSTELLATION_ENABLEMENT_BIT;
     }
-    if (LOCATION_CAPABILITIES_QWES_CARRIER_PHASE_BIT & mask) {
+    if (LOCATION_CAPABILITIES_QWES_CARRIER_PHASE & mask) {
         capsMask |=  LOCATION_CAPS_CARRIER_PHASE_BIT;
     }
-    if (LOCATION_CAPABILITIES_QWES_SV_POLYNOMIAL_BIT & mask) {
+    if (LOCATION_CAPABILITIES_QWES_SV_POLYNOMIAL & mask) {
         capsMask |=  LOCATION_CAPS_SV_POLYNOMIAL_BIT;
     }
     if (LOCATION_CAPABILITIES_QWES_GNSS_SINGLE_FREQUENCY & mask) {
@@ -211,16 +211,16 @@ LocationCapabilitiesMask LocationClientApiImpl::parseCapabilitiesMask(
 uint16_t LocationClientApiImpl::parseYearOfHw(::LocationCapabilitiesMask mask) {
     uint16_t yearOfHw = 2015;
 
-    if (LOCATION_CAPABILITIES_GNSS_MEASUREMENTS_BIT & mask) {
+    if (LOCATION_CAPABILITIES_GNSS_MEASUREMENTS & mask) {
         yearOfHw++; // 2016
-        if (LOCATION_CAPABILITIES_DEBUG_DATA_BIT & mask) {
+        if (LOCATION_CAPABILITIES_DEBUG_DATA & mask) {
             yearOfHw++; // 2017
-            if (LOCATION_CAPABILITIES_CONSTELLATION_ENABLEMENT_BIT & mask ||
-                LOCATION_CAPABILITIES_AGPM_BIT & mask) {
+            if (LOCATION_CAPABILITIES_CONSTELLATION_ENABLEMENT & mask ||
+                LOCATION_CAPABILITIES_AGPM & mask) {
                 yearOfHw++; // 2018
-                if (LOCATION_CAPABILITIES_PRIVACY_BIT & mask) {
+                if (LOCATION_CAPABILITIES_PRIVACY & mask) {
                     yearOfHw++; // 2019
-                    if (LOCATION_CAPABILITIES_MEASUREMENTS_CORRECTION_BIT & mask) {
+                    if (LOCATION_CAPABILITIES_MEASUREMENTS_CORRECTION & mask) {
                         yearOfHw++; // 2020
                     }
                 }
