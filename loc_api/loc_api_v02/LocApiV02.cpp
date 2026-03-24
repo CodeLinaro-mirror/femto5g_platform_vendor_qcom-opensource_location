@@ -8704,14 +8704,28 @@ void LocApiV02::setOperationMode(GnssSuplMode mode) {
 void
 LocApiV02::startTimeBasedTracking(const TrackingOptions& options, LocApiResponse* adapterResponse) {
     sendMsg(new LocApiMsg([this, options, adapterResponse] () {
-    LOC_LOGI("startTimeBasedTracking: minInterval %u, mode %u",
-             options.minInterval, options.mode);
+
+    LOC_LOGI("startTimeBasedTracking: minInterval %u, mode %u, power mode %d, "
+             "prev in session %d, prev minInterval %u, prev power mode %u)",
+             options.minInterval, options.mode, options.powerMode,
+             mInSession, mMinInterval, mPowerMode);
     LocationError err = LOCATION_ERROR_SUCCESS;
 
     // BOOT KPI marker, print only once for a session
     if (false == mInSession) {
         loc_boot_kpi_marker("L - LocApiV02 startFix, tbf %d", options.minInterval);
+    } else {
+        // this logic is to fix below scenario:
+        // 1: device has an on-going M5 keep warm session
+        // 2: a non-M5 session comes in and then stops
+        // 3: device attempts to resume M5 session
+        // In this scenario, we need to issue stop to MP to avoid GPS engine kept on
+        // for extended amount of time
+        if ((mPowerMode != GNSS_POWER_MODE_M5) && (options.powerMode == GNSS_POWER_MODE_M5)) {
+            stopTimeBasedTrackingSync(nullptr);
+        }
     }
+
     mInSession = true;
     registerEventMask();
     setOperationMode(options.mode);
@@ -9183,7 +9197,13 @@ void LocApiV02::configPrecisePositioning(PreciseType preciseType, bool enable,
 
 void LocApiV02::stopTimeBasedTracking(LocApiResponse* adapterResponse) {
     sendMsg(new LocApiMsg([this, adapterResponse] () {
-    LOC_LOGD("stopTimeBasedTracking enter");
+        stopTimeBasedTrackingSync(adapterResponse);
+    }));
+}
+
+void
+LocApiV02::stopTimeBasedTrackingSync(LocApiResponse* adapterResponse) {
+    LOC_LOGd("stopTimeBasedTracking enter");
     loc_boot_kpi_marker("L - LocApiV02 stop Fix session");
     LocationError err = LOCATION_ERROR_SUCCESS;
 
@@ -9196,7 +9216,7 @@ void LocApiV02::stopTimeBasedTracking(LocApiResponse* adapterResponse) {
 
     status = locClientSendReq(QMI_LOC_STOP_REQ_V02, req_union);
     if (status != eLOC_CLIENT_SUCCESS) {
-        LOC_LOGE ("stopTimeBasedTracking failed! status %d", status);
+        LOC_LOGe ("stopTimeBasedTracking failed! status %d", status);
         err = LOCATION_ERROR_GENERAL_FAILURE;
     } else {
         mIsFirstFinalFixReported = false;
@@ -9217,7 +9237,6 @@ void LocApiV02::stopTimeBasedTracking(LocApiResponse* adapterResponse) {
         free(mGnssMeasurements);
         mGnssMeasurements = nullptr;
     }
-    }));
 }
 
 void LocApiV02::startBatching(uint32_t sessionId,
