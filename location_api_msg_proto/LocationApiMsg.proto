@@ -87,8 +87,8 @@ enum LocationApiMsgVersion {
     LOCAPI_MSG_VER_MAJOR = 1;
     // Minor - New features / API addition, new message/elemtent addition.
     // Bump the last byte of version i.e. x.2 to x.3
-    // Minor version 25: Support External netwrok connectivity for XTRA
-    LOCAPI_MSG_VER_MINOR = 25;
+    // Minor version 25: Support Residual reporting
+    LOCAPI_MSG_VER_MINOR = 26;
 }
 
 // ============================================================================
@@ -173,6 +173,8 @@ enum PBELocMsgID {
     PB_E_LOCAPI_GET_SINGLE_POS_RESP_MSG_ID = 39;
     // Ephemeris Data
     PB_E_LOCAPI_EPH_MSG_ID = 40;
+    // Residual Reporting
+    PB_E_LOCAPI_RESIDUAL_REPORT_MSG_ID = 41;
 
     // ping
     PB_E_LOCAPI_PINGTEST_MSG_ID = 99;
@@ -266,6 +268,8 @@ enum PBLocationCallbacksMask {
     PB_E_LOC_CB_ENGINE_NMEA_BIT             = 0x4000;
     /**< Register for GNSS EPH */
     PB_E_LOC_CB_GNSS_EPH_BIT                = 0x8000;
+    /**< Register for Residual Report */
+    PB_E_LOC_CB_RESIDUAL_REPORT_BIT         = 0x10000;
 }
 
 enum PBEngineInfoCallbacksMask {
@@ -539,6 +543,11 @@ message PBLocAPIDcReportIndMsg {
 // defintion for message with msg id of PB_E_LOCAPI_EPH_MSG_ID
 message PBLocAPIEphIndMsg {
     PBGnssEphemerisNotification gnssEphemerisNotification = 1;
+}
+
+// defintion for message with msg id of PB_E_LOCAPI_RESIDUAL_REPORT_MSG_ID
+message PBLocAPISvResidualReportIndMsg {
+    PBSvResidualReport svResidualReport = 1;
 }
 //*******************************************************************
 // IPC message structure - Single-shot Terrestrial fix
