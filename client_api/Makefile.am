@@ -4,15 +4,28 @@ AM_CFLAGS = \
     -I inc/ \
     $(GPSUTILS_CFLAGS) \
     $(LOCAPIMSGPROTO_CFLAGS) \
-    -std=c++14
+    -std=c++17
 
 ACLOCAL_AMFLAGS = -I m4
-AM_CPPFLAGS = -std=c++14
+AM_CPPFLAGS = -std=c++17
 
 requiredlibs = \
     $(GPSUTILS_LIBS) \
     $(LOCAPIMSGPROTO_LIBS) \
     -lprotobuf-lite
+
+if USE_EXTERNAL_AP
+AM_CFLAGS += \
+    $(ABSEIL_LOG_CFLAGS) \
+    $(ABSEIL_CHECK_CFLAGS)
+
+requiredlibs += \
+    $(ABSEIL_LOG_LIBS) \
+    $(ABSEIL_CHECK_LIBS) \
+    -labsl_strings \
+    -labsl_base \
+    -labsl_base
+endif
 
 h_sources = \
     src/LocationClientApiImpl.h \
