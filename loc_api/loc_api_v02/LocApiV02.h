@@ -199,7 +199,6 @@ private:
   bool mIsFullTracking;
   qmiLocGnssSignalTypeMaskT_v02 mPreferredSignalType;
   GnssSvType mPreferredSvSystemType;
-  ModemGnssQesdkFeatureMask mQesdkFeatureMask;
   // GPTP inititialization
   bool mIsGptpInitialized;
   // Dwell Time Allignment
