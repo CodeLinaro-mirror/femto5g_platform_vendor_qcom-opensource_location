@@ -8,6 +8,11 @@ PRODUCT_PACKAGES += izat_remote_api_headers
 PRODUCT_PACKAGES += loc_sll_if_headers
 PRODUCT_PACKAGES += libloc_socket
 
+PRODUCT_PACKAGES += liblocation_api_msg
+PRODUCT_PACKAGES += liblocation_integration_api
+PRODUCT_PACKAGES += liblocation_client_api
+
+ifneq ($(TARGET_SOMEIP_ENABLE), false)
 PRODUCT_PACKAGES += liblocClient_fidl_if_headers
 PRODUCT_PACKAGES += liblocApiV02_fidl_headers
 PRODUCT_PACKAGES += libfidl_loc_api
@@ -18,13 +23,10 @@ ifneq ($(TARGET_BOARD_PLATFORM)$(TARGET_BOARD_SUFFIX)$(TARGET_BOARD_DERIVATIVE_S
 PRODUCT_PACKAGES += locIdlClient_daemon
 endif
 
-PRODUCT_PACKAGES += liblocation_api_msg
-PRODUCT_PACKAGES += liblocation_integration_api
-PRODUCT_PACKAGES += liblocation_client_api
-
 PRODUCT_PACKAGES += commonapi4someip.ini
 PRODUCT_PACKAGES += vsomeip-client.json
 PRODUCT_PACKAGES += libLocIdlAPI-proxy
 PRODUCT_PACKAGES += libLocIdlAPI-someip
 PRODUCT_PACKAGES += LocIdlAPIClient
+endif#TARGET_SOMEIP_ENABLE
 endif#BOARD_VENDOR_QCOM_GPS_LOC_API_HARDWARE
