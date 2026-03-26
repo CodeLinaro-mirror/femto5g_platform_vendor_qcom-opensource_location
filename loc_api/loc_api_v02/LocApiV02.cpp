@@ -6752,8 +6752,7 @@ void LocApiV02 :: errorCb(locClientHandleType /*handle*/) {
   handleEngineDownEvent();
 }
 
-bool LocApiV02::getBestAvailableZppFixSync(LocGpsLocation &zppLoc,
-        LocPosTechMask &tech_mask, float* vertUnc) {
+bool LocApiV02::getBestAvailableZppFixSync(LocGpsLocation &zppLoc, LocPosTechMask &tech_mask) {
 
    LocationError err = LOCATION_ERROR_SUCCESS;
    qmiLocGetBestAvailablePositionReqMsgT_v02 zpp_req;
@@ -6808,8 +6807,9 @@ bool LocApiV02::getBestAvailableZppFixSync(LocGpsLocation &zppLoc,
             tech_mask = zpp_ind.technologyMask;
          }
 
-         if (nullptr != vertUnc && zpp_ind.vertUnc_valid) {
-            *vertUnc = zpp_ind.vertUnc;
+         if (zpp_ind.vertUnc_valid) {
+            zppLoc.flags |= LOC_GPS_LOCATION_HAS_VERT_UNCERTAINITY;
+            zppLoc.vertUncertainity = zpp_ind.vertUnc;
          }
       }
       return true;
