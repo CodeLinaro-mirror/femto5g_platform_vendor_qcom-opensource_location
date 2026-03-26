@@ -306,14 +306,28 @@ LocApiV02::LocApiV02(LOC_API_ADAPTER_EVENT_MASK_T exMask, ContextBase* context):
   UTIL_READ_CONF(LOC_PATH_IZAT_CONF, izat_conf_param_table);
 }
 
-/* Destructor for LocApiV02 */
-LocApiV02::~LocApiV02() {
-    close();
+/* Helper to free mGnssMeasurements and clear GNSS measurement caches */
+void LocApiV02::cleanupGnssResources() {
     if (mGnssMeasurements) {
+        if (mGnssMeasurements->gnssSvMeasurementSet) {
+            free(mGnssMeasurements->gnssSvMeasurementSet);
+            mGnssMeasurements->gnssSvMeasurementSet = nullptr;
+        }
         free(mGnssMeasurements);
         mGnssMeasurements = nullptr;
     }
+    mSvPolynomialMap.clear();
+    mPrev1HzSlipCountMap.clear();
+    mPrevNhzSlipCountMap.clear();
+    mCurrentCycleSlipCountMap1Hz.clear();
+    mCurrentCycleSlipCountMapNHz.clear();
+    m1HzMeasurementsInfo = {};
+}
 
+/* Destructor for LocApiV02 */
+LocApiV02 :: ~LocApiV02() {
+    close();
+    cleanupGnssResources();
 #ifdef PTP_SUPPORTED
          if (mIsGptpInitialized) {
              mIsGptpInitialized = false;
@@ -9239,15 +9253,7 @@ LocApiV02::stopTimeBasedTrackingSync(LocApiResponse* adapterResponse) {
     if (adapterResponse != NULL) {
         adapterResponse->returnToSender(err);
     }
-    // deallocate GnssMeasurements when tracking session stops
-    if (mGnssMeasurements) {
-        if (mGnssMeasurements->gnssSvMeasurementSet) {
-            free(mGnssMeasurements->gnssSvMeasurementSet);
-            mGnssMeasurements->gnssSvMeasurementSet = nullptr;
-        }
-        free(mGnssMeasurements);
-        mGnssMeasurements = nullptr;
-    }
+    cleanupGnssResources();
 }
 
 void LocApiV02::startBatching(uint32_t sessionId,

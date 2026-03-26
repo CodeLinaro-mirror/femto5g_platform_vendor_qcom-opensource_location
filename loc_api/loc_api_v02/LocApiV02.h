@@ -219,6 +219,9 @@ private:
   /* Convert error from loc_api_v02 to loc eng format*/
   static LocationError convertErr(locClientStatusEnumType status);
 
+  /* Free mGnssMeasurements, mSvPolynomialMap and several other measurement data*/
+  void cleanupGnssResources();
+
   /*convert signal type to carrier frequency*/
   static double convertSignalTypeToCarrierFrequency(
       qmiLocGnssSignalTypeMaskT_v02 signalType,
