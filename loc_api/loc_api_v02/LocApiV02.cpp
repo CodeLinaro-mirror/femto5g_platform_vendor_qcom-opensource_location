@@ -4441,20 +4441,34 @@ void LocApiV02 :: reportNiRequest(
     //Accept Ni notify/verify when E911 privacy overrides
     if ((ni_req_ptr->notificationType == eQMI_LOC_NI_USER_NOTIFY_VERIFY_PRIVACY_OVERRIDE_V02) &&
             ni_req_ptr->suplEmergencyNotification_valid) {
-        sendMsg(new LocApiMsg([this, ni_req_ptr] () {
+        sendMsg(new LocApiMsg([this, request_pass_back = *ni_req_ptr] () {
             locClientReqUnionType req_union = {};
             qmiLocNiUserRespReqMsgT_v02 ni_resp = {};
             qmiLocNiUserRespIndMsgT_v02 ni_resp_ind = {};
-            qmiLocEventNiNotifyVerifyReqIndMsgT_v02 *request_pass_back =
-                    (qmiLocEventNiNotifyVerifyReqIndMsgT_v02 *)ni_req_ptr;
             ni_resp.userResp = eQMI_LOC_NI_LCS_NOTIFY_VERIFY_ACCEPT_V02;
-            LOC_LOGd("inform ACCESS user response for SUPL Emergency");
+            LOC_LOGd("inform ACCEPT user response for SUPL Emergency");
             ni_resp.notificationType = eQMI_LOC_NI_USER_NOTIFY_VERIFY_PRIVACY_OVERRIDE_V02;
+
+            // copy SUPL payload from request
+            if (1 == request_pass_back.NiSuplInd_valid) {
+                ni_resp.NiSuplPayload_valid = 1;
+                memcpy(&(ni_resp.NiSuplPayload),
+                       &(request_pass_back.NiSuplInd),
+                       sizeof(qmiLocNiSuplNotifyVerifyStructT_v02));
+            }
+            // copy Network Initiated SUPL Version 2 Extension
+            if (1 == request_pass_back.NiSuplVer2ExtInd_valid) {
+                ni_resp.NiSuplVer2ExtPayload_valid = 1;
+                memcpy(&(ni_resp.NiSuplVer2ExtPayload),
+                       &(request_pass_back.NiSuplVer2ExtInd),
+                       sizeof(qmiLocNiSuplVer2ExtStructT_v02));
+            }
             // copy SUPL Emergency Notification
             ni_resp.suplEmergencyNotification_valid = 1;
             memcpy(&(ni_resp.suplEmergencyNotification),
-                    &(request_pass_back->suplEmergencyNotification),
+                    &(request_pass_back.suplEmergencyNotification),
                     sizeof(qmiLocEmergencyNotificationStructT_v02));
+
             req_union.pNiUserRespReq = &ni_resp;
             locSyncSendReq(QMI_LOC_NI_USER_RESPONSE_REQ_V02,
                            req_union, LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
