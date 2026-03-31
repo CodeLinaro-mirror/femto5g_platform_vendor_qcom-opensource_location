@@ -293,7 +293,9 @@ private:
   void populateGpsTimeOfReport(const qmiLocGnssTimeStructT_v02 &, GnssSystemTimeStructType &);
 
   void populateFeatureStatusReport(const qmiLocFeaturesStatusMaskT_v02 &featureStatusReport,
-        std::unordered_map<LocationQwesFeatureType, bool> &featureMap);
+          std::unordered_map<LocationQwesFeatureType, bool> &featureMap);
+  void populateInjectPosReq(qmiLocInjectPositionReqMsgT_v02 injectPositionReq,
+          const Location& location, bool onDemandCpi);
   void reportLocEvent(const qmiLocEventReportIndMsgT_v02 *event_report_ptr);
   /* convert system info to location api format and dispatch to
      the registered adapter */
@@ -459,15 +461,8 @@ public:
   virtual void
     setTime(LocGpsUtcTime time, int64_t timeReference, int uncertainty);
 
-  virtual void
-    injectPosition(double latitude, double longitude, float accuracy, bool onDemandCpi);
-
-  virtual void
-    injectPosition(const Location& location, bool onDemandCpi);
-
-  virtual void
-    injectPosition(const GnssLocationInfoNotification &locationInfo, bool onDemandCpi);
-
+  virtual void injectPosition(const Location& location, bool onDemandCpi);
+  virtual void injectPosition(const GnssLocationInfoNotification &locationInfo, bool onDemandCpi);
   virtual void injectPositionAndCivicAddress(const Location& location,
           const GnssCivicAddress& addr);
 
