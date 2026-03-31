@@ -687,6 +687,7 @@ public:
                               LocApiResponse* adapterResponse=nullptr);
   virtual void getBlacklistSv();
   virtual void setConstellationControl(const GnssSvTypeConfig& config,
+                                       bool sendReset=false,
                                        LocApiResponse *adapterResponse=nullptr);
   virtual void getConstellationControl();
   virtual void resetConstellationControl(LocApiResponse *adapterResponse=nullptr);

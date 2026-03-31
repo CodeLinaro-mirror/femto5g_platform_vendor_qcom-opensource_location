@@ -9991,9 +9991,10 @@ void LocApiV02::getBlacklistSv()
 
 void
 LocApiV02::setConstellationControl(const GnssSvTypeConfig& config,
+                                   bool sendReset,
                                    LocApiResponse *adapterResponse)
 {
-    sendMsg(new LocApiMsg([this, config, adapterResponse] () {
+    sendMsg(new LocApiMsg([this, config, sendReset, adapterResponse] () {
 
     locClientStatusEnumType status = eLOC_CLIENT_FAILURE_GENERAL;
     locClientReqUnionType req_union = {};
@@ -10006,8 +10007,7 @@ LocApiV02::setConstellationControl(const GnssSvTypeConfig& config,
     memset(&genReqStatusIndMsg, 0, sizeof(genReqStatusIndMsg));
 
     // Fill in the request details
-    setConstellationConfigMsg.resetConstellations = false;
-
+    setConstellationConfigMsg.resetConstellations = sendReset;
     bool disableSupported = ContextBase::isFeatureSupported(
             LOC_SUPPORTED_FEATURE_CONSTELLATION_DISABLEMENT);
 
@@ -10051,14 +10051,14 @@ LocApiV02::setConstellationControl(const GnssSvTypeConfig& config,
           QMI_LOC_CONSTELLATION_GAL_V02 | QMI_LOC_CONSTELLATION_NAVIC_V02);
     setConstellationConfigMsg.enableMask &= ~setConstellationConfigMsg.disableMask;
 
-    LOC_LOGI("setConstellationControl:input perferred constellation %d, disableSupported %d,"
-             "enable: 0x%" PRIx64 ", blacklisted: 0x%" PRIx64 "",
-             mPreferredSvSystemType, disableSupported,
+    LOC_LOGI("setConstellationControl: sendReset %d input perferred constellation %d, "
+             "disableSupported %d, enable: 0x%" PRIx64 ", blacklisted: 0x%" PRIx64 "",
+             sendReset, mPreferredSvSystemType, disableSupported,
              config.enabledSvTypesMask, config.blacklistedSvTypesMask);
 
-    LOC_LOGI("setConstellationControl:disableSupported %d,"
+    LOC_LOGI("setConstellationControl: sendReset %d disableSupported %d,"
              "enable: %d 0x%" PRIx64 ", blacklisted: %d 0x%" PRIx64 "",
-             disableSupported,
+             sendReset, disableSupported,
              setConstellationConfigMsg.enableMask_valid,
              setConstellationConfigMsg.enableMask,
              setConstellationConfigMsg.disableMask_valid,
