@@ -25,7 +25,6 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
@@ -61,6 +60,10 @@ IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+/******************************************************************************
+Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+SPDX-License-Identifier: BSD-3-Clause-Clear
+*******************************************************************************/
 
 #define LOG_TAG "LocSvc_LocationIntegrationApi"
 
@@ -87,11 +90,22 @@ LocationIntegrationApi::LocationIntegrationApi(
 }
 
 LocationIntegrationApi::~LocationIntegrationApi() {
+}
 
-    LOC_LOGd("calling destructor of LocationIntegrationApi");
-    if (mApiImpl) {
-        mApiImpl->destroy();
+void LocationIntegrationApi::destroy(LocIntegrationDestroyCb destroyCompleteCb) {
+    locationApiDestroyCompleteCallback destroyCb = nullptr;
+    if (destroyCompleteCb) {
+        destroyCb = [destroyCompleteCb] () {
+            LOC_LOGw("call destroyCompleteCb");
+            destroyCompleteCb();
+        };
     }
+
+    if (mApiImpl) {
+        // two steps processes due to asynchronous message processing
+        mApiImpl->destroyMe(destroyCb);
+    }
+
 }
 
 bool LocationIntegrationApi::configConstellations(
@@ -1042,7 +1056,7 @@ bool LocationIntegrationApi::getXtraStatus() {
 
 bool LocationIntegrationApi::registerXtraStatusUpdate(bool registerUpdate) {
     if (mApiImpl) {
-        return (mApiImpl->registerXtraStatusUpdate(registerUpdate) == 0);
+        return (mApiImpl->registerXtraStatusUpdate(registerUpdate, 0) == 0);
     } else {
         LOC_LOGe ("NULL mApiImpl");
         return false;
