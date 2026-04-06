@@ -482,6 +482,7 @@ void IpcListener::onReceive(const char* data, uint32_t length,
             case E_INTAPI_CONFIG_MAP_MATCHED_FEEDBACK_MSG_ID:
             case E_LOCAPI_CLIENT_DEREGISTER_MSG_ID:
             case E_INTAPI_NETWORK_UPDATE_INFO_MSG_ID:
+            case E_INTAPI_CONFIG_XTRA_USER_CONSENT_MSG_ID:
             {
                 PBLocAPIGenericRespMsg pbLocApiGenericRsp;
                 if (0 == pbLocApiGenericRsp.ParseFromString(pbLocApiMsg.payload())) {
