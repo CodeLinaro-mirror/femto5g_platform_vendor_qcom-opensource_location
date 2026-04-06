@@ -154,13 +154,6 @@ typedef enum {
     RF_LOSS_MAX_CONF        = 11
 } rfLossConf;
 
-typedef enum {
-    DISABLED,
-    BASIC,
-    PREMIUM,
-    MODEM_DEFAULT
-}e_premium_mode;
-
 static uint32_t rfLossNV[RF_LOSS_MAX_CONF] = { 0 };
 
 /* static event callbacks that call the LocApiV02 callbacks*/
@@ -9693,55 +9686,32 @@ AgcStatus LocApiV02::convertQmiAgcStatusType(qmiLocAgcStatusEnumT_v02 qmiAgcStat
 
 void LocApiV02::injectFeatureConfig() {
     sendMsg(new LocApiMsg([this] () {
-    e_premium_mode sap_mode=DISABLED;
     // As this is read using loc cfg routine, the buffer size
     // need to conform to what is supported by loc cfg module. */
     char conf_feature_sap[LOC_MAX_PARAM_STRING];
-    loc_param_s_type izat_conf_feature_table[] =
-    {
-    {"SAP",           &conf_feature_sap,           NULL, 's'}
+    loc_param_s_type izat_conf_feature_table[] = {
+        {"SAP", &conf_feature_sap, NULL, 's'}
     };
     UTIL_READ_CONF(LOC_PATH_IZAT_CONF, izat_conf_feature_table);
 
-    //SAP
-    if (strcmp(conf_feature_sap, "BASIC") == 0) {
-        sap_mode = BASIC;
-        LOC_LOGd("Setting SAP to mode: BASIC");
-    } else if (strcmp(conf_feature_sap, "PREMIUM") == 0 ||
-        strcmp(conf_feature_sap, "PREMIUM_ENV_AIDING") == 0) {
-        LOC_LOGd("Setting SAP to mode: PREMIUM");
-        sap_mode = PREMIUM;
-    } else if (strcmp(conf_feature_sap, "DISABLED") == 0) {
-        LOC_LOGd("Setting SAP to mode: DISABLED");
-    } else if (strcmp(conf_feature_sap, "MODEM_DEFAULT") == 0) {
-        LOC_LOGd("Setting SAP to mode: MODEM_DEFAULT");
-        sap_mode = MODEM_DEFAULT;
-    } else {
-        LOC_LOGe("Unrecognized value for SAP Mode.Setting to default mode: BASIC");
-        sap_mode = BASIC;
-    }
-    qmiLocSetPremiumServicesCfgReqMsgT_v02 premiumCfgReq;
-    memset(&premiumCfgReq, 0, sizeof(premiumCfgReq));
-    //SAP
-    if (sap_mode != MODEM_DEFAULT) {
-        memset(&premiumCfgReq, 0, sizeof(premiumCfgReq));
-        premiumCfgReq.premiumServiceType = eQMI_LOC_PREMIUM_SERVICE_SAP_V02;
-        if (sap_mode == BASIC) {
+    // only set sap_mode if it is not modem default
+    if (strcmp(conf_feature_sap, "MODEM_DEFAULT") != 0) {
+        qmiLocSetPremiumServicesCfgReqMsgT_v02 premiumCfgReq = {};
+        if (strcmp(conf_feature_sap, "BASIC") == 0) {
             premiumCfgReq.premiumServiceCfg = eQMI_LOC_PREMIUM_SERVICE_ENABLED_BASIC_V02;
-        }
-        else if (sap_mode == PREMIUM) {
+        } else if (strcmp(conf_feature_sap, "PREMIUM") == 0 ||
+                   strcmp(conf_feature_sap, "PREMIUM_ENV_AIDING") == 0) {
             premiumCfgReq.premiumServiceCfg = eQMI_LOC_PREMIUM_SERVICE_ENABLED_PREMIUM_V02;
-        }
-        else {
+        } else {
             premiumCfgReq.premiumServiceCfg = eQMI_LOC_PREMIUM_SERVICE_DISABLED_V02;
         }
-        {
-            LOC_SEND_SYNC_REQ(SetPremiumServicesCfg, SET_PREMIUM_SERVICES_CONFIG,
-                    premiumCfgReq);
-        }
+
+        LOC_LOGd("SAP mode %s, inject mode of %d to modem",
+                 conf_feature_sap, premiumCfgReq.premiumServiceCfg);
+        LOC_SEND_SYNC_REQ(SetPremiumServicesCfg, SET_PREMIUM_SERVICES_CONFIG,
+                          premiumCfgReq);
     } else {
-        LOC_LOGd("sap_mode is modem_default, so not setting PREMIUM_SERVICES_CONFIG"
-                "for SAP_MODE");
+        LOC_LOGd("SAP mode is MODEM_DEFAULT, no inject to modem");
     }
     }));
 }
