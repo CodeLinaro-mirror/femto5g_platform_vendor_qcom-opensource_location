@@ -60,7 +60,8 @@ private:
 
 MutexImpl::MutexImpl(const char * const tag, const bool verboseLog) :
         m_tag(tag),
-        m_flagEnableVerboseLog(verboseLog)
+        m_flagEnableVerboseLog(verboseLog),
+        m_mutex(PTHREAD_MUTEX_INITIALIZER)  // Initialize m_mutex to ensure it's in a valid state
 {
   int result = 1;
   pthread_mutexattr_t mutex_attr;
@@ -233,6 +234,7 @@ private:
 };
 
 WaitableBase::WaitableBase(const char * const name, const bool verboseLog) :
+        m_cond(PTHREAD_COND_INITIALIZER),  // Initialize m_cond to ensure it's in a valid state
         m_mutex(name, verboseLog),
         m_tag(name),
         m_verboseLog(verboseLog)
@@ -560,7 +562,8 @@ int BlockingQueueImpl::ZeroIfShouldWaitAgain_locked()
   }
   else
   {
-    return m_queue.getSize();
+    // Return 0 if queue is empty (should wait), non-zero if queue has items (should not wait)
+    return (m_queue.getSize() > 0) ? 1 : 0;
   }
 }
 

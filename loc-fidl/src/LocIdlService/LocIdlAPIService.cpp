@@ -1174,7 +1174,7 @@ int main() {
         pLocIdlService->init();
     }
 
-    if (gptpInit()) {
+    if (pLocIdlService && gptpInit()) {
         pLocIdlService->mIsGptpInitialized = true;
         LOC_LOGd(" GPTP init success ");
     } else {
