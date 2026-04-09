@@ -600,7 +600,7 @@ void LocApiV02::setTime(LocGpsUtcTime time, int64_t timeReference, int uncertain
 }
 
 /* inject position into the position engine */
-void LocApiV02::populateInjectPosReq(qmiLocInjectPositionReqMsgT_v02 injectPositionReq,
+void LocApiV02::populateInjectPosReq(qmiLocInjectPositionReqMsgT_v02& injectPositionReq,
         const Location& location, bool onDemandCpi) {
         injectPositionReq.timestampUtc_valid = 1;
     if (location.timestamp > 0) {

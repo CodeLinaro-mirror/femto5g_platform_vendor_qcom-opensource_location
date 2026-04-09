@@ -297,7 +297,7 @@ private:
 
   void populateFeatureStatusReport(const qmiLocFeaturesStatusMaskT_v02 &featureStatusReport,
           std::unordered_map<LocationQwesFeatureType, bool> &featureMap);
-  void populateInjectPosReq(qmiLocInjectPositionReqMsgT_v02 injectPositionReq,
+  void populateInjectPosReq(qmiLocInjectPositionReqMsgT_v02 &injectPositionReq,
           const Location& location, bool onDemandCpi);
   void reportLocEvent(const qmiLocEventReportIndMsgT_v02 *event_report_ptr);
   /* convert system info to location api format and dispatch to
