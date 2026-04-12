@@ -411,6 +411,9 @@ GnssSignalTypeMask LocationClientApiImpl::parseGnssSignalType(
     if (halGnssSignalTypeMask & ::GNSS_SIGNAL_QZSS_L1CA) {
         gnssSignalTypeMask |= GNSS_SIGNAL_QZSS_L1CA_BIT;
     }
+    if (halGnssSignalTypeMask & ::GNSS_SIGNAL_QZSS_L1CB) {
+        gnssSignalTypeMask |= GNSS_SIGNAL_QZSS_L1CB_BIT;
+    }
     if (halGnssSignalTypeMask & ::GNSS_SIGNAL_QZSS_L1S) {
         gnssSignalTypeMask |= GNSS_SIGNAL_QZSS_L1S_BIT;
     }

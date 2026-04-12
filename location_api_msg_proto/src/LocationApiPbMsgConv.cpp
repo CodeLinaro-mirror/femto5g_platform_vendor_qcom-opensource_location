@@ -2322,6 +2322,9 @@ uint32_t LocationApiPbMsgConv::getPBMaskForGnssSignalTypeMask(
     if (gnssSignalTypeMask & GNSS_SIGNAL_QZSS_L1CA) {
         pbGnssSignalTypeMask |= PB_GNSS_SIGNAL_QZSS_L1CA_BIT;
     }
+    if (gnssSignalTypeMask & GNSS_SIGNAL_QZSS_L1CB) {
+        pbGnssSignalTypeMask |= PB_GNSS_SIGNAL_QZSS_L1CB_BIT;
+    }
     if (gnssSignalTypeMask & GNSS_SIGNAL_QZSS_L1S) {
         pbGnssSignalTypeMask |= PB_GNSS_SIGNAL_QZSS_L1S_BIT;
     }
@@ -2846,6 +2849,9 @@ uint32_t LocationApiPbMsgConv::getGnssSignalTypeMaskFromPB(
     }
     if (pbGnssSignalTypeMask & PB_GNSS_SIGNAL_QZSS_L1CA_BIT) {
         gnssSignalTypeMask |= GNSS_SIGNAL_QZSS_L1CA;
+    }
+    if (pbGnssSignalTypeMask & PB_GNSS_SIGNAL_QZSS_L1CB_BIT) {
+        gnssSignalTypeMask |= GNSS_SIGNAL_QZSS_L1CB;
     }
     if (pbGnssSignalTypeMask & PB_GNSS_SIGNAL_QZSS_L1S_BIT) {
         gnssSignalTypeMask |= GNSS_SIGNAL_QZSS_L1S;

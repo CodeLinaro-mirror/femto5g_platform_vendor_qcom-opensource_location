@@ -235,7 +235,7 @@ struct GnssSvIdInfo {
     /** sv id range for the constellation: <br/>
      * GPS SV id range: 1 to 32 <br/>
      * GLONASS SV id range: 65 to 96 <br/>
-     * QZSS SV id range: 193 to 197 <br/>
+     * QZSS SV id range: 193 to 202 <br/>
      * BDS SV id range: 201 to 263 <br/>
      * GAL SV id range: 301 to 336 <br/>
      * SBAS SV id range: 120 to 158 and 183 to 191 <br/>
