@@ -49,8 +49,8 @@ enum LocationApiDataTypesVersion {
     LOCAPI_DATA_TYPES_VER_MAJOR = 1;
     // Minor - New features / API addition, new message/elemtent addition.
     // Bump the last byte of version i.e. x.4 to x.5
-    // Minor version 54: Change hwClkFreqCorrection data type from uint32 to int32
-    LOCAPI_DATA_TYPES_VER_MINOR = 54;
+    // Minor version 55: Support QZSS L1 C/B  signal type
+    LOCAPI_DATA_TYPES_VER_MINOR = 55;
 }
 
 // ============================================================================
@@ -122,6 +122,8 @@ enum PBGnssSignalTypeMask {
     PB_GNSS_SIGNAL_BEIDOU_B2BQ_BIT         = 0x00800000;
     /** NAVIC L1 RF Band */
     PB_GNSS_SIGNAL_NAVIC_L1_BIT            = 0x01000000;
+    /** QZSS L1CB RF Band */
+    PB_GNSS_SIGNAL_QZSS_L1CB_BIT           = 0x02000000;
 }
 
 enum PBLocApiGnss_LocSvSystemEnumType {
@@ -931,7 +933,7 @@ message PBLocApiGnssSv {
      *    - For GPS:     1 to 32
      *    - For GLONASS: 65 to 96
      *    - For SBAS:    120 to 158 and 183 to 191
-     *    - For QZSS:    193 to 197
+     *    - For QZSS:    193 to 202
      *    - For BDS:     201 to 237
      *    - For GAL:     301 to 336
      *    - For NAVIC:   401 to 414    */
@@ -1141,7 +1143,7 @@ message PBGnssLocationSvUsedInPosition {
     uint64 bdsSvUsedIdsMask = 4;
     /** Specify the set of SVs from QZSS constellation that are used
      *  to compute the position.
-     *  Bit 0 to Bit 4 corresponds to QZSS SV id 193 to 197.
+     *  Bit 0 to Bit 9 corresponds to QZSS SV id 193 to 202.
      *   */
     uint64 qzssSvUsedIdsMask = 5;
     /** Specify the set of SVs from NAVIC constellation that are used
@@ -1994,10 +1996,7 @@ message PBGpsExtendedEphemeris {
     /**<   GNSS SV ID. \n
        Range:\n
        - GPS --     1 to 32 \n
-       - QZSS --    193 to 197 \n
-       - BDS --     201 to 263 \n
-       - Galileo -- 301 to 336 \n
-       - NavIC --   401 to 420 \n
+       - QZSS --    193 to 202 \n
     */
 
     uint32 validityMask = 2;
@@ -2252,11 +2251,7 @@ message PBBdsExtendedEphemeris {
     uint32 gnssSvId = 1;
     /**<   GNSS SV ID. \n
        Range:\n
-       - GPS --     1 to 32 \n
-       - QZSS --    193 to 197 \n
        - BDS --     201 to 263 \n
-       - Galileo -- 301 to 336 \n
-       - NavIC --   401 to 420 \n
     */
 
     uint32 validityMask = 2;
