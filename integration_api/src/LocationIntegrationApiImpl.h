@@ -47,6 +47,7 @@
 #include <queue>
 #include <unordered_map>
 #include <condition_variable>
+#include <LocTimer.h>
 
 using namespace std;
 using namespace loc_util;
@@ -130,7 +131,35 @@ public:
 
 class IpcListener;
 
+struct RegisterXtraStatusUpdateReq : public LocMsg {
+    RegisterXtraStatusUpdateReq(LocationIntegrationApiImpl* apiImpl,
+            bool registerUpdate) :
+        mApiImpl(apiImpl), mRegisterUpdate(registerUpdate) {}
+    virtual ~RegisterXtraStatusUpdateReq() {}
+    virtual void proc() const override;
+    LocationIntegrationApiImpl* mApiImpl;
+    bool mRegisterUpdate;
+};
+
+class XtraStatusRegDelayTimer : public LocTimer {
+public:
+    XtraStatusRegDelayTimer(LocationIntegrationApiImpl* apiImpl, const MsgTask* msgTask,
+            bool registerUpdate) : LocTimer("XtraStatusRegDelayTimer"), mApiImpl(apiImpl),
+            mMsgTask(msgTask), mRegisterUpdate(registerUpdate) {}
+    void timeOutCallback() {
+        if (nullptr == mMsgTask) {
+            return;
+        }
+        mMsgTask->sendMsg(new RegisterXtraStatusUpdateReq(mApiImpl, mRegisterUpdate));
+    }
+private:
+    LocationIntegrationApiImpl* mApiImpl;
+    const MsgTask*      mMsgTask;
+    bool                mRegisterUpdate;
+};
+
 class LocationIntegrationApiImpl : public ILocationControlAPI, public Waitable {
+    friend RegisterXtraStatusUpdateReq;
     friend IpcListener;
 public:
     LocationIntegrationApiImpl(LocIntegrationCbs& integrationCbs);
@@ -249,6 +278,7 @@ private:
     shared_ptr<LocIpcSender> mIpcSender;
 
     MsgTask                  mMsgTask;
+    XtraStatusRegDelayTimer* mXtraStatusRegDelayTimer;
 };
 
 } // namespace location_client

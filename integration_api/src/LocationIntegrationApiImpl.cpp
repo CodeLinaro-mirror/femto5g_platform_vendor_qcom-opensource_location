@@ -269,7 +269,8 @@ LocationIntegrationApiImpl::LocationIntegrationApiImpl(LocIntegrationCbs& integr
         mGtpUserConsentConfigInfo{},
         mNmeaConfigInfo{},
         mRegisterXtraUpdate(false),
-        mXtraUpdateUponRegisterPending(false) {
+        mXtraUpdateUponRegisterPending(false),
+        mXtraStatusRegDelayTimer(nullptr) {
 
     if (integrationClientAllowed() == false) {
         return;
@@ -1308,50 +1309,52 @@ uint32_t LocationIntegrationApiImpl::getXtraStatus() {
     return 0;
 }
 
+void RegisterXtraStatusUpdateReq::proc() const {
+    LOC_LOGd("registerXtraStatusUpdate: %d", mRegisterUpdate);
+    string pbStr;
+    if (true == mRegisterUpdate) {
+        LocConfigRegisterXtraStatusUpdateReqMsg msg(
+                mApiImpl->mSocketName, &mApiImpl->mPbufMsgConv);
+        msg.serializeToProtobuf(pbStr);
+    } else {
+        LocConfigDeregisterXtraStatusUpdateReqMsg msg(
+                mApiImpl->mSocketName, &mApiImpl->mPbufMsgConv);
+        msg.serializeToProtobuf(pbStr);
+    }
+
+    if (pbStr.size() != 0) {
+        if (mApiImpl->sendConfigMsgToHalDaemon(REGISTER_XTRA_STATUS_UPDATE, pbStr)) {
+            mApiImpl->mXtraUpdateUponRegisterPending = mRegisterUpdate;
+            mApiImpl->mRegisterXtraUpdate = mRegisterUpdate;
+        }
+    } else {
+        LOC_LOGe("serializeToProtobuf failed");
+    }
+    if (mApiImpl->mXtraStatusRegDelayTimer) {
+        delete mApiImpl->mXtraStatusRegDelayTimer;
+        mApiImpl->mXtraStatusRegDelayTimer = nullptr;
+    }
+}
+
 uint32_t LocationIntegrationApiImpl::registerXtraStatusUpdate(bool registerUpdate,
         uint32_t delayInMsec) {
-
-    struct RegisterXtraStatusUpdateReq : public LocMsg {
-        RegisterXtraStatusUpdateReq(LocationIntegrationApiImpl* apiImpl,
-                      bool registerUpdate) :
-                mApiImpl(apiImpl), mRegisterUpdate(registerUpdate) {}
-        virtual ~RegisterXtraStatusUpdateReq() {}
-        void proc() const {
-            LOC_LOGe("registerXtraStatusUpdate: %d", mRegisterUpdate);
-            string pbStr;
-            if (true == mRegisterUpdate) {
-                LocConfigRegisterXtraStatusUpdateReqMsg msg(
-                    mApiImpl->mSocketName, &mApiImpl->mPbufMsgConv);
-                msg.serializeToProtobuf(pbStr);
-            } else {
-                LocConfigDeregisterXtraStatusUpdateReqMsg msg(
-                    mApiImpl->mSocketName, &mApiImpl->mPbufMsgConv);
-                msg.serializeToProtobuf(pbStr);
-            }
-
-            if (pbStr.size() != 0) {
-                if (mApiImpl->sendConfigMsgToHalDaemon(REGISTER_XTRA_STATUS_UPDATE, pbStr)) {
-                    mApiImpl->mXtraUpdateUponRegisterPending = mRegisterUpdate;
-                    mApiImpl->mRegisterXtraUpdate = mRegisterUpdate;
-                }
-            } else {
-                LOC_LOGe("serializeToProtobuf failed");
-            }
-        }
-
-        LocationIntegrationApiImpl* mApiImpl;
-        bool mRegisterUpdate;
-    };
-
     if (mIntegrationCbs.getXtraStatusCb == nullptr) {
         LOC_LOGe("no callback passed in constructor to receive xtra status");
         // return 1 to signal error
         return 1;
     }
-    RegisterXtraStatusUpdateReq* pLocMsg = new RegisterXtraStatusUpdateReq(this,
+    if (delayInMsec == 0) {
+        RegisterXtraStatusUpdateReq* pLocMsg = new RegisterXtraStatusUpdateReq(this,
                 registerUpdate);
-    mMsgTask.sendMsg((const LocMsg*)pLocMsg, delayInMsec);
-
+        mMsgTask.sendMsg((const LocMsg*)pLocMsg);
+    } else {
+        if (mXtraStatusRegDelayTimer == nullptr) {
+            mXtraStatusRegDelayTimer = new XtraStatusRegDelayTimer(this, &mMsgTask, registerUpdate);
+        }
+        if (mXtraStatusRegDelayTimer) {
+            mXtraStatusRegDelayTimer->start(delayInMsec, false);
+        }
+    }
     return 0;
 }
 
