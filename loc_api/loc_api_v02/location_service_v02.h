@@ -67,8 +67,8 @@
  *THIS IS AN AUTO GENERATED FILE. DO NOT ALTER IN ANY WAY
  *====*====*====*====*====*====*====*====*====*====*====*====*====*====*====*/
 
-/* This file was generated with Tool version 6.14.7
-   It was generated on: Tue Jan 20 2026 (Spin 0)
+/* This file was generated with Tool version 6.14.9
+   It was generated on: Thu Feb 26 2026 (Spin 1)
    From IDL File: location_service_v02.idl */
 
 /** @defgroup loc_qmi_consts Constant values defined in the IDL */
@@ -94,7 +94,7 @@ extern "C" {
 /** Major Version Number of the IDL used to generate this file */
 #define LOC_V02_IDL_MAJOR_VERS 0x02
 /** Revision Number of the IDL used to generate this file */
-#define LOC_V02_IDL_MINOR_VERS 0xBA
+#define LOC_V02_IDL_MINOR_VERS 0xBC
 /** Major Version Number of the qmi_idl_compiler used to generate this file */
 #define LOC_V02_IDL_TOOL_VERS 0x06
 /** Maximum Defined Message ID */
@@ -8978,6 +8978,47 @@ typedef uint64_t qmiLocLppeCpAuxTechMaskT_v02;
 #define QMI_LOC_LPPE_MASK_CP_RESERVED_4_BIT_V02 ((qmiLocLppeCpAuxTechMaskT_v02)0x00000080ull) /**<  Reserved for future use \n    */
 #define QMI_LOC_LPPE_MASK_CP_NON_E911_V02 ((qmiLocLppeCpAuxTechMaskT_v02)0x00000100ull) /**<  Enable the LPPe Capabilities for Non E911 NILR control plane sessions \n  */
 #define QMI_LOC_LPPE_MASK_CP_CIV_ADDRESS_V02 ((qmiLocLppeCpAuxTechMaskT_v02)0x00000200ull) /**<  Enable shipping the Civic Address to the server  */
+typedef uint64_t qmiLocAgnssProtocolMaskT_v02;
+#define QMI_LOC_AGNSS_PROTOCOL_MASK_STANDALONE_V02 ((qmiLocAgnssProtocolMaskT_v02)0x00000001ull) /**<  Standalone \n  */
+#define QMI_LOC_AGNSS_PROTOCOL_MASK_UP_MS_BASED_V02 ((qmiLocAgnssProtocolMaskT_v02)0x00000002ull) /**<  UP MS-based \n  */
+#define QMI_LOC_AGNSS_PROTOCOL_MASK_UP_MS_ASSISTED_V02 ((qmiLocAgnssProtocolMaskT_v02)0x00000004ull) /**<  UP MS-assisted \n  */
+#define QMI_LOC_AGNSS_PROTOCOL_MASK_CP_MS_BASED_2G_V02 ((qmiLocAgnssProtocolMaskT_v02)0x00000008ull) /**<  CP MS-based (2G) \n  */
+#define QMI_LOC_AGNSS_PROTOCOL_MASK_CP_MS_ASSISTED_2G_V02 ((qmiLocAgnssProtocolMaskT_v02)0x00000010ull) /**<  CP MS-assisted (2G) \n  */
+#define QMI_LOC_AGNSS_PROTOCOL_MASK_CP_UE_BASED_3G_V02 ((qmiLocAgnssProtocolMaskT_v02)0x00000020ull) /**<  CP UE-based (3G) \n  */
+#define QMI_LOC_AGNSS_PROTOCOL_MASK_CP_UE_ASSISTED_3G_V02 ((qmiLocAgnssProtocolMaskT_v02)0x00000040ull) /**<  CP UE-assisted (3G) \n  */
+#define QMI_LOC_AGNSS_PROTOCOL_MASK_UP_NETWORK_MEAS_REPORT_2G_V02 ((qmiLocAgnssProtocolMaskT_v02)0x00000080ull) /**<  UP network measurement report (2G) \n  */
+#define QMI_LOC_AGNSS_PROTOCOL_MASK_UP_MS_BASED_4G_V02 ((qmiLocAgnssProtocolMaskT_v02)0x00000100ull) /**<  UP MS-based (4G) \n  */
+#define QMI_LOC_AGNSS_PROTOCOL_MASK_UP_MS_ASSISTED_4G_V02 ((qmiLocAgnssProtocolMaskT_v02)0x00000200ull) /**<  UP MS-assisted (4G) \n  */
+#define QMI_LOC_AGNSS_PROTOCOL_MASK_CP_MS_BASED_4G_V02 ((qmiLocAgnssProtocolMaskT_v02)0x00000400ull) /**<  CP MS-based (4G) \n  */
+#define QMI_LOC_AGNSS_PROTOCOL_MASK_CP_MS_ASSISTED_4G_V02 ((qmiLocAgnssProtocolMaskT_v02)0x00000800ull) /**<  CP MS-assisted (4G) \n  */
+#define QMI_LOC_AGNSS_PROTOCOL_MASK_AUTONOMOUS_FALLBACK_SUPL_MSB_V02 ((qmiLocAgnssProtocolMaskT_v02)0x00010000ull) /**<  Enabling of autonomous fallback for SUPL-MSB \n  */
+#define QMI_LOC_AGNSS_PROTOCOL_MASK_AGLO_UP_MS_BASED_3G_V02 ((qmiLocAgnssProtocolMaskT_v02)0x00020000ull) /**<  A-GLONASS UP MS-based for 3G \n  */
+#define QMI_LOC_AGNSS_PROTOCOL_MASK_AGLO_UP_MS_ASSISTED_3G_V02 ((qmiLocAgnssProtocolMaskT_v02)0x00040000ull) /**<  A-GLONASS UP MS-assisted for 3G \n  */
+#define QMI_LOC_AGNSS_PROTOCOL_MASK_AGLO_CP_MS_BASED_3G_V02 ((qmiLocAgnssProtocolMaskT_v02)0x00080000ull) /**<  A-GLONASS CP MS-based for 3G \n  */
+#define QMI_LOC_AGNSS_PROTOCOL_MASK_AGLO_CP_MS_ASSISTED_3G_V02 ((qmiLocAgnssProtocolMaskT_v02)0x00100000ull) /**<  A-GLONASS CP MS-assisted for 3G \n  */
+#define QMI_LOC_AGNSS_PROTOCOL_MASK_AGLO_UP_MS_BASED_4G_V02 ((qmiLocAgnssProtocolMaskT_v02)0x00200000ull) /**<  A-GLONASS UP MS-based for 4G \n  */
+#define QMI_LOC_AGNSS_PROTOCOL_MASK_AGLO_UP_MS_ASSISTED_4G_V02 ((qmiLocAgnssProtocolMaskT_v02)0x00400000ull) /**<  A-GLONASS UP MS-assisted for 4G \n  */
+#define QMI_LOC_AGNSS_PROTOCOL_MASK_AGLO_CP_MS_BASED_4G_V02 ((qmiLocAgnssProtocolMaskT_v02)0x00800000ull) /**<  A-GLONASS CP MS-based for 4G \n  */
+#define QMI_LOC_AGNSS_PROTOCOL_MASK_AGLO_CP_MS_ASSISTED_4G_V02 ((qmiLocAgnssProtocolMaskT_v02)0x01000000ull) /**<  A-GLONASS CP MS-assisted for 4G \n  */
+typedef uint64_t qmiLocAgnssExtProtocolMaskT_v02;
+#define QMI_LOC_AGNSS_EXT_MASK_CP_LPP_GPS_MS_BASED_V02 ((qmiLocAgnssExtProtocolMaskT_v02)0x00000001ull) /**<  Enable/disable AGNSS NR CP LPP GPS MS-based \n  */
+#define QMI_LOC_AGNSS_EXT_MASK_CP_LPP_GPS_MS_ASSISTED_V02 ((qmiLocAgnssExtProtocolMaskT_v02)0x00000002ull) /**<  Enable/disable AGNSS NR CP LPP GPS MS-assisted \n  */
+#define QMI_LOC_AGNSS_EXT_MASK_CP_LPP_GLO_MS_BASED_V02 ((qmiLocAgnssExtProtocolMaskT_v02)0x00000004ull) /**<  Enable/disable AGNSS NR CP LPP GLO MS-based \n  */
+#define QMI_LOC_AGNSS_EXT_MASK_CP_LPP_GLO_MS_ASSISTED_V02 ((qmiLocAgnssExtProtocolMaskT_v02)0x00000008ull) /**<  Enable/disable AGNSS NR CP LPP GLO MS-assisted \n  */
+#define QMI_LOC_AGNSS_EXT_MASK_UP_LPP_GPS_MS_BASED_V02 ((qmiLocAgnssExtProtocolMaskT_v02)0x00000010ull) /**<  Enable/disable AGNSS NR UP LPP GPS MS-based \n  */
+#define QMI_LOC_AGNSS_EXT_MASK_UP_LPP_GPS_MS_ASSISTED_V02 ((qmiLocAgnssExtProtocolMaskT_v02)0x00000020ull) /**<  Enable/disable AGNSS NR UP LPP GPS MS-assisted \n  */
+#define QMI_LOC_AGNSS_EXT_MASK_UP_LPP_GLO_MS_BASED_V02 ((qmiLocAgnssExtProtocolMaskT_v02)0x00000040ull) /**<  Enable/disable AGNSS NR UP LPP GLO MS-based \n  */
+#define QMI_LOC_AGNSS_EXT_MASK_UP_LPP_GLO_MS_ASSISTED_V02 ((qmiLocAgnssExtProtocolMaskT_v02)0x00000080ull) /**<  Enable/disable AGNSS NR UP LPP GLO MS-assisted \n  */
+#define QMI_LOC_AGNSS_EXT_MASK_UP_RRLP_GPS_MS_BASED_V02 ((qmiLocAgnssExtProtocolMaskT_v02)0x00000100ull) /**<  Enable/disable AGNSS NR RRLP UP GPS MS-based \n  */
+#define QMI_LOC_AGNSS_EXT_MASK_UP_RRLP_GPS_MS_ASSISTED_V02 ((qmiLocAgnssExtProtocolMaskT_v02)0x00000200ull) /**<  Enable/disable AGNSS NR RRLP UP GPS MS-assisted \n  */
+#define QMI_LOC_AGNSS_EXT_MASK_UP_RRLP_GLO_MS_BASED_V02 ((qmiLocAgnssExtProtocolMaskT_v02)0x00000400ull) /**<  Enable/disable AGNSS NR RRLP UP GLO MS-based \n  */
+#define QMI_LOC_AGNSS_EXT_MASK_UP_RRLP_GLO_MS_ASSISTED_V02 ((qmiLocAgnssExtProtocolMaskT_v02)0x00000800ull) /**<  Enable/disable AGNSS NR RRLP UP GLO MS-assisted \n  */
+#define QMI_LOC_AGNSS_EXT_MASK_UP_RRLP_BDS_MS_BASED_V02 ((qmiLocAgnssExtProtocolMaskT_v02)0x00001000ull) /**<  Enable/disable AGNSS NR RRLP UP BDS MS-based \n  */
+#define QMI_LOC_AGNSS_EXT_MASK_UP_RRLP_BDS_MS_ASSISTED_V02 ((qmiLocAgnssExtProtocolMaskT_v02)0x00002000ull) /**<  Enable/disable AGNSS NR RRLP UP BDS MS-assisted \n  */
+#define QMI_LOC_AGNSS_EXT_MASK_UP_LPP_BDS_MS_BASED_V02 ((qmiLocAgnssExtProtocolMaskT_v02)0x00004000ull) /**<  Enable/disable AGNSS NR LPP UP BDS MS-based
+       (Bit 14 available on Qualcomm Location software v22 and later) \n  */
+#define QMI_LOC_AGNSS_EXT_MASK_CP_LPP_ECID_V02 ((qmiLocAgnssExtProtocolMaskT_v02)0x00100000ull) /**<  Enable/disable AGNSS NR LPP CP ECID
+       (Bit 20 available on Qualcomm Location software v23 and later) \n  */
 /** @addtogroup loc_qmi_messages
     @{
   */
@@ -9149,6 +9190,71 @@ typedef struct {
        - Units -- Seconds \n
        - Default -- 0 seconds
   */
+
+  /* Optional */
+  /*  Subscription ID */
+  uint8_t subId_valid;  /**< Must be set to true if subId is being passed */
+  qmiLocSysModemAsIdTypeEnumT_v02 subId;
+  /**<   Subscription ID on which to update the Values: \n
+      - eQMI_LOC_SYS_MODEM_AS_ID_1 (0) --  Subscription ID 1 \n
+      - eQMI_LOC_SYS_MODEM_AS_ID_2 (1) --  Subscription ID 2 \n
+      - eQMI_LOC_SYS_MODEM_AS_ID_3 (2) --  Subscription ID 3
+ */
+
+  /* Optional */
+  /*  AGNSS protocol config mask */
+  uint8_t agnssProtocolConfig_valid;  /**< Must be set to true if agnssProtocolConfig is being passed */
+  qmiLocAgnssProtocolMaskT_v02 agnssProtocolConfig;
+  /**<   AGNSS protocol config mask.
+ Valid bitmasks: \n
+      - QMI_LOC_AGNSS_PROTOCOL_MASK_STANDALONE (0x00000001) --  Standalone \n
+      - QMI_LOC_AGNSS_PROTOCOL_MASK_UP_MS_BASED (0x00000002) --  UP MS-based \n
+      - QMI_LOC_AGNSS_PROTOCOL_MASK_UP_MS_ASSISTED (0x00000004) --  UP MS-assisted \n
+      - QMI_LOC_AGNSS_PROTOCOL_MASK_CP_MS_BASED_2G (0x00000008) --  CP MS-based (2G) \n
+      - QMI_LOC_AGNSS_PROTOCOL_MASK_CP_MS_ASSISTED_2G (0x00000010) --  CP MS-assisted (2G) \n
+      - QMI_LOC_AGNSS_PROTOCOL_MASK_CP_UE_BASED_3G (0x00000020) --  CP UE-based (3G) \n
+      - QMI_LOC_AGNSS_PROTOCOL_MASK_CP_UE_ASSISTED_3G (0x00000040) --  CP UE-assisted (3G) \n
+      - QMI_LOC_AGNSS_PROTOCOL_MASK_UP_NETWORK_MEAS_REPORT_2G (0x00000080) --  UP network measurement report (2G) \n
+      - QMI_LOC_AGNSS_PROTOCOL_MASK_UP_MS_BASED_4G (0x00000100) --  UP MS-based (4G) \n
+      - QMI_LOC_AGNSS_PROTOCOL_MASK_UP_MS_ASSISTED_4G (0x00000200) --  UP MS-assisted (4G) \n
+      - QMI_LOC_AGNSS_PROTOCOL_MASK_CP_MS_BASED_4G (0x00000400) --  CP MS-based (4G) \n
+      - QMI_LOC_AGNSS_PROTOCOL_MASK_CP_MS_ASSISTED_4G (0x00000800) --  CP MS-assisted (4G) \n
+      - QMI_LOC_AGNSS_PROTOCOL_MASK_AUTONOMOUS_FALLBACK_SUPL_MSB (0x00010000) --  Enabling of autonomous fallback for SUPL-MSB \n
+      - QMI_LOC_AGNSS_PROTOCOL_MASK_AGLO_UP_MS_BASED_3G (0x00020000) --  A-GLONASS UP MS-based for 3G \n
+      - QMI_LOC_AGNSS_PROTOCOL_MASK_AGLO_UP_MS_ASSISTED_3G (0x00040000) --  A-GLONASS UP MS-assisted for 3G \n
+      - QMI_LOC_AGNSS_PROTOCOL_MASK_AGLO_CP_MS_BASED_3G (0x00080000) --  A-GLONASS CP MS-based for 3G \n
+      - QMI_LOC_AGNSS_PROTOCOL_MASK_AGLO_CP_MS_ASSISTED_3G (0x00100000) --  A-GLONASS CP MS-assisted for 3G \n
+      - QMI_LOC_AGNSS_PROTOCOL_MASK_AGLO_UP_MS_BASED_4G (0x00200000) --  A-GLONASS UP MS-based for 4G \n
+      - QMI_LOC_AGNSS_PROTOCOL_MASK_AGLO_UP_MS_ASSISTED_4G (0x00400000) --  A-GLONASS UP MS-assisted for 4G \n
+      - QMI_LOC_AGNSS_PROTOCOL_MASK_AGLO_CP_MS_BASED_4G (0x00800000) --  A-GLONASS CP MS-based for 4G \n
+      - QMI_LOC_AGNSS_PROTOCOL_MASK_AGLO_CP_MS_ASSISTED_4G (0x01000000) --  A-GLONASS CP MS-assisted for 4G \n
+ */
+
+  /* Optional */
+  /*  AGNSS extended protocol config mask */
+  uint8_t agnssExtendedProtocolConfig_valid;  /**< Must be set to true if agnssExtendedProtocolConfig is being passed */
+  qmiLocAgnssExtProtocolMaskT_v02 agnssExtendedProtocolConfig;
+  /**<   AGNSS extended protocol config mask.
+ Valid bitmasks: \n
+      - QMI_LOC_AGNSS_EXT_MASK_CP_LPP_GPS_MS_BASED (0x00000001) --  Enable/disable AGNSS NR CP LPP GPS MS-based \n
+      - QMI_LOC_AGNSS_EXT_MASK_CP_LPP_GPS_MS_ASSISTED (0x00000002) --  Enable/disable AGNSS NR CP LPP GPS MS-assisted \n
+      - QMI_LOC_AGNSS_EXT_MASK_CP_LPP_GLO_MS_BASED (0x00000004) --  Enable/disable AGNSS NR CP LPP GLO MS-based \n
+      - QMI_LOC_AGNSS_EXT_MASK_CP_LPP_GLO_MS_ASSISTED (0x00000008) --  Enable/disable AGNSS NR CP LPP GLO MS-assisted \n
+      - QMI_LOC_AGNSS_EXT_MASK_UP_LPP_GPS_MS_BASED (0x00000010) --  Enable/disable AGNSS NR UP LPP GPS MS-based \n
+      - QMI_LOC_AGNSS_EXT_MASK_UP_LPP_GPS_MS_ASSISTED (0x00000020) --  Enable/disable AGNSS NR UP LPP GPS MS-assisted \n
+      - QMI_LOC_AGNSS_EXT_MASK_UP_LPP_GLO_MS_BASED (0x00000040) --  Enable/disable AGNSS NR UP LPP GLO MS-based \n
+      - QMI_LOC_AGNSS_EXT_MASK_UP_LPP_GLO_MS_ASSISTED (0x00000080) --  Enable/disable AGNSS NR UP LPP GLO MS-assisted \n
+      - QMI_LOC_AGNSS_EXT_MASK_UP_RRLP_GPS_MS_BASED (0x00000100) --  Enable/disable AGNSS NR RRLP UP GPS MS-based \n
+      - QMI_LOC_AGNSS_EXT_MASK_UP_RRLP_GPS_MS_ASSISTED (0x00000200) --  Enable/disable AGNSS NR RRLP UP GPS MS-assisted \n
+      - QMI_LOC_AGNSS_EXT_MASK_UP_RRLP_GLO_MS_BASED (0x00000400) --  Enable/disable AGNSS NR RRLP UP GLO MS-based \n
+      - QMI_LOC_AGNSS_EXT_MASK_UP_RRLP_GLO_MS_ASSISTED (0x00000800) --  Enable/disable AGNSS NR RRLP UP GLO MS-assisted \n
+      - QMI_LOC_AGNSS_EXT_MASK_UP_RRLP_BDS_MS_BASED (0x00001000) --  Enable/disable AGNSS NR RRLP UP BDS MS-based \n
+      - QMI_LOC_AGNSS_EXT_MASK_UP_RRLP_BDS_MS_ASSISTED (0x00002000) --  Enable/disable AGNSS NR RRLP UP BDS MS-assisted \n
+      - QMI_LOC_AGNSS_EXT_MASK_UP_LPP_BDS_MS_BASED (0x00004000) --  Enable/disable AGNSS NR LPP UP BDS MS-based
+       (Bit 14 available on Qualcomm Location software v22 and later) \n
+      - QMI_LOC_AGNSS_EXT_MASK_CP_LPP_ECID (0x00100000) --  Enable/disable AGNSS NR LPP CP ECID
+       (Bit 20 available on Qualcomm Location software v23 and later) \n
+ */
 }qmiLocSetProtocolConfigParametersReqMsgT_v02;  /* Message */
 /**
     @}
@@ -9167,6 +9273,8 @@ typedef uint64_t qmiLocProtocolConfigParamMaskT_v02;
 #define QMI_LOC_PROTOCOL_CONFIG_PARAM_MASK_LPPE_UP_V02 ((qmiLocProtocolConfigParamMaskT_v02)0x0000000000000200ull) /**<  LPPe user plane configuration parameter. \n */
 #define QMI_LOC_PROTOCOL_CONFIG_PARAM_MASK_LPPE_CP_V02 ((qmiLocProtocolConfigParamMaskT_v02)0x0000000000000400ull) /**<  LPPe control plane configuration parameter. \n */
 #define QMI_LOC_PROTOCOL_CONFIG_PARAM_MASK_EMERGENCY_CB_WINDOW_V02 ((qmiLocProtocolConfigParamMaskT_v02)0x0000000000000800ull) /**<  Emergency callback window configuration parameter.  */
+#define QMI_LOC_PROTOCOL_CONFIG_PARAM_MASK_AAGPS_POSITIONING_CONFIG_V02 ((qmiLocProtocolConfigParamMaskT_v02)0x0000000000001000ull) /**<  AAGPS protocol configuration parameter.  */
+#define QMI_LOC_PROTOCOL_CONFIG_PARAM_MASK_AAGPS_EXT_POSITIONING_CONFIG_V02 ((qmiLocProtocolConfigParamMaskT_v02)0x0000000000002000ull) /**<  AAGPS protocol extended configuration parameter.  */
 /** @addtogroup loc_qmi_messages
     @{
   */
@@ -9212,6 +9320,8 @@ typedef struct {
       - QMI_LOC_PROTOCOL_CONFIG_PARAM_MASK_LPPE_UP (0x0000000000000200) --  LPPe user plane configuration parameter. \n
       - QMI_LOC_PROTOCOL_CONFIG_PARAM_MASK_LPPE_CP (0x0000000000000400) --  LPPe control plane configuration parameter. \n
       - QMI_LOC_PROTOCOL_CONFIG_PARAM_MASK_EMERGENCY_CB_WINDOW (0x0000000000000800) --  Emergency callback window configuration parameter.
+      - QMI_LOC_PROTOCOL_CONFIG_PARAM_MASK_AAGPS_POSITIONING_CONFIG (0x0000000000001000) --  AAGPS protocol configuration parameter.
+      - QMI_LOC_PROTOCOL_CONFIG_PARAM_MASK_AAGPS_EXT_POSITIONING_CONFIG (0x0000000000002000) --  AAGPS protocol extended configuration parameter.
  */
 }qmiLocSetProtocolConfigParametersIndMsgT_v02;  /* Message */
 /**
@@ -9242,6 +9352,18 @@ typedef struct {
       - QMI_LOC_PROTOCOL_CONFIG_PARAM_MASK_LPPE_UP (0x0000000000000200) --  LPPe user plane configuration parameter. \n
       - QMI_LOC_PROTOCOL_CONFIG_PARAM_MASK_LPPE_CP (0x0000000000000400) --  LPPe control plane configuration parameter. \n
       - QMI_LOC_PROTOCOL_CONFIG_PARAM_MASK_EMERGENCY_CB_WINDOW (0x0000000000000800) --  Emergency callback window configuration parameter.
+      - QMI_LOC_PROTOCOL_CONFIG_PARAM_MASK_AAGPS_POSITIONING_CONFIG (0x0000000000001000) --  AAGPS protocol configuration parameter.
+      - QMI_LOC_PROTOCOL_CONFIG_PARAM_MASK_AAGPS_EXT_POSITIONING_CONFIG (0x0000000000002000) --  AAGPS protocol extended configuration parameter.
+ */
+
+  /* Optional */
+  /*  Subscription ID */
+  uint8_t subId_valid;  /**< Must be set to true if subId is being passed */
+  qmiLocSysModemAsIdTypeEnumT_v02 subId;
+  /**<   Subscription ID on which to get the Values: \n
+      - eQMI_LOC_SYS_MODEM_AS_ID_1 (0) --  Subscription ID 1 \n
+      - eQMI_LOC_SYS_MODEM_AS_ID_2 (1) --  Subscription ID 2 \n
+      - eQMI_LOC_SYS_MODEM_AS_ID_3 (2) --  Subscription ID 3
  */
 }qmiLocGetProtocolConfigParametersReqMsgT_v02;  /* Message */
 /**
@@ -9417,6 +9539,61 @@ typedef struct {
         - Units -- Seconds \n
         - Default -- 0 seconds
   */
+
+  /* Optional */
+  /*  AGNSS protocol config mask */
+  uint8_t agnssProtocolConfig_valid;  /**< Must be set to true if agnssProtocolConfig is being passed */
+  qmiLocAgnssProtocolMaskT_v02 agnssProtocolConfig;
+  /**<   AGNSS protocol config mask.
+ Valid bitmasks: \n
+      - QMI_LOC_AGNSS_PROTOCOL_MASK_STANDALONE (0x00000001) --  Standalone \n
+      - QMI_LOC_AGNSS_PROTOCOL_MASK_UP_MS_BASED (0x00000002) --  UP MS-based \n
+      - QMI_LOC_AGNSS_PROTOCOL_MASK_UP_MS_ASSISTED (0x00000004) --  UP MS-assisted \n
+      - QMI_LOC_AGNSS_PROTOCOL_MASK_CP_MS_BASED_2G (0x00000008) --  CP MS-based (2G) \n
+      - QMI_LOC_AGNSS_PROTOCOL_MASK_CP_MS_ASSISTED_2G (0x00000010) --  CP MS-assisted (2G) \n
+      - QMI_LOC_AGNSS_PROTOCOL_MASK_CP_UE_BASED_3G (0x00000020) --  CP UE-based (3G) \n
+      - QMI_LOC_AGNSS_PROTOCOL_MASK_CP_UE_ASSISTED_3G (0x00000040) --  CP UE-assisted (3G) \n
+      - QMI_LOC_AGNSS_PROTOCOL_MASK_UP_NETWORK_MEAS_REPORT_2G (0x00000080) --  UP network measurement report (2G) \n
+      - QMI_LOC_AGNSS_PROTOCOL_MASK_UP_MS_BASED_4G (0x00000100) --  UP MS-based (4G) \n
+      - QMI_LOC_AGNSS_PROTOCOL_MASK_UP_MS_ASSISTED_4G (0x00000200) --  UP MS-assisted (4G) \n
+      - QMI_LOC_AGNSS_PROTOCOL_MASK_CP_MS_BASED_4G (0x00000400) --  CP MS-based (4G) \n
+      - QMI_LOC_AGNSS_PROTOCOL_MASK_CP_MS_ASSISTED_4G (0x00000800) --  CP MS-assisted (4G) \n
+      - QMI_LOC_AGNSS_PROTOCOL_MASK_AUTONOMOUS_FALLBACK_SUPL_MSB (0x00010000) --  Enabling of autonomous fallback for SUPL-MSB \n
+      - QMI_LOC_AGNSS_PROTOCOL_MASK_AGLO_UP_MS_BASED_3G (0x00020000) --  A-GLONASS UP MS-based for 3G \n
+      - QMI_LOC_AGNSS_PROTOCOL_MASK_AGLO_UP_MS_ASSISTED_3G (0x00040000) --  A-GLONASS UP MS-assisted for 3G \n
+      - QMI_LOC_AGNSS_PROTOCOL_MASK_AGLO_CP_MS_BASED_3G (0x00080000) --  A-GLONASS CP MS-based for 3G \n
+      - QMI_LOC_AGNSS_PROTOCOL_MASK_AGLO_CP_MS_ASSISTED_3G (0x00100000) --  A-GLONASS CP MS-assisted for 3G \n
+      - QMI_LOC_AGNSS_PROTOCOL_MASK_AGLO_UP_MS_BASED_4G (0x00200000) --  A-GLONASS UP MS-based for 4G \n
+      - QMI_LOC_AGNSS_PROTOCOL_MASK_AGLO_UP_MS_ASSISTED_4G (0x00400000) --  A-GLONASS UP MS-assisted for 4G \n
+      - QMI_LOC_AGNSS_PROTOCOL_MASK_AGLO_CP_MS_BASED_4G (0x00800000) --  A-GLONASS CP MS-based for 4G \n
+      - QMI_LOC_AGNSS_PROTOCOL_MASK_AGLO_CP_MS_ASSISTED_4G (0x01000000) --  A-GLONASS CP MS-assisted for 4G \n
+ */
+
+  /* Optional */
+  /*  AGNSS extended protocol config mask */
+  uint8_t agnssExtendedProtocolConfig_valid;  /**< Must be set to true if agnssExtendedProtocolConfig is being passed */
+  qmiLocAgnssExtProtocolMaskT_v02 agnssExtendedProtocolConfig;
+  /**<   AGNSS extended protocol config mask.
+ Valid bitmasks: \n
+      - QMI_LOC_AGNSS_EXT_MASK_CP_LPP_GPS_MS_BASED (0x00000001) --  Enable/disable AGNSS NR CP LPP GPS MS-based \n
+      - QMI_LOC_AGNSS_EXT_MASK_CP_LPP_GPS_MS_ASSISTED (0x00000002) --  Enable/disable AGNSS NR CP LPP GPS MS-assisted \n
+      - QMI_LOC_AGNSS_EXT_MASK_CP_LPP_GLO_MS_BASED (0x00000004) --  Enable/disable AGNSS NR CP LPP GLO MS-based \n
+      - QMI_LOC_AGNSS_EXT_MASK_CP_LPP_GLO_MS_ASSISTED (0x00000008) --  Enable/disable AGNSS NR CP LPP GLO MS-assisted \n
+      - QMI_LOC_AGNSS_EXT_MASK_UP_LPP_GPS_MS_BASED (0x00000010) --  Enable/disable AGNSS NR UP LPP GPS MS-based \n
+      - QMI_LOC_AGNSS_EXT_MASK_UP_LPP_GPS_MS_ASSISTED (0x00000020) --  Enable/disable AGNSS NR UP LPP GPS MS-assisted \n
+      - QMI_LOC_AGNSS_EXT_MASK_UP_LPP_GLO_MS_BASED (0x00000040) --  Enable/disable AGNSS NR UP LPP GLO MS-based \n
+      - QMI_LOC_AGNSS_EXT_MASK_UP_LPP_GLO_MS_ASSISTED (0x00000080) --  Enable/disable AGNSS NR UP LPP GLO MS-assisted \n
+      - QMI_LOC_AGNSS_EXT_MASK_UP_RRLP_GPS_MS_BASED (0x00000100) --  Enable/disable AGNSS NR RRLP UP GPS MS-based \n
+      - QMI_LOC_AGNSS_EXT_MASK_UP_RRLP_GPS_MS_ASSISTED (0x00000200) --  Enable/disable AGNSS NR RRLP UP GPS MS-assisted \n
+      - QMI_LOC_AGNSS_EXT_MASK_UP_RRLP_GLO_MS_BASED (0x00000400) --  Enable/disable AGNSS NR RRLP UP GLO MS-based \n
+      - QMI_LOC_AGNSS_EXT_MASK_UP_RRLP_GLO_MS_ASSISTED (0x00000800) --  Enable/disable AGNSS NR RRLP UP GLO MS-assisted \n
+      - QMI_LOC_AGNSS_EXT_MASK_UP_RRLP_BDS_MS_BASED (0x00001000) --  Enable/disable AGNSS NR RRLP UP BDS MS-based \n
+      - QMI_LOC_AGNSS_EXT_MASK_UP_RRLP_BDS_MS_ASSISTED (0x00002000) --  Enable/disable AGNSS NR RRLP UP BDS MS-assisted \n
+      - QMI_LOC_AGNSS_EXT_MASK_UP_LPP_BDS_MS_BASED (0x00004000) --  Enable/disable AGNSS NR LPP UP BDS MS-based
+       (Bit 14 available on Qualcomm Location software v22 and later) \n
+      - QMI_LOC_AGNSS_EXT_MASK_CP_LPP_ECID (0x00100000) --  Enable/disable AGNSS NR LPP CP ECID
+       (Bit 20 available on Qualcomm Location software v23 and later) \n
+ */
 }qmiLocGetProtocolConfigParametersIndMsgT_v02;  /* Message */
 /**
     @}
@@ -25798,7 +25975,7 @@ typedef struct {
   /* Optional */
   /*  Hardware clock frequency correction */
   uint8_t HwClkFreqCorrection_valid;  /**< Must be set to true if HwClkFreqCorrection is being passed */
-  uint32_t HwClkFreqCorrection;
+  int32_t HwClkFreqCorrection;
 
   /* Optional */
   /*  GPS Clock Time Bias */
