@@ -2949,14 +2949,9 @@ void  LocApiV02::reportSvPolynomial(const qmiLocEventGnssSvPolyIndMsgT_v02 *gnss
     svPolynomial.is_valid = 0;
 
     if (0 != gnss_sv_poly_ptr->gnssSvId) {
-        // first deterimine if sv is of QZSS constellation as per special logic below.
-        // when modem add constellation type to sv poly, this special handling
-        // can be removed.
-        if (gnss_sv_poly_ptr->svPolyFlagValid & QMI_LOC_SV_POLY_SRC_QZSS_L1_CB_VALID_V02) {
-            svPolynomial.gnssConstellation = GNSS_SV_TYPE_QZSS;
-        } else {
-            svPolynomial.gnssConstellation = getSvTypeFromSvId(
-                    gnss_sv_poly_ptr->gnssSvId);
+        // svPolynomial.gnssConstellation default is 0 (unknown)
+        if (gnss_sv_poly_ptr->system_valid) {
+            svPolynomial.gnssConstellation = getLocApiSvSystemType(gnss_sv_poly_ptr->system);
         }
         svPolynomial.gnssSvId = gnss_sv_poly_ptr->gnssSvId;
 
@@ -5891,11 +5886,20 @@ void LocApiV02::convertGnssMeasurements(
     }
 
     measurementData.stateMask |= GNSS_MEASUREMENTS_STATE_MSEC_AMBIGUOUS_BIT;
+
+    if ((validMeasStatus & QMI_LOC_MASK_MEAS_STATUS_SV_TIME_SRC_NEWLY_DECODED_V02) ||
+            (validMeasStatus & QMI_LOC_MASK_MEAS_STATUS_SV_TIME_SRC_PREV_DECODED_V02)) {
+        measurementData.stateMask |= GNSS_MEASUREMENTS_STATE_TOW_DECODED_BIT;
+        if (GNSS_SV_TYPE_GLONASS == measurementData.svType &&
+            (bBandNotAvailable || (QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GLONASS_G1_V02 == gnssBand))) {
+            measurementData.stateMask |= GNSS_MEASUREMENTS_STATE_GLO_TOD_DECODED_BIT;
+        }
+    }
+
     if (validMeasStatus & QMI_LOC_MASK_MEAS_STATUS_MS_VALID_V02) {
         measurementData.stateMask &= ~GNSS_MEASUREMENTS_STATE_MSEC_AMBIGUOUS_BIT;
         /* sub-frame decode & TOW decode */
         measurementData.stateMask |= (GNSS_MEASUREMENTS_STATE_SUBFRAME_SYNC_BIT |
-                                      GNSS_MEASUREMENTS_STATE_TOW_DECODED_BIT |
                                       GNSS_MEASUREMENTS_STATE_TOW_KNOWN_BIT |
                                       GNSS_MEASUREMENTS_STATE_BIT_SYNC_BIT |
                                       GNSS_MEASUREMENTS_STATE_CODE_LOCK_BIT);
@@ -5905,7 +5909,6 @@ void LocApiV02::convertGnssMeasurements(
             (bBandNotAvailable ||
             (QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GLONASS_G1_V02 == gnssBand))) {
             measurementData.stateMask |= (GNSS_MEASUREMENTS_STATE_GLO_TOD_KNOWN_BIT |
-                                          GNSS_MEASUREMENTS_STATE_GLO_TOD_DECODED_BIT |
                                           GNSS_MEASUREMENTS_STATE_GLO_STRING_SYNC_BIT);
         }
 

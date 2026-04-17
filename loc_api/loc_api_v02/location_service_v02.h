@@ -67,8 +67,8 @@
  *THIS IS AN AUTO GENERATED FILE. DO NOT ALTER IN ANY WAY
  *====*====*====*====*====*====*====*====*====*====*====*====*====*====*====*/
 
-/* This file was generated with Tool version 6.14.9
-   It was generated on: Thu Feb 26 2026 (Spin 1)
+/* This file was generated with Tool version 6.14.11
+   It was generated on: Mon Apr 13 2026 (Spin 0)
    From IDL File: location_service_v02.idl */
 
 /** @defgroup loc_qmi_consts Constant values defined in the IDL */
@@ -94,7 +94,7 @@ extern "C" {
 /** Major Version Number of the IDL used to generate this file */
 #define LOC_V02_IDL_MAJOR_VERS 0x02
 /** Revision Number of the IDL used to generate this file */
-#define LOC_V02_IDL_MINOR_VERS 0xBC
+#define LOC_V02_IDL_MINOR_VERS 0xBD
 /** Major Version Number of the qmi_idl_compiler used to generate this file */
 #define LOC_V02_IDL_TOOL_VERS 0x06
 /** Maximum Defined Message ID */
@@ -14963,6 +14963,8 @@ typedef uint64_t qmiLocSvMeasStatusValidMaskT_v02;
 #define QMI_LOC_MASK_MEAS_STATUS_RESERVED_UNUSED_2_BIT_VALID_V02 ((qmiLocSvMeasStatusValidMaskT_v02)0x20000000ull) /**<  Reserved for future use \n   */
 #define QMI_LOC_MASK_MEAS_STATUS_100MS_STAT_BIT_VALID_V02 ((qmiLocSvMeasStatusValidMaskT_v02)0x40000000ull) /**<  TRUE -- SV time known with 100 ms ambiguity  \n */
 #define QMI_LOC_MASK_MEAS_STATUS_2S_STAT_BIT_VALID_V02 ((qmiLocSvMeasStatusValidMaskT_v02)0x80000000ull) /**<  TRUE -- SV time known with 2 seconds ambiguity  */
+#define QMI_LOC_MASK_MEAS_STATUS_SV_TIME_SRC_NEWLY_DECODED_BIT_VALID_V02 ((qmiLocSvMeasStatusValidMaskT_v02)0x100000000ull) /**<  TRUE -- QMI_LOC_MASK_MEAS_STATUS_SV_TIME_SRC_NEWLY_DECODED bit in measurementStatus is valid  */
+#define QMI_LOC_MASK_MEAS_STATUS_SV_TIME_SRC_PREV_DECODED_BIT_VALID_V02 ((qmiLocSvMeasStatusValidMaskT_v02)0x200000000ull) /**<  TRUE -- QMI_LOC_MASK_MEAS_STATUS_SV_TIME_SRC_PREV_DECODED bit in measurementStatus is valid  */
 typedef uint64_t qmiLocSvMeasStatusMaskT_v02;
 #define QMI_LOC_MASK_MEAS_STATUS_SM_VALID_V02 ((qmiLocSvMeasStatusMaskT_v02)0x00000001ull) /**<  Satellite time in submilliseconds (code phase) is known \n */
 #define QMI_LOC_MASK_MEAS_STATUS_SB_VALID_V02 ((qmiLocSvMeasStatusMaskT_v02)0x00000002ull) /**<  Satellite sub-bit time is known \n */
@@ -14976,6 +14978,8 @@ typedef uint64_t qmiLocSvMeasStatusMaskT_v02;
 #define QMI_LOC_MASK_MEAS_STATUS_FROM_VE_DIFF_V02 ((qmiLocSvMeasStatusMaskT_v02)0x00000400ull) /**<  Doppler update from satellite differences is measured \n */
 #define QMI_LOC_MASK_MEAS_STATUS_GNSS_FRESH_MEAS_VALID_V02 ((qmiLocSvMeasStatusMaskT_v02)0x08000000ull) /**<  TRUE -- Fresh GNSS measurement observed in last second    */
 #define QMI_LOC_MASK_MEAS_STATUS_L1_CB_SIGNAL_V02 ((qmiLocSvMeasStatusMaskT_v02)0x10000000ull) /**<  TRUE -- Measurement belongs to L1 C/B Signal Type  */
+#define QMI_LOC_MASK_MEAS_STATUS_SV_TIME_SRC_NEWLY_DECODED_V02 ((qmiLocSvMeasStatusMaskT_v02)0x100000000ull) /**<  TRUE -- SV time was decoded  */
+#define QMI_LOC_MASK_MEAS_STATUS_SV_TIME_SRC_PREV_DECODED_V02 ((qmiLocSvMeasStatusMaskT_v02)0x200000000ull) /**<  TRUE -- SV time is inferred  */
 /** @addtogroup loc_qmi_aggregates
     @{
   */
@@ -15110,6 +15114,8 @@ typedef struct {
       - QMI_LOC_MASK_MEAS_STATUS_RESERVED_UNUSED_2_BIT_VALID (0x20000000) --  Reserved for future use \n
       - QMI_LOC_MASK_MEAS_STATUS_100MS_STAT_BIT_VALID (0x40000000) --  TRUE -- SV time known with 100 ms ambiguity  \n
       - QMI_LOC_MASK_MEAS_STATUS_2S_STAT_BIT_VALID (0x80000000) --  TRUE -- SV time known with 2 seconds ambiguity
+      - QMI_LOC_MASK_MEAS_STATUS_SV_TIME_SRC_NEWLY_DECODED_BIT_VALID (0x100000000) --  TRUE -- QMI_LOC_MASK_MEAS_STATUS_SV_TIME_SRC_NEWLY_DECODED bit in measurementStatus is valid
+      - QMI_LOC_MASK_MEAS_STATUS_SV_TIME_SRC_PREV_DECODED_BIT_VALID (0x200000000) --  TRUE -- QMI_LOC_MASK_MEAS_STATUS_SV_TIME_SRC_PREV_DECODED bit in measurementStatus is valid
  \n MSB 0xFFC0000000000000 bits indicate the validity of DONT_USE bits.
  */
 
@@ -15127,6 +15133,8 @@ typedef struct {
       - QMI_LOC_MASK_MEAS_STATUS_FROM_VE_DIFF (0x00000400) --  Doppler update from satellite differences is measured \n
       - QMI_LOC_MASK_MEAS_STATUS_GNSS_FRESH_MEAS_VALID (0x08000000) --  TRUE -- Fresh GNSS measurement observed in last second
       - QMI_LOC_MASK_MEAS_STATUS_L1_CB_SIGNAL (0x10000000) --  TRUE -- Measurement belongs to L1 C/B Signal Type
+      - QMI_LOC_MASK_MEAS_STATUS_SV_TIME_SRC_NEWLY_DECODED (0x100000000) --  TRUE -- SV time was decoded
+      - QMI_LOC_MASK_MEAS_STATUS_SV_TIME_SRC_PREV_DECODED (0x200000000) --  TRUE -- SV time is inferred
 
  If any MSB bit in 0xFFC0000000000000 DONT_USE is set, the client must not
  use the measurement.
@@ -16277,6 +16285,22 @@ typedef struct {
   /**<   SBAS Correction Uncertainty.\n
        - Units -- Meters
   */
+
+  /* Optional */
+  /*  System */
+  uint8_t system_valid;  /**< Must be set to true if system is being passed */
+  qmiLocSvSystemEnumT_v02 system;
+  /**<   Specifies the satellite system constellation.
+ Values: \n
+      - eQMI_LOC_SV_SYSTEM_GPS (1) --  GPS satellite \n
+      - eQMI_LOC_SV_SYSTEM_GALILEO (2) --  Galileo satellite \n
+      - eQMI_LOC_SV_SYSTEM_SBAS (3) --  SBAS satellite \n
+      - eQMI_LOC_SV_SYSTEM_COMPASS (4) --  COMPASS satellite (Deprecated) \n
+      - eQMI_LOC_SV_SYSTEM_GLONASS (5) --  GLONASS satellite \n
+      - eQMI_LOC_SV_SYSTEM_BDS (6) --  BDS satellite \n
+      - eQMI_LOC_SV_SYSTEM_QZSS (7) --  QZSS satellite \n
+      - eQMI_LOC_SV_SYSTEM_NAVIC (8) --  NavIC satellite
+ */
 }qmiLocEventGnssSvPolyIndMsgT_v02;  /* Message */
 /**
     @}
@@ -27708,3 +27732,4 @@ qmi_idl_service_object_type loc_get_service_object_internal_v02
 }
 #endif
 #endif
+
