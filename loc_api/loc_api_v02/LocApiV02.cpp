@@ -2305,7 +2305,6 @@ void LocApiV02 :: reportPosition (
     memset(&location, 0, sizeof (UlpLocation));
     location.size = sizeof(location);
     location.unpropagatedPosition = unpropagatedPosition;
-    GnssDataNotification dataNotify = {};
     int msInWeek = -1;
     uint16_t meaAvailForPVT[eQMI_LOC_SV_SYSTEM_NAVIC_V02] = {};
 
@@ -2334,63 +2333,6 @@ void LocApiV02 :: reportPosition (
                  locationExtended.timeStamp.apTimeStamp.tv_sec,
                  locationExtended.timeStamp.apTimeStamp.tv_nsec);
 
-    // Process the position from final and intermediate reports
-    memset(&dataNotify, 0, sizeof(dataNotify));
-    msInWeek = (int)location_report_ptr->gpsTime.gpsTimeOfWeekMs;
-
-    if (location_report_ptr->jammerIndicatorListExt_valid) {
-        msInWeek = -2;
-        for (uint32_t i = 0; i < location_report_ptr->jammerIndicatorListExt_len; i++) {
-            int signalId = log2(location_report_ptr->jammerIndicatorListExt[i].gnssSignalType);
-            if (signalId < GNSS_LOC_MAX_NUMBER_OF_SIGNAL_TYPES) {
-                LOC_LOGa("signal type %d, agcMetricDb=%d, bpMetricDb=%d",
-                        signalId, -location_report_ptr->jammerIndicatorListExt[i].bpMetricDb,
-                        location_report_ptr->jammerIndicatorListExt[i].bpMetricDb);
-                dataNotify.gnssDataMask[signalId] |=
-                    GNSS_LOC_DATA_AGC_BIT | GNSS_LOC_DATA_JAMMER_IND_BIT;
-                dataNotify.agc[signalId] =
-                    -(double)location_report_ptr->jammerIndicatorListExt[i].bpMetricDb / 100.0;
-                dataNotify.jammerInd[signalId] =
-                    (double)location_report_ptr->jammerIndicatorListExt[i].bpMetricDb / 100.0;
-                msInWeek = -1;
-            }
-        }
-    } else if (location_report_ptr->jammerIndicatorList_valid) {
-        LOC_LOGa("jammerIndicator is present len=%d",
-                 location_report_ptr->jammerIndicatorList_len);
-        /* msInWeek is used to indicate if jammer indicator is present in this message.
-           The appropriate action will be taken in GnssAdapter
-           There are three cases as follows:
-           1. jammer is not present (old modem image that doesn't support this) then
-              msInWeek is set above, has a value >=0 and it is used in GnssAdapter to
-              validate when parsing jammer value from NMEA debug message
-           2. jammer is present and at least one satellite has a valid value, then
-              msInWeek is -1
-           3. jammer is present, but the values for all satellites are invalid
-              (GNSS_INVALID_JAMMER_IND) then msInWeek is -2 */
-        msInWeek = -2;
-        for (uint32_t i = 1; i < location_report_ptr->jammerIndicatorList_len; i++) {
-            dataNotify.gnssDataMask[i-1] = 0;
-            dataNotify.agc[i-1] = 0.0;
-            dataNotify.jammerInd[i-1] = 0.0;
-            if (GNSS_INVALID_JAMMER_IND !=
-                location_report_ptr->jammerIndicatorList[i].bpMetricDb) {
-                LOC_LOGa("agcMetricDb[%d]=%d; bpMetricDb[%d]=%d",
-                         i, -location_report_ptr->jammerIndicatorList[i].bpMetricDb,
-                         i, location_report_ptr->jammerIndicatorList[i].bpMetricDb);
-                dataNotify.gnssDataMask[i-1] |=
-                        GNSS_LOC_DATA_AGC_BIT | GNSS_LOC_DATA_JAMMER_IND_BIT;
-                dataNotify.agc[i-1] =
-                        -(double)location_report_ptr->jammerIndicatorList[i].bpMetricDb / 100.0;
-                dataNotify.jammerInd[i-1] =
-                        (double)location_report_ptr->jammerIndicatorList[i].bpMetricDb / 100.0;
-                msInWeek = -1;
-            }
-        }
-    } else {
-        LOC_LOGa("jammerIndicator is not present");
-    }
-
     if ((false == mIsFirstFinalFixReported) &&
             (eQMI_LOC_SESS_STATUS_SUCCESS_V02 == location_report_ptr->sessionStatus)) {
         loc_boot_kpi_marker("L - LocApiV02 First Final Fix");
@@ -2416,8 +2358,6 @@ void LocApiV02 :: reportPosition (
                     locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_ALTITUDE_MEAN_SEA_LEVEL;
                 }
             }
-        } else {
-            LocApiBase::reportData(dataNotify, msInWeek);
         }
 
         // Time stamp (UTC)
@@ -3138,7 +3078,7 @@ void LocApiV02 :: reportPosition (
         LocApiBase::reportPosition(location,
                                    locationExtended,
                                    sessStatus,
-                                   locationExtended.tech_mask, &dataNotify, msInWeek);
+                                   locationExtended.tech_mask, msInWeek);
     }
     else
     {
@@ -3146,7 +3086,7 @@ void LocApiV02 :: reportPosition (
                                    locationExtended,
                                    LOC_SESS_FAILURE,
                                    LOC_POS_TECH_MASK_DEFAULT,
-                                   &dataNotify, msInWeek);
+                                   msInWeek);
     }
 }
 
@@ -8454,7 +8394,7 @@ void LocApiV02::reportEngDebugDataInfo(const qmiLocEngineDebugDataIndMsgT_v02*
         gnssDataNotification.gnssDataValidityMask |= GNSS_LOC_DATA_GPS_SYSTEM_TIME_BIT;
     }
 
-    LocApiBase::reportData(gnssDataNotification, -1);
+    LocApiBase::reportData(gnssDataNotification, mMsInWeek);
     LocApiBase::reportEngDebugDataInfo(gnssEngineDebugDataInfo);
 }
 

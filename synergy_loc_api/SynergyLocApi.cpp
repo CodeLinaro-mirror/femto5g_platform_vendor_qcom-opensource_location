@@ -169,7 +169,7 @@ void handleSllReportPosition(UlpLocation& location,
     if (nullptr != context) {
         SynergyLocApi *synergyLocApiInstance = (SynergyLocApi*)context;
         synergyLocApiInstance->reportPosition(location, locationExtended,
-                            status, loc_technology_mask,  nullptr, msInWeek);
+                            status, loc_technology_mask, msInWeek);
     } else {
         LOC_LOGw ("Context is NULL");
     }
