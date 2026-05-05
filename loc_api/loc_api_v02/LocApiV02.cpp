@@ -6420,7 +6420,8 @@ bool LocApiV02 :: convertGnssMeasurements (
     svMeas.gnssSvId = gnss_measurement_info.gnssSvId;
     svMeas.gloFrequency = gnss_measurement_info.gloFrequency;
     if (gnss_measurement_report_ptr.gnssSignalType_valid) {
-        svMeas.gnssSignalTypeMask = gnss_measurement_report_ptr.gnssSignalType;
+        svMeas.gnssSignalTypeMask = convertQmiGnssSignalType(
+                gnss_measurement_report_ptr.gnssSignalType);
     }
     if (gnss_measurement_info.validMask & QMI_LOC_SV_LOSSOFLOCK_VALID_V02) {
         svMeas.lossOfLock = (bool)gnss_measurement_info.lossOfLock;
