@@ -133,7 +133,7 @@ struct ProtoMsgInfo{
     string protoStr;
 
     inline ProtoMsgInfo() :
-            configType((LocConfigTypeEnum) 0), protoStr(nullptr) {}
+            configType((LocConfigTypeEnum) 0), protoStr("") {}
     inline ProtoMsgInfo(LocConfigTypeEnum inType, string inStr) :
             configType(inType), protoStr(std::move(inStr)) {}
 };
