@@ -6816,13 +6816,16 @@ bool LocApiV02 :: convertGnssMeasurements(
         bIsL5orE5 = true;
     }
 
+    measurementData.stateMask |= GNSS_MEASUREMENTS_STATE_MSEC_AMBIGUOUS_BIT;
     if (validMeasStatus & QMI_LOC_MASK_MEAS_STATUS_MS_VALID_V02) {
+        measurementData.stateMask &= ~GNSS_MEASUREMENTS_STATE_MSEC_AMBIGUOUS_BIT;
         /* sub-frame decode & TOW decode */
         measurementData.stateMask |= (GNSS_MEASUREMENTS_STATE_SUBFRAME_SYNC_BIT |
                                       GNSS_MEASUREMENTS_STATE_TOW_DECODED_BIT |
                                       GNSS_MEASUREMENTS_STATE_TOW_KNOWN_BIT |
                                       GNSS_MEASUREMENTS_STATE_BIT_SYNC_BIT |
                                       GNSS_MEASUREMENTS_STATE_CODE_LOCK_BIT);
+
         // GLO
         if (GNSS_SV_TYPE_GLONASS == measurementData.svType &&
             (bBandNotAvailable ||
