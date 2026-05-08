@@ -97,6 +97,11 @@ if (POWER_DAEMON_MGR_ENABLED)
     SYSR_INCLUDE_DIR(powermanager)
 endif (POWER_DAEMON_MGR_ENABLED)
 
+if (LOC_USE_DLT)
+    add_definitions(-DLOC_USE_DLT)
+    SYSR_INCLUDE_DIR(automotive-dlt)
+endif (LOC_USE_DLT)
+
 # SOME/IP
 find_package (CommonAPI-SomeIP 3.2.0 REQUIRED)
 find_package (vsomeip3 3.1.20 REQUIRED)
@@ -161,11 +166,18 @@ endif()
 
 # Build service
 add_executable(${PRJ_NAME_SERVICE} ${PRJ_SERVICE_SRCS})
+
+set(EXTRA_LIBS "")
+
 if (POWER_DAEMON_MGR_ENABLED)
-    target_link_libraries(${PRJ_NAME_SERVICE} ${LINK_LIBRARIES} powermanager)
-else ()
-    target_link_libraries(${PRJ_NAME_SERVICE} ${LINK_LIBRARIES})
+    list(APPEND EXTRA_LIBS powermanager)
 endif()
+
+if (LOC_USE_DLT)
+    list(APPEND EXTRA_LIBS dlt)
+endif()
+
+target_link_libraries(${PRJ_NAME_SERVICE} ${LINK_LIBRARIES} ${EXTRA_LIBS})
 
 # Build DBus library
 #add_library (${PRJ_NAME}-dbus SHARED ${PRJ_DBUS_LIB_SRCS})
