@@ -552,6 +552,8 @@ enum GnssSignalTypeMask {
     GNSS_SIGNAL_BEIDOU_B2BQ_BIT         = (1<<23),
     /** GNSS signal is of NAVIC L1 RF band. <br/>   */
     GNSS_SIGNAL_NAVIC_L1_BIT            = (1<<24),
+    /** GNSS signal is of QZSS L1 CB band. <br/>   */
+    GNSS_SIGNAL_QZSS_L1CB_BIT            = (1<<25),
 
 };
 
@@ -892,7 +894,7 @@ struct GnssLocationSvUsedInPosition {
     uint64_t bdsSvUsedIdsMask;
     /** Specify the set of SVs from QZSS constellation that are used
      *  to compute the position. <br/>
-     *  Bit 0 to Bit 4 corresponds to QZSS SV id 193 to 197.
+     *  Bit 0 to Bit 9 corresponds to QZSS SV id 193 to 202.
      *  <br/> */
     uint64_t qzssSvUsedIdsMask;
     /** Specify the set of SVs from NAVIC constellation that are used
@@ -1550,7 +1552,7 @@ struct GnssSv {
      *                   [97, 110] as frequency channel number(FCN) [-7, 6] plus 104
      *                   i.e. encode FCN -7 as 97, 0 as 104, 6 as 110 <br/>
      *    - For SBAS:    120 to 158 and 183 to 191 <br/>
-     *    - For QZSS:    193 to 197 <br/>
+     *    - For QZSS:    193 to 202 <br/>
      *    - For BDS:     201 to 263 <br/>
      *    - For GAL:     301 to 336 <br/>
      *    - For NAVIC:   401 to 414 <br/>   */
@@ -1651,6 +1653,8 @@ enum GnssSignalTypes {
     GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q = 21,
     /**  GNSS signal is of NAVIC L1 RF band.  <br/>   */
     GNSS_SIGNAL_TYPE_NAVIC_L1 = 22,
+    /**  GNSS signal is of QZSS L1CB RF band.  <br/>   */
+    GNSS_SIGNAL_TYPE_QZSS_L1CB = 23,
     /** Maximum number of signal types. <br/>   */
     GNSS_MAX_NUMBER_OF_SIGNAL_TYPES
 };
@@ -2537,21 +2541,19 @@ enum GpsQzssExtEphValidity {
     /** Valid GpsQzssExtEphemeris::validtyPeriod*/
     GPS_QZSS_EXT_EPH_VALIDITY_PERIOD_VALID = (1<<10),
     /** Valid GpsQzssExtEphemeris::deltaNdot */
-    GPS_QZSS_EXT_EPH_DELTA_NDOT_VALID = (1<11),
+    GPS_QZSS_EXT_EPH_DELTA_NDOT_VALID = (1<<11),
     /** Valid GpsQzssExtEphemeris::delaA*/
     GPS_QZSS_EXT_EPH_DELTAA_VALID = (1<<12),
     /** Valid GpsQzssExtEphemeris::adot */
-    GPS_QZSS_EXT_EPH_ADOT_VALID = (1<<13)
+    GPS_QZSS_EXT_EPH_ADOT_VALID = (1<<13),
+    /** Valid GpsQzssExtEphemeris::iscL1cb*/
+    GPS_QZSS_EXT_EPH_ISC_L1CB_VALID = (1<<14),
 };
 
 struct GpsQzssExtEphemeris {
-    /**<   GNSS SV ID. \n
+    /**<   QZSS SV ID. \n
        Range:\n
-       - GPS --     1 to 32 \n
-       - QZSS --    193 to 197 \n
-       - BDS --     201 to 263 \n
-       - Galileo -- 301 to 336 \n
-       - NavIC --   401 to 420 \n
+       - QZSS --    193 to 202 \n
     */
     uint16_t gnssSvId;
 
@@ -2841,11 +2843,7 @@ enum BdsExtEphValidity {
 struct BdsExtEphemeris {
     /**<   GNSS SV ID. \n
        Range:\n
-       - GPS --     1 to 32 \n
-       - QZSS --    193 to 197 \n
        - BDS --     201 to 263 \n
-       - Galileo -- 301 to 336 \n
-       - NavIC --   401 to 420 \n
     */
     uint16_t gnssSvId;
 
