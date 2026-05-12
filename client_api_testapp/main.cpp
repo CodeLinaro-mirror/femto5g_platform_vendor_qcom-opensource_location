@@ -59,7 +59,7 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 using namespace location_client;
 using namespace location_integration;
 using std::vector;
-
+#define MAX_NMEA_PRINT_LEN 256
 static bool     outputEnabled = true;
 static bool     detailedOutputEnabled = false;
 // debug events counter
@@ -261,8 +261,8 @@ Callback functions
 ******************************************************************************/
 static void onCapabilitiesCb(location_client::LocationCapabilitiesMask mask) {
     printf("<<< onCapabilitiesCb mask=0x%" PRIx64 "\n", mask);
-    printf("<<< onCapabilitiesCb mask string=%s",
-            LocationClientApi::capabilitiesToString(mask).c_str());
+    printf("<<< onCapabilitiesCb mask string=%.*s",
+            (int)MAX_NMEA_PRINT_LEN, LocationClientApi::capabilitiesToString(mask).c_str());
 }
 
 static void onResponseCb(location_client::LocationResponse response) {
@@ -276,8 +276,8 @@ static void onLocationCb(const location_client::Location& location) {
     }
     if (outputEnabled) {
         if (detailedOutputEnabled) {
-            printf("<<< onLocationCb cnt=(%u/%u): %s\n", numValidFixes, numFixes,
-                    location.toString().c_str());
+            printf("<<< onLocationCb cnt=(%u/%u): %.*s\n", numValidFixes, numFixes,
+                    (int)MAX_NMEA_PRINT_LEN, location.toString().c_str());
         } else {
             printf("<<< onLocationCb cnt=(%u/%u): session status %d time=%" PRIu64
                    " mask=0x%x lat=%f lon=%f alt=%f horzacc=%f\n",
@@ -307,18 +307,17 @@ static void onGtpResponseCb(location_client::LocationResponse response) {
 static void onGtpLocationCb(const location_client::Location& location) {
     sem_post(&semCompleted);
 
-    if (!outputEnabled) {
-        return;
-    }
-    if (detailedOutputEnabled) {
-        printf("<<< onGtpLocationCb: %s\n", location.toString().c_str());
-    } else {
-        printf("<<< onGtpLocationCb time=%" PRIu64" mask=0x%x lat=%f lon=%f alt=%f\n",
-               location.timestamp,
-               location.flags,
-               location.latitude,
-               location.longitude,
-               location.altitude);
+    if (outputEnabled) {
+        if (detailedOutputEnabled) {
+            printf("<<< onGtpLocationCb: %.*s\n", (int)MAX_NMEA_PRINT_LEN, location.toString().c_str());
+        } else {
+            printf("<<< onGtpLocationCb time=%" PRIu64" mask=0x%x lat=%f lon=%f alt=%f\n",
+                   location.timestamp,
+                   location.flags,
+                   location.latitude,
+                   location.longitude,
+                   location.altitude);
+        }
     }
 }
 
@@ -336,7 +335,7 @@ static void onSingleShotLocationCb(const location_client::Location& location) {
         return;
     }
     if (detailedOutputEnabled) {
-        printf("<<< onSingleShotLocationCb: %s\n", location.toString().c_str());
+        printf("<<< onSingleShotLocationCb: %.*s\n", (int)MAX_NMEA_PRINT_LEN, location.toString().c_str());
     } else {
         printf("<<< onSingleShotLocationCb time=%" PRIu64" mask=0x%x lat=%f lon=%f "
                "alt=%f accuracy=%f\n",
@@ -356,8 +355,8 @@ static void onGnssLocationCb(const location_client::GnssLocation& location) {
     }
     if (outputEnabled) {
         if (detailedOutputEnabled) {
-            printf("<<< onGnssLocationCb cnt=(%u/%u): %s\n", numValidFixes, numFixes,
-                    location.toString().c_str());
+            printf("<<< onGnssLocationCb cnt=(%u/%u): %.*s\n", numValidFixes, numFixes,
+                    (int)MAX_NMEA_PRINT_LEN, location.toString().c_str());
         } else {
             printf("<<< onGnssLocationCb cnt=(%u/%u): session status %d time=%" PRIu64
                    " mask=0x%x lat=%f lon=%f alt=%f\n",
@@ -380,8 +379,8 @@ static void onEngLocationsCb(const std::vector<location_client::GnssLocation>& l
     for (auto gnssLocation : locations) {
         if (outputEnabled) {
             if (detailedOutputEnabled) {
-                printf("<<< onEngLocationsCb cnt=%u: %s\n", numFixes,
-                       gnssLocation.toString().c_str());
+                printf("<<< onEngLocationsCb cnt=%u: %.*s\n", numFixes,
+                       (int)MAX_NMEA_PRINT_LEN, gnssLocation.toString().c_str());
             } else {
                 printf("<<< onEngLocationsCb cnt=%u: time=%" PRIu64" mask=0x%x lat=%f lon=%f \n"
                        "alt=%f info mask=0x%" PRIx64 ", nav solution maks = 0x%x, eng type %d, "
@@ -464,7 +463,7 @@ static void onGnssSvCb(const std::vector<location_client::GnssSv>& gnssSvs) {
     if (detailedOutputEnabled) {
         printf("<<< onGnssSvCb cnt=%d\n", numGnssSvCb);
         for (auto sv : gnssSvs) {
-            printf("<<< %s\n", sv.toString().c_str());
+            printf("<<< %.*s\n", (int)MAX_NMEA_PRINT_LEN, sv.toString().c_str());
         }
     } else {
         std::stringstream ss;
@@ -481,8 +480,11 @@ static void onGnssNmeaCb(uint64_t timestamp, const std::string& nmea) {
     if (!outputEnabled) {
         return;
     }
-    printf("<<< onGnssNmeaCb cnt=%u time=%" PRIu64" nmea=%s",
-            numGnssNmeaCb, timestamp, nmea.c_str());
+    printf("<<< onGnssNmeaCb cnt=%u time=%" PRIu64 " nmea=%.*s",
+           numGnssNmeaCb,
+           timestamp,
+           MAX_NMEA_PRINT_LEN,
+           nmea.c_str());
     if (routeToNMEAPort && openPort()) {
        sendNMEAToTty(nmea);
     }
@@ -493,8 +495,15 @@ static void onEngineNmeaCb(LocOutputEngineType engType,
                            const std::string& nmea) {
     numEngineNmeaCb++;
     if (outputEnabled) {
-        printf("<<< onEngineNmeaCb cnt=%u engine type=%u time=%" PRIu64" nmea=%s",
-            numEngineNmeaCb, engType, timestamp, nmea.c_str());
+        printf("<<< onEngineNmeaCb cnt=%u engine type=%u time=%" PRIu64
+               " nmea=%.*s",
+               numEngineNmeaCb,
+               static_cast<unsigned int>(engType),
+               timestamp,
+               MAX_NMEA_PRINT_LEN,
+               nmea.c_str());
+
+
     }
     if (routeToNMEAPort && openPort()) {
                 sendNMEAToTty(nmea);
@@ -520,7 +529,7 @@ static void onGnssDataCb(const location_client::GnssData& gnssData) {
         return;
     }
     if (detailedOutputEnabled) {
-        printf("<<< gnssDataCb cnt=%u: %s\n", numDataCb, gnssData.toString().c_str());
+        printf("<<< gnssDataCb cnt=%u: %.*s\n", numDataCb, (int)MAX_NMEA_PRINT_LEN, gnssData.toString().c_str());
     } else {
         printf("<<< gnssDataCb cnt=%u\n", numDataCb);
     }
@@ -533,8 +542,8 @@ static void onGnssMeasurementsCb(const location_client::GnssMeasurements& gnssMe
     }
 
     if (detailedOutputEnabled) {
-        printf("<<< onGnssMeasurementsCb cnt=%u, %s ",numGnssMeasurementsCb,
-               gnssMeasurements.toString().c_str());
+        printf("<<< onGnssMeasurementsCb cnt=%u, %.*s ",numGnssMeasurementsCb,
+               (int)MAX_NMEA_PRINT_LEN, gnssMeasurements.toString().c_str());
     } else {
         printf("<<< onGnssMeasurementsCb cnt=%u, num of meas %d, nHz %d\n",
                numGnssMeasurementsCb, gnssMeasurements.measurements.size(),
@@ -544,7 +553,7 @@ static void onGnssMeasurementsCb(const location_client::GnssMeasurements& gnssMe
 
 static void onGnssDcReportCb(const location_client::GnssDcReport & dcReport) {
     if (detailedOutputEnabled) {
-        printf("<<< DC report %s\n", dcReport.toString().c_str());
+        printf("<<< DC report %.*s\n", (int)MAX_NMEA_PRINT_LEN, dcReport.toString().c_str());
     } else {
         printf("DC report type %d, valid bits cnt %d, data byte cnt %d PRN %d \n",
                dcReport.dcReportType, dcReport.numValidBits,
@@ -1805,7 +1814,7 @@ int getGeofenceCount() {
     return count;
 }
 
-void menuAddGeofence() {
+bool menuAddGeofence() {
     uint32_t count = getGeofenceCount();
     double latitude = 32.896535;
     double longitude = -117.201025;
@@ -1824,7 +1833,7 @@ void menuAddGeofence() {
         p = fgets (buf, 16, stdin);
         if (p == nullptr) {
             printf("Error: fgets returned nullptr !!");
-            return;
+            return false;
         }
         if (atof(p) != 0) {
             latitude = atof(p);
@@ -1834,7 +1843,7 @@ void menuAddGeofence() {
         p = fgets (buf, 16, stdin);
         if (p == nullptr) {
             printf("Error: fgets returned nullptr !!");
-            return;
+            return false;
         }
         if (atof(p) != 0) {
             longitude = atof(p);
@@ -1844,7 +1853,7 @@ void menuAddGeofence() {
         p = fgets (buf, 16, stdin);
         if (p == nullptr) {
             printf("Error: fgets returned nullptr !!");
-            return;
+            return false;
         }
         if (atof(p) != 0) {
             radiusM = atof(p);
@@ -1854,7 +1863,7 @@ void menuAddGeofence() {
         p = fgets (buf, 16, stdin);
         if (p == nullptr) {
             printf("Error: fgets returned nullptr !!");
-            return;
+            return false;
         }
         if (atoi(p) != 0) {
             breachType = (GeofenceBreachTypeMask)atoi(p);
@@ -1864,7 +1873,7 @@ void menuAddGeofence() {
         p = fgets (buf, 16, stdin);
         if (p == nullptr) {
             printf("Error: fgets returned nullptr !!");
-            return;
+            return false;
         }
         if (atoi(p) != 0) {
             responsivenessMs = atoi(p) * 1000;
@@ -1874,7 +1883,7 @@ void menuAddGeofence() {
         p = fgets (buf, 16, stdin);
         if (p == nullptr) {
             printf("Error: fgets returned nullptr !!");
-            return;
+            return false;
         }
         if (atoi(p) != 0) {
             dwellTimeSec = atoi(p);
@@ -2415,7 +2424,7 @@ int main(int argc, char *argv[]) {
                            strlen(INJECT_LOCATION)) == 0) {
             location_client::Location injectLocation = {};
             parseLocation(buf, injectLocation);
-            printf("Injected location info: %s\n", injectLocation.toString().c_str());
+            printf("Injected location info: %.*s\n", (int)MAX_NMEA_PRINT_LEN, injectLocation.toString().c_str());
             pIntClient->injectLocation(injectLocation);
         } else if (strncmp(buf, GET_SINGLE_FUSED_FIX,
                            strlen(GET_SINGLE_FUSED_FIX)) == 0) {
@@ -2489,6 +2498,10 @@ int main(int argc, char *argv[]) {
             pIntClient->registerXtraStatusUpdate(registerUpdate);
         } else if (strncmp(buf, CONFIG_MERKLE_TREE, strlen(CONFIG_MERKLE_TREE)) == 0) {
             FILE *xmlFile = fopen("/etc/merkletree.xml", "rb");
+            if (xmlFile == NULL) {
+                perror("fopen");
+                return 0;
+            }
             if (nullptr == xmlFile) {
                 printf("failed to open merkletree config file\n");
                 break;

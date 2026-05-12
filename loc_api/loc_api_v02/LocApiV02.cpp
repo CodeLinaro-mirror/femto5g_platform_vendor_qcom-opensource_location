@@ -2604,7 +2604,9 @@ void LocApiV02 :: reportPosition (
     location.unpropagatedPosition = unpropagatedPosition;
     GnssDataNotification dataNotify = {};
     int msInWeek = -1;
-    uint16_t meaAvailForPVT[eQMI_LOC_SV_SYSTEM_NAVIC_V02] = {};
+    // Initialize meaAvailForPVT array to zero to prevent uninitialized usage
+    uint16_t meaAvailForPVT[eQMI_LOC_SV_SYSTEM_NAVIC_V02];
+    memset(meaAvailForPVT, 0, sizeof(meaAvailForPVT));
 
     GpsLocationExtended locationExtended;
     memset(&locationExtended, 0, sizeof (GpsLocationExtended));

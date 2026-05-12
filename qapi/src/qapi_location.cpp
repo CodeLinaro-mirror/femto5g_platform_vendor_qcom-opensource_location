@@ -711,7 +711,7 @@ extern "C" {
                     Runnable timerRunnable = [pLocClientApi] {
                         pLocClientApi->stopPositionSession();
                         if (qLocationCallbacks.singleShotCb) {
-                            qapi_Location_t qLocation;
+                            qapi_Location_t qLocation = {};
                             qLocationCallbacks.singleShotCb(qLocation, QAPI_LOCATION_ERROR_TIMEOUT);
                         } else {
                             LOC_LOGe("No singleshot cb registered");

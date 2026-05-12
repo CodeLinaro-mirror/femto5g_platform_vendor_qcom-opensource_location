@@ -2200,8 +2200,14 @@ locClientStatusEnumType locClientOpenInstance (
   }
   else
   {
-    LOC_LOGd("returning handle = %p, user_handle=%p, status = %d",
-             *pLocClientHandle, pCallbackData->userHandle, status);
+    // Check pCallbackData is not NULL before dereferencing to prevent null pointer access
+    if (NULL != pCallbackData) {
+      LOC_LOGd("returning handle = %p, user_handle=%p, status = %d",
+               *pLocClientHandle, pCallbackData->userHandle, status);
+    } else {
+      LOC_LOGd("returning handle = %p, status = %d",
+               *pLocClientHandle, status);
+    }
   }
 
   return(status);
