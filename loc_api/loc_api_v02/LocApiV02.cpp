@@ -6096,7 +6096,7 @@ void LocApiV02::convertGnssMeasurements(
                 GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_RESET_BIT);
 
         uint8_t svIdFound = 1;
-        int32_t refCountDiff = 0;
+        uint32_t refCountDiff = 0;
         stringstream ss;
         ss << gnss_measurement_report_ptr.gnssSignalType;
         ss << "-";
@@ -6104,7 +6104,7 @@ void LocApiV02::convertGnssMeasurements(
         CycleSlipCountMapItr iter;
         CycleSlipCountMap &prevCntMapToUse = gnss_measurement_report_ptr.nHzMeasurement ? \
                 mPrevNhzSlipCountMap : mPrev1HzSlipCountMap;
-        int32_t maxRefCntDiff = gnss_measurement_report_ptr.nHzMeasurement ? \
+        uint32_t maxRefCntDiff = gnss_measurement_report_ptr.nHzMeasurement ? \
                 MAX_REFOUNT_DIFF_FOR_NHZ : MAX_REFOUNT_DIFF_FOR_1HZ;
 
         iter = prevCntMapToUse.find(ss.str());
@@ -6118,7 +6118,7 @@ void LocApiV02::convertGnssMeasurements(
                     iter->second.refFCount;
             if (refCountDiff > maxRefCntDiff) {
                 svIdFound = 0;
-                LOC_LOGi("svID: %d refCountDiff: %d > %d , Not consider it",
+                LOC_LOGi("svID: %d refCountDiff: %u > %u , Not consider it",
                        gnss_measurement_info.gnssSvId, refCountDiff, maxRefCntDiff);
             }
         }
