@@ -54,6 +54,7 @@
 #include "loc_pla.h"
 #include <loc_cfg.h>
 #include <LocContext.h>
+#include <loc_misc_utils.h>
 
 #ifdef PTP_SUPPORTED
 #include <gptp_helper.h>
@@ -265,6 +266,7 @@ LocApiV02::LocApiV02(LOC_API_ADAPTER_EVENT_MASK_T exMask, ContextBase* context):
     mIsGptpInitialized(false),
     mDwellAlignTimeMsValid(0),
     mDwellAlignTimeMs(0),
+    mLastSessionStopTimestampInMs(0),
     mPreferredSignalType(QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L1CA_V02),
     mPreferredSvSystemType(GNSS_SV_TYPE_GPS) {
   // initialize loc_sync_req interface
@@ -528,11 +530,20 @@ locClientEventMaskType LocApiV02::adjustLocClientEventMask(locClientEventMaskTyp
     }
 
 #ifdef __ANDROID__
-    if (mInSession || mEngineOn) {
+    if (mInSession) {
         // if device is in session, always register for engine state
         // so that we can support full tracking mode in concurrent
         // measurement and position session
         qmiMask |= QMI_LOC_EVENT_MASK_ENGINE_STATE_V02;
+    } else if (mEngineOn) {
+        // if session just stopped but engine is still on, keep engine state
+        // registered for up to 5 seconds after session stop to avoid missing
+        // engine-off indication during quick stop/start scenarios
+        uint64_t currentBootTimestampMs = getBootTimeMilliSec();
+        if (currentBootTimestampMs >= mLastSessionStopTimestampInMs &&
+            currentBootTimestampMs - mLastSessionStopTimestampInMs < 5000) {
+            qmiMask |= QMI_LOC_EVENT_MASK_ENGINE_STATE_V02;
+        }
     }
 #endif
 
@@ -4192,6 +4203,7 @@ void LocApiV02::reportEngineState(const qmiLocEventEngineStateIndMsgT_v02 *engin
               mpLocApiV02->mFirstMeasurementOfSessionReceived = false;
           }
           mpLocApiV02->mEngineOn = mEngineOn;
+          mpLocApiV02->registerEventMask();
       }
   };
 
@@ -9240,6 +9252,8 @@ LocApiV02::stopTimeBasedTrackingSync(LocApiResponse* adapterResponse) {
         LOC_LOGe ("stopTimeBasedTracking failed! status %d", status);
         err = LOCATION_ERROR_GENERAL_FAILURE;
     } else {
+        // Record boot timestamp in ms when session stops
+        mLastSessionStopTimestampInMs = getBootTimeMilliSec();
         mIsFirstFinalFixReported = false;
         mInSession = false;
         mPowerMode = GNSS_POWER_MODE_DEFAULT;
