@@ -4270,13 +4270,16 @@ void LocApiV02::reportNiRequest(const qmiLocEventNiNotifyVerifyReqIndMsgT_v02 *n
             ni_req_ptr->suplEmergencyNotification_valid);
     //Accept NI when privacy overrides or no notify/verify required
     if ((ni_req_ptr->notificationType == eQMI_LOC_NI_USER_NOTIFY_VERIFY_PRIVACY_OVERRIDE_V02) ||
-             (ni_req_ptr->notificationType == eQMI_LOC_NI_USER_NO_NOTIFY_NO_VERIFY_V02)) {
+             (ni_req_ptr->notificationType == eQMI_LOC_NI_USER_NO_NOTIFY_NO_VERIFY_V02) ||
+              // even though this is notify/verify, we will not pop up dialog but simply
+              // accept it
+             (ni_req_ptr->notificationType == eQMI_LOC_NI_USER_NOTIFY_VERIFY_ALLOW_NO_RESP_V02)) {
         sendMsg(new LocApiMsg([this, request_pass_back = *ni_req_ptr] () {
             locClientReqUnionType req_union = {};
             qmiLocNiUserRespReqMsgT_v02 ni_resp = {};
             qmiLocNiUserRespIndMsgT_v02 ni_resp_ind = {};
             ni_resp.userResp = eQMI_LOC_NI_LCS_NOTIFY_VERIFY_ACCEPT_V02;
-            LOC_LOGd("ACCEPT privacy override and no notify/verify NI request");
+            LOC_LOGd("ACCEPT privacy override and no notify/verify NI request or allow no resp");
             ni_resp.notificationType = request_pass_back.notificationType;
 
             // copy SUPL payload from request
