@@ -5836,8 +5836,6 @@ void LocApiV02::convertGnssMeasurements(
     // stateMask & receivedSvTimeNs & received_gps_tow_uncertainty_ns
     uint64_t validMeasStatus = gnss_measurement_info.measurementStatus &
                                gnss_measurement_info.validMeasStatusMask;
-    uint64_t bitSynMask = QMI_LOC_MASK_MEAS_STATUS_BE_CONFIRM_V02 |
-                          QMI_LOC_MASK_MEAS_STATUS_SB_VALID_V02;
     double gpsTowUncNs = (double)gnss_measurement_info.svTimeSpeed.svTimeUncMs * 1e6;
     bool bBandNotAvailable = !gnss_measurement_report_ptr.gnssSignalType_valid;
     qmiLocGnssSignalTypeMaskT_v02 gnssBand = 0;
@@ -5896,7 +5894,11 @@ void LocApiV02::convertGnssMeasurements(
         }
     }
 
-    if (validMeasStatus & QMI_LOC_MASK_MEAS_STATUS_MS_VALID_V02) {
+    const qmiLocSVTimeSpeedStructT_v02 &svTimeSpeed = gnss_measurement_info.svTimeSpeed;
+    bool smValid = validMeasStatus & QMI_LOC_MASK_MEAS_STATUS_SM_VALID_V02;
+    bool msValid = validMeasStatus & QMI_LOC_MASK_MEAS_STATUS_MS_VALID_V02;
+    bool sbValid = validMeasStatus & QMI_LOC_MASK_MEAS_STATUS_SB_VALID_V02;
+    if (smValid && sbValid && msValid) {
         measurementData.stateMask &= ~GNSS_MEASUREMENTS_STATE_MSEC_AMBIGUOUS_BIT;
         /* sub-frame decode & TOW decode */
         measurementData.stateMask |= (GNSS_MEASUREMENTS_STATE_SUBFRAME_SYNC_BIT |
@@ -5927,10 +5929,9 @@ void LocApiV02::convertGnssMeasurements(
             measurementData.stateMask |= GNSS_MEASUREMENTS_STATE_2ND_CODE_LOCK_BIT;
         }
 
-        const qmiLocSVTimeSpeedStructT_v02 &svTimeSpeed = gnss_measurement_info.svTimeSpeed;
         double svTimeSubMsToNs = ((double)svTimeSpeed.svTimeSubMs) * NSEC_IN_MSEC;
         measurementData.receivedSvTimeNs =
-                (int64_t)gnss_measurement_info.svTimeSpeed.svTimeMs * NSEC_IN_MSEC +
+                (int64_t)svTimeSpeed.svTimeMs * NSEC_IN_MSEC +
                 (int64_t)svTimeSubMsToNs;
         measurementData.receivedSvTimeSubNs = svTimeSubMsToNs -
                 (int64_t)svTimeSubMsToNs;
@@ -5940,7 +5941,7 @@ void LocApiV02::convertGnssMeasurements(
         measurementData.flags |= (GNSS_MEASUREMENTS_DATA_STATE_BIT |
                                   GNSS_MEASUREMENTS_DATA_RECEIVED_SV_TIME_BIT |
                                   GNSS_MEASUREMENTS_DATA_RECEIVED_SV_TIME_UNCERTAINTY_BIT);
-    } else if ((validMeasStatus & bitSynMask) == bitSynMask) {
+    } else if (smValid && sbValid) {
         /* bit sync */
         measurementData.stateMask |= (GNSS_MEASUREMENTS_STATE_BIT_SYNC_BIT |
                                       GNSS_MEASUREMENTS_STATE_SYMBOL_SYNC_BIT |
@@ -5951,8 +5952,15 @@ void LocApiV02::convertGnssMeasurements(
         if (bIsL5orE5) {
             measurementData.stateMask |= GNSS_MEASUREMENTS_STATE_2ND_CODE_LOCK_BIT;
         }
-        double svTimeNs = fmod(((double)gnss_measurement_info.svTimeSpeed.svTimeMs +
-                  (double)gnss_measurement_info.svTimeSpeed.svTimeSubMs), 20) * NSEC_IN_MSEC;
+
+        int modFactor = 20;
+        if (GNSS_SV_TYPE_GALILEO == measurementData.svType) {
+            modFactor = 4;
+        }
+
+        double svTimeMsTotal =
+            (double)svTimeSpeed.svTimeMs + (double)svTimeSpeed.svTimeSubMs;
+        double svTimeNs = fmod(svTimeMsTotal, modFactor) * NSEC_IN_MSEC;
         measurementData.receivedSvTimeNs = (int64_t)svTimeNs;
         measurementData.receivedSvTimeSubNs = svTimeNs -(int64_t)svTimeNs;
 
@@ -5960,14 +5968,13 @@ void LocApiV02::convertGnssMeasurements(
         measurementData.flags |= (GNSS_MEASUREMENTS_DATA_STATE_BIT |
                                   GNSS_MEASUREMENTS_DATA_RECEIVED_SV_TIME_BIT |
                                   GNSS_MEASUREMENTS_DATA_RECEIVED_SV_TIME_UNCERTAINTY_BIT);
-    } else if (validMeasStatus & QMI_LOC_MASK_MEAS_STATUS_SM_VALID_V02) {
+    } else if (smValid) {
         /* code lock */
         measurementData.stateMask |= GNSS_MEASUREMENTS_STATE_CODE_LOCK_BIT;
         measurementData.stateMask |= galSVstateMask;
 
         measurementData.receivedSvTimeNs =
-             (int64_t)((double)gnss_measurement_info.svTimeSpeed.svTimeSubMs * 1e6);
-        const qmiLocSVTimeSpeedStructT_v02 &svTimeSpeed = gnss_measurement_info.svTimeSpeed;
+             (int64_t)((double)svTimeSpeed.svTimeSubMs * 1e6);
         double svTimeSubMsToNs = ((double)svTimeSpeed.svTimeSubMs) * NSEC_IN_MSEC;
         measurementData.receivedSvTimeNs = (int64_t)svTimeSubMsToNs;
         measurementData.receivedSvTimeSubNs = svTimeSubMsToNs -
