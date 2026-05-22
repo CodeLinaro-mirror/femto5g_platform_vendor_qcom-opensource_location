@@ -1,5 +1,5 @@
 cc_binary {
-    name: "qsh_location_test",
+    name: "qsh_location_test_mobile",
     owner: "qti",
     proprietary: true,
     srcs: [
@@ -25,7 +25,7 @@ cc_binary {
         "libcutils",
         "liblog",
         "libgps.utils",
-        "libqshlocation",
+        "libqshlocationmobile",
         "libqshutils",
         "libsensinghubapi",
         "libsensinghubsession",
