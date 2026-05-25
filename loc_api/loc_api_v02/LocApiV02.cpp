@@ -7933,13 +7933,18 @@ LocationError LocApiV02::setBlacklistSvSync(const GnssSvIdConfig& config) {
        setBlacklistSvMsg.gps_persist_blacklist_sv = config.gpsBlacklistSvMask,
        setBlacklistSvMsg.gps_clear_persist_blacklist_sv_valid = true;
        setBlacklistSvMsg.gps_clear_persist_blacklist_sv = ~config.gpsBlacklistSvMask;
-    } else {
+    }
+    // Android VTS test case allows blocklist of preferred constellation,
+    // so we need to silently drop those SVs and not return error
+#ifndef __ANDROID__
+    else {
         if (config.gpsBlacklistSvMask) {
             LOC_LOGd("Preferred System %d, SV Blacklisting NOT SUPPORTED !!",
                     mPreferredSvSystemType);
             return LOCATION_ERROR_NOT_SUPPORTED;
         }
     }
+#endif
 
     if (mPreferredSvSystemType != GNSS_SV_TYPE_GLONASS) {
        setBlacklistSvMsg.glo_persist_blacklist_sv_valid = true;
@@ -7953,13 +7958,19 @@ LocationError LocApiV02::setBlacklistSvSync(const GnssSvIdConfig& config) {
        setBlacklistSvMsg.bds_persist_blacklist_sv = config.bdsBlacklistSvMask;
        setBlacklistSvMsg.bds_clear_persist_blacklist_sv_valid = true;
        setBlacklistSvMsg.bds_clear_persist_blacklist_sv = ~config.bdsBlacklistSvMask;
-    } else {
+    }
+    // Android VTS test case allows blocklist of preferred constellation,
+    // so we need to silently drop those SVs and not send to modem and
+    // not return error
+#ifndef __ANDROID__
+    else {
         if (config.bdsBlacklistSvMask) {
             LOC_LOGd("Preferred System %d, SV Blacklisting NOT SUPPORTED !!",
                     mPreferredSvSystemType);
             return LOCATION_ERROR_NOT_SUPPORTED;
         }
     }
+#endif
 
     if (mPreferredSvSystemType != GNSS_SV_TYPE_QZSS) {
        setBlacklistSvMsg.qzss_persist_blacklist_sv_valid = true;
