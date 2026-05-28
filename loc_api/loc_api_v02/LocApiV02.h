@@ -207,6 +207,9 @@ private:
   // Boot timestamp in ms when stopTimeBasedTrackingSync was last called
   uint64_t mLastSessionStopTimestampInMs;
 
+  //MO MSA session timeout value in ms
+  uint32_t mMsaSessionTimeOutMs;
+
   GnssBasicMeasurementsInfo m1HzMeasurementsInfo;
 
   /* Convert event mask from loc eng to loc_api_v02 format */
