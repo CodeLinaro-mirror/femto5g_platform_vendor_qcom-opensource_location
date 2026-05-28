@@ -238,6 +238,10 @@ private:
 
   // Below two member variables are for elapsedRealTime calculation
   GnssMeasurementsNotification m1HzMeasurementsNotify;
+
+  //MO MSA session timeout value in ms
+  uint32_t mMsaSessionTimeOutMs;
+
   GnssBasicMeasurementsInfo m1HzMeasurementsInfo;
 
   /* Convert event mask from loc eng to loc_api_v02 format */

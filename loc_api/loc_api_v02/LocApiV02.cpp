@@ -331,6 +331,7 @@ LocApiV02 :: LocApiV02(LOC_API_ADAPTER_EVENT_MASK_T exMask,
     mDwellAlignTimeMsValid(0),
     mDwellAlignTimeMs(0),
     mLastSessionStopTimestampInMs(0),
+    mMsaSessionTimeOutMs(0),
     mPreferredSignalType(QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L1CA_V02),
     mPreferredSvSystemType(GNSS_SV_TYPE_GPS)
 {
@@ -10333,6 +10334,20 @@ LocApiV02::startTimeBasedTracking(const TrackingOptions& options, LocApiResponse
     start_msg.configAltitudeAssumed_valid = 1;
     start_msg.configAltitudeAssumed =
         eQMI_LOC_ALTITUDE_ASSUMED_IN_GNSS_SV_INFO_DISABLED_V02;
+
+    if (options.mode == GNSS_SUPL_MODE_MSA) {
+        if (mMsaSessionTimeOutMs == 0) {
+            mMsaSessionTimeOutMs = 16000;
+            const loc_param_s_type mo_msa_timeout_table[] =
+            {
+                { "MO_MSA_SESSION_TIME_OUT_IN_MS", &mMsaSessionTimeOutMs, NULL, 'n' },
+            };
+            UTIL_READ_CONF(LOC_PATH_GPS_CONF_STR, mo_msa_timeout_table);
+        }
+        start_msg.positionReportTimeout_valid = 1;
+        start_msg.positionReportTimeout = mMsaSessionTimeOutMs;
+        LOC_LOGd("MO MSA session time out set to %d", start_msg.positionReportTimeout);
+    }
 
     // power mode
     if (options.powerMode >= GNSS_POWER_MODE_M1 && options.powerMode <= GNSS_POWER_MODE_M5) {
