@@ -477,6 +477,7 @@ public:
   // Tracking
   void startTimeBasedTracking(const TrackingOptions& options, LocApiResponse* adapterResponse);
   void stopTimeBasedTracking(LocApiResponse* adapterResponse);
+  void stopTimeBasedTrackingSync(LocApiResponse* adapterResponse);
 
   // Batching
   void startBatching(uint32_t sessionId, const LocationOptions& options, uint32_t accuracy,
