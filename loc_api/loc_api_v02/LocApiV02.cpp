@@ -3232,7 +3232,12 @@ void  LocApiV02::reportSvPolynomial(const qmiLocEventGnssSvPolyIndMsgT_v02 *gnss
                 svPolynomial.gnssSvId += 50;
             }
         }
-        mSvPolynomialMap[svPolynomial.gnssSvId] = svPolynomial;
+
+        uint32_t key = getSvPolyMapKey(svPolynomial.gnssConstellation,
+                                       svPolynomial.gnssSvId);
+        mSvPolynomialMap[key] = svPolynomial;
+        LOC_LOGv("received sv poly for sv system %d, poly sv id %d, key %u",
+                 svPolynomial.gnssConstellation, svPolynomial.gnssSvId, key);
     }
 } //reportSvPolynomial
 
@@ -6218,21 +6223,18 @@ void LocApiV02::convertGnssMeasurements(
     // satellite PVT
     // find in svPolynomial in mSvPolynomialMap and extract it
     GnssSvPolynomial  svPolynomial = {};
-    std::unordered_map<uint16_t, GnssSvPolynomial>::iterator it;
+    std::unordered_map<uint32_t, GnssSvPolynomial>::iterator it;
     bool bFound = false;
     LocApiProxyBase* locApiProxyObj = getLocApiProxy();
-
-    it = mSvPolynomialMap.find(gnss_measurement_info.gnssSvId);
-    if (it != mSvPolynomialMap.end()) {
-        svPolynomial = it->second;
-        bFound = true;
-    }
+    uint32_t key = 0;
 
     /* For GAL E5 (code type Q) svId could be +50 */
     if (gnss_measurement_info.gnssSvId >= GAL_SV_PRN_MIN &&
         gnss_measurement_info.gnssSvId <= GAL_SV_PRN_MAX &&
         GNSS_MEASUREMENTS_CODE_TYPE_Q == measurementData.codeType) {
-        it = mSvPolynomialMap.find(gnss_measurement_info.gnssSvId + 50);
+        key = getSvPolyMapKey(measurementData.svType,
+                              measurementData.svId + 50);
+        it = mSvPolynomialMap.find(key);
         if (it != mSvPolynomialMap.end()) {
             svPolynomial = it->second;
             bFound = true;
@@ -6240,6 +6242,18 @@ void LocApiV02::convertGnssMeasurements(
                 svPolynomial.gnssSvId -= 50;
             }
         }
+        LOC_LOGa("find sv poly for GAL, sv code type Q, sv id %d, bFound %d",
+                 measurementData.svId, bFound);
+    } else {
+        key = getSvPolyMapKey(measurementData.svType,
+                              measurementData.svId);
+        it = mSvPolynomialMap.find(key);
+        if (it != mSvPolynomialMap.end()) {
+            svPolynomial = it->second;
+            bFound = true;
+        }
+        LOC_LOGa("find sv poly for sv type %d, sv id %d, sv poly found %d",
+                 measurementData.svType, measurementData.svId, bFound);
     }
 
     if (bFound && nullptr != locApiProxyObj) {
@@ -9764,4 +9778,10 @@ void LocApiV02::injectFeatureConfig() {
         LOC_LOGd("SAP mode is MODEM_DEFAULT, no inject to modem");
     }
     }));
+}
+
+// SV system 1-7 for GPS to NAVIC
+// gnssSvId:
+uint32_t LocApiV02::getSvPolyMapKey(GnssSvType svSystem, uint16_t gnssSvId) {
+    return ((uint32_t) svSystem << 16) + (uint32_t) gnssSvId;
 }

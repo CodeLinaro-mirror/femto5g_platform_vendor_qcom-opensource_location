@@ -190,7 +190,7 @@ private:
 
   GnssMeasurements*  mGnssMeasurements;
   timeBiases mTimeBiases;
-  std::unordered_map<uint16_t, GnssSvPolynomial> mSvPolynomialMap;
+  std::unordered_map<uint32_t, GnssSvPolynomial> mSvPolynomialMap;
   qmiLocPlatformPowerStateEnumT_v02 mPlatformPowerState;
 
   size_t mBatchSize, mDesiredBatchSize;
@@ -418,6 +418,8 @@ private:
         qmiLocGNSSConstellEnumT_v02 qmiSecondaryBandConfig,
         GnssSvTypeConfig& secondaryBandConfig);
   void injectFeatureConfig();
+
+  uint32_t getSvPolyMapKey(GnssSvType svSystem, uint16_t gnssSvId);
 
 protected:
   virtual enum loc_api_adapter_err
