@@ -259,14 +259,6 @@ private:
   /* Convert error from loc_api_v02 to loc eng format*/
   static enum loc_api_adapter_err convertErr(locClientStatusEnumType status);
 
-  /* convert Ni Encoding type from QMI_LOC to loc eng format */
-  static GnssNiEncodingType convertNiEncoding(
-    qmiLocNiDataCodingSchemeEnumT_v02 loc_encoding);
-
-  /*convert NI notify verify type from QMI LOC to loc eng format*/
-  static bool convertNiNotifyVerifyType (GnssNiNotification *notif,
-      qmiLocNiNotifyVerifyEnumT_v02 notif_priv);
-
   /*convert signal type to carrier frequency*/
   static double convertSignalTypeToCarrierFrequency(
       qmiLocGnssSignalTypeMaskT_v02 signalType,
@@ -565,7 +557,7 @@ public:
     deleteAidingData(const GnssAidingData& data, LocApiResponse *adapterResponse);
 
   virtual void
-    informNiResponse(GnssNiResponse userResponse, const void* passThroughData);
+    informNiResponse(GnssNiResponse userResponse, const void* passThroughData) {}
 
   virtual LocationError
     setServerSync(const char* url, int len, LocServerType type);
