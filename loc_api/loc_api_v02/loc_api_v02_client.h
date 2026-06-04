@@ -61,6 +61,11 @@ IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+/*
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
 
 /** @file loc_api_v02_client.h
 */
@@ -516,7 +521,18 @@ typedef union
     const qmiLocReleaseBatchReqMsgT_v02 *pReleaseBatchReq;
     /* QMI_LOC_RELEASE_BATCHING_REQ_V02 */
     const qmiLocSetPremiumServicesCfgReqMsgT_v02 *pSetPremiumServicesCfgReq;
-    /* QMI_LOC_SET_PREMIUM_SERVICES_CONFIG_REQ_V02*/
+    /*QMI_LOC_SET_PREMIUM_SERVICES_CONFIG_REQ_V02*/
+
+    // WWAN / FDCL
+    const qmiLocGetAvailWwanPositionReqMsgT_v02 *pGetAvailWwanPositionReq;
+    /*QMI_LOC_GET_AVAILABLE_WWAN_POSITION_REQ_V02*/
+    const qmiLocGetFdclBsListReqMsgT_v02 *pGetFdclBsListReq;
+    /*QMI_LOC_GET_FDCL_BS_LIST_REQ_V02*/
+    const qmiLocInjectFdclDataReqMsgT_v02 *pInjectFdclDataReq;
+    /*QMI_LOC_INJECT_FDCL_DATA_REQ_V02*/
+    const qmiLocGetBsObsDataReqMsgT_v02 *pGetBsObsDataReq;
+    /*QMI_LOC_GET_BS_OBS_DATA_REQ_V02*/
+
     const qmiLocSetXtraVersionCheckReqMsgT_v02 *pSetXtraVersionCheckReq;
     /* QMI_LOC_SET_XTRA_VERSION_CHECK_REQ_V02 */
     const qmiLocSetGNSSConstRepConfigReqMsgT_v02 *pSetGNSSConstRepConfigReq;
@@ -1046,6 +1062,9 @@ typedef union
     const qmiLocNotifyWifiEnabledStatusIndMsgT_v02 *pNotifyWifiEnabledStatusInd;
     /* QMI_LOC_NOTIFY_WIFI_ENABLED_STATUS_REQ_V02 */
 
+    const qmiLocGetAvailWwanPositionIndMsgT_v02 *pGetAvailWwanPositionInd;
+    /*QMI_LOC_GET_AVAILABLE_WWAN_POSITION_IND_V02*/
+
     const qmiLocSetXtraVersionCheckIndMsgT_v02 *pSetXtraVersionCheckInd;
     /*QMI_LOC_SET_XTRA_VERSION_CHECK_IND_V02*/
 
@@ -1074,6 +1093,12 @@ typedef union
     /* QMI_LOC_SET_NTN_STATUS_IND_V02 */
     const qmiLocGetNtnStatusIndMsgT_v02 *pGetNtnStatusInd;
     /* QMI_LOC_GET_NTN_STATUS_IND_V02 */
+    const qmiLocGetFdclBsListIndMsgT_v02 *pGetFdclBsListInd;
+    /*QMI_LOC_GET_FDCL_BS_LIST_IND_V02 */
+    const qmiLocInjectFdclDataIndMsgT_v02 *pInjectFdclDataInd;
+    /* QMI_LOC_INJECT_FDCL_DATA_IND_V02 */
+    const qmiLocGetBsObsDataIndMsgT_v02 *pGetBsObsDataInd;
+    /* QMI_LOC_GET_BS_OBS_DATA_IND_V02 */
 }locClientRespIndUnionType;
 
 /** @} */ /* end_addtogroup data_types */

@@ -240,11 +240,19 @@ static void globalRespCb(locClientHandleType clientHandle,
     return;
   }
 
-  // process the sync call
-  // use pSetEngineLockInd as a dummy pointer
-  // Plz note this is required to pass a valid locClientRespIndUnionType ind msg
-  loc_sync_process_ind(clientHandle, respId,
+  switch (respId)
+  {
+    case QMI_LOC_GET_AVAILABLE_WWAN_POSITION_IND_V02:
+        [[fallthrough]];
+    case QMI_LOC_GET_BEST_AVAILABLE_POSITION_IND_V02:
+    default:
+      // process the sync call
+      // use pSetEngineLockInd as a dummy pointer
+      // Plz note this is required to pass a valid locClientRespIndUnionType ind msg
+      loc_sync_process_ind(clientHandle, respId,
           (void *)respPayload.pSetEngineLockInd, respPayloadSize);
+      break;
+  }
 }
 
 /* global error callback, it will call the handle service down
@@ -1999,6 +2007,10 @@ locClientEventMaskType LocApiV02 :: convertLocClientEventMask(
 
   if (mask & LOC_API_ADAPTER_BIT_NTN_CONFIG_UPDATE) {
       eventMask |= QMI_LOC_EVENT_MASK_NTN_CONFIG_UPDATE_V02;
+  }
+
+  if (mask & LOC_API_ADAPTER_BIT_FDCL_SERVICE_REQ) {
+      eventMask |= QMI_LOC_EVENT_MASK_FDCL_SERVICE_REQ_V02;
   }
 
   return eventMask;
@@ -7334,6 +7346,77 @@ void LocApiV02 :: errorCb(locClientHandleType /*handle*/,
   }
 }
 
+
+bool LocApiV02::getWwanFixSync(LocGpsLocation &wwanLoc)
+{
+    qmiLocGetAvailWwanPositionReqMsgT_v02 wwanReq = {};
+    qmiLocGetAvailWwanPositionIndMsgT_v02 wwanInd = {};
+    locClientReqUnionType reqUnion = {};
+    locClientStatusEnumType status;
+
+    LOC_LOGd("Get WWAN fix sync\n");
+    memset(&wwanLoc, 0, sizeof(wwanLoc));
+    wwanLoc.size = sizeof(wwanLoc);
+
+    reqUnion.pGetAvailWwanPositionReq = &wwanReq;
+    wwanReq.transactionId = 1;
+    status = locSyncSendReq(QMI_LOC_GET_AVAILABLE_WWAN_POSITION_REQ_V02,
+                            reqUnion,
+                            LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
+                            QMI_LOC_GET_AVAILABLE_WWAN_POSITION_IND_V02,
+                            &wwanInd);
+
+    if ((eLOC_CLIENT_SUCCESS != status) ||
+        (eQMI_LOC_SUCCESS_V02 != wwanInd.status))
+    {
+        LOC_LOGe("error! status = %d, wwanInd.status = %d\n",
+                  (status),
+                  (wwanInd.status));
+        return false;
+    }
+
+    if ((wwanInd.latitude_valid == false) ||
+        (wwanInd.longitude_valid == false) ||
+        (wwanInd.horUncCircular_valid == false)) {
+        LOC_LOGe("Location not valid lat=%u lon=%u unc=%u",
+                 wwanInd.latitude_valid,
+                 wwanInd.longitude_valid,
+                 wwanInd.horUncCircular_valid);
+        return false;
+    }
+
+    if (wwanInd.timestampUtc_valid) {
+        wwanLoc.timestamp = wwanInd.timestampUtc;
+    } else {
+        struct timespec time_info_current = {};
+        clock_gettime(CLOCK_REALTIME, &time_info_current);
+        wwanLoc.timestamp = (time_info_current.tv_sec)*1e3 +
+                            (time_info_current.tv_nsec)/1e6;
+        LOC_LOGd("wwan timestamp got from system: %" PRIu64, wwanLoc.timestamp);
+    }
+
+    wwanLoc.flags = LOC_GPS_LOCATION_HAS_LAT_LONG | LOC_GPS_LOCATION_HAS_ACCURACY;
+    wwanLoc.latitude = wwanInd.latitude;
+    wwanLoc.longitude = wwanInd.longitude;
+    wwanLoc.accuracy = wwanInd.horUncCircular;
+
+    if (wwanInd.horCircularConfidence_valid) {
+        scaleAccuracyTo68PercentConfidence(wwanInd.horCircularConfidence, wwanLoc, true);
+    }
+
+    if (wwanInd.altitudeWrtEllipsoid_valid) {
+        wwanLoc.flags |= LOC_GPS_LOCATION_HAS_ALTITUDE;
+        wwanLoc.altitude = wwanInd.altitudeWrtEllipsoid;
+    }
+
+    if (wwanInd.vertUnc_valid) {
+        wwanLoc.flags |= LOC_GPS_LOCATION_HAS_VERT_UNCERTAINITY;
+        wwanLoc.vertUncertainity = wwanInd.vertUnc;
+    }
+
+    return true;
+}
+
 bool LocApiV02::getBestAvailableZppFixSync(LocGpsLocation &zppLoc,
         LocPosTechMask &tech_mask, float* vertUnc) {
 
@@ -7368,27 +7451,21 @@ bool LocApiV02::getBestAvailableZppFixSync(LocGpsLocation &zppLoc,
         if (zpp_ind.timestampUtc_valid) {
             zppLoc.timestamp = zpp_ind.timestampUtc;
         } else {
-            /* The UTC time from modem is not valid.
-                    In this case, we use current system time instead.*/
-
-          struct timespec time_info_current = {};
-          clock_gettime(CLOCK_REALTIME, &time_info_current);
-          zppLoc.timestamp = (time_info_current.tv_sec)*1e3 +
-                  (time_info_current.tv_nsec)/1e6;
-          LOC_LOGd("zpp timestamp got from system: %" PRIu64, zppLoc.timestamp);
+            struct timespec time_info_current = {};
+            clock_gettime(CLOCK_REALTIME, &time_info_current);
+            zppLoc.timestamp = (time_info_current.tv_sec)*1e3 +
+                    (time_info_current.tv_nsec)/1e6;
+            LOC_LOGd("zpp timestamp got from system: %" PRIu64, zppLoc.timestamp);
         }
 
         if (zpp_ind.latitude_valid && zpp_ind.longitude_valid &&
-                zpp_ind.horUncCircular_valid ) {
+                zpp_ind.horUncCircular_valid) {
             zppLoc.flags = LOC_GPS_LOCATION_HAS_LAT_LONG | LOC_GPS_LOCATION_HAS_ACCURACY;
             zppLoc.latitude = zpp_ind.latitude;
             zppLoc.longitude = zpp_ind.longitude;
             zppLoc.accuracy = zpp_ind.horUncCircular;
 
-            // If horCircularConfidence_valid is true, and horCircularConfidence value
-            // is less than 68%, then scale the accuracy value to 68% confidence.
-            if (zpp_ind.horCircularConfidence_valid)
-            {
+            if (zpp_ind.horCircularConfidence_valid) {
                 scaleAccuracyTo68PercentConfidence(zpp_ind.horCircularConfidence,
                                                    zppLoc, true);
             }

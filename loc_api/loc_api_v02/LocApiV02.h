@@ -547,6 +547,7 @@ public:
       setAGLONASSProtocolSync(GnssConfigAGlonassPositionProtocolMask aGlonassProtocol);
   virtual LocationError setLPPeProtocolCpSync(GnssConfigLppeControlPlaneMask lppeCP);
   virtual LocationError setLPPeProtocolUpSync(GnssConfigLppeUserPlaneMask lppeUP);
+  virtual bool getWwanFixSync(LocGpsLocation &wwanLoc);
   virtual bool getBestAvailableZppFixSync(LocGpsLocation &zppLoc,
           LocPosTechMask &tech_mask, float* vertUnc = nullptr);
   virtual LocationError setGpsLockSync(GnssConfigGpsLock lock);
