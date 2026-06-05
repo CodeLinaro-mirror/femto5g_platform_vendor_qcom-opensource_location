@@ -999,8 +999,7 @@ int main(int argc, char *argv[]) {
     timeout.tv_sec = 10;
     timeout.tv_nsec = 0;
     sigemptyset(&newmask);
-    const loc_param_s_type gps_conf_params[] = {};
-    UTIL_READ_CONF(LOC_PATH_GPS_CONF, gps_conf_params);
+    UTIL_READ_CONF_DEFAULT(LOC_PATH_GPS_CONF);
 
     LOC_LOGd("SIGRTMIN = %d, signum=%d", SIGRTMIN, signum);
 

@@ -3,6 +3,12 @@
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
+#undef LOG_NDEBUG
+#define LOG_NDEBUG 0
+
+#undef LOG_TAG
+#define LOG_TAG "QSH_LOCATION_TEST"
+
 /*=============================================================================
   Include Files
   ===========================================================================*/
@@ -18,12 +24,6 @@
 /*=============================================================================
   Macro Definitions
   ===========================================================================*/
-
-#undef LOG_NDEBUG
-#define LOG_NDEBUG 0
-
-#undef LOG_TAG
-#define LOG_TAG "QSH_LOCATION_TEST"
 
 #ifndef UNUSED_VAR
 #define UNUSED_VAR(var) ((void)(var));
@@ -965,8 +965,7 @@ int main(int argc, char *argv[]) {
     timeout.tv_sec = 10;
     timeout.tv_nsec = 0;
     sigemptyset(&newmask);
-    const loc_param_s_type gps_conf_params[] = {};
-    UTIL_READ_CONF(LOC_PATH_GPS_CONF, gps_conf_params);
+    UTIL_READ_CONF_DEFAULT(LOC_PATH_GPS_CONF);
 
     LOC_LOGd("SIGRTMIN = %d, signum=%d", SIGRTMIN, signum);
 
