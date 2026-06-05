@@ -91,14 +91,13 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   set to 4 before sending the message.  When decoding, the _len value is set
   by the decode routine and should be checked so that the correct number of
   elements in the array will be accessed.
-
 */
 /*====*====*====*====*====*====*====*====*====*====*====*====*====*====*====*
  *THIS IS AN AUTO GENERATED FILE. DO NOT ALTER IN ANY WAY
  *====*====*====*====*====*====*====*====*====*====*====*====*====*====*====*/
 
-/* This file was generated with Tool version 6.14.9
-   It was generated on: Mon Jul  1 2024 (Spin 0)
+/* This file was generated with Tool version 6.14.7
+   It was generated on: Tue Dec  3 2024 (Spin 0)
    From IDL File: location_service_v02.idl */
 
 /** @defgroup loc_qmi_consts Constant values defined in the IDL */
@@ -124,11 +123,11 @@ extern "C" {
 /** Major Version Number of the IDL used to generate this file */
 #define LOC_V02_IDL_MAJOR_VERS 0x02
 /** Revision Number of the IDL used to generate this file */
-#define LOC_V02_IDL_MINOR_VERS 0xAC
+#define LOC_V02_IDL_MINOR_VERS 0xB1
 /** Major Version Number of the qmi_idl_compiler used to generate this file */
 #define LOC_V02_IDL_TOOL_VERS 0x06
 /** Maximum Defined Message ID */
-#define LOC_V02_MAX_MESSAGE_ID 0x00F0
+#define LOC_V02_MAX_MESSAGE_ID 0x00F1
 /**
     @}
   */
@@ -428,9 +427,33 @@ extern "C" {
 
 /**  Maximum length of disaster & crisis report. Corresponds to 512 bits of storage.  */
 #define QMI_LOC_MAX_DCREPORT_LEN_V02 64
+#define QMI_LOC_EPH_ISC_L1CA_VALID_MASK_V02 0x0001
+#define QMI_LOC_EPH_ISC_L2C_VALID_MASK_V02 0x0002
+#define QMI_LOC_EPH_ISC_L5I5_VALID_MASK_V02 0x0004
+#define QMI_LOC_EPH_ISC_L5Q5_VALID_MASK_V02 0x0008
+#define QMI_LOC_EPH_ALERT_VALID_MASK_V02 0x0010
+#define QMI_LOC_EPH_URANED0_VALID_MASK_V02 0x0020
+#define QMI_LOC_EPH_URANED1_VALID_MASK_V02 0x0040
+#define QMI_LOC_EPH_URANED2_VALID_MASK_V02 0x0080
+#define QMI_LOC_EPH_TOP_VALID_MASK_V02 0x0100
+#define QMI_LOC_EPH_TOP_CLOCK_VALID_MASK_V02 0x0200
+#define QMI_LOC_EPH_VALIDITY_PERIOD_VALID_MASK_V02 0x0400
+#define QMI_LOC_EPH_DELTA_NDOT_VALID_MASK_V02 0x0800
+#define QMI_LOC_EPH_DELTAA_VALID_MASK_V02 0x1000
+#define QMI_LOC_EPH_ADOT_VALID_MASK_V02 0x2000
 
 /**  Maximum number of satellites in an ephemeris report.  */
 #define QMI_LOC_EPHEMERIS_LIST_MAX_SIZE_V02 8
+#define QMI_LOC_BDS_EPH_ISC_B2A_VALID_MASK_V02 0x0001
+#define QMI_LOC_BDS_EPH_ISC_B1C_VALID_MASK_V02 0x0002
+#define QMI_LOC_BDS_EPH_TGD_B2A_VALID_MASK_V02 0x0004
+#define QMI_LOC_BDS_EPH_TGD_B1C_VALID_MASK_V02 0x0008
+#define QMI_LOC_BDS_EPH_SV_TYPE_VALID_MASK_V02 0x0010
+#define QMI_LOC_BDS_EPH_VALIDITY_PERIOD_VALID_MASK_V02 0x0020
+#define QMI_LOC_BDS_EPH_INTEGRITY_FLAGS_VALID_MASK_V02 0x0040
+#define QMI_LOC_BDS_EPH_DELTA_NDOT_VALID_MASK_V02 0x0080
+#define QMI_LOC_BDS_EPH_DELTAA_VALID_MASK_V02 0x0100
+#define QMI_LOC_BDS_EPH_ADOT_VALID_MASK_V02 0x0200
 
 /**   */
 #define QMI_LOC_DEFAULT_CONSTRAINED_TUNC_MS_V02 9.5
@@ -784,6 +807,7 @@ typedef uint64_t qmiLocEventRegMaskT_v02;
 #define QMI_LOC_EVENT_MASK_GNSS_BANDS_SUPPORTED_V02 ((qmiLocEventRegMaskT_v02)0x0008000000000000ull) /**<  QMI_LOC_GNSS_BANDS_SUPPORTED indication. \n  */
 #define QMI_LOC_EVENT_MASK_NTN_CONFIG_UPDATE_V02 ((qmiLocEventRegMaskT_v02)0x0010000000000000ull) /**<  QMI_LOC_NTN_CONFIG_UPDATE indication. \n  */
 #define QMI_LOC_EVENT_MASK_DBH_POSITION_V02 ((qmiLocEventRegMaskT_v02)0x0020000000000000ull) /**<  QMI_LOC_EVENT_DBH_POSITION indication. \n  */
+#define QMI_LOC_EVENT_DWELL_TIME_ALIGNMENT_INFO_V02 ((qmiLocEventRegMaskT_v02)0x0040000000000000ull) /**<  Dwell time allignment information from the service. \n  */
 /** @addtogroup loc_qmi_enums
     @{
   */
@@ -791,7 +815,8 @@ typedef enum {
   QMILOCCLIENTTYPEENUMT_MIN_ENUM_VAL_V02 = -2147483647, /**< To force a 32 bit signed enum.  Do not change or use*/
   eQMI_LOC_CLIENT_AFW_V02 = 1, /**<  Application FrameWork client \n  */
   eQMI_LOC_CLIENT_NFW_V02 = 2, /**<  Non-AFW client \n */
-  eQMI_LOC_CLIENT_PRIVILEGED_V02 = 3, /**<  Privileged client  */
+  eQMI_LOC_CLIENT_PRIVILEGED_V02 = 3, /**<  Privileged client \n */
+  eQMI_LOC_CLIENT_AFW_PROXY_V02 = 4, /**<  Application Framework Proxy Client  */
   QMILOCCLIENTTYPEENUMT_MAX_ENUM_VAL_V02 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
 }qmiLocClientTypeEnumT_v02;
 /**
@@ -900,6 +925,7 @@ typedef struct {
       - QMI_LOC_EVENT_MASK_GNSS_BANDS_SUPPORTED (0x0008000000000000) --  QMI_LOC_GNSS_BANDS_SUPPORTED indication. \n
       - QMI_LOC_EVENT_MASK_NTN_CONFIG_UPDATE (0x0010000000000000) --  QMI_LOC_NTN_CONFIG_UPDATE indication. \n
       - QMI_LOC_EVENT_MASK_DBH_POSITION (0x0020000000000000) --  QMI_LOC_EVENT_DBH_POSITION indication. \n
+      - QMI_LOC_EVENT_DWELL_TIME_ALIGNMENT_INFO (0x0040000000000000) --  Dwell time allignment information from the service. \n
 
  Multiple events can be registered by ORing the individual masks and
  sending them in this TLV. Set all unused bits in this mask to 0.
@@ -932,7 +958,8 @@ typedef struct {
  Values: \n
       - eQMI_LOC_CLIENT_AFW (1) --  Application FrameWork client \n
       - eQMI_LOC_CLIENT_NFW (2) --  Non-AFW client \n
-      - eQMI_LOC_CLIENT_PRIVILEGED (3) --  Privileged client
+      - eQMI_LOC_CLIENT_PRIVILEGED (3) --  Privileged client \n
+      - eQMI_LOC_CLIENT_AFW_PROXY (4) --  Application Framework Proxy Client
  */
 
   /* Optional */
@@ -3385,6 +3412,19 @@ typedef struct {
     @}
   */
 
+/** @addtogroup loc_qmi_enums
+    @{
+  */
+typedef enum {
+  QMILOCGNSSAIDINGDLCAUSEENUMT_MIN_ENUM_VAL_V02 = -2147483647, /**< To force a 32 bit signed enum.  Do not change or use*/
+  eQMI_LOC_GNSS_AIDING_DL_CAUSE_LEGACY_V02 = 1, /**<  Gnss Aiding (Time/Xtra) dl cause legacy \n */
+  eQMI_LOC_GNSS_AIDING_DL_CAUSE_EMERGENCY_V02 = 2, /**<  Gnss Aiding (Time/Xtra) dl cause emergency  */
+  QMILOCGNSSAIDINGDLCAUSEENUMT_MAX_ENUM_VAL_V02 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
+}qmiLocGnssAidingDlCauseEnumT_v02;
+/**
+    @}
+  */
+
 /** @addtogroup loc_qmi_aggregates
     @{
   */
@@ -3434,6 +3474,12 @@ typedef struct {
   qmiLocTimeServerListStructT_v02 timeServerInfo;
   /**<   \vspace{0.06in} \n Contains information about the time servers recommended by the
        location service for NTP time. */
+
+  /* Optional */
+  /*  Time Download Cause Type Info */
+  uint8_t dlCause_valid;  /**< Must be set to true if dlCause is being passed */
+  qmiLocGnssAidingDlCauseEnumT_v02 dlCause;
+  /**<   \n Time Download type cause information. */
 }qmiLocEventInjectTimeReqIndMsgT_v02;  /* Message */
 /**
     @}
@@ -3565,6 +3611,12 @@ typedef struct {
   uint8_t fileInfo_valid;  /**< Must be set to true if fileInfo is being passed */
   qmiLocPredictedOrbitsSpecialFileTypeStructT_v02 fileInfo;
   /**<   \n File type and download interval information. */
+
+  /* Optional */
+  /*  Xtra Download Cause Type Info */
+  uint8_t dlCause_valid;  /**< Must be set to true if dlCause is being passed */
+  qmiLocGnssAidingDlCauseEnumT_v02 dlCause;
+  /**<   \n Xtra Download type cause information. */
 }qmiLocEventInjectPredictedOrbitsReqIndMsgT_v02;  /* Message */
 /**
     @}
@@ -4050,6 +4102,16 @@ typedef struct {
       - eQMI_LOC_SYS_MODEM_AS_ID_2 (1) --  Subscription ID 2 \n
       - eQMI_LOC_SYS_MODEM_AS_ID_3 (2) --  Subscription ID 3
  */
+
+  /* Optional */
+  /*  Maximum Wait Time to Get the ATL response */
+  uint8_t connectionRequestTimeout_valid;  /**< Must be set to true if connectionRequestTimeout is being passed */
+  uint32_t connectionRequestTimeout;
+  /**<   Maximum time to wait for ATL request response. \n
+       - Units -- Milliseconds \n
+       - Default -- 5*1000 ms \n
+       - Range -- 1000 - 255*1000 ms
+  */
 }qmiLocEventLocationServerConnectionReqIndMsgT_v02;  /* Message */
 /**
     @}
@@ -6166,6 +6228,7 @@ typedef uint64_t qmiLocLockClientMaskT_v02;
 #define QMI_LOC_LOCK_CLIENT_MASK_AFW_V02 ((qmiLocLockClientMaskT_v02)0x00000001ull) /**<  Lock AFW client \n */
 #define QMI_LOC_LOCK_CLIENT_MASK_NFW_V02 ((qmiLocLockClientMaskT_v02)0x00000002ull) /**<  Lock NFW client \n */
 #define QMI_LOC_LOCK_CLIENT_MASK_PRIVILEGED_V02 ((qmiLocLockClientMaskT_v02)0x00000004ull) /**<  Lock privileged client  */
+#define QMI_LOC_LOCK_CLIENT_MASK_AFW_PROXY_V02 ((qmiLocLockClientMaskT_v02)0x00000008ull) /**<  Lock AFW proxy client  */
 typedef uint64_t qmiLocClientsMaskT_v02;
 #define QMI_LOC_MASK_UTH_CLIENT_IMS_V02 ((qmiLocClientsMaskT_v02)0x00000001ull) /**<  Lock/unlock IMS client \n  */
 #define QMI_LOC_MASK_UTH_CLIENT_SIM_V02 ((qmiLocClientsMaskT_v02)0x00000002ull) /**<  Lock/unlock SIM client \n  */
@@ -6177,6 +6240,7 @@ typedef uint64_t qmiLocClientsMaskT_v02;
 #define QMI_LOC_MASK_OEM_CLIENT_R2_V02 ((qmiLocClientsMaskT_v02)0x00000080ull) /**<  Lock/unlock reserved UTH OEM R2 client \n    */
 #define QMI_LOC_MASK_OEM_CLIENT_R3_V02 ((qmiLocClientsMaskT_v02)0x00000100ull) /**<  Lock/unlock reserved UTH OEM R3 client  \n   */
 #define QMI_LOC_MASK_UTH_CLIENT_NTN_V02 ((qmiLocClientsMaskT_v02)0x00000200ull) /**<  Lock/unlock NTN client   */
+#define QMI_LOC_MASK_UTH_CLIENT_ECALL_V02 ((qmiLocClientsMaskT_v02)0x00000400ull) /**<  Lock/unlock ECALL client  */
 /** @addtogroup loc_qmi_messages
     @{
   */
@@ -6218,6 +6282,7 @@ typedef struct {
       - QMI_LOC_LOCK_CLIENT_MASK_AFW (0x00000001) --  Lock AFW client \n
       - QMI_LOC_LOCK_CLIENT_MASK_NFW (0x00000002) --  Lock NFW client \n
       - QMI_LOC_LOCK_CLIENT_MASK_PRIVILEGED (0x00000004) --  Lock privileged client
+      - QMI_LOC_LOCK_CLIENT_MASK_AFW_PROXY (0x00000008) --  Lock AFW proxy client
  */
 
   /* Optional */
@@ -6239,6 +6304,7 @@ typedef struct {
       - QMI_LOC_MASK_OEM_CLIENT_R2 (0x00000080) --  Lock/unlock reserved UTH OEM R2 client \n
       - QMI_LOC_MASK_OEM_CLIENT_R3 (0x00000100) --  Lock/unlock reserved UTH OEM R3 client  \n
       - QMI_LOC_MASK_UTH_CLIENT_NTN (0x00000200) --  Lock/unlock NTN client
+      - QMI_LOC_MASK_UTH_CLIENT_ECALL (0x00000400) --  Lock/unlock ECALL client
  */
 }qmiLocSetEngineLockReqMsgT_v02;  /* Message */
 /**
@@ -6368,6 +6434,7 @@ typedef struct {
       - QMI_LOC_LOCK_CLIENT_MASK_AFW (0x00000001) --  Lock AFW client \n
       - QMI_LOC_LOCK_CLIENT_MASK_NFW (0x00000002) --  Lock NFW client \n
       - QMI_LOC_LOCK_CLIENT_MASK_PRIVILEGED (0x00000004) --  Lock privileged client
+      - QMI_LOC_LOCK_CLIENT_MASK_AFW_PROXY (0x00000008) --  Lock AFW proxy client
  */
 
   /* Optional */
@@ -6389,6 +6456,7 @@ typedef struct {
       - QMI_LOC_MASK_OEM_CLIENT_R2 (0x00000080) --  Lock/unlock reserved UTH OEM R2 client \n
       - QMI_LOC_MASK_OEM_CLIENT_R3 (0x00000100) --  Lock/unlock reserved UTH OEM R3 client  \n
       - QMI_LOC_MASK_UTH_CLIENT_NTN (0x00000200) --  Lock/unlock NTN client
+      - QMI_LOC_MASK_UTH_CLIENT_ECALL (0x00000400) --  Lock/unlock ECALL client
  */
 
   /* Optional */
@@ -7849,6 +7917,7 @@ typedef struct {
       - QMI_LOC_EVENT_MASK_GNSS_BANDS_SUPPORTED (0x0008000000000000) --  QMI_LOC_GNSS_BANDS_SUPPORTED indication. \n
       - QMI_LOC_EVENT_MASK_NTN_CONFIG_UPDATE (0x0010000000000000) --  QMI_LOC_NTN_CONFIG_UPDATE indication. \n
       - QMI_LOC_EVENT_MASK_DBH_POSITION (0x0020000000000000) --  QMI_LOC_EVENT_DBH_POSITION indication. \n
+      - QMI_LOC_EVENT_DWELL_TIME_ALIGNMENT_INFO (0x0040000000000000) --  Dwell time allignment information from the service. \n
  */
 }qmiLocGetRegisteredEventsIndMsgT_v02;  /* Message */
 /**
@@ -15273,46 +15342,46 @@ typedef struct {
   qmiLocJammerIndicatorStructT_v02 jammerIndicator;
 
   /* Optional */
-  /*  GPS L1 - L2C Intrasystem Time Bias */
+  /*  GPS L2C Intrasystem Time Bias w.r.t GPS L1 */
   uint8_t GpsL1L2cTimeBias_valid;  /**< Must be set to true if GpsL1L2cTimeBias is being passed */
   qmiLocInterSystemBiasStructT_v02 GpsL1L2cTimeBias;
-  /**<   GPS L1 to L2C time bias (L2C-L1). */
+  /**<   GPS L2C Intrasystem Time Bias w.r.t GPS L1 (L2C-L1). */
 
   /* Optional */
-  /*  GPS L1 - L5 Intrasystem Time Bias */
+  /*  GPS L5 Intrasystem Time Bias w.r.t GPS L1 */
   uint8_t GpsL1L5TimeBias_valid;  /**< Must be set to true if GpsL1L5TimeBias is being passed */
   qmiLocInterSystemBiasStructT_v02 GpsL1L5TimeBias;
-  /**<   GPS L1 to L5 time bias (L5-L1). */
+  /**<   GPS L5 Intrasystem Time Bias w.r.t GPS L1 (L5-L1). */
 
   /* Optional */
-  /*  GLONASS G1 - G2 Intrasystem Time Bias */
+  /*  GLONASS G2 Intrasystem Time Bias w.r.t. GLONASS G1 */
   uint8_t GloG1G2TimeBias_valid;  /**< Must be set to true if GloG1G2TimeBias is being passed */
   qmiLocInterSystemBiasStructT_v02 GloG1G2TimeBias;
-  /**<   GLONASS G1 to G2 time bias (G2-G1). */
+  /**<   GLONASS G2 Intrasystem Time Bias w.r.t. GLONASS G1 (G2-G1). */
 
   /* Optional */
-  /*  BDS B1I - B2A Intrasystem Time Bias */
+  /*  BDS B2A Intrasystem Time Bias w.r.t BDS B1I */
   uint8_t BdsB1iB2aTimeBias_valid;  /**< Must be set to true if BdsB1iB2aTimeBias is being passed */
   qmiLocInterSystemBiasStructT_v02 BdsB1iB2aTimeBias;
-  /**<   BDS B1I to B2A time bias (B2A-B1I). */
+  /**<   BDS B2A Intrasystem Time Bias w.r.t BDS B1I (B2A-B1I). */
 
   /* Optional */
-  /*  BDS B1I - B1C Intrasystem Time Bias */
+  /*  BDS B1C Intrasystem Time Bias w.r.t BDS B1I */
   uint8_t BdsB1iB1cTimeBias_valid;  /**< Must be set to true if BdsB1iB1cTimeBias is being passed */
   qmiLocInterSystemBiasStructT_v02 BdsB1iB1cTimeBias;
-  /**<   BDS B1I to B1C time bias (B1C-B1I). */
+  /**<   BDS B1C Intrasystem Time Bias w.r.t BDS B1I (B1C-B1I). */
 
   /* Optional */
-  /*  Galileo E1 - E5A Intrasystem Time Bias */
+  /*  GAL E5A Intrasystem Time Bias w.r.t GAL E1 */
   uint8_t GalE1E5aTimeBias_valid;  /**< Must be set to true if GalE1E5aTimeBias is being passed */
   qmiLocInterSystemBiasStructT_v02 GalE1E5aTimeBias;
-  /**<   Galileo E1 to E5a time bias (E5a-E1). */
+  /**<   GAL E5A Intrasystem Time Bias w.r.t GAL E1 (E5a-E1). */
 
   /* Optional */
-  /*  Galileo E1 - E5B Intrasystem Time Bias */
+  /*  GAL E5B Intrasystem Time Bias w.r.t GAL E1 */
   uint8_t GalE1E5bTimeBias_valid;  /**< Must be set to true if GalE1E5bTimeBias is being passed */
   qmiLocInterSystemBiasStructT_v02 GalE1E5bTimeBias;
-  /**<   Galileo E1 to E5b time bias (E5b-E1). */
+  /**<   GAL E5B Intrasystem Time Bias w.r.t GAL E1 (E5b-E1). */
 
   /* Optional */
   /*  NHz Indicator */
@@ -15512,10 +15581,10 @@ typedef struct {
   /**<   \n Galileo to BDS B1C intersystem time bias. */
 
   /* Optional */
-  /*  BDS B1C - B2A Intrasystem Time Bias */
+  /*  BDS B2A Intrasystem Time Bias w.r.t BDS B1C */
   uint8_t BdsB1cB2aTimeBias_valid;  /**< Must be set to true if BdsB1cB2aTimeBias is being passed */
   qmiLocInterSystemBiasStructT_v02 BdsB1cB2aTimeBias;
-  /**<   \n BDS B1C to B2A time bias (B2A - B1I). */
+  /**<   \n BDS B2A Intrasystem Time Bias w.r.t BDS B1C (B2A - B1C). */
 
   /* Optional */
   /*  BDS B1C to NavIC Intersystem Time Bias */
@@ -15524,10 +15593,10 @@ typedef struct {
   /**<   \n BDS B1C to NavIC time bias. */
 
   /* Optional */
-  /*  BDS B1I - B2B I Intrasystem Time Bias */
+  /*  BDS B2BI Intrasystem Time Bias w.r.t. BDS B1I */
   uint8_t BdsB1iB2biTimeBias_valid;  /**< Must be set to true if BdsB1iB2biTimeBias is being passed */
   qmiLocInterSystemBiasStructT_v02 BdsB1iB2biTimeBias;
-  /**<   \n BDS B1I to B2B I time bias (B1I  -B2B I). */
+  /**<   \n BDS B2BI Intrasystem Time Bias w.r.t. BDS B1I (B2BI - B1I). */
 
   /* Optional */
   /*  Jammed Signals Mask */
@@ -15563,6 +15632,9 @@ typedef struct {
   /*  GNSS Leap Second */
   uint8_t gnssLeapSecond_valid;  /**< Must be set to true if gnssLeapSecond is being passed */
   uint8_t gnssLeapSecond;
+  /**<   GNSS time leap second delta to UTC time.
+       The GNSS leap second field will always be sourced from the primary constellation. \n
+      - Units -- Seconds  */
 
   /* Optional */
   /*  GNSS Leap Second Uncertainty */
@@ -15590,6 +15662,12 @@ typedef struct {
       - eQMI_LOC_FRONT_END_GAIN_MAXIMUM_SATURATION (1) --  AGC status is Front end gain maximum saturation \n
       - eQMI_LOC_FRONT_END_GAIN_MINIMUM_SATURATION (2) --  AGC status is Front end gain minimum saturation
  */
+
+  /* Optional */
+  /*  NAVIC L1 Intrasystem Time Bias w.r.t NAVIC L5 */
+  uint8_t navicL5L1TimeBias_valid;  /**< Must be set to true if navicL5L1TimeBias is being passed */
+  qmiLocInterSystemBiasStructT_v02 navicL5L1TimeBias;
+  /**<   NAVIC L1 Intrasystem Time Bias w.r.t NAVIC L5 (L1-L5). */
 }qmiLocEventGnssSvMeasInfoIndMsgT_v02;  /* Message */
 /**
     @}
@@ -16033,15 +16111,15 @@ typedef struct {
   uint8_t polyOrder_valid;  /**< Must be set to true if polyOrder is being passed */
   uint8_t polyOrder;
   /**<   Polynomial order. Maximum polynomial order size is QMI_LOC_SV_POLY_XYZ_COEFF_ ORDER_SIZE_MAX.
-    */
+  */
 
   /* Optional */
   /*  Polynomial Valid Duration */
   uint8_t validDuration_valid;  /**< Must be set to true if validDuration is being passed */
   uint16_t validDuration;
   /**<   Valid polynomial duration \n
-         - Units -- Seconds
-    */
+       - Units -- Seconds
+  */
 
   /* Optional */
   /*  Polynomial Coefficients for X, Y, Z Coordinates */
@@ -16049,14 +16127,14 @@ typedef struct {
   uint32_t polyCoeffXYZ_len;  /**< Must be set to # of elements in polyCoeffXYZ */
   double polyCoeffXYZ[QMI_LOC_SV_POLY_XYZ_COEFF_SIZE_MAX_V02];
   /**<   Zero, first, second,... Nth terms of the polynomial coefficient for X, Y, and Z coordinates
-         (C0X, C1X, ..., CNX, C0Y, C1Y,..., CNY, C0Z, C1Z, ..., CNZ).\n
-          Units: \n
-          - Zeroth term -- Meters \n
-          - First term -- Meters per second\textsuperscript{1} \n
-          - Second term -- Meters per second\textsuperscript{2} \n
-          - Nth term -- Meters per seconds\textsuperscript{N} \n
-          Note: N is the polynomial order size as specified by the Polynomial Order Size TLV.
-    */
+       (C0X, C1X, ..., CNX, C0Y, C1Y,..., CNY, C0Z, C1Z, ..., CNZ).\n
+        Units: \n
+        - Zeroth term -- Meters \n
+        - First term -- Meters per second\textsuperscript{1} \n
+        - Second term -- Meters per second\textsuperscript{2} \n
+        - Nth term -- Meters per seconds\textsuperscript{N} \n
+        Note: N is the polynomial order size as specified by the Polynomial Order Size TLV.
+  */
 
   /* Optional */
   /*  Polynomial Coefficients for Satellite Clock Bias Correction */
@@ -16064,14 +16142,45 @@ typedef struct {
   uint32_t polyClockBias_len;  /**< Must be set to # of elements in polyClockBias */
   double polyClockBias[QMI_LOC_SV_POLY_SV_CLKBIAS_COEFF_SIZE_MAX_V02];
   /**<    Polynomial coefficients for satellite clock bias correction (C0T, C1T, C2T, CNT). \n
-          Units: \n
-          - Zeroth term -- Milliseconds \n
-          - First term -- Milliseconds per second\textsuperscript{1} \n
-          - Second term -- Milliseconds per second\textsuperscript{2} \n
-          - Nth term -- Milliseconds per second\textsuperscript{N} \n
-          Note: N is the polynomial order size as specified by the Polynomial Order Size TLV.
+        Units: \n
+        - Zeroth term -- Milliseconds \n
+        - First term -- Milliseconds per second\textsuperscript{1} \n
+        - Second term -- Milliseconds per second\textsuperscript{2} \n
+        - Nth term -- Milliseconds per second\textsuperscript{N} \n
+        Note: N is the polynomial order size as specified by the Polynomial Order Size TLV.
+  */
 
-    */
+  /* Optional */
+  /*  Time of Group Delay - NAVIC L1 */
+  uint8_t navicTgdL1_valid;  /**< Must be set to true if navicTgdL1 is being passed */
+  float navicTgdL1;
+  /**<   Time of group delay -- NAVIC L1. \n
+       - Units -- Milliseconds
+  */
+
+  /* Optional */
+  /*  Intersignal correction between NAVIC S and L1 data channels. */
+  uint8_t navicIscL1D_valid;  /**< Must be set to true if navicIscL1D is being passed */
+  float navicIscL1D;
+  /**<   Intersignal correction between NAVIC S and L1 data channels. \n
+       - Units -- Milliseconds
+  */
+
+  /* Optional */
+  /*  Intersignal correction between NAVIC S and L1 Pilot channels. */
+  uint8_t navicIscL1P_valid;  /**< Must be set to true if navicIscL1P is being passed */
+  float navicIscL1P;
+  /**<   Intersignal correction between NAVIC S and L1 Pilot channels. \n
+       - Units -- Milliseconds
+  */
+
+  /* Optional */
+  /*  SBAS Iono Uncertainty */
+  uint8_t sbasCorrUnc_valid;  /**< Must be set to true if sbasCorrUnc is being passed */
+  float sbasCorrUnc;
+  /**<   SBAS Correction Uncertainty.\n
+       - Units -- Meters
+  */
 }qmiLocEventGnssSvPolyIndMsgT_v02;  /* Message */
 /**
     @}
@@ -18723,7 +18832,9 @@ typedef uint64_t qmiLocFeaturesStatusMaskT_v02;
 #define QMI_LOC_FEATURE_STATUS_QPPE_V02 ((qmiLocFeaturesStatusMaskT_v02)0x00000200ull) /**<  QPPE. \n */
 #define QMI_LOC_FEATURE_STATUS_ROBUST_LOCATION_V02 ((qmiLocFeaturesStatusMaskT_v02)0x00000400ull) /**<  Robust Location. \n */
 #define QMI_LOC_FEATURE_STATUS_NLOS_ML20_V02 ((qmiLocFeaturesStatusMaskT_v02)0x00000800ull) /**<  Machine Learning. \n */
-#define QMI_LOC_FEATURE_STATUS_GNSS_NHZ_V02 ((qmiLocFeaturesStatusMaskT_v02)0x00001000ull) /**<  GNSS NHz.  */
+#define QMI_LOC_FEATURE_STATUS_GNSS_NHZ_V02 ((qmiLocFeaturesStatusMaskT_v02)0x00001000ull) /**<  GNSS NHz. \n */
+#define QMI_LOC_FEATURE_STATUS_SBAS_V02 ((qmiLocFeaturesStatusMaskT_v02)0x00002000ull) /**<  SBAS data decoding for Iono delay estimation in modem. \n */
+#define QMI_LOC_FEATURE_STATUS_SBAS_WOCS_V02 ((qmiLocFeaturesStatusMaskT_v02)0x00004000ull) /**<  WCOS correction less mode of operation in QPPE. \n */
 /** @addtogroup loc_qmi_messages
     @{
   */
@@ -18783,7 +18894,9 @@ typedef struct {
       - QMI_LOC_FEATURE_STATUS_QPPE (0x00000200) --  QPPE. \n
       - QMI_LOC_FEATURE_STATUS_ROBUST_LOCATION (0x00000400) --  Robust Location. \n
       - QMI_LOC_FEATURE_STATUS_NLOS_ML20 (0x00000800) --  Machine Learning. \n
-      - QMI_LOC_FEATURE_STATUS_GNSS_NHZ (0x00001000) --  GNSS NHz.
+      - QMI_LOC_FEATURE_STATUS_GNSS_NHZ (0x00001000) --  GNSS NHz. \n
+      - QMI_LOC_FEATURE_STATUS_SBAS (0x00002000) --  SBAS data decoding for Iono delay estimation in modem. \n
+      - QMI_LOC_FEATURE_STATUS_SBAS_WOCS (0x00004000) --  WCOS correction less mode of operation in QPPE. \n
  */
 }qmiLocGetSupportedFeatureIndMsgT_v02;  /* Message */
 /**
@@ -20668,6 +20781,7 @@ typedef struct {
       - QMI_LOC_LOCK_CLIENT_MASK_AFW (0x00000001) --  Lock AFW client \n
       - QMI_LOC_LOCK_CLIENT_MASK_NFW (0x00000002) --  Lock NFW client \n
       - QMI_LOC_LOCK_CLIENT_MASK_PRIVILEGED (0x00000004) --  Lock privileged client
+      - QMI_LOC_LOCK_CLIENT_MASK_AFW_PROXY (0x00000008) --  Lock AFW proxy client
  */
 }qmiLocEventEngineLockStateIndMsgT_v02;  /* Message */
 /**
@@ -20710,7 +20824,8 @@ typedef struct {
 typedef enum {
   QMILOCSYSTEMINFOENUMT_MIN_ENUM_VAL_V02 = -2147483647, /**< To force a 32 bit signed enum.  Do not change or use*/
   eQMI_LOC_UNDEFINED_INFO_V02 = 0, /**<  Undefined \n */
-  eQMI_LOC_NEXT_LEAP_SECOND_INFO_V02 = 1, /**<  Information about next (upcoming) leap second  */
+  eQMI_LOC_NEXT_LEAP_SECOND_INFO_V02 = 1, /**<  Information about next (upcoming) leap second \n  */
+  eQMI_LOC_DWELL_TIME_ALIGNMENT_INFO_V02 = 2, /**<  Information about dwell time alignment  */
   QMILOCSYSTEMINFOENUMT_MAX_ENUM_VAL_V02 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
 }qmiLocSystemInfoEnumT_v02;
 /**
@@ -20774,7 +20889,8 @@ typedef struct {
   /**<   System info being requested.
  Values: \n
       - eQMI_LOC_UNDEFINED_INFO (0) --  Undefined \n
-      - eQMI_LOC_NEXT_LEAP_SECOND_INFO (1) --  Information about next (upcoming) leap second
+      - eQMI_LOC_NEXT_LEAP_SECOND_INFO (1) --  Information about next (upcoming) leap second \n
+      - eQMI_LOC_DWELL_TIME_ALIGNMENT_INFO (2) --  Information about dwell time alignment
  */
 }qmiLocSystemInfoReqMsgT_v02;  /* Message */
 /**
@@ -20793,7 +20909,8 @@ typedef struct {
   /**<   System information being requested.
  Values: \n
       - eQMI_LOC_UNDEFINED_INFO (0) --  Undefined \n
-      - eQMI_LOC_NEXT_LEAP_SECOND_INFO (1) --  Information about next (upcoming) leap second
+      - eQMI_LOC_NEXT_LEAP_SECOND_INFO (1) --  Information about next (upcoming) leap second \n
+      - eQMI_LOC_DWELL_TIME_ALIGNMENT_INFO (2) --  Information about dwell time alignment
  */
 
   /* Optional */
@@ -20861,14 +20978,15 @@ typedef struct {
   uint8_t gnssleapSecondsNext;
   /**<   Upcoming leap second information.
          Reported only when receiver has information
-         on an upcoming change event.\n
+         on an upcoming change event.
+         The GNSS leap second field will always be sourced from the primary constellation.\n
          - Units -- Seconds */
 
   /* Optional */
   /*  GNSS Current Leap Seconds */
   uint8_t gnssleapSecondsCurrent_valid;  /**< Must be set to true if gnssleapSecondsCurrent is being passed */
   uint8_t gnssleapSecondsCurrent;
-  /**<   Current leap second information.\n
+  /**<   Current leap second information. The GNSS leap second field will always be sourced from the primary constellation.\n
        - Units -- Seconds */
 
   /* Optional */
@@ -21526,6 +21644,95 @@ typedef struct {
     @}
   */
 
+/** @addtogroup loc_qmi_aggregates
+    @{
+  */
+typedef struct {
+
+  uint16_t gnssSvId;
+  /**<   GNSS SV ID. \n
+       Range:\n
+       - GPS --     1 to 32 \n
+       - QZSS --    193 to 197 \n
+       - BDS --     201 to 263 \n
+       - Galileo -- 301 to 336 \n
+       - NavIC --   401 to 420 \n
+      */
+
+  uint16_t validityMask;
+  /**<   Specifies validity of all the fields.  \n
+        - iscL1ca -- 0x0001 \n
+        - iscL2c  -- 0x0002 \n
+        - iscL5I5  -- 0x0004  \n
+        - iscL5Q5 --  0x0008  \n
+        - alert   -- 0x0010 \n
+        - uraNed0  -- 0x0020 \n
+        - uraNed1  -- 0x0040  \n
+        - uraNed2 --  0x0080  \n
+        - top     -- 0x0100 \n
+        - topClock  -- 0x0200 \n
+        - validityPeriod  -- 0x0400  \n
+        - deltaNdot --  0x0800  \n
+        - deltaA    --  0x1000  \n
+        - adot      --  0x2000  \n
+    */
+
+  float iscL1ca;
+  /**<   InterSignal Correction between L1ca Data and Pilot channels in milliseconds, always zero for QZSS. \n
+       - Units -- milliseconds */
+
+  float iscL2c;
+  /**<   InterSignal Correction between L2c Data and Pilot channels in milliseconds. \n
+       - Units -- milliseconds */
+
+  float iscL5I5;
+  /**<   InterSignal Correction between L5I5 Data and Pilot channels in milliseconds. \n
+       - Units -- milliseconds */
+
+  float iscL5Q5;
+  /**<   InterSignal Correction between L5Q5 Data and Pilot channels in milliseconds. \n
+       - Units -- milliseconds    */
+
+  uint8_t alert;
+  /**<   Alert Bit Info (unitless). */
+
+  uint8_t uraNed0;
+  /**<   NED accuracy index (5 bits, unitless). */
+
+  uint8_t uraNed1;
+  /**<   NED accuracy change index (3 bits), UraNed1 = 1/2^N (m/s), N=14 + UraNed1 index (unitless). */
+
+  uint8_t uraNed2;
+  /**<   NED accuracy change rate index (3 bits), UraNed2 = 1/2^N (m/s^2), N=28 + UraNed2 index (unitless). */
+
+  double top;
+  /**<   Data predict time of week, 0-604500 sec. \n
+       - Units -- Seconds */
+
+  uint16_t topClock;
+  /**<   Data predict time of week (clock) , scale 300 seconds. \n
+       - Units -- Seconds */
+
+  uint32_t validityPeriod;
+  /**<   Validity Period in seconds. \n
+       - Units -- Seconds */
+
+  double deltaNdot;
+  /**<   Rate of Mean motion difference from computed value [semi-circle/sec^2] (unitless).
+       */
+
+  double deltaA;
+  /**<   Semi-Major Axis Difference At Reference Time [m]. \n
+       - Units -- Meters */
+
+  double adot;
+  /**<   Change Rate In Semi-Major Axis [m/sec]. \n
+       - Units -- Meters/seconds */
+}qmiLocGpsExtEphemerisT_v02;  /* Type */
+/**
+    @}
+  */
+
 /** @addtogroup loc_qmi_messages
     @{
   */
@@ -21534,7 +21741,7 @@ typedef struct {
 typedef struct {
 
   /* Mandatory */
-  /*  GPS Ephemeris Data */
+  /*  GPS Ephemeris Data  */
   uint32_t gpsEphemerisList_len;  /**< Must be set to # of elements in gpsEphemerisList */
   qmiLocGpsEphemerisT_v02 gpsEphemerisList[QMI_LOC_EPHEMERIS_LIST_MAX_SIZE_V02];
   /**<   \n GPS ephemeris parameters. */
@@ -21544,6 +21751,45 @@ typedef struct {
   uint8_t gpsSystemTime_valid;  /**< Must be set to true if gpsSystemTime is being passed */
   qmiLocGnssTimeStructT_v02 gpsSystemTime;
   /**<    */
+
+  /* Optional */
+  /*  Ephemeris Signal Source Type */
+  uint8_t dataSourceSignal_valid;  /**< Must be set to true if dataSourceSignal is being passed */
+  qmiLocGnssSignalTypeEnumT_v02 dataSourceSignal;
+  /**<   \n Ephemeris Signal Source Type. \n
+ Values: \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_INVALID (0) --  Invalid RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_GPS_L1CA (1) --  GPS L1 C/A RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_GPS_L1C (2) --  GPS L1 C RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_GPS_L2C_L (3) --  GPS L2 C L RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_GPS_L5_Q (4) --  GPS L5 Q RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_GLONASS_G1 (5) --  GLONASS G1 (L1 OF) RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_GLONASS_G2 (6) --  GLONASS G2 (L2 OF) RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_GALILEO_E1_C (7) --  Galileo E1 C RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_GALILEO_E5A_Q (8) --  Galileo E5a Q RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_GALILEO_E5B_Q (9) --  Galileo E5b Q RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_BEIDOU_B1_I (10) --  BeiDou B1 I RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_BEIDOU_B1C (11) --  BeiDou B1C RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_BEIDOU_B2_I (12) --  BeiDou B2 I RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_BEIDOU_B2A_I (13) --  BeiDou B2a I RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_QZSS_L1CA (14) --  QZSS L1CA RF band\n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_QZSS_L1S (15) --  QZSS L1S RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_QZSS_L2C_L (16) --  QZSS L2C L RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_QZSS_L5_Q (17) --  QZSS L5 Q RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_SBAS_L1_CA (18) --  SBAS L1 CA RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_NAVIC_L5 (19) --  NavIC L5 RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_BEIDOU_B2A_Q (20) --  BeiDou B2a Q RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_BEIDOU_B2B_I (21) --  BeiDou B2b I RF band (data) \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q (22) --  BeiDou B2b Q RF band (pilot) \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_NAVIC_L1 (23) --  Navic L1 RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_QZSS_L1_CB (24) --  QZSS L1 CB RF band  */
+
+  /* Optional */
+  /*  GPS Extended Ephemeris Data */
+  uint8_t gpsEphemerisListExt_valid;  /**< Must be set to true if gpsEphemerisListExt is being passed */
+  uint32_t gpsEphemerisListExt_len;  /**< Must be set to # of elements in gpsEphemerisListExt */
+  qmiLocGpsExtEphemerisT_v02 gpsEphemerisListExt[QMI_LOC_EPHEMERIS_LIST_MAX_SIZE_V02];
+  /**<   \n GPS Ephemeris Parameters (Extended). */
 }qmiLocGpsEphemerisReportIndMsgT_v02;  /* Message */
 /**
     @}
@@ -21686,7 +21932,7 @@ typedef struct {
 typedef struct {
 
   qmiLocEphGnssDataStructT_v02 commonEphemerisData;
-  /**<   Common ephemeris data.   */
+  /**<   Common ephemeris data.  */
 
   uint8_t svHealth;
   /**<   Satellite health information applied to both B1 and B2 (SatH1).
@@ -21714,6 +21960,81 @@ typedef struct {
     @}
   */
 
+/** @addtogroup loc_qmi_aggregates
+    @{
+  */
+typedef struct {
+
+  uint16_t gnssSvId;
+  /**<   GNSS SV ID. \n
+       Range:\n
+       - GPS --     1 to 32 \n
+       - QZSS --    193 to 197 \n
+       - BDS --     201 to 263 \n
+       - Galileo -- 301 to 336 \n
+       - NavIC --   401 to 420 \n
+      */
+
+  uint16_t validityMask;
+  /**<   Specifies validity of all the fields.  \n
+        - iscB2a -- 0x0001   \n
+        - iscB1c -- 0x0002  \n
+        - tgdB2a -- 0x0004   \n
+        - tgdB1c -- 0x0008  \n
+        - svType -- 0x0010   \n
+        - validityPeriod  -- 0x0020  \n
+        - integrityFlags -- 0x0040   \n
+        - deltaNdot  -- 0x0080  \n
+        - deltaA -- 0x0100   \n
+        - adot  -- 0x0200  \n
+    */
+
+  float tgdB2a;
+  /**<   Time of Group Delay For B2a in milliseconds. \n
+       - Units -- milliseconds */
+
+  float iscB2a;
+  /**<   InterSignal Correction between B2a Data and Pilot channels in milliseconds. \n
+       - Units -- milliseconds */
+
+  float tgdB1c;
+  /**<   Time of Group Delay For B1C in milliseconds. \n
+       - Units -- milliseconds */
+
+  float iscB1c;
+  /**<   InterSignal Correction between B1c Data and Pilot channels in milliseconds. \n
+       - Units -- milliseconds */
+
+  uint8_t svType;
+  /**<   Sv Type -- GEO / MEO / IGSO (Unitless). */
+
+  uint32_t validityPeriod;
+
+  uint8_t integrityFlags;
+  /**<   Satellite Integrity Flags consists data integrity Flag(DIF), Signal Integrity Flag(SIF), Accuracy Integrity Flag (AIF). \n
+       Values: \n
+       - b0 - AIF, The signal is Valid(0) or Invalid (1). \n
+       - b1 - SIF, The signal is Normal(0) or Abnormal (1). \n
+       - b2 - DIF, The error of message parameters in this signal doesnot exceeds the prediction accuracy (0)/ Exceeds the prediction accuracy (1). \n
+       - b3 - B1I, ephemeris health (unitless). \n
+       */
+
+  double deltaNdot;
+  /**<   Rate of Mean motion difference from computed value [semi-circle/sec^2] (unitless).
+       */
+
+  double deltaA;
+  /**<   Semi-Major Axis Difference At Reference Time [m]. \n
+       - Units -- Meters */
+
+  double adot;
+  /**<   Change Rate In Semi-Major Axis [m/sec]. \n
+       - Units -- Meters/seconds */
+}qmiLocBdsExtEphemerisT_v02;  /* Type */
+/**
+    @}
+  */
+
 /** @addtogroup loc_qmi_messages
     @{
   */
@@ -21730,6 +22051,45 @@ typedef struct {
   uint8_t gpsSystemTime_valid;  /**< Must be set to true if gpsSystemTime is being passed */
   qmiLocGnssTimeStructT_v02 gpsSystemTime;
   /**<    */
+
+  /* Optional */
+  /*  Ephemeris Source Signal Type */
+  uint8_t dataSourceSignal_valid;  /**< Must be set to true if dataSourceSignal is being passed */
+  qmiLocGnssSignalTypeEnumT_v02 dataSourceSignal;
+  /**<   Ephemeris Signal Source Type. \n
+ Values: \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_INVALID (0) --  Invalid RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_GPS_L1CA (1) --  GPS L1 C/A RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_GPS_L1C (2) --  GPS L1 C RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_GPS_L2C_L (3) --  GPS L2 C L RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_GPS_L5_Q (4) --  GPS L5 Q RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_GLONASS_G1 (5) --  GLONASS G1 (L1 OF) RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_GLONASS_G2 (6) --  GLONASS G2 (L2 OF) RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_GALILEO_E1_C (7) --  Galileo E1 C RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_GALILEO_E5A_Q (8) --  Galileo E5a Q RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_GALILEO_E5B_Q (9) --  Galileo E5b Q RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_BEIDOU_B1_I (10) --  BeiDou B1 I RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_BEIDOU_B1C (11) --  BeiDou B1C RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_BEIDOU_B2_I (12) --  BeiDou B2 I RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_BEIDOU_B2A_I (13) --  BeiDou B2a I RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_QZSS_L1CA (14) --  QZSS L1CA RF band\n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_QZSS_L1S (15) --  QZSS L1S RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_QZSS_L2C_L (16) --  QZSS L2C L RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_QZSS_L5_Q (17) --  QZSS L5 Q RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_SBAS_L1_CA (18) --  SBAS L1 CA RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_NAVIC_L5 (19) --  NavIC L5 RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_BEIDOU_B2A_Q (20) --  BeiDou B2a Q RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_BEIDOU_B2B_I (21) --  BeiDou B2b I RF band (data) \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q (22) --  BeiDou B2b Q RF band (pilot) \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_NAVIC_L1 (23) --  Navic L1 RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_QZSS_L1_CB (24) --  QZSS L1 CB RF band */
+
+  /* Optional */
+  /*  BDS Extended Ephemeris Data */
+  uint8_t bdsEphemerisListExt_valid;  /**< Must be set to true if bdsEphemerisListExt is being passed */
+  uint32_t bdsEphemerisListExt_len;  /**< Must be set to # of elements in bdsEphemerisListExt */
+  qmiLocBdsExtEphemerisT_v02 bdsEphemerisListExt[QMI_LOC_EPHEMERIS_LIST_MAX_SIZE_V02];
+  /**<   BDS Ephemeris parameters (Extended). */
 }qmiLocBdsEphemerisReportIndMsgT_v02;  /* Message */
 /**
     @}
@@ -21834,6 +22194,45 @@ typedef struct {
   uint8_t gpsSystemTime_valid;  /**< Must be set to true if gpsSystemTime is being passed */
   qmiLocGnssTimeStructT_v02 gpsSystemTime;
   /**<   */
+
+  /* Optional */
+  /*  Ephemeris Signal Source Type */
+  uint8_t dataSourceSignal_valid;  /**< Must be set to true if dataSourceSignal is being passed */
+  qmiLocGnssSignalTypeEnumT_v02 dataSourceSignal;
+  /**<   \n Ephemeris Signal Source Type. \n
+ Values: \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_INVALID (0) --  Invalid RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_GPS_L1CA (1) --  GPS L1 C/A RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_GPS_L1C (2) --  GPS L1 C RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_GPS_L2C_L (3) --  GPS L2 C L RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_GPS_L5_Q (4) --  GPS L5 Q RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_GLONASS_G1 (5) --  GLONASS G1 (L1 OF) RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_GLONASS_G2 (6) --  GLONASS G2 (L2 OF) RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_GALILEO_E1_C (7) --  Galileo E1 C RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_GALILEO_E5A_Q (8) --  Galileo E5a Q RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_GALILEO_E5B_Q (9) --  Galileo E5b Q RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_BEIDOU_B1_I (10) --  BeiDou B1 I RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_BEIDOU_B1C (11) --  BeiDou B1C RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_BEIDOU_B2_I (12) --  BeiDou B2 I RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_BEIDOU_B2A_I (13) --  BeiDou B2a I RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_QZSS_L1CA (14) --  QZSS L1CA RF band\n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_QZSS_L1S (15) --  QZSS L1S RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_QZSS_L2C_L (16) --  QZSS L2C L RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_QZSS_L5_Q (17) --  QZSS L5 Q RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_SBAS_L1_CA (18) --  SBAS L1 CA RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_NAVIC_L5 (19) --  NavIC L5 RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_BEIDOU_B2A_Q (20) --  BeiDou B2a Q RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_BEIDOU_B2B_I (21) --  BeiDou B2b I RF band (data) \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q (22) --  BeiDou B2b Q RF band (pilot) \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_NAVIC_L1 (23) --  Navic L1 RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_QZSS_L1_CB (24) --  QZSS L1 CB RF band  */
+
+  /* Optional */
+  /*  QZSS Extended Ephemeris Data */
+  uint8_t qzssEphemerisListExt_valid;  /**< Must be set to true if qzssEphemerisListExt is being passed */
+  uint32_t qzssEphemerisListExt_len;  /**< Must be set to # of elements in qzssEphemerisListExt */
+  qmiLocGpsExtEphemerisT_v02 qzssEphemerisListExt[QMI_LOC_EPHEMERIS_LIST_MAX_SIZE_V02];
+  /**<   \n QZSS Ephemeris Parameters (Extended). */
 }qmiLocQzssEphemerisReportIndMsgT_v02;  /* Message */
 /**
     @}
@@ -22095,6 +22494,65 @@ typedef struct {
     @}
   */
 
+/** @addtogroup loc_qmi_aggregates
+    @{
+  */
+typedef struct {
+
+  qmiLocGnssSignalTypeEnumT_v02 signalType;
+  /**<   Specifies the satellite signal type for the ionospheric model Latitude Longitude limits.
+ Values: \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_INVALID (0) --  Invalid RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_GPS_L1CA (1) --  GPS L1 C/A RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_GPS_L1C (2) --  GPS L1 C RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_GPS_L2C_L (3) --  GPS L2 C L RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_GPS_L5_Q (4) --  GPS L5 Q RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_GLONASS_G1 (5) --  GLONASS G1 (L1 OF) RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_GLONASS_G2 (6) --  GLONASS G2 (L2 OF) RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_GALILEO_E1_C (7) --  Galileo E1 C RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_GALILEO_E5A_Q (8) --  Galileo E5a Q RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_GALILEO_E5B_Q (9) --  Galileo E5b Q RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_BEIDOU_B1_I (10) --  BeiDou B1 I RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_BEIDOU_B1C (11) --  BeiDou B1C RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_BEIDOU_B2_I (12) --  BeiDou B2 I RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_BEIDOU_B2A_I (13) --  BeiDou B2a I RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_QZSS_L1CA (14) --  QZSS L1CA RF band\n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_QZSS_L1S (15) --  QZSS L1S RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_QZSS_L2C_L (16) --  QZSS L2C L RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_QZSS_L5_Q (17) --  QZSS L5 Q RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_SBAS_L1_CA (18) --  SBAS L1 CA RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_NAVIC_L5 (19) --  NavIC L5 RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_BEIDOU_B2A_Q (20) --  BeiDou B2a Q RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_BEIDOU_B2B_I (21) --  BeiDou B2b I RF band (data) \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q (22) --  BeiDou B2b Q RF band (pilot) \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_NAVIC_L1 (23) --  Navic L1 RF band \n
+      - eQMI_LOC_GNSS_SIGNAL_TYPE_QZSS_L1_CB (24) --  QZSS L1 CB RF band
+ */
+
+  float maxLonLimit;
+  /**<   Klobuchar Model Parameter Max Longitude Limit.\n
+       - Unit -- Degrees
+  */
+
+  float minLonLimit;
+  /**<   Klobuchar Model Parameter Min Longitude Limit.\n
+       - Unit -- Degrees
+  */
+
+  float maxLatLimit;
+  /**<   Klobuchar Model Parameter Max Latitude Limit.\n
+       - Unit -- Degrees
+  */
+
+  float minLatLimit;
+  /**<   Klobuchar Model Parameter Min Latitude Limit.\n
+       - Unit -- Degrees
+  */
+}qmiLocKlobucharIonoModelLimitsT_v02;  /* Type */
+/**
+    @}
+  */
+
 /** @addtogroup loc_qmi_messages
     @{
   */
@@ -22184,8 +22642,16 @@ typedef struct {
       - QMI_LOC_FEATURE_STATUS_QPPE (0x00000200) --  QPPE. \n
       - QMI_LOC_FEATURE_STATUS_ROBUST_LOCATION (0x00000400) --  Robust Location. \n
       - QMI_LOC_FEATURE_STATUS_NLOS_ML20 (0x00000800) --  Machine Learning. \n
-      - QMI_LOC_FEATURE_STATUS_GNSS_NHZ (0x00001000) --  GNSS NHz.
+      - QMI_LOC_FEATURE_STATUS_GNSS_NHZ (0x00001000) --  GNSS NHz. \n
+      - QMI_LOC_FEATURE_STATUS_SBAS (0x00002000) --  SBAS data decoding for Iono delay estimation in modem. \n
+      - QMI_LOC_FEATURE_STATUS_SBAS_WOCS (0x00004000) --  WCOS correction less mode of operation in QPPE. \n
  */
+
+  /* Optional */
+  /*  Klobuchar Ionospheric Model Latitude and Longitude Limits */
+  uint8_t klobucharIonoModelLimits_valid;  /**< Must be set to true if klobucharIonoModelLimits is being passed */
+  qmiLocKlobucharIonoModelLimitsT_v02 klobucharIonoModelLimits;
+  /**<   Klobuchar ionospheric model Latitude and Longitude Limits. */
 }qmiLocEventReportIndMsgT_v02;  /* Message */
 /**
     @}
@@ -22348,7 +22814,8 @@ typedef enum {
   eQMI_LOC_R1_V02 = 9, /**<  Reserved UTH OEM client 1 requests the location \n  */
   eQMI_LOC_R2_V02 = 10, /**<  Reserved UTH OEM client 2 requests the location \n  */
   eQMI_LOC_R3_V02 = 11, /**<  Reserved UTH OEM client 3 requests the location \n  */
-  eQMI_LOC_NTN_V02 = 12, /**<  NTN requests the location   */
+  eQMI_LOC_NTN_V02 = 12, /**<  NTN requests the location \n  */
+  eQMI_LOC_ECALL_V02 = 13, /**<  ECALL client requests the location   */
   QMILOCREQUESTPROTOCOLENUMT_MAX_ENUM_VAL_V02 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
 }qmiLocRequestProtocolEnumT_v02;
 /**
@@ -22421,7 +22888,8 @@ typedef struct {
       - eQMI_LOC_R1 (9) --  Reserved UTH OEM client 1 requests the location \n
       - eQMI_LOC_R2 (10) --  Reserved UTH OEM client 2 requests the location \n
       - eQMI_LOC_R3 (11) --  Reserved UTH OEM client 3 requests the location \n
-      - eQMI_LOC_NTN (12) --  NTN requests the location
+      - eQMI_LOC_NTN (12) --  NTN requests the location \n
+      - eQMI_LOC_ECALL (13) --  ECALL client requests the location
  */
 
   /* Mandatory */
@@ -25317,6 +25785,9 @@ typedef struct {
   /*  GNSS Leap Second */
   uint8_t gnssLeapSecond_valid;  /**< Must be set to true if gnssLeapSecond is being passed */
   uint8_t gnssLeapSecond;
+  /**<   GNSS time leap second delta to UTC time.
+       The GNSS leap second field will always be sourced from the primary constellation. \n
+      - Units -- Seconds  */
 
   /* Optional */
   /*  GNSS Leap Second Uncertainty */
@@ -25473,7 +25944,9 @@ typedef struct {
       - QMI_LOC_FEATURE_STATUS_QPPE (0x00000200) --  QPPE. \n
       - QMI_LOC_FEATURE_STATUS_ROBUST_LOCATION (0x00000400) --  Robust Location. \n
       - QMI_LOC_FEATURE_STATUS_NLOS_ML20 (0x00000800) --  Machine Learning. \n
-      - QMI_LOC_FEATURE_STATUS_GNSS_NHZ (0x00001000) --  GNSS NHz.
+      - QMI_LOC_FEATURE_STATUS_GNSS_NHZ (0x00001000) --  GNSS NHz. \n
+      - QMI_LOC_FEATURE_STATUS_SBAS (0x00002000) --  SBAS data decoding for Iono delay estimation in modem. \n
+      - QMI_LOC_FEATURE_STATUS_SBAS_WOCS (0x00004000) --  WCOS correction less mode of operation in QPPE. \n
  */
 
   /* Optional */
@@ -25534,7 +26007,9 @@ typedef struct {
       - QMI_LOC_FEATURE_STATUS_QPPE (0x00000200) --  QPPE. \n
       - QMI_LOC_FEATURE_STATUS_ROBUST_LOCATION (0x00000400) --  Robust Location. \n
       - QMI_LOC_FEATURE_STATUS_NLOS_ML20 (0x00000800) --  Machine Learning. \n
-      - QMI_LOC_FEATURE_STATUS_GNSS_NHZ (0x00001000) --  GNSS NHz.
+      - QMI_LOC_FEATURE_STATUS_GNSS_NHZ (0x00001000) --  GNSS NHz. \n
+      - QMI_LOC_FEATURE_STATUS_SBAS (0x00002000) --  SBAS data decoding for Iono delay estimation in modem. \n
+      - QMI_LOC_FEATURE_STATUS_SBAS_WOCS (0x00004000) --  WCOS correction less mode of operation in QPPE. \n
  */
 }qmiLocSetSdkFeatureConfigIndMsgT_v02;  /* Message */
 /**
@@ -26194,6 +26669,63 @@ typedef struct {
     @}
   */
 
+/** @addtogroup loc_qmi_enums
+    @{
+  */
+typedef enum {
+  QMILOCPRECISESESSIONSTATUSENUMT_MIN_ENUM_VAL_V02 = -2147483647, /**< To force a 32 bit signed enum.  Do not change or use*/
+  eQMI_LOC_PRECISE_SESSION_STOP_V02 = 0, /**<  Stop Session \n  */
+  eQMI_LOC_PRECISE_SESSION_START_V02 = 1, /**<  Start Session \n  */
+  QMILOCPRECISESESSIONSTATUSENUMT_MAX_ENUM_VAL_V02 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
+}qmiLocPreciseSessionStatusEnumT_v02;
+/**
+    @}
+  */
+
+/** @addtogroup loc_qmi_enums
+    @{
+  */
+typedef enum {
+  QMILOCPRECISESESSIONTYPEENUMT_MIN_ENUM_VAL_V02 = -2147483647, /**< To force a 32 bit signed enum.  Do not change or use*/
+  eQMI_LOC_PRECISE_SESSION_TYPE_EDGNSS_V02 = 0, /**<  Session Type eDGNSS\n  */
+  eQMI_LOC_PRECISE_SESSION_TYPE_RTK_V02 = 1, /**<  Session Type RTK \n  */
+  eQMI_LOC_PRECISE_SESSION_TYPE_WOCS_V02 = 2, /**<  Session Type WOCS \n  */
+  QMILOCPRECISESESSIONTYPEENUMT_MAX_ENUM_VAL_V02 = 2147483647 /**< To force a 32 bit signed enum.  Do not change or use*/
+}qmiLocPreciseSessionTypeEnumT_v02;
+/**
+    @}
+  */
+
+/** @addtogroup loc_qmi_messages
+    @{
+  */
+/** Request Message; Used by the control point to enable, disable, Precise
+                     Positioning features. */
+typedef struct {
+
+  /* Optional */
+  /*  Precise Session Config Command */
+  uint8_t sessionCmd_valid;  /**< Must be set to true if sessionCmd is being passed */
+  qmiLocPreciseSessionStatusEnumT_v02 sessionCmd;
+  /**<   Precise Positioning Session Command.
+ Values: \n
+      - eQMI_LOC_PRECISE_SESSION_STOP (0) --  Stop Session \n
+      - eQMI_LOC_PRECISE_SESSION_START (1) --  Start Session \n */
+
+  /* Optional */
+  /*  Precise Positioning Session Type */
+  uint8_t sessionType_valid;  /**< Must be set to true if sessionType is being passed */
+  qmiLocPreciseSessionTypeEnumT_v02 sessionType;
+  /**<   Precise Positioning Session Type. \n
+ Values: \n
+      - eQMI_LOC_PRECISE_SESSION_TYPE_EDGNSS (0) --  Session Type eDGNSS\n
+      - eQMI_LOC_PRECISE_SESSION_TYPE_RTK (1) --  Session Type RTK \n
+      - eQMI_LOC_PRECISE_SESSION_TYPE_WOCS (2) --  Session Type WOCS \n */
+}qmiLocSetPreciseSessionConfigReqMsgT_v02;  /* Message */
+/**
+    @}
+  */
+
 /* Conditional compilation tags for message removal */
 //#define REMOVE_QMI_LOC_ADD_CIRCULAR_GEOFENCE_V02
 //#define REMOVE_QMI_LOC_ADD_GEOFENCE_CONTEXT_V02
@@ -26381,6 +26913,7 @@ typedef struct {
 //#define REMOVE_QMI_LOC_SET_OSNMA_STATE_V02
 //#define REMOVE_QMI_LOC_SET_PARAMETER_V02
 //#define REMOVE_QMI_LOC_SET_POSITION_ENGINE_CONFIG_PARAMETERS_V02
+//#define REMOVE_QMI_LOC_SET_PRECISE_SESSION_CONFIG_V02
 //#define REMOVE_QMI_LOC_SET_PREMIUM_SERVICES_CONFIG_V02
 //#define REMOVE_QMI_LOC_SET_PROTOCOL_CONFIG_PARAMETERS_V02
 //#define REMOVE_QMI_LOC_SET_ROBUST_LOCATION_CONFIG_V02
@@ -26913,6 +27446,9 @@ typedef struct {
 #define QMI_LOC_GET_NTN_STATUS_IND_V02 0x00EE
 #define QMI_LOC_NTN_CONFIG_UPDATE_IND_V02 0x00EF
 #define QMI_LOC_EVENT_DBH_POSITION_IND_V02 0x00F0
+#define QMI_LOC_SET_PRECISE_SESSION_CONFIG_REQ_V02 0x00F1
+#define QMI_LOC_SET_PRECISE_SESSION_CONFIG_RESP_V02 0x00F1
+#define QMI_LOC_SET_PRECISE_SESSION_CONFIG_IND_V02 0x00F1
 /**
     @}
   */
