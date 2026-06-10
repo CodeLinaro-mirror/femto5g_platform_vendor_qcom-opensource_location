@@ -518,6 +518,7 @@ locClientEventMaskType LocApiV02::adjustLocClientEventMask(locClientEventMaskTyp
                                            QMI_LOC_EVENT_MASK_GNSS_NHZ_MEASUREMENT_REPORT_V02 |
                                            QMI_LOC_EVENT_MASK_GNSS_SV_POLYNOMIAL_REPORT_V02 |
                                            QMI_LOC_EVENT_MASK_EPHEMERIS_REPORT_V02 |
+                                           QMI_LOC_EVENT_DWELL_TIME_ALIGNMENT_INFO_V02 |
 #ifdef __ANDROID__
                                            QMI_LOC_EVENT_MASK_NEXT_LS_INFO_REPORT_V02 |
 #endif
