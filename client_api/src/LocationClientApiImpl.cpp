@@ -1878,6 +1878,8 @@ LocationClientApiImpl
 uint32_t LocationClientApiImpl::mClientIdGenerator = LOCATION_CLIENT_SESSION_ID_INVALID;
 uint32_t LocationClientApiImpl::mClientIdIndex = 0;
 mutex LocationClientApiImpl::mMutex;
+std::recursive_mutex LocationClientApiImpl::mStartPosRequestResponseMutex;
+
 
 /******************************************************************************
 LocationClientApiImpl - constructors
@@ -2280,6 +2282,7 @@ void LocationClientApiImpl::startPositionSession(
                 mCallbacksOption(callbacksOption), mTrackingOptions(trackingOptions) {}
         virtual ~StartPositionSessionReqMsg() {}
         void proc() const {
+            std::lock_guard<std::recursive_mutex> lock(mApiImpl->mStartPosRequestResponseMutex);
             if (mApiImpl->mPositionSessionResponseCbPending) {
                 mCallbacksOption.responseCb(::LOCATION_ERROR_ALREADY_STARTED, 0);
                 return;
@@ -2360,6 +2363,9 @@ void LocationClientApiImpl::stopTrackingSync(bool clearSubscriptions) {
     mLocationOptions.minInterval = 0;
     mLocationOptions.minDistance = 0;
     mSessionId = LOCATION_CLIENT_SESSION_ID_INVALID;
+    if (mPositionSessionResponseCbPending) {
+        invokePositionSessionResponseCb(LOCATION_ERROR_GENERAL_FAILURE);
+    }
     mPositionSessionResponseCbPending = false;
     mSessionStartBootTimestampNs = 0;
 }
@@ -2507,6 +2513,7 @@ void LocationClientApiImpl::startBatchingSession(const LocationCallbacks& callba
                 mBatchingOptions(batchingOptions) {}
         virtual ~StartBatchingSessionReqMsg() {}
         void proc() const {
+            std::lock_guard<std::recursive_mutex> lock(mApiImpl->mStartPosRequestResponseMutex);
             if (mApiImpl->mPositionSessionResponseCbPending) {
                 mApiImpl->mLocationCbs.responseCb(::LOCATION_ERROR_ALREADY_STARTED, 0);
                 return;
@@ -2685,6 +2692,7 @@ void LocationClientApiImpl::addGeofences(const LocationCallbacks& callbacksOptio
                 return;
             }
             // set up the flag to indicate that responseCb is pending
+            std::lock_guard<std::recursive_mutex> lock(mApiImpl->mStartPosRequestResponseMutex);
             mApiImpl->mPositionSessionResponseCbPending = true;
             mApiImpl->updateCallbacksSync(mCallbacksOption);
 
@@ -3412,6 +3420,7 @@ void LocationClientApiImpl::pingTest(PingTestCb pingTestCallback) {
 }
 
 void LocationClientApiImpl::invokePositionSessionResponseCb(LocationError errCode) {
+    std::lock_guard<std::recursive_mutex> lock(mStartPosRequestResponseMutex);
     if (mPositionSessionResponseCbPending) {
         if (nullptr != mLocationCbs.responseCb) {
             mLocationCbs.responseCb(errCode, 0);
@@ -3578,7 +3587,9 @@ void IpcListener::onReceive(const char* data, uint32_t length,
                         delete[] errs;
                     }
                 }
+
                 if (mApiImpl.mPositionSessionResponseCbPending) {
+                    std::lock_guard<std::recursive_mutex> lock(mApiImpl.mStartPosRequestResponseMutex);
                     mApiImpl.mPositionSessionResponseCbPending = false;
                 }
                 break;
