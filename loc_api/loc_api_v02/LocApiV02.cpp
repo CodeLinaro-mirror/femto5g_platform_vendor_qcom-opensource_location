@@ -4289,8 +4289,9 @@ void LocApiV02::reportNiRequest(const qmiLocEventNiNotifyVerifyReqIndMsgT_v02 *n
     //Accept NI when privacy overrides or no notify/verify required
     if ((ni_req_ptr->notificationType == eQMI_LOC_NI_USER_NOTIFY_VERIFY_PRIVACY_OVERRIDE_V02) ||
              (ni_req_ptr->notificationType == eQMI_LOC_NI_USER_NO_NOTIFY_NO_VERIFY_V02) ||
-              // even though this is notify/verify, we will not pop up dialog but simply
-              // accept it
+              // for notify only or notify/verify allow no resp, ack back to modem,
+              // no need to display the dialog
+             (ni_req_ptr->notificationType == eQMI_LOC_NI_USER_NOTIFY_ONLY_V02) ||
              (ni_req_ptr->notificationType == eQMI_LOC_NI_USER_NOTIFY_VERIFY_ALLOW_NO_RESP_V02)) {
         sendMsg(new LocApiMsg([this, request_pass_back = *ni_req_ptr] () {
             locClientReqUnionType req_union = {};
