@@ -7331,6 +7331,10 @@ void LocApiV02 :: eventCb(locClientHandleType /*clientHandle*/,
     case QMI_LOC_NTN_CONFIG_UPDATE_IND_V02:
       LocApiBase::reportNtnConfigUpdateEvent(eventPayload.pNtnConfigUpdateIndMsg->signalType);
       break;
+
+    case QMI_LOC_EVENT_DBT_POSITION_REPORT_IND_V02:
+      onDbtPosReportEvent(eventPayload.pDbtPositionReportEvent);
+      break;
   }
 }
 
@@ -10818,6 +10822,122 @@ LocApiV02::stopTimeBasedTrackingSync(LocApiResponse* adapterResponse) {
 }
 
 void
+LocApiV02::startDistanceBasedTracking(uint32_t sessionId,
+                                       const LocationOptions& options,
+                                       LocApiResponse* adapterResponse)
+{
+    sendMsg(new LocApiMsg([this, sessionId, options, adapterResponse] () {
+
+    LOC_LOGD("startDistanceBasedTracking: session id %u, minInterval %u minDistance %u",
+             sessionId, options.minInterval, options.minDistance);
+    LocationError err = LOCATION_ERROR_SUCCESS;
+
+    /** start distance based tracking session*/
+    locClientStatusEnumType status;
+    locClientReqUnionType req_union;
+    qmiLocStartDbtReqMsgT_v02 start_dbt_req;
+    qmiLocStartDbtIndMsgT_v02 start_dbt_ind;
+    memset(&start_dbt_req, 0, sizeof(start_dbt_req));
+    memset(&start_dbt_ind, 0, sizeof(start_dbt_ind));
+
+    // request id
+    if (sessionId > 0xFF) {
+        LOC_LOGe("sessionId: %" PRIu32 " is greater than 0xFF, cannot start DBT", sessionId);
+        if (NULL != adapterResponse) {
+            adapterResponse->returnToSender(LOCATION_ERROR_INVALID_PARAMETER);
+        }
+        return;
+    }
+    start_dbt_req.reqId = static_cast<uint8_t>(sessionId);
+
+    // distance
+    start_dbt_req.minDistance = options.minDistance;
+
+    // time
+    uint32_t minInterval = options.minInterval;
+    start_dbt_req.maxLatency_valid = 1;
+    start_dbt_req.maxLatency = minInterval/1000; //in seconds
+    if (0 == start_dbt_req.maxLatency) {
+        start_dbt_req.maxLatency = 1; //in seconds
+    }
+
+    // type
+    start_dbt_req.distanceType = eQMI_LOC_DBT_DISTANCE_TYPE_STRAIGHT_LINE_V02;
+
+    /* original location disabled by default, as the original location is
+       the one cached in the modem buffer and its timestamps is not fresh.*/
+    start_dbt_req.needOriginLocation = 0;
+
+    start_dbt_req.usageType_valid = 1;
+    start_dbt_req.usageType = eQMI_LOC_DBT_USAGE_NAVIGATION_V02;
+    req_union.pStartDbtReq = &start_dbt_req;
+
+    status = locSyncSendReq(QMI_LOC_START_DBT_REQ_V02,
+                            req_union,
+                            LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
+                            QMI_LOC_START_DBT_IND_V02,
+                            &start_dbt_ind);
+
+    if (eLOC_CLIENT_SUCCESS != status ||
+            eQMI_LOC_SUCCESS_V02 != start_dbt_ind.status) {
+        if (ENGINE_LOCK_STATE_DISABLED == getEngineLockState()) {
+            LOC_LOGD("startDistanceBasedTracking: engine state disabled");
+            err = LOCATION_ERROR_TZ_LOCKED;
+        } else {
+            err = LOCATION_ERROR_GENERAL_FAILURE;
+        }
+    }
+
+    if (adapterResponse != NULL) {
+        adapterResponse->returnToSender(err);
+    }
+    }));
+}
+
+void
+LocApiV02::stopDistanceBasedTracking(uint32_t sessionId, LocApiResponse* adapterResponse)
+{
+    sendMsg(new LocApiMsg([this, sessionId, adapterResponse] () {
+
+    LOC_LOGD("stopDistanceBasedTracking: session id %u", sessionId);
+    LocationError err = LOCATION_ERROR_SUCCESS;
+
+    locClientStatusEnumType status;
+    locClientReqUnionType req_union;
+    qmiLocStopDbtReqMsgT_v02 stop_dbt_req;
+    qmiLocStopDbtIndMsgT_v02 stop_dbt_Ind;
+    memset(&stop_dbt_req, 0, sizeof(stop_dbt_req));
+    memset(&stop_dbt_Ind, 0, sizeof(stop_dbt_Ind));
+
+    if (sessionId > 0xFF) {
+        LOC_LOGe("sessionId: %" PRIu32 " is greater than 0xFF, cannot stop DBT", sessionId);
+        if (NULL != adapterResponse) {
+            adapterResponse->returnToSender(LOCATION_ERROR_INVALID_PARAMETER);
+        }
+        return;
+    }
+    stop_dbt_req.reqId = static_cast<uint8_t>(sessionId);
+
+    req_union.pStopDbtReq = &stop_dbt_req;
+
+    status = locSyncSendReq(QMI_LOC_STOP_DBT_REQ_V02,
+                            req_union,
+                            LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
+                            QMI_LOC_STOP_DBT_IND_V02,
+                            &stop_dbt_Ind);
+
+    if (eLOC_CLIENT_SUCCESS != status ||
+            eQMI_LOC_SUCCESS_V02 != stop_dbt_Ind.status) {
+        err = LOCATION_ERROR_GENERAL_FAILURE;
+    }
+
+    if (nullptr != adapterResponse) {
+        adapterResponse->returnToSender(err);
+    }
+    }));
+}
+
+void
 LocApiV02::startBatching(uint32_t sessionId,
                           const LocationOptions& options,
                           uint32_t accuracy,
@@ -11353,4 +11473,87 @@ AgcStatus LocApiV02::convertQmiAgcStatusType(qmiLocAgcStatusEnumT_v02 qmiAgcStat
             break;
     }
     return agcStatus;
+}
+
+void LocApiV02::onDbtPosReportEvent(
+        const qmiLocEventDbtPositionReportIndMsgT_v02* pDbtPosReport)
+{
+    if (NULL == pDbtPosReport) {
+        LOC_LOGe("NULL pDbtPosReport");
+        return;
+    }
+
+    UlpLocation location;
+    memset(&location, 0, sizeof(location));
+    location.size = sizeof(location);
+
+    GpsLocationExtended locationExtended;
+    memset(&locationExtended, 0, sizeof(locationExtended));
+    locationExtended.size = sizeof(locationExtended);
+
+    const qmiLocDbtPositionStructT_v02 &dbtPos = pDbtPosReport->dbtPosition;
+
+    location.gpsLocation.flags |= LOC_GPS_LOCATION_HAS_LAT_LONG;
+    location.gpsLocation.latitude  = dbtPos.latitude;
+    location.gpsLocation.longitude = dbtPos.longitude;
+    location.gpsLocation.timestamp = dbtPos.timestampUtc;
+
+    if (dbtPos.altitudeWrtEllipsoid_valid) {
+        location.gpsLocation.flags |= LOC_GPS_LOCATION_HAS_ALTITUDE;
+        location.gpsLocation.altitude = dbtPos.altitudeWrtEllipsoid;
+    }
+
+    if (dbtPos.speedHorizontal_valid) {
+        location.gpsLocation.flags |= LOC_GPS_LOCATION_HAS_SPEED;
+        location.gpsLocation.speed = dbtPos.speedHorizontal;
+    }
+
+    if (dbtPos.heading_valid) {
+        location.gpsLocation.flags |= LOC_GPS_LOCATION_HAS_BEARING;
+        location.gpsLocation.bearing = dbtPos.heading;
+    }
+
+    float unc = sqrt((dbtPos.horUncEllipseSemiMinor * dbtPos.horUncEllipseSemiMinor) +
+                     (dbtPos.horUncEllipseSemiMajor * dbtPos.horUncEllipseSemiMajor)) /
+                     sqrt(2.0f);
+    location.gpsLocation.flags |= LOC_GPS_LOCATION_HAS_ACCURACY;
+    location.gpsLocation.accuracy = unc;
+
+    if (pDbtPosReport->headingUnc_valid) {
+        locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_BEARING_UNC;
+        locationExtended.bearing_unc = pDbtPosReport->headingUnc;
+    }
+
+    if (pDbtPosReport->speedUnc_valid) {
+        locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_SPEED_UNC;
+        locationExtended.speed_unc = pDbtPosReport->speedUnc;
+    }
+
+    LocPosTechMask techMask = LOC_POS_TECH_MASK_DEFAULT;
+    if (pDbtPosReport->positionSrc_valid) {
+        switch (pDbtPosReport->positionSrc) {
+        case eQMI_LOC_POSITION_SRC_GNSS_V02:
+            techMask = LOC_POS_TECH_MASK_SATELLITE;
+            break;
+        case eQMI_LOC_POSITION_SRC_CELLID_V02:
+        case eQMI_LOC_POSITION_SRC_ENH_CELLID_V02:
+            techMask = LOC_POS_TECH_MASK_CELLID;
+            break;
+        case eQMI_LOC_POSITION_SRC_WIFI_V02:
+            techMask = LOC_POS_TECH_MASK_WIFI;
+            break;
+        default:
+            techMask = LOC_POS_TECH_MASK_DEFAULT;
+            break;
+        }
+    }
+
+    LOC_LOGd("DBT position: lat=%f lon=%f unc=%f posType=%d",
+             location.gpsLocation.latitude,
+             location.gpsLocation.longitude,
+             location.gpsLocation.accuracy,
+             pDbtPosReport->positionType);
+
+    LocApiBase::reportDBTPosition(location, locationExtended,
+                                  LOC_SESS_INTERMEDIATE, techMask);
 }

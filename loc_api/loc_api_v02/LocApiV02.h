@@ -449,6 +449,9 @@ private:
   void updateGnssCapabNotification(GnssCapabNotification& gnssCapabNotification,
                                    qmiLocGnssSignalTypeMaskT_v02 gnssSignalType);
 
+  void onDbtPosReportEvent(
+        const qmiLocEventDbtPositionReportIndMsgT_v02* pDbtPosReport);
+
 protected:
   virtual enum loc_api_adapter_err
     open(LOC_API_ADAPTER_EVENT_MASK_T mask);
@@ -476,6 +479,9 @@ public:
   void startTimeBasedTracking(const TrackingOptions& options, LocApiResponse* adapterResponse);
   void stopTimeBasedTracking(LocApiResponse* adapterResponse);
   void stopTimeBasedTrackingSync(LocApiResponse* adapterResponse);
+  void startDistanceBasedTracking(uint32_t sessionId, const LocationOptions& options,
+         LocApiResponse* adapterResponse);
+  void stopDistanceBasedTracking(uint32_t sessionId, LocApiResponse* adapterResponse);
 
   // Batching
   void startBatching(uint32_t sessionId, const LocationOptions& options, uint32_t accuracy,
