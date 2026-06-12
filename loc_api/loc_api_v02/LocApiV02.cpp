@@ -8273,11 +8273,9 @@ void LocApiV02::batchStatusEvent(const qmiLocEventBatchingStatusIndMsgT_v02* bat
 void LocApiV02::geofenceBreachEvent(const qmiLocEventGeofenceBatchedBreachIndMsgT_v02* breachInfo) {
     if (NULL == breachInfo)
         return;
-
     int64_t timestamp = time(NULL); // get the current time
     Location location;
     memset(&location, 0, sizeof(Location));
-
     if (breachInfo->geofencePosition_valid) {
         // Latitude & Longitude
         location.flags |= LOCATION_HAS_LAT_LONG_BIT;
@@ -8291,31 +8289,25 @@ void LocApiV02::geofenceBreachEvent(const qmiLocEventGeofenceBatchedBreachIndMsg
         }
         else {
             // latitdue and longitude must be in wrong format, so convert
-            location.latitude  = breachInfo->geofencePosition.latitude *
-                                 LAT_LONG_TO_RADIANS;
-            location.longitude = breachInfo->geofencePosition.longitude *
-                                 LAT_LONG_TO_RADIANS;
+            location.latitude  = breachInfo->geofencePosition.latitude * LAT_LONG_TO_RADIANS;
+            location.longitude = breachInfo->geofencePosition.longitude * LAT_LONG_TO_RADIANS;
         }
 
         // Time stamp (UTC)
         location.timestamp = breachInfo->geofencePosition.timestampUtc;
-
         // Altitude
         location.flags |= LOCATION_HAS_ALTITUDE_BIT;
         location.altitude = breachInfo->geofencePosition.altitudeWrtEllipsoid;
-
         // Speed
         if (breachInfo->geofencePosition.speedHorizontal_valid == 1) {
             location.flags |= LOCATION_HAS_SPEED_BIT;
             location.speed = breachInfo->geofencePosition.speedHorizontal;
         }
-
         // Heading
         if (breachInfo->geofencePosition.heading_valid == 1) {
             location.flags |= LOCATION_HAS_BEARING_BIT;
             location.bearing = breachInfo->geofencePosition.heading;
         }
-
         // Uncertainty (circular)
         location.flags |= LOCATION_HAS_ACCURACY_BIT;
         location.accuracy = sqrt(
@@ -8323,12 +8315,8 @@ void LocApiV02::geofenceBreachEvent(const qmiLocEventGeofenceBatchedBreachIndMsg
             breachInfo->geofencePosition.horUncEllipseSemiMinor) +
             (breachInfo->geofencePosition.horUncEllipseSemiMajor *
             breachInfo->geofencePosition.horUncEllipseSemiMajor));
-
         location.techMask = LOCATION_TECHNOLOGY_GNSS_BIT;
-
-        LOC_LOGv("latitude=%8.2f longitude=%8.2f ",
-                 location.latitude, location.longitude);
-
+        LOC_LOGv("latitude=%8.5f longitude=%8.5f ", location.latitude, location.longitude);
     } else {
        LOC_LOGe("NO Location ");
     }
