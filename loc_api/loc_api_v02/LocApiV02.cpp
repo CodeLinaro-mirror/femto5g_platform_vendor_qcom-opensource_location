@@ -2457,17 +2457,6 @@ void LocApiV02::reportPosition (const qmiLocEventPositionReportIndMsgT_v02 *loca
             LOC_LOGa("no dgnss station id");
         }
 
-        if (location_report_ptr->payload_valid) {
-            locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_EXTENDED_DATA;
-            locationExtended.extendedDataLen = location_report_ptr->payload_len;
-            if (locationExtended.extendedDataLen <= sizeof(locationExtended.extendedData)) {
-                memcpy(locationExtended.extendedData,
-                        location_report_ptr->payload,
-                        location_report_ptr->payload_len);
-            }
-
-        }
-
         if (location_report_ptr->systemTick_valid &&
                 location_report_ptr->systemTickUnc_valid) {
             locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_SYSTEM_TICK;

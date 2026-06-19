@@ -108,7 +108,6 @@ class TrackingSessCbHandler {
                         ::GnssLocationInfoNotification* engineLocationInfoNotification) {
 
                     std::vector<GnssLocation> engLocationsVector;
-                    std::vector<uint8_t> extendedDataVector;
                     for (int i=0; i< count; i++) {
                         GnssLocation gnssLocation =
                             LocationClientApiImpl::parseLocationInfo(
@@ -116,31 +115,8 @@ class TrackingSessCbHandler {
                         engLocationsVector.push_back(gnssLocation);
                         pClientApiImpl->logLocation(gnssLocation,
                                                     LOC_REPORT_TRIGGER_ENGINE_TRACKING_SESSION);
-                        if ((LOC_OUTPUT_ENGINE_SPE == gnssLocation.locOutputEngType) &&
-                                 extendedLocDataCb) {
-                            const ::GnssLocationInfoNotification &halLocationInfo =
-                                    engineLocationInfoNotification[i];
-
-                            if ((halLocationInfo.flags &
-                                    LDT_GNSS_LOCATION_INFO_EXTENDED_DATA_BIT) &&
-                                    halLocationInfo.extendedDataLen > 0) {
-                                //Copy extendedData to extendedDatastr
-                                if (halLocationInfo.extendedDataLen <= sizeof(
-                                        halLocationInfo.extendedData)) {
-                                    extendedDataVector.insert(extendedDataVector.end(),
-                                            &halLocationInfo.extendedData[0],
-                                            &halLocationInfo.extendedData[
-                                                    halLocationInfo.extendedDataLen]);
-                                }
-                            }
-                        }
                     }
                     engineLocCb(engLocationsVector);
-                    // Call ExtendedData Data callback
-                    if (extendedLocDataCb && extendedDataVector.size() > 0) {
-                        pClientApiImpl->getLogger().log(1, extendedDataVector);
-                        extendedLocDataCb(extendedDataVector);
-                    }
                 };
             }
             if (!engineReportCbs.nmeaSentencesCallback && !engineReportCbs.engineNmeaCallback
