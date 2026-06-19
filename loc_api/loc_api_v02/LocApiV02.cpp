@@ -71,7 +71,6 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sstream>
 #include <math.h>
 #include <dlfcn.h>
 #include <algorithm>
@@ -86,9 +85,273 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "loc_pla.h"
 #include <loc_cfg.h>
 #include <LocContext.h>
+#include <cfloat>
 
 using namespace std;
 using namespace loc_core;
+
+/* speed of light */
+#define SPEED_OF_LIGHT          299792458.0
+// Optimization: replace string-keyed std::map with integer-keyed unordered containers.
+// Key encoding: (gnssSignalType << 16) | gnssSvId
+// This redefines CycleSlipCountMap for this .cpp only; LocApiV02.h must also change the
+// member declarations from std::map<std::string,...> to std::unordered_map<uint64_t,...>
+// and add: std::unordered_set<uint64_t> m1HzFreshSvSet;
+//using CycleSlipCountMap = std::unordered_map<uint64_t, MeasCacheInfo>;
+
+// ---------------------------------------------------------------------------
+// Precomputed carrier wavelength tables  zero runtime cost per SV.
+//
+// Fixed-frequency signals: indexed by __builtin_ctzll(signalTypeMask).
+// A zero entry means the signal type is unknown or GLONASS (handled separately).
+//
+// GLONASS: indexed by gloFrequency slot [0..14].
+//   Index 0  = slot not in 1-14 range ? base channel centre frequency.
+//   Index k  = slot k (k = 114).
+// ---------------------------------------------------------------------------
+static constexpr int kGloSlots = 15; // indices 0..14
+
+// Build the fixed-signal wavelength table at compile time.
+// The QMI signal type mask is a single-bit uint64_t; the bit position (ctzll)
+// is used as the table index.  We cover all 22 bits used by the modem.
+// Entries for GLONASS bit positions are left 0.0  handled by the GLO tables.
+static constexpr double kFixedWavelength[22] = {
+    // bit 0  QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L1CA_V02
+    SPEED_OF_LIGHT / GPS_L1CA_CARRIER_FREQUENCY,
+    // bit 1  QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L1C_V02
+    SPEED_OF_LIGHT / GPS_L1C_CARRIER_FREQUENCY,
+    // bit 2  QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L2C_L_V02
+    SPEED_OF_LIGHT / GPS_L2C_L_CARRIER_FREQUENCY,
+    // bit 3  QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L5_Q_V02
+    SPEED_OF_LIGHT / GPS_L5_Q_CARRIER_FREQUENCY,
+    // bit 4  QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GLONASS_G1_V02   see kGloG1Wavelength
+    0.0,
+    // bit 5  QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GLONASS_G2_V02   see kGloG2Wavelength
+    0.0,
+    // bit 6  QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GALILEO_E1_C_V02
+    SPEED_OF_LIGHT / GALILEO_E1_C_CARRIER_FREQUENCY,
+    // bit 7  QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GALILEO_E5A_Q_V02
+    SPEED_OF_LIGHT / GALILEO_E5A_Q_CARRIER_FREQUENCY,
+    // bit 8  QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GALILEO_E5B_Q_V02
+    SPEED_OF_LIGHT / GALILEO_E5B_Q_CARRIER_FREQUENCY,
+    // bit 9  QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B1_I_V02
+    SPEED_OF_LIGHT / BEIDOU_B1_I_CARRIER_FREQUENCY,
+    // bit 10 QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B1C_V02
+    SPEED_OF_LIGHT / BEIDOU_B1C_CARRIER_FREQUENCY,
+    // bit 11 QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2_I_V02
+    SPEED_OF_LIGHT / BEIDOU_B2_I_CARRIER_FREQUENCY,
+    // bit 12 QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2A_I_V02
+    SPEED_OF_LIGHT / BEIDOU_B2A_I_CARRIER_FREQUENCY,
+    // bit 13 QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1CA_V02
+    SPEED_OF_LIGHT / QZSS_L1CA_CARRIER_FREQUENCY,
+    // bit 14 QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1S_V02
+    SPEED_OF_LIGHT / QZSS_L1S_CARRIER_FREQUENCY,
+    // bit 15 QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L2C_L_V02
+    SPEED_OF_LIGHT / QZSS_L2C_L_CARRIER_FREQUENCY,
+    // bit 16 QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L5_Q_V02
+    SPEED_OF_LIGHT / QZSS_L5_Q_CARRIER_FREQUENCY,
+    // bit 17 QMI_LOC_MASK_GNSS_SIGNAL_TYPE_SBAS_L1_CA_V02
+    SPEED_OF_LIGHT / SBAS_L1_CA_CARRIER_FREQUENCY,
+    // bit 18 QMI_LOC_MASK_GNSS_SIGNAL_TYPE_NAVIC_L5_V02
+    SPEED_OF_LIGHT / NAVIC_L5_CARRIER_FREQUENCY,
+    // bit 19 QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2A_Q_V02
+    SPEED_OF_LIGHT / BEIDOU_B2A_Q_CARRIER_FREQUENCY,
+    // bit 20  reserved/unknown
+    0.0,
+    // bit 21  reserved/unknown
+    0.0,
+};
+
+// GLONASS G1: f(k) = GLONASS_G1_CARRIER_FREQUENCY + (k-8)*562500 Hz
+// Index 0 = slot out of range (use base frequency centre, k=8 offset ? k-8=0)
+static constexpr double kGloG1Wavelength[kGloSlots] = {
+    SPEED_OF_LIGHT / GLONASS_G1_CARRIER_FREQUENCY,             // slot 0  (base)
+    SPEED_OF_LIGHT / (GLONASS_G1_CARRIER_FREQUENCY + (1-8)*562500.0),  // slot 1
+    SPEED_OF_LIGHT / (GLONASS_G1_CARRIER_FREQUENCY + (2-8)*562500.0),  // slot 2
+    SPEED_OF_LIGHT / (GLONASS_G1_CARRIER_FREQUENCY + (3-8)*562500.0),  // slot 3
+    SPEED_OF_LIGHT / (GLONASS_G1_CARRIER_FREQUENCY + (4-8)*562500.0),  // slot 4
+    SPEED_OF_LIGHT / (GLONASS_G1_CARRIER_FREQUENCY + (5-8)*562500.0),  // slot 5
+    SPEED_OF_LIGHT / (GLONASS_G1_CARRIER_FREQUENCY + (6-8)*562500.0),  // slot 6
+    SPEED_OF_LIGHT / (GLONASS_G1_CARRIER_FREQUENCY + (7-8)*562500.0),  // slot 7
+    SPEED_OF_LIGHT / (GLONASS_G1_CARRIER_FREQUENCY + (8-8)*562500.0),  // slot 8
+    SPEED_OF_LIGHT / (GLONASS_G1_CARRIER_FREQUENCY + (9-8)*562500.0),  // slot 9
+    SPEED_OF_LIGHT / (GLONASS_G1_CARRIER_FREQUENCY + (10-8)*562500.0), // slot 10
+    SPEED_OF_LIGHT / (GLONASS_G1_CARRIER_FREQUENCY + (11-8)*562500.0), // slot 11
+    SPEED_OF_LIGHT / (GLONASS_G1_CARRIER_FREQUENCY + (12-8)*562500.0), // slot 12
+    SPEED_OF_LIGHT / (GLONASS_G1_CARRIER_FREQUENCY + (13-8)*562500.0), // slot 13
+    SPEED_OF_LIGHT / (GLONASS_G1_CARRIER_FREQUENCY + (14-8)*562500.0), // slot 14
+};
+
+// GLONASS G2: f(k) = GLONASS_G2_CARRIER_FREQUENCY + (k-8)*437500 Hz
+static constexpr double kGloG2Wavelength[kGloSlots] = {
+    SPEED_OF_LIGHT / GLONASS_G2_CARRIER_FREQUENCY,             // slot 0  (base)
+    SPEED_OF_LIGHT / (GLONASS_G2_CARRIER_FREQUENCY + (1-8)*437500.0),  // slot 1
+    SPEED_OF_LIGHT / (GLONASS_G2_CARRIER_FREQUENCY + (2-8)*437500.0),  // slot 2
+    SPEED_OF_LIGHT / (GLONASS_G2_CARRIER_FREQUENCY + (3-8)*437500.0),  // slot 3
+    SPEED_OF_LIGHT / (GLONASS_G2_CARRIER_FREQUENCY + (4-8)*437500.0),  // slot 4
+    SPEED_OF_LIGHT / (GLONASS_G2_CARRIER_FREQUENCY + (5-8)*437500.0),  // slot 5
+    SPEED_OF_LIGHT / (GLONASS_G2_CARRIER_FREQUENCY + (6-8)*437500.0),  // slot 6
+    SPEED_OF_LIGHT / (GLONASS_G2_CARRIER_FREQUENCY + (7-8)*437500.0),  // slot 7
+    SPEED_OF_LIGHT / (GLONASS_G2_CARRIER_FREQUENCY + (8-8)*437500.0),  // slot 8
+    SPEED_OF_LIGHT / (GLONASS_G2_CARRIER_FREQUENCY + (9-8)*437500.0),  // slot 9
+    SPEED_OF_LIGHT / (GLONASS_G2_CARRIER_FREQUENCY + (10-8)*437500.0), // slot 10
+    SPEED_OF_LIGHT / (GLONASS_G2_CARRIER_FREQUENCY + (11-8)*437500.0), // slot 11
+    SPEED_OF_LIGHT / (GLONASS_G2_CARRIER_FREQUENCY + (12-8)*437500.0), // slot 12
+    SPEED_OF_LIGHT / (GLONASS_G2_CARRIER_FREQUENCY + (13-8)*437500.0), // slot 13
+    SPEED_OF_LIGHT / (GLONASS_G2_CARRIER_FREQUENCY + (14-8)*437500.0), // slot 14
+};
+
+// ---------------------------------------------------------------------------
+// Compile-time contract: assert every QMI signal-type bit position that the
+// wavelength tables above depend on.  If the HLOS-side QMI header changes a
+// mask value this file will fail to compile with a clear message identifying
+// which bit moved.  A matching runtime check in signalTypeBitIndex() (below)
+// covers the complementary modem/HLOS binary mismatch case where modem
+// firmware introduces a new or shifted signal type while the HLOS binary
+// remains on an older image.
+// ---------------------------------------------------------------------------
+static constexpr int kSignalTypeBitCount = 22; // must equal kFixedWavelength size
+
+static_assert(__builtin_ctzll(QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L1CA_V02)      == 0,
+              "kFixedWavelength index mismatch: GPS_L1CA must be bit 0");
+static_assert(__builtin_ctzll(QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L1C_V02)       == 1,
+              "kFixedWavelength index mismatch: GPS_L1C must be bit 1");
+static_assert(__builtin_ctzll(QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L2C_L_V02)     == 2,
+              "kFixedWavelength index mismatch: GPS_L2C must be bit 2");
+static_assert(__builtin_ctzll(QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L5_Q_V02)      == 3,
+              "kFixedWavelength index mismatch: GPS_L5 must be bit 3");
+static_assert(__builtin_ctzll(QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GLONASS_G1_V02)    == 4,
+              "kFixedWavelength index mismatch: GLO_G1 must be bit 4");
+static_assert(__builtin_ctzll(QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GLONASS_G2_V02)    == 5,
+              "kFixedWavelength index mismatch: GLO_G2 must be bit 5");
+static_assert(__builtin_ctzll(QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GALILEO_E1_C_V02)  == 6,
+              "kFixedWavelength index mismatch: GAL_E1 must be bit 6");
+static_assert(__builtin_ctzll(QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GALILEO_E5A_Q_V02) == 7,
+              "kFixedWavelength index mismatch: GAL_E5A must be bit 7");
+static_assert(__builtin_ctzll(QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GALILEO_E5B_Q_V02) == 8,
+              "kFixedWavelength index mismatch: GAL_E5B must be bit 8");
+static_assert(__builtin_ctzll(QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B1_I_V02)   == 9,
+              "kFixedWavelength index mismatch: BDS_B1I must be bit 9");
+static_assert(__builtin_ctzll(QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B1C_V02)    == 10,
+              "kFixedWavelength index mismatch: BDS_B1C must be bit 10");
+static_assert(__builtin_ctzll(QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2_I_V02)   == 11,
+              "kFixedWavelength index mismatch: BDS_B2I must be bit 11");
+static_assert(__builtin_ctzll(QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2A_I_V02)  == 12,
+              "kFixedWavelength index mismatch: BDS_B2AI must be bit 12");
+static_assert(__builtin_ctzll(QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1CA_V02)     == 13,
+              "kFixedWavelength index mismatch: QZSS_L1CA must be bit 13");
+static_assert(__builtin_ctzll(QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1S_V02)      == 14,
+              "kFixedWavelength index mismatch: QZSS_L1S must be bit 14");
+static_assert(__builtin_ctzll(QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L2C_L_V02)    == 15,
+              "kFixedWavelength index mismatch: QZSS_L2C must be bit 15");
+static_assert(__builtin_ctzll(QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L5_Q_V02)     == 16,
+              "kFixedWavelength index mismatch: QZSS_L5 must be bit 16");
+static_assert(__builtin_ctzll(QMI_LOC_MASK_GNSS_SIGNAL_TYPE_SBAS_L1_CA_V02)    == 17,
+              "kFixedWavelength index mismatch: SBAS_L1 must be bit 17");
+static_assert(__builtin_ctzll(QMI_LOC_MASK_GNSS_SIGNAL_TYPE_NAVIC_L5_V02)      == 18,
+              "kFixedWavelength index mismatch: NAVIC_L5 must be bit 18");
+static_assert(__builtin_ctzll(QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2A_Q_V02)  == 19,
+              "kFixedWavelength index mismatch: BDS_B2AQ must be bit 19");
+static_assert(sizeof(kFixedWavelength) / sizeof(kFixedWavelength[0]) == kSignalTypeBitCount,
+              "kFixedWavelength size must equal kSignalTypeBitCount");
+
+// Returns the bit index [0, kSignalTypeBitCount) for a single-bit QMI signal
+// type mask, or -1 if the value is not a recognised single-bit mask.
+//
+// Zero is returned as -1 silently (signal type simply absent).
+// A non-zero, non-single-bit, or out-of-range value triggers a one-time
+// LOC_LOGw  this is the runtime companion to the static_asserts above and
+// catches modem/HLOS binary mismatches that static_asserts cannot see.
+static inline int signalTypeBitIndex(qmiLocGnssSignalTypeMaskT_v02 signalType) {
+    if (signalType == 0) {
+        return -1;
+    }
+    if (__builtin_popcountll(signalType) != 1) {
+        static std::unordered_set<uint64_t> sWarnedMultiBit;
+        if (sWarnedMultiBit.find(signalType) == sWarnedMultiBit.end()) {
+            sWarnedMultiBit.insert(signalType);
+            LOC_LOGw("QMI signal type 0x%" PRIx64
+                     " is not a single-bit mask  modem/HLOS mismatch?", signalType);
+        }
+        return -1;
+    }
+    int idx = __builtin_ctzll(signalType);
+    if (idx >= kSignalTypeBitCount) {
+        static std::unordered_set<uint64_t> sWarnedOutOfRange;
+        if (sWarnedOutOfRange.find(signalType) == sWarnedOutOfRange.end()) {
+            sWarnedOutOfRange.insert(signalType);
+            LOC_LOGw("QMI signal type 0x%" PRIx64
+                     " bit index %d exceeds table size %d  new modem signal type?",
+                     signalType, idx, kSignalTypeBitCount);
+        }
+        return -1;
+    }
+    return idx;
+}
+
+// ---------------------------------------------------------------------------
+// Carrier-frequency table  parallel to kFixedWavelength, same bit-index scheme.
+// GLONASS entries (bits 4 and 5) are left 0.0f; the per-slot arithmetic in
+// convertSignalTypeToCarrierFrequency handles them using gloFrequency directly.
+// static_asserts reuse the per-bit guards above; only table size is rechecked.
+// ---------------------------------------------------------------------------
+static constexpr float kCarrierFreq[22] = {
+    GPS_L1CA_CARRIER_FREQUENCY,      // bit 0  GPS L1CA
+    GPS_L1C_CARRIER_FREQUENCY,       // bit 1  GPS L1C
+    GPS_L2C_L_CARRIER_FREQUENCY,     // bit 2  GPS L2C
+    GPS_L5_Q_CARRIER_FREQUENCY,      // bit 3  GPS L5
+    0.0f,                            // bit 4  GLONASS G1  handled via gloFrequency
+    0.0f,                            // bit 5  GLONASS G2  handled via gloFrequency
+    GALILEO_E1_C_CARRIER_FREQUENCY,  // bit 6  GAL E1
+    GALILEO_E5A_Q_CARRIER_FREQUENCY, // bit 7  GAL E5A
+    GALILEO_E5B_Q_CARRIER_FREQUENCY, // bit 8  GAL E5B
+    BEIDOU_B1_I_CARRIER_FREQUENCY,   // bit 9  BDS B1I
+    BEIDOU_B1C_CARRIER_FREQUENCY,    // bit 10 BDS B1C
+    BEIDOU_B2_I_CARRIER_FREQUENCY,   // bit 11 BDS B2I
+    BEIDOU_B2A_I_CARRIER_FREQUENCY,  // bit 12 BDS B2AI
+    QZSS_L1CA_CARRIER_FREQUENCY,     // bit 13 QZSS L1CA
+    QZSS_L1S_CARRIER_FREQUENCY,      // bit 14 QZSS L1S
+    QZSS_L2C_L_CARRIER_FREQUENCY,    // bit 15 QZSS L2C
+    QZSS_L5_Q_CARRIER_FREQUENCY,     // bit 16 QZSS L5
+    SBAS_L1_CA_CARRIER_FREQUENCY,    // bit 17 SBAS L1
+    NAVIC_L5_CARRIER_FREQUENCY,      // bit 18 NAVIC L5
+    BEIDOU_B2A_Q_CARRIER_FREQUENCY,  // bit 19 BDS B2AQ
+    0.0f,                            // bit 20 reserved
+    0.0f,                            // bit 21 reserved
+};
+static_assert(sizeof(kCarrierFreq) / sizeof(kCarrierFreq[0]) == kSignalTypeBitCount,
+              "kCarrierFreq size must equal kSignalTypeBitCount");
+
+// ---------------------------------------------------------------------------
+// QMI ? HAL signal type mask table  same bit-index scheme.
+// Zero entry means signal type has no direct HAL equivalent.
+// ---------------------------------------------------------------------------
+static constexpr GnssSignalTypeMask kQmiToGnssSignal[22] = {
+    GNSS_SIGNAL_GPS_L1CA,      // bit 0  GPS L1CA
+    GNSS_SIGNAL_GPS_L1C,       // bit 1  GPS L1C
+    GNSS_SIGNAL_GPS_L2,        // bit 2  GPS L2C
+    GNSS_SIGNAL_GPS_L5,        // bit 3  GPS L5
+    GNSS_SIGNAL_GLONASS_G1,    // bit 4  GLO G1
+    GNSS_SIGNAL_GLONASS_G2,    // bit 5  GLO G2
+    GNSS_SIGNAL_GALILEO_E1,    // bit 6  GAL E1
+    GNSS_SIGNAL_GALILEO_E5A,   // bit 7  GAL E5A
+    GNSS_SIGNAL_GALILEO_E5B,   // bit 8  GAL E5B
+    GNSS_SIGNAL_BEIDOU_B1I,    // bit 9  BDS B1I
+    GNSS_SIGNAL_BEIDOU_B1C,    // bit 10 BDS B1C
+    GNSS_SIGNAL_BEIDOU_B2I,    // bit 11 BDS B2I
+    GNSS_SIGNAL_BEIDOU_B2AI,   // bit 12 BDS B2AI
+    GNSS_SIGNAL_QZSS_L1CA,     // bit 13 QZSS L1CA
+    GNSS_SIGNAL_QZSS_L1S,      // bit 14 QZSS L1S
+    GNSS_SIGNAL_QZSS_L2,       // bit 15 QZSS L2C
+    GNSS_SIGNAL_QZSS_L5,       // bit 16 QZSS L5
+    GNSS_SIGNAL_SBAS_L1,       // bit 17 SBAS L1
+    GNSS_SIGNAL_NAVIC_L5,      // bit 18 NAVIC L5
+    GNSS_SIGNAL_BEIDOU_B2AQ,   // bit 19 BDS B2AQ
+    (GnssSignalTypeMask)0,     // bit 20 reserved
+    (GnssSignalTypeMask)0,     // bit 21 reserved
+};
+static_assert(sizeof(kQmiToGnssSignal) / sizeof(kQmiToGnssSignal[0]) == kSignalTypeBitCount,
+              "kQmiToGnssSignal size must equal kSignalTypeBitCount");
 
 /* Doppler Conversion from M/S to NS/S */
 #define MPS_TO_NSPS         (1.0/0.299792458)
@@ -131,9 +394,6 @@ using namespace loc_core;
 /* Num days elapsed since BDS started from GPS start day 1980->2006 */
 #define GPS_BDS_DAYS_DIFF           9492 // 1356 weeks
 #define GPS_BDS_LEAP_SECONDS_DIFF   14   // 14 leap seconds from 1980 to 2006
-
-/* speed of light */
-#define SPEED_OF_LIGHT          299792458.0
 
 #define MAX_SV_CNT_SUPPORTED_IN_ONE_CONSTELLATION 64
 
@@ -383,8 +643,8 @@ LocApiV02 :: LocApiV02(LOC_API_ADAPTER_EVENT_MASK_T exMask,
   m1HzMeasurementsInfo = {};
   mPrev1HzSlipCountMap.clear();
   mPrevNhzSlipCountMap.clear();
-  mCurrentCycleSlipCountMap1Hz.clear();
-  mCurrentCycleSlipCountMapNHz.clear();
+  mPrev1HzSlipCountMap.reserve(GNSS_MEASUREMENTS_MAX);
+  mPrevNhzSlipCountMap.reserve(GNSS_MEASUREMENTS_MAX);
 
   UTIL_READ_CONF(LOC_PATH_GPS_CONF, gps_conf_param_table);
 
@@ -2822,16 +3082,8 @@ enum loc_api_adapter_err LocApiV02 :: convertErr(
 bool LocApiV02::isMeasurementRefreshForSv(uint16_t gnssSvId,
         GnssSignalTypeMask gnssSignalTypeMask)
 {
-    if (m1HzMeasurementsInfo.measurements.size() > 0) {
-        for (auto measurement : m1HzMeasurementsInfo.measurements) {
-            if (measurement.svId == gnssSvId &&
-                    measurement.gnssSignalType == gnssSignalTypeMask) {
-                return true;
-            }
-        }
-    }
-
-    return false;
+    uint64_t key = ((uint64_t)gnssSignalTypeMask << 16) | gnssSvId;
+    return m1HzFreshSvSet.count(key) > 0;
 }
 
 bool LocApiV02::isTOAValid(const qmiLocEventPositionReportIndMsgT_v02 *location_report_ptr,
@@ -3210,6 +3462,7 @@ void LocApiV02 :: reportPosition (
         bool updateMeaAvailForPVTArray = !unpropagatedPosition &&
                 mQmiMask & QMI_LOC_EVENT_MASK_GNSS_MEASUREMENT_REPORT_V02 &&
                 isTOAValid(location_report_ptr, &m1HzMeasurementsInfo);
+        bool sufficientVisibility = false;
 
         if (((location_report_ptr->expandedGnssSvUsedList_valid) &&
                 (location_report_ptr->expandedGnssSvUsedList_len != 0)) ||
@@ -3241,7 +3494,6 @@ void LocApiV02 :: reportPosition (
             LOC_LOGv("sv length %d ", gnssSvUsedList_len);
 
             locationExtended.numOfMeasReceived = gnssSvUsedList_len;
-            memset(locationExtended.measUsageInfo, 0, sizeof(locationExtended.measUsageInfo));
             // Set of used_in_fix SV ID
             bool reported = LocApiBase::needReport(location,
                                                    (eQMI_LOC_SESS_STATUS_IN_PROGRESS_V02 ==
@@ -3455,38 +3707,46 @@ void LocApiV02 :: reportPosition (
                 // has measuremnt with QMI_LOC_MASK_MEAS_STATUS_GNSS_FRESH_MEAS_VALID
                 LOC_LOGv("gnssSvIdUsed %d gnssSignalTypeMask 0x%x",
                         gnssSvIdUsed, gnssSignalTypeMask);
-
                 if (updateMeaAvailForPVTArray &&
+                        !sufficientVisibility &&
+                        (int)m1HzFreshSvSet.size() >= MIN_REFRESH_MEASUREMENTS &&
                         isMeasurementRefreshForSv(gnssSvIdUsed, gnssSignalTypeMask))
                 {
+                    int constellationIdx = -1;
                     if (gnssSvIdUsed <= GPS_SV_PRN_MAX)
                     {
-                        meaAvailForPVT[eQMI_LOC_SV_SYSTEM_GPS_V02 - 1]++;
+                        constellationIdx = eQMI_LOC_SV_SYSTEM_GPS_V02 - 1;
                     }
                     else if ((gnssSvIdUsed >= GLO_SV_PRN_MIN) &&
                              (gnssSvIdUsed <= GLO_SV_PRN_MAX))
                     {
-                        meaAvailForPVT[eQMI_LOC_SV_SYSTEM_GLONASS_V02 - 1]++;
+                        constellationIdx = eQMI_LOC_SV_SYSTEM_GLONASS_V02 - 1;
                     }
                     else if ((gnssSvIdUsed >= BDS_SV_PRN_MIN) &&
                              (gnssSvIdUsed <= BDS_SV_PRN_MAX))
                     {
-                        meaAvailForPVT[eQMI_LOC_SV_SYSTEM_BDS_V02 - 1]++;
+                        constellationIdx = eQMI_LOC_SV_SYSTEM_BDS_V02 - 1;
                     }
                     else if ((gnssSvIdUsed >= GAL_SV_PRN_MIN) &&
                              (gnssSvIdUsed <= GAL_SV_PRN_MAX))
                     {
-                        meaAvailForPVT[eQMI_LOC_SV_SYSTEM_GALILEO_V02 - 1]++;
+                        constellationIdx = eQMI_LOC_SV_SYSTEM_GALILEO_V02 - 1;
                     }
                     else if ((gnssSvIdUsed >= QZSS_SV_PRN_MIN) &&
                              (gnssSvIdUsed <= QZSS_SV_PRN_MAX))
                     {
-                        meaAvailForPVT[eQMI_LOC_SV_SYSTEM_QZSS_V02 - 1]++;
+                        constellationIdx = eQMI_LOC_SV_SYSTEM_QZSS_V02 - 1;
                     }
                     else if ((gnssSvIdUsed >= NAVIC_SV_PRN_MIN) &&
                              (gnssSvIdUsed <= NAVIC_SV_PRN_MAX))
                     {
-                        meaAvailForPVT[eQMI_LOC_SV_SYSTEM_NAVIC_V02 - 1]++;
+                        constellationIdx = eQMI_LOC_SV_SYSTEM_NAVIC_V02 - 1;
+                    }
+                    if (constellationIdx >= 0) {
+                        meaAvailForPVT[constellationIdx]++;
+                        if (meaAvailForPVT[constellationIdx] >= MIN_REFRESH_MEASUREMENTS) {
+                            sufficientVisibility = true;
+                        }
                     }
                 }
             }
@@ -3708,102 +3968,19 @@ double LocApiV02::convertSignalTypeToCarrierFrequency(
     qmiLocGnssSignalTypeMaskT_v02 signalType,
     uint8_t gloFrequency)
 {
-    double carrierFrequency = 0.0;
-
-    LOC_LOGv("signalType = 0x%" PRIx64 , signalType);
-    switch (signalType) {
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L1CA_V02:
-        carrierFrequency = GPS_L1CA_CARRIER_FREQUENCY;
-        break;
-
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L1C_V02:
-        carrierFrequency = GPS_L1C_CARRIER_FREQUENCY;
-        break;
-
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L2C_L_V02:
-        carrierFrequency = GPS_L2C_L_CARRIER_FREQUENCY;
-        break;
-
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L5_Q_V02:
-        carrierFrequency = GPS_L5_Q_CARRIER_FREQUENCY;
-        break;
-
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GLONASS_G1_V02:
-        carrierFrequency = GLONASS_G1_CARRIER_FREQUENCY;
-        if ((gloFrequency >= 1 && gloFrequency <= 14)) {
-            carrierFrequency += ((gloFrequency - 8) * 562500.0);
-        }
-        LOC_LOGv("GLO carFreq after conversion = %f", carrierFrequency);
-        break;
-
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GLONASS_G2_V02:
-        carrierFrequency = GLONASS_G2_CARRIER_FREQUENCY;
-        if ((gloFrequency >= 1 && gloFrequency <= 14)) {
-            carrierFrequency += ((gloFrequency - 8) * 437500.0);
-        }
-        LOC_LOGv("GLO carFreq after conversion = %f", carrierFrequency);
-        break;
-
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GALILEO_E1_C_V02:
-        carrierFrequency = GALILEO_E1_C_CARRIER_FREQUENCY;
-        break;
-
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GALILEO_E5A_Q_V02:
-        carrierFrequency = GALILEO_E5A_Q_CARRIER_FREQUENCY;
-        break;
-
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GALILEO_E5B_Q_V02:
-        carrierFrequency = GALILEO_E5B_Q_CARRIER_FREQUENCY;
-        break;
-
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B1_I_V02:
-        carrierFrequency = BEIDOU_B1_I_CARRIER_FREQUENCY;
-        break;
-
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B1C_V02:
-        carrierFrequency = BEIDOU_B1C_CARRIER_FREQUENCY;
-        break;
-
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2_I_V02:
-        carrierFrequency = BEIDOU_B2_I_CARRIER_FREQUENCY;
-        break;
-
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2A_I_V02:
-        carrierFrequency = BEIDOU_B2A_I_CARRIER_FREQUENCY;
-        break;
-
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1CA_V02:
-        carrierFrequency = QZSS_L1CA_CARRIER_FREQUENCY;
-        break;
-
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1S_V02:
-        carrierFrequency = QZSS_L1S_CARRIER_FREQUENCY;
-        break;
-
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L2C_L_V02:
-        carrierFrequency = QZSS_L2C_L_CARRIER_FREQUENCY;
-        break;
-
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L5_Q_V02:
-        carrierFrequency = QZSS_L5_Q_CARRIER_FREQUENCY;
-        break;
-
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_SBAS_L1_CA_V02:
-        carrierFrequency = SBAS_L1_CA_CARRIER_FREQUENCY;
-        break;
-
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2A_Q_V02:
-        carrierFrequency = BEIDOU_B2A_Q_CARRIER_FREQUENCY;
-        break;
-
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_NAVIC_L5_V02:
-        carrierFrequency = NAVIC_L5_CARRIER_FREQUENCY;
-        break;
-
-    default:
-        break;
+    const int bit = signalTypeBitIndex(signalType);
+    if (bit < 0) {
+        return 0.0f;
     }
-    return carrierFrequency;
+    if (bit == 4) { // GLONASS G1
+        return GLONASS_G1_CARRIER_FREQUENCY +
+               ((gloFrequency >= 1 && gloFrequency <= 14) ? (gloFrequency - 8) * 562500.0f : 0.0f);
+    }
+    if (bit == 5) { // GLONASS G2
+        return GLONASS_G2_CARRIER_FREQUENCY +
+               ((gloFrequency >= 1 && gloFrequency <= 14) ? (gloFrequency - 8) * 437500.0f : 0.0f);
+    }
+    return kCarrierFreq[bit];
 }
 
 static GnssSignalTypeMask getDefaultGnssSignalTypeMask(qmiLocSvSystemEnumT_v02 qmiSvSystemType)
@@ -5683,16 +5860,13 @@ void LocApiV02::reportGnssMeasurementData(
         m1HzMeasurementsInfo.clock.flags = measInfo.clock.flags;
         m1HzMeasurementsInfo.clock.timeNs = measInfo.clock.timeNs;
         m1HzMeasurementsInfo.clock.fullBiasNs = measInfo.clock.fullBiasNs;
-        // Clear previous measurement data.
-        m1HzMeasurementsInfo.measurements.clear();
+        m1HzFreshSvSet.clear();
         for (int meas = 0; (meas < measInfo.count) && (meas < GNSS_MEASUREMENTS_MAX); meas++) {
-            GnssBasicMeasurementsData measurement = {};
-            measurement.svId = measInfo.measurements[meas].svId;
-            measurement.gnssSignalType = measInfo.measurements[meas].gnssSignalType;
-            m1HzMeasurementsInfo.measurements.push_back(std::move(measurement));
+            uint64_t key = ((uint64_t)measInfo.measurements[meas].gnssSignalType << 16) |
+                           measInfo.measurements[meas].svId;
+            m1HzFreshSvSet.insert(key);
         }
     }
-
 
     if (gnss_measurement_report_ptr.maxMessageNum == gnss_measurement_report_ptr.seqNum &&
         maxSubSeqNum == subSeqNum) {
@@ -5923,15 +6097,6 @@ void LocApiV02 ::reportSvMeasurementInternal() {
         if (mAgcIsPresent) {
             /* If we can get AGC from QMI LOC there is no need to get it from NMEA */
             mMsInWeek = -1;
-        }
-        if (mGnssMeasurements->gnssSvMeasurementSet.isNhz) {
-            mPrevNhzSlipCountMap = mCurrentCycleSlipCountMapNHz;
-            //Clear current epoch data
-            mCurrentCycleSlipCountMapNHz.clear();
-        } else {
-            mPrev1HzSlipCountMap = mCurrentCycleSlipCountMap1Hz;
-            //Clear current epoch data
-            mCurrentCycleSlipCountMap1Hz.clear();
         }
 
         mGnssMeasurements->gnssSvMeasurementSet.svMeasCount = mGnssMeasurements->gnssMeasNotification.count;
@@ -7106,6 +7271,23 @@ bool LocApiV02 :: convertGnssMeasurements(
     }
 
     // accumulatedDeltaRangeM
+    // Zero-cost wavelength lookup: precomputed constexpr tables, no division at runtime.
+    // signalTypeBitIndex() validates the modem-supplied mask and logs a one-time warning
+    // if the value is unrecognised (new modem signal type, or modem/HLOS binary mismatch).
+    double carrierWavelengthMeters = 0.0;
+    const qmiLocGnssSignalTypeMaskT_v02 sigType = gnss_measurement_report_ptr.gnssSignalType;
+    const int sigBit = signalTypeBitIndex(sigType);
+    if (sigBit >= 0) {
+        if (sigBit == 4) { // GLONASS G1
+            const uint8_t slot = gnss_measurement_info.gloFrequency;
+            carrierWavelengthMeters = kGloG1Wavelength[slot < kGloSlots ? slot : 0];
+        } else if (sigBit == 5) { // GLONASS G2
+            const uint8_t slot = gnss_measurement_info.gloFrequency;
+            carrierWavelengthMeters = kGloG2Wavelength[slot < kGloSlots ? slot : 0];
+        } else {
+            carrierWavelengthMeters = kFixedWavelength[sigBit];
+        }
+    }
     if (gnss_measurement_info.validMask & QMI_LOC_SV_CARRIER_PHASE_VALID_V02) {
         measurementData.carrierPhase = gnss_measurement_info.carrierPhase;
         measurementData.flags |= GNSS_MEASUREMENTS_DATA_CARRIER_PHASE_BIT;
@@ -7113,8 +7295,7 @@ bool LocApiV02 :: convertGnssMeasurements(
             (validMeasStatus & QMI_LOC_MASK_MEAS_STATUS_LP_POS_VALID_V02)) {
             measurementData.carrierPhase += 0.5;
         }
-        measurementData.adrMeters =
-            (SPEED_OF_LIGHT / measurementData.carrierFrequencyHz) * measurementData.carrierPhase;
+        measurementData.adrMeters = carrierWavelengthMeters * measurementData.carrierPhase;
         LOC_LOGv("carrierPhase = %.2f adrMeters = %.2f",
                  measurementData.carrierPhase,
                  measurementData.adrMeters);
@@ -7131,8 +7312,7 @@ bool LocApiV02 :: convertGnssMeasurements(
     // accumulatedDeltaRangeUncertaintyM
     if (!isExt) {
         if (gnss_measurement_report_ptr.svCarrierPhaseUncertainty_valid) {
-            measurementData.adrUncertaintyMeters =
-                (SPEED_OF_LIGHT / measurementData.carrierFrequencyHz) *
+            measurementData.adrUncertaintyMeters = carrierWavelengthMeters *
                 gnss_measurement_report_ptr.svCarrierPhaseUncertainty[index];
             LOC_LOGv("carrierPhaseUnc = %.6f adrMetersUnc = %.6f",
                      gnss_measurement_report_ptr.svCarrierPhaseUncertainty[index],
@@ -7142,8 +7322,7 @@ bool LocApiV02 :: convertGnssMeasurements(
         }
     } else {
         if (gnss_measurement_report_ptr.extSvCarrierPhaseUncertainty_valid) {
-            measurementData.adrUncertaintyMeters =
-                (SPEED_OF_LIGHT / measurementData.carrierFrequencyHz) *
+            measurementData.adrUncertaintyMeters = carrierWavelengthMeters *
                 gnss_measurement_report_ptr.extSvCarrierPhaseUncertainty[index];
             LOC_LOGv("extCarrierPhaseUnc = %.6f adrMetersUnc = %.6f",
                      gnss_measurement_report_ptr.extSvCarrierPhaseUncertainty[index],
@@ -7162,31 +7341,30 @@ bool LocApiV02 :: convertGnssMeasurements(
 
         uint8_t svIdFound = 1;
         int32_t refCountDiff = 0;
-        stringstream ss;
-        ss << gnss_measurement_report_ptr.gnssSignalType;
-        ss << "-";
-        ss << gnss_measurement_info.gnssSvId;
-        CycleSlipCountMapItr iter;
+        const uint64_t cycleSlipKey = ((uint64_t)gnss_measurement_report_ptr.gnssSignalType << 16) |
+                gnss_measurement_info.gnssSvId;
         CycleSlipCountMap &prevCntMapToUse = gnss_measurement_report_ptr.nHzMeasurement ? \
                 mPrevNhzSlipCountMap : mPrev1HzSlipCountMap;
         int32_t maxRefCntDiff = gnss_measurement_report_ptr.nHzMeasurement ? \
                 MAX_REFOUNT_DIFF_FOR_NHZ : MAX_REFOUNT_DIFF_FOR_1HZ;
 
-        iter = prevCntMapToUse.find(ss.str());
-        if (iter == prevCntMapToUse.end()) {
-            svIdFound = 0;
-        } else {
-            // found the SV ID with previous nhz data base
-            // Consider it as not available, if the abs(difference from prev FCount)
-            // is > 110 msec for Nhz
+        auto [iter, inserted] = prevCntMapToUse.emplace(cycleSlipKey, MeasCacheInfo{});
+
+        if (!inserted) {
+            // entry existed
             refCountDiff = gnss_measurement_report_ptr.systemTimeExt.refFCount -
-                    iter->second.refFCount;
+                           iter->second.refFCount;
             if (refCountDiff > maxRefCntDiff) {
                 svIdFound = 0;
                 LOC_LOGi("svID: %d refCountDiff: %d > %d , Not consider it",
-                       gnss_measurement_info.gnssSvId, refCountDiff, maxRefCntDiff);
+                         gnss_measurement_info.gnssSvId,
+                         refCountDiff, maxRefCntDiff);
             }
+        } else {
+            // new entry
+            svIdFound = 0;
         }
+
         if (svIdFound) {
             measurementData.adrStateMask &=
                     ~GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_RESET_BIT;
@@ -7200,16 +7378,10 @@ bool LocApiV02 :: convertGnssMeasurements(
                     GNSS_MEASUREMENTS_ACCUMULATED_DELTA_RANGE_STATE_CYCLE_SLIP_BIT;
 
         }
-        MeasCacheInfo measInfo = {};
-        measInfo.cycleSlipCount = gnss_measurement_info.cycleSlipCount;
-        measInfo.refFCount = gnss_measurement_report_ptr.systemTimeExt.refFCount;
 
-        if (gnss_measurement_report_ptr.nHzMeasurement) {
-            mCurrentCycleSlipCountMapNHz[ss.str()] = measInfo;
-        } else {
-            mCurrentCycleSlipCountMap1Hz[ss.str()] = measInfo;
-        }
-
+        // Update values (same path for both cases)
+        iter->second.cycleSlipCount = gnss_measurement_info.cycleSlipCount;
+        iter->second.refFCount = gnss_measurement_report_ptr.systemTimeExt.refFCount;
 
         if (validMeasStatus & QMI_LOC_MASK_MEAS_STATUS_LP_VALID_V02) {
             LOC_LOGv("measurement status has QMI_LOC_MASK_MEAS_STATUS_LP_VALID_V02 set");
@@ -7324,7 +7496,7 @@ bool LocApiV02 :: convertGnssMeasurements(
         measurementData.gnssSignalType =
                 convertQmiGnssSignalType(gnss_measurement_report_ptr.gnssSignalType);
     }
-
+#ifndef USE_GLIB
     // satellite PVT
     // find in svPolynomial in mSvPolynomialMap and extract it
     GnssSvPolynomial  svPolynomial = {};
@@ -7406,6 +7578,7 @@ bool LocApiV02 :: convertGnssMeasurements(
              measurementData.adrUncertaintyMeters,                              // %f
              measurementData.carrierFrequencyHz,                                // %f
              measurementData.codeType);                                         // %d
+#endif
     return bAgcIsPresent;
 }
 
@@ -11961,72 +12134,6 @@ void LocApiV02::convertGnssConestellationMask(
 
 GnssSignalTypeMask LocApiV02::convertQmiGnssSignalType(
         qmiLocGnssSignalTypeMaskT_v02 qmiGnssSignalType) {
-    GnssSignalTypeMask gnssSignalType = (GnssSignalTypeMask)0;
-
-    switch (qmiGnssSignalType) {
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L1CA_V02:
-        gnssSignalType = GNSS_SIGNAL_GPS_L1CA;
-        break;
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L1C_V02:
-        gnssSignalType = GNSS_SIGNAL_GPS_L1C;
-        break;
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L2C_L_V02:
-        gnssSignalType = GNSS_SIGNAL_GPS_L2;
-        break;
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L5_Q_V02:
-        gnssSignalType = GNSS_SIGNAL_GPS_L5;
-        break;
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GLONASS_G1_V02:
-        gnssSignalType = GNSS_SIGNAL_GLONASS_G1;
-        break;
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GLONASS_G2_V02:
-        gnssSignalType = GNSS_SIGNAL_GLONASS_G2;
-        break;
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GALILEO_E1_C_V02:
-        gnssSignalType = GNSS_SIGNAL_GALILEO_E1;
-        break;
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GALILEO_E5A_Q_V02:
-        gnssSignalType = GNSS_SIGNAL_GALILEO_E5A;
-        break;
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GALILEO_E5B_Q_V02:
-        gnssSignalType = GNSS_SIGNAL_GALILEO_E5B;
-        break;
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B1_I_V02:
-        gnssSignalType = GNSS_SIGNAL_BEIDOU_B1I;
-        break;
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B1C_V02:
-        gnssSignalType = GNSS_SIGNAL_BEIDOU_B1C;
-        break;
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2_I_V02:
-        gnssSignalType = GNSS_SIGNAL_BEIDOU_B2I;
-        break;
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2A_I_V02:
-        gnssSignalType = GNSS_SIGNAL_BEIDOU_B2AI;
-        break;
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1CA_V02:
-        gnssSignalType = GNSS_SIGNAL_QZSS_L1CA;
-        break;
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L1S_V02:
-        gnssSignalType =  GNSS_SIGNAL_QZSS_L1S;
-        break;
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L2C_L_V02:
-        gnssSignalType = GNSS_SIGNAL_QZSS_L2;
-        break;
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_QZSS_L5_Q_V02:
-        gnssSignalType = GNSS_SIGNAL_QZSS_L5;
-        break;
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_SBAS_L1_CA_V02:
-        gnssSignalType = GNSS_SIGNAL_SBAS_L1;
-        break;
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_NAVIC_L5_V02:
-        gnssSignalType = GNSS_SIGNAL_NAVIC_L5;
-        break;
-    case QMI_LOC_MASK_GNSS_SIGNAL_TYPE_BEIDOU_B2A_Q_V02:
-        gnssSignalType = GNSS_SIGNAL_BEIDOU_B2AQ;
-        break;
-    default:
-        break;
-    }
-
-    return gnssSignalType;
+    const int bit = signalTypeBitIndex(qmiGnssSignalType);
+    return (bit >= 0) ? kQmiToGnssSignal[bit] : (GnssSignalTypeMask)0;
 }

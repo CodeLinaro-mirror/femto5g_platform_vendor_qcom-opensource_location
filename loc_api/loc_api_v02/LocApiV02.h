@@ -71,6 +71,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <vector>
 #include <functional>
 #include <unordered_map>
+#include <unordered_set>
 
 #define LOC_SEND_SYNC_REQ(NAME, ID, REQ)  \
     int rv = true; \
@@ -189,7 +190,6 @@ typedef struct {
 typedef struct {
     /* clock info */
     GnssBasicClockInfo clock;
-    std::vector<GnssBasicMeasurementsData> measurements;
 } GnssBasicMeasurementsInfo;
 
 struct MeasCacheInfo {
@@ -197,7 +197,7 @@ struct MeasCacheInfo {
     uint32_t refFCount;
 };
 
-typedef std::unordered_map<std::string, MeasCacheInfo> CycleSlipCountMap;
+typedef std::unordered_map<uint64_t, MeasCacheInfo> CycleSlipCountMap;
 typedef CycleSlipCountMap::iterator CycleSlipCountMapItr;
 
 /* This class derives from the LocApiBase class.
@@ -223,8 +223,7 @@ private:
 
   CycleSlipCountMap mPrev1HzSlipCountMap;
   CycleSlipCountMap mPrevNhzSlipCountMap;
-  CycleSlipCountMap mCurrentCycleSlipCountMap1Hz;
-  CycleSlipCountMap mCurrentCycleSlipCountMapNHz;
+  std::unordered_set<uint64_t> m1HzFreshSvSet;
 
   GnssMeasurements*  mGnssMeasurements;
   int  mMsInWeek;
