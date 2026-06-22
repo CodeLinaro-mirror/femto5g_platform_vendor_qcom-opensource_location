@@ -233,6 +233,8 @@ private:
   // Dwell Time Allignment
   uint8_t mDwellAlignTimeMsValid;
   uint32_t mDwellAlignTimeMs;
+  // Boot timestamp in ms when stopTimeBasedTrackingSync was last called
+  uint64_t mLastSessionStopTimestampInMs;
 
   // Below two member variables are for elapsedRealTime calculation
   GnssMeasurementsNotification m1HzMeasurementsNotify;
