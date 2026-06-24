@@ -26,39 +26,9 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 /*
-Changes from Qualcomm Innovation Center are provided under the following license:
-
-Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted (subject to the limitations in the
-disclaimer below) provided that the following conditions are met:
-
-    * Redistributions of source code must retain the above copyright
-      notice, this list of conditions and the following disclaimer.
-
-    * Redistributions in binary form must reproduce the above
-      copyright notice, this list of conditions and the following
-      disclaimer in the documentation and/or other materials provided
-      with the distribution.
-
-    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
-      contributors may be used to endorse or promote products derived
-      from this software without specific prior written permission.
-
-NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
-WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
-GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
-IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
-OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+Changes from Qualcomm Technologies, Inc. are provided under the following license:
+Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
 // ============================================================================
@@ -78,9 +48,9 @@ enum LocationApiDataTypesVersion {
     // Major changes - compatibility breakage. Bump the first byte of version i.e. 1.x to 2.0
     LOCAPI_DATA_TYPES_VER_MAJOR = 1;
     // Minor - New features / API addition, new message/elemtent addition.
-    // Bump the last byte of version i.e. x.2 to x.3
-    // Minor version 52: Support External connectivity for XTRA
-    LOCAPI_DATA_TYPES_VER_MINOR = 52;
+    // Bump the last byte of version i.e. x.4 to x.5
+    // Minor version 56: Support Residual reporting
+    LOCAPI_DATA_TYPES_VER_MINOR = 56;
 }
 
 // ============================================================================
@@ -152,6 +122,8 @@ enum PBGnssSignalTypeMask {
     PB_GNSS_SIGNAL_BEIDOU_B2BQ_BIT         = 0x00800000;
     /** NAVIC L1 RF Band */
     PB_GNSS_SIGNAL_NAVIC_L1_BIT            = 0x01000000;
+    /** QZSS L1CB RF Band */
+    PB_GNSS_SIGNAL_QZSS_L1CB_BIT           = 0x02000000;
 }
 
 enum PBLocApiGnss_LocSvSystemEnumType {
@@ -758,6 +730,26 @@ enum PBGnssDataMask {
     PB_GNSS_LOC_DATA_AGC_BIT = 2;
 }
 
+enum PBGnssDataValidityMask {
+    PB_GNSS_LOC_DATA_VALIDITY_MASK_INVALID    = 0;
+    // Jammer Indicator Array is available
+    PB_GNSS_LOC_DATA_JAMMER_IND_ARRAY_BIT = 1;
+    // AGC Array is available
+    PB_GNSS_LOC_DATA_AGC_ARRAY_BIT = 2;
+    // AGC status for L1 band is available.
+    PB_GNSS_LOC_DATA_AGC_STATUS_L1_BIT = 3;
+    // AGC status for L2 band is available.
+    PB_GNSS_LOC_DATA_AGC_STATUS_L2_BIT = 4;
+    // AGC status for L5 band is available.
+    PB_GNSS_LOC_DATA_AGC_STATUS_L5_BIT = 5;
+    // GPS system time is available.
+    PB_GNSS_LOC_DATA_GPS_SYSTEM_TIME_BIT = 6;
+    // System Tick at GPS Time is available.
+    PB_GNSS_LOC_DATA_SYSTEM_TICK_AT_GPS_TIME_BIT = 7;
+    // Hardware clock frequency correction is available.
+    PB_GNSS_LOC_DATA_HW_CLK_FREQ_CORRECTION_BIT = 8;
+}
+
 enum PBLIALeverArmTypeMask {
     PB_LEVER_ARM_TYPE_INVALID = 0;
     // Lever arm regarding the VRP (Vehicle Reference Point) w.r.t
@@ -941,7 +933,7 @@ message PBLocApiGnssSv {
      *    - For GPS:     1 to 32
      *    - For GLONASS: 65 to 96
      *    - For SBAS:    120 to 158 and 183 to 191
-     *    - For QZSS:    193 to 197
+     *    - For QZSS:    193 to 202
      *    - For BDS:     201 to 237
      *    - For GAL:     301 to 336
      *    - For NAVIC:   401 to 414    */
@@ -1151,7 +1143,7 @@ message PBGnssLocationSvUsedInPosition {
     uint64 bdsSvUsedIdsMask = 4;
     /** Specify the set of SVs from QZSS constellation that are used
      *  to compute the position.
-     *  Bit 0 to Bit 4 corresponds to QZSS SV id 193 to 197.
+     *  Bit 0 to Bit 9 corresponds to QZSS SV id 193 to 202.
      *   */
     uint64 qzssSvUsedIdsMask = 5;
     /** Specify the set of SVs from NAVIC constellation that are used
@@ -1278,6 +1270,14 @@ message PBGnssDataNotification {
     PBAgcStatus agcStatusL2 = 6;
     // RF Automatic gain control status for L5 band
     PBAgcStatus agcStatusL5 = 7;
+    // bitwise OR of GnssDataMask.
+    uint64 gnssDataValidityMask = 8;
+    // GPS system time
+    PBLocApiGnssSystemTimeStructType gpsSystemTime = 9;
+    // System Tick at GPS time
+    uint64 systemTickAtGpsTime = 10;
+    // Hardware clock frequency correction
+    int32 hwClkFreqCorrection = 11;
 }
 
 message PBGnssMeasurementsNotification {
@@ -1996,10 +1996,7 @@ message PBGpsExtendedEphemeris {
     /**<   GNSS SV ID. \n
        Range:\n
        - GPS --     1 to 32 \n
-       - QZSS --    193 to 197 \n
-       - BDS --     201 to 263 \n
-       - Galileo -- 301 to 336 \n
-       - NavIC --   401 to 420 \n
+       - QZSS --    193 to 202 \n
     */
 
     uint32 validityMask = 2;
@@ -2254,11 +2251,7 @@ message PBBdsExtendedEphemeris {
     uint32 gnssSvId = 1;
     /**<   GNSS SV ID. \n
        Range:\n
-       - GPS --     1 to 32 \n
-       - QZSS --    193 to 197 \n
        - BDS --     201 to 263 \n
-       - Galileo -- 301 to 336 \n
-       - NavIC --   401 to 420 \n
     */
 
     uint32 validityMask = 2;
@@ -2630,4 +2623,244 @@ message PBNetworkInfoData {
     string country = 3;
     string mccmnc = 4;
 };
+
+/** Validity mask for SvResidualInfo fields */
+enum PBSvResidualInfoValidityMask {
+    PB_SV_RES_INVALID           = 0x00000000; // enum to start at 0
+    PB_SV_RES_PR_RES_VALID      = 0x00000001; // prRes is valid
+    PB_SV_RES_PR_UNC_VALID      = 0x00000002; // prUnc is valid
+    PB_SV_RES_CP_RES_VALID      = 0x00000004; // cpRes is valid
+    PB_SV_RES_CP_UNC_VALID      = 0x00000008; // cpUnc is valid
+    PB_SV_RES_DOPPLER_RES_VALID = 0x00000010; // dopplerRes is valid
+    PB_SV_RES_DOPPLER_UNC_VALID = 0x00000020; // dopplerUnc is valid
+    PB_SV_RES_IODE_VALID        = 0x00000040; // iode is valid
+    PB_SV_RES_GLO_TB_VALID      = 0x00000080; // gloTb is valid
+    PB_SV_RES_FREQ_NUM_VALID    = 0x00000100; // freqNum is valid
+    PB_SV_RES_CNO_VALID         = 0x00000200; // cNo is valid
+    PB_SV_RES_AZIM_VALID        = 0x00000400; // azim is valid
+    PB_SV_RES_ELEV_VALID        = 0x00000800; // elev is valid
+
+}
+
+/** Satellite residual information for a single SV */
+message PBSvResidualInfo {
+    /** Satellite ID
+     (GPS: 1-32, GLONASS: 65-96, QZSS: 193-202, BDS: 201-263, GAL: 301-336, NAVIC: 401-420) */
+    uint32 svId = 1;
+    /** GNSS signal type mask (see PBGnssSignalTypeMask) */
+    uint32 signalTypeMask = 2;
+    /** Bitwise OR of PBSvResidualInfoValidityMask indicating which fields are valid */
+    uint32 validityMask = 3;
+    /** Pseudorange residual (meters) */
+    float prRes = 4;
+    /** Pseudorange uncertainty (meters) */
+    float prUnc = 5;
+    /** Carrier phase residual (meters) */
+    float cpRes = 6;
+    /** Carrier phase uncertainty (meters) */
+    float cpUnc = 7;
+    /** Doppler residual (meters/second) */
+    float dopplerRes = 8;
+    /** Doppler uncertainty (meters/second) */
+    float dopplerUnc = 9;
+    /** Issue of Data Ephemeris (for GPS/BDS/GAL) */
+    uint32 iode = 10;
+    /** Tb for GLONASS SV */
+    uint32 gloTb = 11;
+    /** Frequency number for GLONASS SV (-7 ~ +6), invalid for other constellations */
+    int32 freqNum = 12;
+    /** SV carrier to noise ratio at antenna (dB-Hz) */
+    float cNo = 13;
+    /** SV azimuth (radians) */
+    double azim = 14;
+    /** SV elevation (radians) */
+    double elev = 15;
+
+}
+
+/** Validity mask for SvAvailableUsedInfo fields */
+enum PBSvAvailableUsedInfoValidityMask {
+    PB_SV_AVAIL_INVALID                    = 0x00000000;
+    PB_SV_AVAIL_GPS_NUM_SV_MEAS_VALID      = 0x00000001;
+    PB_SV_AVAIL_GPS_NUM_SV_POS_FIX_VALID   = 0x00000002;
+    PB_SV_AVAIL_GPS_NUM_SV_VEL_FIX_VALID   = 0x00000004;
+    PB_SV_AVAIL_GPS_SV_MASK_USED_VALID     = 0x00000008;
+    PB_SV_AVAIL_GLO_NUM_SV_MEAS_VALID      = 0x00000010;
+    PB_SV_AVAIL_GLO_NUM_SV_POS_FIX_VALID   = 0x00000020;
+    PB_SV_AVAIL_GLO_NUM_SV_VEL_FIX_VALID   = 0x00000040;
+    PB_SV_AVAIL_GLO_SV_MASK_USED_VALID     = 0x00000080;
+    PB_SV_AVAIL_BDS_NUM_SV_MEAS_VALID      = 0x00000100;
+    PB_SV_AVAIL_BDS_NUM_SV_POS_FIX_VALID   = 0x00000200;
+    PB_SV_AVAIL_BDS_NUM_SV_VEL_FIX_VALID   = 0x00000400;
+    PB_SV_AVAIL_BDS_SV_MASK_USED_VALID     = 0x00000800;
+    PB_SV_AVAIL_GAL_NUM_SV_MEAS_VALID      = 0x00001000;
+    PB_SV_AVAIL_GAL_NUM_SV_POS_FIX_VALID   = 0x00002000;
+    PB_SV_AVAIL_GAL_NUM_SV_VEL_FIX_VALID   = 0x00004000;
+    PB_SV_AVAIL_GAL_SV_MASK_USED_VALID     = 0x00008000;
+    PB_SV_AVAIL_QZSS_NUM_SV_MEAS_VALID     = 0x00010000;
+    PB_SV_AVAIL_QZSS_NUM_SV_POS_FIX_VALID  = 0x00020000;
+    PB_SV_AVAIL_QZSS_NUM_SV_VEL_FIX_VALID  = 0x00040000;
+    PB_SV_AVAIL_QZSS_SV_MASK_USED_VALID    = 0x00080000;
+    PB_SV_AVAIL_NAVIC_NUM_SV_MEAS_VALID    = 0x00100000;
+    PB_SV_AVAIL_NAVIC_NUM_SV_POS_FIX_VALID = 0x00200000;
+    PB_SV_AVAIL_NAVIC_NUM_SV_VEL_FIX_VALID = 0x00400000;
+    PB_SV_AVAIL_NAVIC_SV_MASK_USED_VALID   = 0x00800000;
+}
+
+/** SV available/used info for all constellations */
+message PBSvAvailableUsedInfo {
+    /** Bitwise OR of PBSvAvailableUsedInfoValidityMask indicating which fields are valid */
+    uint32 validityMask = 1;
+    /** Number of GPS SVs with valid measurement (detected by searcher) */
+    uint32 gpsNumSvMeas = 2;
+    /** Number of GPS SVs used in Position Fix */
+    uint32 gpsNumSvPosFix = 3;
+    /** Number of GPS SVs used in Velocity Fix */
+    uint32 gpsNumSvVelFix = 4;
+    /** Bitmask for GPS SVs used for calculating position fix */
+    uint64 gpsSvMaskUsed = 5;
+    /** Number of GLO SVs with valid measurement */
+    uint32 gloNumSvMeas = 6;
+    /** Number of GLO SVs used in Position Fix */
+    uint32 gloNumSvPosFix = 7;
+    /** Number of GLO SVs used in Velocity Fix */
+    uint32 gloNumSvVelFix = 8;
+    /** Bitmask for GLONASS SVs used for calculating position fix */
+    uint64 gloSvMaskUsed = 9;
+    /** Number of BDS SVs with valid measurement */
+    uint32 bdsNumSvMeas = 10;
+    /** Number of BDS SVs used in Position Fix */
+    uint32 bdsNumSvPosFix = 11;
+    /** Number of BDS SVs used in Velocity Fix */
+    uint32 bdsNumSvVelFix = 12;
+    /** Bitmask for BDS SVs used for calculating position fix */
+    uint64 bdsSvMaskUsed = 13;
+    /** Number of GAL SVs with valid measurement */
+    uint32 galNumSvMeas = 14;
+    /** Number of GAL SVs used in Position Fix */
+    uint32 galNumSvPosFix = 15;
+    /** Number of GAL SVs used in Velocity Fix */
+    uint32 galNumSvVelFix = 16;
+    /** Bitmask for GAL SVs used for calculating position fix */
+    uint64 galSvMaskUsed = 17;
+    /** Number of QZSS SVs with valid measurement */
+    uint32 qzssNumSvMeas = 18;
+    /** Number of QZSS SVs used in Position Fix */
+    uint32 qzssNumSvPosFix = 19;
+    /** Number of QZSS SVs used in Velocity Fix */
+    uint32 qzssNumSvVelFix = 20;
+    /** Bitmask for QZSS SVs used for calculating position fix */
+    uint64 qzssSvMaskUsed = 21;
+    /** Number of NAVIC SVs with valid measurement */
+    uint32 navicNumSvMeas = 22;
+    /** Number of NAVIC SVs used in Position Fix */
+    uint32 navicNumSvPosFix = 23;
+    /** Number of NAVIC SVs used in Velocity Fix */
+    uint32 navicNumSvVelFix = 24;
+    /** Bitmask for NAVIC SVs used for calculating position fix */
+    uint64 navicSvMaskUsed = 25;
+}
+
+/** Validity mask for ResidualPVTData fields */
+enum PBResidualPVTDataValidityMask {
+    /** Enum to start with zero*/
+    PB_RESIDUAL_INVALID                    = 0x00000000;
+    /** posLatRad is valid */
+    PB_RESIDUAL_POS_LAT_VALID              = 0x00000001;
+    /** posLonRad is valid */
+    PB_RESIDUAL_POS_LON_VALID              = 0x00000002;
+    /** posAltMeters is valid */
+    PB_RESIDUAL_POS_ALT_VALID              = 0x00000004;
+    /** velEast is valid */
+    PB_RESIDUAL_VEL_EAST_VALID             = 0x00000008;
+    /** velNorth is valid */
+    PB_RESIDUAL_VEL_NORTH_VALID            = 0x00000010;
+    /** velUp is valid */
+    PB_RESIDUAL_VEL_UP_VALID               = 0x00000020;
+    /** headingRad is valid */
+    PB_RESIDUAL_HEADING_VALID              = 0x00000040;
+    /** headingUncRad is valid */
+    PB_RESIDUAL_HEADING_UNC_VALID          = 0x00000080;
+    /** puncLatMeters is valid */
+    PB_RESIDUAL_PUNC_LAT_VALID             = 0x00000100;
+    /** puncLonMeters is valid */
+    PB_RESIDUAL_PUNC_LON_VALID             = 0x00000200;
+    /** puncVertMeters is valid */
+    PB_RESIDUAL_PUNC_VERT_VALID            = 0x00000400;
+    /** vuncEastMps is valid */
+    PB_RESIDUAL_VUNC_EAST_VALID            = 0x00000800;
+    /** vuncNorthMps is valid */
+    PB_RESIDUAL_VUNC_NORTH_VALID           = 0x00001000;
+    /** vuncVertMps is valid */
+    PB_RESIDUAL_VUNC_VERT_VALID            = 0x00002000;
+    /** clockBias is valid */
+    PB_RESIDUAL_CLOCK_BIAS_VALID           = 0x00004000;
+    /** clockBiasUncMs is valid */
+    PB_RESIDUAL_CLOCK_BIAS_UNC_VALID       = 0x00008000;
+    /** clockDriftRate is valid */
+    PB_RESIDUAL_CLOCK_DRIFT_RATE_VALID     = 0x00010000;
+    /** clockDriftRateUncMps is valid */
+    PB_RESIDUAL_CLOCK_DRIFT_RATE_UNC_VALID = 0x00020000;
+    /** pdop is valid */
+    PB_RESIDUAL_PDOP_VALID                 = 0x00040000;
+}
+
+/** Reference position for SV residuals */
+message PBResidualPVTData {
+    /** Validity mask for other fields in this structure */
+    uint32 validityMask = 1; // bitwise OR of PBResidualPVTDataValidityMask
+    /** Latitude (radians) */
+    double posLatRad = 2;
+    /** Longitude (radians) */
+    double posLonRad = 3;
+    /** Altitude (meters) */
+    double posAltMeters = 4;
+    /** East velocity (m/s) */
+    float velEast = 5;
+    /** North velocity (m/s) */
+    float velNorth = 6;
+    /** Up velocity (m/s) */
+    float velUp = 7;
+    /** Heading angle, [0, 2*pi] (rad). Referenced to North (0 rad) */
+    float headingRad = 8;
+    /** Heading uncertainty (rad) */
+    float headingUncRad = 9;
+    /** Position Latitude uncertainty (m)*/
+    float puncLatMeters = 10;
+    /** Position Longitude uncertainty (m)*/
+    float puncLonMeters = 11;
+    /** Vertical position uncertainty (m) */
+    float puncVertMeters = 12;
+    /** East velocity uncertainty (m/s) */
+    float vuncEastMps = 13;
+    /** North velocity uncertainty (m/s) */
+    float vuncNorthMps = 14;
+    /** Vertical velocity uncertainty (m/s) */
+    float vuncVertMps = 15;
+    /** Receiver's clock bias (meters) */
+    float clockBias = 16;
+    /** Receiver's clock uncertainty (meters) */
+    float clockBiasUncMs = 17;
+    /** Receiver's clock drift rate (m/s) */
+    float clockDriftRate = 18;
+    /** Receiver's clock frequency bias uncertainty (m/s) */
+    float clockDriftRateUncMps = 19;
+    /** Position Dilution of Precision (unitless) */
+    float pdop = 20;
+}
+
+/** GNSS SV Residual Report for all satellites in an epoch */
+message PBSvResidualReport {
+    /** Location engine type that produced this SV residual report. */
+    PBLocApiOutputEngineType locOutputEngType = 1;
+    /** GNSS system time information for the report. */
+    PBLocApiGnssSystemTime gnssSystemTime = 2;
+    /** Reference position for SV residuals */
+    PBResidualPVTData residualPvtData = 3;
+    /** Array of satellite residual info (size = number of SVs) */
+    repeated PBSvResidualInfo svResidualInfo = 4;
+    /** SV count information for all constellations */
+    PBSvAvailableUsedInfo svAvailableUsedInfo = 5;
+
+}
 
