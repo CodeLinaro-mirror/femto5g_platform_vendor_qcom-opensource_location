@@ -55,6 +55,7 @@
 #include "loc_pla.h"
 #include <loc_cfg.h>
 #include <LocContext.h>
+#include <loc_misc_utils.h>
 
 #ifdef PTP_SUPPORTED
 #include <gptp_helper.h>
@@ -329,6 +330,7 @@ LocApiV02 :: LocApiV02(LOC_API_ADAPTER_EVENT_MASK_T exMask,
     mIsGptpInitialized(false),
     mDwellAlignTimeMsValid(0),
     mDwellAlignTimeMs(0),
+    mLastSessionStopTimestampInMs(0),
     mPreferredSignalType(QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L1CA_V02),
     mPreferredSvSystemType(GNSS_SV_TYPE_GPS)
 {
@@ -591,11 +593,20 @@ locClientEventMaskType LocApiV02 :: adjustLocClientEventMask(locClientEventMaskT
     }
 
 #ifdef __ANDROID__
-    if (mInSession || mEngineOn) {
+    if (mInSession) {
         // if device is in session, always register for engine state
         // so that we can support full tracking mode in concurrent
         // measurement and position session
         qmiMask |= QMI_LOC_EVENT_MASK_ENGINE_STATE_V02;
+    } else if (mEngineOn) {
+        // if session just stopped but engine is still on, keep engine state
+        // registered for up to 5 seconds after session stop to avoid missing
+        // engine-off indication during quick stop/start scenarios
+        uint64_t currentBootTimestampMs = getBootTimeMilliSec();
+        if (currentBootTimestampMs >= mLastSessionStopTimestampInMs &&
+            currentBootTimestampMs - mLastSessionStopTimestampInMs < 5000) {
+            qmiMask |= QMI_LOC_EVENT_MASK_ENGINE_STATE_V02;
+        }
     }
 #endif
 
@@ -4876,11 +4887,11 @@ void LocApiV02 :: reportEngineState (
                   resender();
               }
               mpLocApiV02->mResenders.clear();
-              // update the registration mask upon receiving Engine state off
-              // as we have already flushed out the queue, and can un-register
-              // the ENGINE_STATE event
-              mpLocApiV02->registerEventMask();
           }
+          // update the registration mask upon receiving Engine state off
+          // as we have already flushed out the queue, and can un-register
+          // the ENGINE_STATE event
+          mpLocApiV02->registerEventMask();
       }
   };
 
@@ -6816,13 +6827,16 @@ bool LocApiV02 :: convertGnssMeasurements(
         bIsL5orE5 = true;
     }
 
+    measurementData.stateMask |= GNSS_MEASUREMENTS_STATE_MSEC_AMBIGUOUS_BIT;
     if (validMeasStatus & QMI_LOC_MASK_MEAS_STATUS_MS_VALID_V02) {
+        measurementData.stateMask &= ~GNSS_MEASUREMENTS_STATE_MSEC_AMBIGUOUS_BIT;
         /* sub-frame decode & TOW decode */
         measurementData.stateMask |= (GNSS_MEASUREMENTS_STATE_SUBFRAME_SYNC_BIT |
                                       GNSS_MEASUREMENTS_STATE_TOW_DECODED_BIT |
                                       GNSS_MEASUREMENTS_STATE_TOW_KNOWN_BIT |
                                       GNSS_MEASUREMENTS_STATE_BIT_SYNC_BIT |
                                       GNSS_MEASUREMENTS_STATE_CODE_LOCK_BIT);
+
         // GLO
         if (GNSS_SV_TYPE_GLONASS == measurementData.svType &&
             (bBandNotAvailable ||
@@ -7231,12 +7245,15 @@ bool LocApiV02 :: convertGnssMeasurements(
 int LocApiV02 :: convertGnssClock (GnssMeasurementsClock& clock,
     const qmiLocEventGnssSvMeasInfoIndMsgT_v02& gnss_measurement_info)
 {
-    static uint32_t oldRefFCount = 0;
-    static uint32_t newRefFCount = 0;
-    static uint32_t oldDiscCount = 0;
-    static uint32_t newDiscCount = 0;
-    static uint32_t localDiscCount = 0;
+    static uint32_t oldRefFCount[2] = {0, 0};
+    static uint32_t newRefFCount[2] = {0, 0};
+    static uint32_t oldDiscCount[2] = {0, 0};
+    static uint32_t newDiscCount[2] = {0, 0};
+    static uint32_t localDiscCount[2] = {0, 0};
     int msInWeek = -1;
+
+    // Index: 0 for normal, 1 for NHZ
+    int idx = gnss_measurement_info.nHzMeasurement ? 1 : 0;
 
     // size
     clock.size = sizeof(GnssMeasurementsClock);
@@ -7245,38 +7262,38 @@ int LocApiV02 :: convertGnssClock (GnssMeasurementsClock& clock,
     GnssMeasurementsClockFlagsMask flags = 0;
 
     if (gnss_measurement_info.systemTimeExt_valid && gnss_measurement_info.numClockResets_valid) {
-        newRefFCount = gnss_measurement_info.systemTimeExt.refFCount;
-        newDiscCount = gnss_measurement_info.numClockResets;
+        newRefFCount[idx] = gnss_measurement_info.systemTimeExt.refFCount;
+        newDiscCount[idx] = gnss_measurement_info.numClockResets;
         LOC_LOGa("mFirstMeasurementOfSessionReceived %d,"
-                 "new: ref cnt %d, disc count %d, old: ref cnt %d, disc count %d",
-                 mFirstMeasurementOfSessionReceived,
-                 newRefFCount, newDiscCount, oldRefFCount, oldDiscCount);
+                 "isNhz %d, new: ref cnt %d, disc count %d, old: ref cnt %d, disc count %d",
+                 mFirstMeasurementOfSessionReceived, idx,
+                 newRefFCount[idx], newDiscCount[idx], oldRefFCount[idx], oldDiscCount[idx]);
 
         mIsFullTracking = true;
         if ((true == mFirstMeasurementOfSessionReceived) &&
-                (newDiscCount != oldDiscCount)) {
+                (newDiscCount[idx] != oldDiscCount[idx])) {
             mIsFullTracking = false;
         }
 
         // refFCount roll over, increment local clock dist count to signal this
-        if (newRefFCount <= oldRefFCount) {
-           localDiscCount++;
+        if (newRefFCount[idx] <= oldRefFCount[idx]) {
+           localDiscCount[idx]++;
         } else if ((false == mFirstMeasurementOfSessionReceived) ||
-                   (newDiscCount != oldDiscCount)) {
+                   (newDiscCount[idx] != oldDiscCount[idx])) {
             // do not increment in full power mode
            if (GNSS_POWER_MODE_M1 != mPowerMode) {
-               localDiscCount++;
+               localDiscCount[idx]++;
            }
         }
 
         mFirstMeasurementOfSessionReceived = true;
-        oldDiscCount = newDiscCount;
-        oldRefFCount = newRefFCount;
+        oldDiscCount[idx] = newDiscCount[idx];
+        oldRefFCount[idx] = newRefFCount[idx];
 
         // timeNs & timeUncertaintyNs
         clock.timeNs = (int64_t)gnss_measurement_info.systemTimeExt.refFCount * 1e6;
         flags |= GNSS_MEASUREMENTS_CLOCK_FLAGS_TIME_BIT;
-        clock.hwClockDiscontinuityCount = localDiscCount;
+        clock.hwClockDiscontinuityCount = localDiscCount[idx];
         clock.timeUncertaintyNs = 0.0;
 
         flags |= (GNSS_MEASUREMENTS_CLOCK_FLAGS_TIME_BIT |
@@ -10260,14 +10277,27 @@ LocApiV02::startTimeBasedTracking(const TrackingOptions& options, LocApiResponse
 {
     sendMsg(new LocApiMsg([this, options, adapterResponse] () {
 
-    LOC_LOGI("startTimeBasedTracking: minInterval %u, mode %u",
-             options.minInterval, options.mode);
+    LOC_LOGI("startTimeBasedTracking: minInterval %u, mode %u, power mode %d, "
+             "prev in session %d, prev minInterval %u, prev power mode %u)",
+             options.minInterval, options.mode, options.powerMode,
+             mInSession, mMinInterval, mPowerMode);
     LocationError err = LOCATION_ERROR_SUCCESS;
 
     // BOOT KPI marker, print only once for a session
     if (false == mInSession) {
         loc_boot_kpi_marker("L - LocApiV02 startFix, tbf %d", options.minInterval);
+    } else {
+        // this logic is to fix below scenario:
+        // 1: device has an on-going M5 keep warm session
+        // 2: a non-M5 session comes in and then stops
+        // 3: device attempts to resume M5 session
+        // In this scenario, we need to issue stop to MP to avoid GPS engine kept on
+        // for extended amount of time
+        if ((mPowerMode != GNSS_POWER_MODE_M5) && (options.powerMode == GNSS_POWER_MODE_M5)) {
+            stopTimeBasedTrackingSync(nullptr);
+        }
     }
+
     mInSession = true;
     registerEventMask();
     setOperationMode(options.mode);
@@ -10917,8 +10947,13 @@ void
 LocApiV02::stopTimeBasedTracking(LocApiResponse* adapterResponse)
 {
     sendMsg(new LocApiMsg([this, adapterResponse] () {
+        stopTimeBasedTrackingSync(adapterResponse);
+    }));
+}
 
-    LOC_LOGD("stopTimeBasedTracking enter");
+void
+LocApiV02::stopTimeBasedTrackingSync(LocApiResponse* adapterResponse) {
+    LOC_LOGd("stopTimeBasedTracking enter");
     loc_boot_kpi_marker("L - LocApiV02 stop Fix session");
     LocationError err = LOCATION_ERROR_SUCCESS;
 
@@ -10931,9 +10966,11 @@ LocApiV02::stopTimeBasedTracking(LocApiResponse* adapterResponse)
 
     status = locClientSendReq(QMI_LOC_STOP_REQ_V02, req_union);
     if (status != eLOC_CLIENT_SUCCESS) {
-        LOC_LOGE ("stopTimeBasedTracking failed! status %d", status);
+        LOC_LOGe ("stopTimeBasedTracking failed! status %d", status);
         err = LOCATION_ERROR_GENERAL_FAILURE;
     } else {
+        // Record boot timestamp in ms when session stops
+        mLastSessionStopTimestampInMs = getBootTimeMilliSec();
         mIsFirstFinalFixReported = false;
         mInSession = false;
         mPowerMode = GNSS_POWER_MODE_DEFAULT;
@@ -10943,7 +10980,6 @@ LocApiV02::stopTimeBasedTracking(LocApiResponse* adapterResponse)
     if (adapterResponse != NULL) {
         adapterResponse->returnToSender(err);
     }
-    }));
 }
 
 void
