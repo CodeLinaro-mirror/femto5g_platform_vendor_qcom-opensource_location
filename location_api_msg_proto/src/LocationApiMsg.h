@@ -316,6 +316,9 @@ enum ELocMsgID {
     // Ephemeris Reporting
     E_LOCAPI_EPH_MSG_ID = 40,
 
+    // Residual Reporting
+    E_LOCAPI_RESIDUAL_REPORT_MSG_ID = 41,
+
     // ping
     E_LOCAPI_PINGTEST_MSG_ID = 99,
 
@@ -384,7 +387,8 @@ enum ELocationCallbacksOption {
     E_LOC_CB_GNSS_DC_REPORT_BIT         = (1<<13), /**< Register for disaster and crisis reports */
     E_LOC_CB_ANTENNA_INFO_BIT           = (1<<14), /**< Register for Antenna Info */
     E_LOC_CB_ENGINE_NMEA_BIT            = (1<<15), /**< Register for Engine NMEA */
-    E_LOC_CB_GNSS_EPH_BIT               = (1<<16) /**< Register for Engine NMEA */
+    E_LOC_CB_GNSS_EPH_BIT               = (1<<16), /**< Register for Engine NMEA */
+    E_LOC_CB_RESIDUAL_REPORT_BIT        = (1<<17) /**< Register for Residual Report */
 };
 
 // Mask related to all info that are tied with a position session and need to be unsubscribed
@@ -398,7 +402,8 @@ enum ELocationCallbacksOption {
                                        E_LOC_CB_SIMPLE_LOCATION_INFO_BIT |\
                                        E_LOC_CB_GNSS_DC_REPORT_BIT |\
                                        E_LOC_CB_ENGINE_NMEA_BIT |\
-                                       E_LOC_CB_GNSS_EPH_BIT)
+                                       E_LOC_CB_GNSS_EPH_BIT |\
+                                       E_LOC_CB_RESIDUAL_REPORT_BIT)
 
 #define LOCATION_BATCHING_SESSION_MASK (E_LOC_CB_BATCHING_BIT|\
                                         E_LOC_CB_BATCHING_STATUS_BIT)
@@ -1158,6 +1163,23 @@ struct LocAPIEphIndMsg : LocAPIMsgHeader
     // For PROTO to LOC-HAL conversion
     LocAPIEphIndMsg(const char* name, const PBLocAPIEphIndMsg &pbLocApiEphIndMsg,
             const LocationApiPbMsgConv *pbMsgConv);
+
+    int serializeToProtobuf(string& protoStr) override;
+};
+
+// defintion for message with msg id of E_LOCAPI_RESIDUAL_REPORT_MSG_ID
+struct LocAPISvResidualReportMsg : LocAPIMsgHeader
+{
+    GnssSvResidualReport residualReport;
+
+    inline LocAPISvResidualReportMsg(const char* name,
+                                const GnssSvResidualReport& residualReportInfo,
+                                const LocationApiPbMsgConv *pbMsgConv) :
+        LocAPIMsgHeader(name, E_LOCAPI_RESIDUAL_REPORT_MSG_ID, pbMsgConv),
+        residualReport(residualReportInfo) { }
+    LocAPISvResidualReportMsg(const char* name,
+        const PBLocAPISvResidualReportIndMsg &pbLocAPIResidualReportMsg,
+        const LocationApiPbMsgConv *pbMsgConv);
 
     int serializeToProtobuf(string& protoStr) override;
 };

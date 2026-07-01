@@ -106,6 +106,7 @@ enum ReportType {
     EPHEMERIS_REPORT   = 1 << 8,
     NMEA_SENTENCES_REPORT = 1 << 9,
     EXTENDED_DATA_REPORT = 1 << 10,
+    RESIDUAL_REPORT    = 1 << 11,
 };
 
 enum TrackingSessionType {
@@ -560,6 +561,82 @@ static void onGnssDcReportCb(const location_client::GnssDcReport & dcReport) {
                dcReport.dcReportData.size(), dcReport.prn);
     }
 }
+
+
+static void onSvResidualReportCb(const SvResidualReport &svResReport) {
+    printf("==== SvResidualReport ==== \n");
+    printf("EngineType: %d \n", svResReport.locOutputEngType);
+
+    // GNSS System Time
+    printf("SystemTimeSrc: %d \n", svResReport.gnssSystemTime.gnssSystemTimeSrc);
+
+    // Print system time union based on source
+    switch (svResReport.gnssSystemTime.gnssSystemTimeSrc) {
+        case GNSS_LOC_SV_SYSTEM_GPS:
+            printf("GPS Time: week=%u msec=%u clkBias=%.3f clkUnc=%.3f \n",
+                     svResReport.gnssSystemTime.u.gpsSystemTime.systemWeek,
+                     svResReport.gnssSystemTime.u.gpsSystemTime.systemMsec,
+                     svResReport.gnssSystemTime.u.gpsSystemTime.systemClkTimeBias,
+                     svResReport.gnssSystemTime.u.gpsSystemTime.systemClkTimeUncMs);
+            break;
+        case GNSS_LOC_SV_SYSTEM_GLONASS:
+            printf("GLO Time: fourYear=%u days=%u msec=%u clkBias=%.3f clkUnc=%.3f \n",
+                     svResReport.gnssSystemTime.u.gloSystemTime.gloFourYear,
+                     svResReport.gnssSystemTime.u.gloSystemTime.gloDays,
+                     svResReport.gnssSystemTime.u.gloSystemTime.gloMsec,
+                     svResReport.gnssSystemTime.u.gloSystemTime.gloClkTimeBias,
+                     svResReport.gnssSystemTime.u.gloSystemTime.gloClkTimeUncMs);
+            break;
+        default:
+            printf("Other constellation time logged \n");
+            break;
+    }
+
+    // Residual PVT Data
+    const auto &pvt = svResReport.residualPvtData;
+    printf("ResidualPVT: Lat=%.9f Lon=%.9f Alt=%.3f \n",
+             pvt.posLla[0], pvt.posLla[1], pvt.posLla[2]);
+    printf("VelENU: [%.3f, %.3f, %.3f] Heading=%.3f (unc=%.3f) \n",
+             pvt.velEnu[0], pvt.velEnu[1], pvt.velEnu[2],
+             pvt.headingRad, pvt.headingUncRad);
+    printf("PosUnc: Lat=%.3f Lon=%.3f Vert=%.3f \n",
+             pvt.puncLatLonMeters[0], pvt.puncLatLonMeters[1], pvt.puncVertMeters);
+    printf("VelUnc: East=%.3f North=%.3f Vert=%.3f \n",
+             pvt.vuncEastNorthMps[0], pvt.vuncEastNorthMps[1], pvt.vuncVertMps);
+    printf("ClockBias=%.6f (unc=%.6f) Drift=%.6f (unc=%.6f) PDOP=%.3f \n",
+             pvt.clockBias, pvt.clockBiasUncMs,
+             pvt.clockDriftRate, pvt.clockDriftRateUncMps, pvt.pdop);
+
+    // SV Residual Info
+    printf("NumSVs=%zu \n", svResReport.svResidualInfo.size());
+    for (size_t i = 0; i < svResReport.svResidualInfo.size(); ++i) {
+        const auto &sv = svResReport.svResidualInfo[i];
+        printf("SV[%zu]: ID=%u SigMask=0x%X ValidMask=0x%X ",
+                i, sv.svId, sv.signalType, sv.validityMask);
+        printf("   PR: %.4f (unc=%.4f) CP: %.4f (unc=%.4f) Doppler: %.4f (unc=%.4f) ",
+                sv.prRes, sv.prUnc, sv.cpRes, sv.cpUnc, sv.dopplerRes, sv.dopplerUnc);
+        printf("   IODE=%u GLO_Tb=%u FreqNum=%d CNo=%.2f Az=%.3f El=%.3f \n",
+                sv.iode, sv.gloTb, sv.freqNum, sv.cNo, sv.azim, sv.elev);
+    }
+
+    // SV Available/Used Info
+    const auto &avail = svResReport.svAvailableUsedInfo;
+    printf("SV Avail/Used: GPS meas=%u posFix=%u velFix=%u mask=0x%X \n", avail.gpsNumSvMeas,
+            avail.gpsNumSvPosFix, avail.gpsNumSvVelFix, avail.gpsSvMaskUsed);
+    printf("   GLO meas=%u posFix=%u velFix=%u mask=0x%X \n", avail.gloNumSvMeas,
+            avail.gloNumSvPosFix, avail.gloNumSvVelFix, avail.gloSvMaskUsed);
+    printf("   BDS meas=%u posFix=%u velFix=%u mask=0x%llX \n", avail.bdsNumSvMeas,
+            avail.bdsNumSvPosFix, avail.bdsNumSvVelFix, (unsigned long long)avail.bdsSvMaskUsed);
+    printf("   GAL meas=%u posFix=%u velFix=%u mask=0x%llX \n", avail.galNumSvMeas,
+            avail.galNumSvPosFix, avail.galNumSvVelFix, (unsigned long long)avail.galSvMaskUsed);
+    printf("   QZSS meas=%u posFix=%u velFix=%u mask=0x%X \n", avail.qzssNumSvMeas,
+            avail.qzssNumSvPosFix, avail.qzssNumSvVelFix, avail.qzssSvMaskUsed);
+    printf("   NAVIC meas=%u posFix=%u velFix=%u mask=0x%X \n", avail.navicNumSvMeas,
+            avail.navicNumSvPosFix, avail.navicNumSvVelFix, avail.navicSvMaskUsed);
+
+    printf("==== End SvResidualReport ==== \n");
+}
+
 
 static void onConfigResponseCb(location_integration::LocConfigTypeEnum    requestType,
                                location_integration::LocIntegrationResponse response) {
@@ -1177,6 +1254,7 @@ static void setupGnssReportCbs(uint32_t reportType, GnssReportCbs& reportcbs) {
 }
 
 static void setupEngineReportCbs(uint32_t reportType, EngineReportCbs& reportcbs) {
+    printf("reportType 0x%x", reportType);
     if (reportType & POSITION_REPORT) {
         reportcbs.engLocationsCallback = EngineLocationsCb(onEngLocationsCb);
     }
@@ -1210,6 +1288,10 @@ static void setupEngineReportCbs(uint32_t reportType, EngineReportCbs& reportcbs
     if (reportType & EXTENDED_DATA_REPORT) {
         reportcbs.gnssExtendedDataInfoCallback =
                             GNSSExtendedDataInfoCb(onGNSSExtendedDataInfoCb);
+    }
+    if (reportType & RESIDUAL_REPORT) {
+        printf("Register for svResidualReportCallback \n");
+        reportcbs.svResidualReportCallback = SvResidualReportCb(onSvResidualReportCb);
     }
 }
 
@@ -1527,7 +1609,7 @@ static bool checkForAutoStart(int argc, char *argv[]) {
     uint32_t aidingDataMask = 0;
     int interval = 100;
     LocReqEngineTypeMask reqEngMask = (LocReqEngineTypeMask) 0x7;
-    uint32_t reportType = 0xff;
+    uint32_t reportType = 0xfff;
     TrackingSessionType trackingType = NO_TRACKING;
 
     //Specifying the expected options
@@ -2608,7 +2690,7 @@ int main(int argc, char *argv[]) {
                     pLcaClient = new LocationClientApi(onCapabilitiesCb);
                 }
                 if (pLcaClient) {
-                    uint32_t reportType = 0x6fd;
+                    uint32_t reportType = 0xfff;
                     uint32_t tbfMsec = 100;
                     LocReqEngineTypeMask reqEngMask = (LocReqEngineTypeMask)
                         (LOC_REQ_ENGINE_FUSED_BIT|LOC_REQ_ENGINE_SPE_BIT|
