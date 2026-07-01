@@ -365,6 +365,8 @@ private:
     std::unordered_map<uint32_t, Geofence> mGeofenceMap;
 
     LCAReportLoggerUtil        mLogger;
+    // Synchronize response callback for startPositionRequest
+    static std::recursive_mutex mStartPosRequestResponseMutex;
 };
 
 } // namespace location_client
