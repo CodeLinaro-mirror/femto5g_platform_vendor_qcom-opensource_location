@@ -17,6 +17,7 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #include <unistd.h>
 #include <inttypes.h>
 #include <string.h>
+#include <sys/capability.h>
 
 #include <CommonAPI/CommonAPI.hpp>
 #include "LocIdlAPIStubImpl.hpp"
@@ -1157,11 +1158,64 @@ void LocIdlAPIService::triggerAutoStartSession() const {
     mMsgTask->sendMsg(new AutoStartSession(this));
 }
 
+bool LocIdlAPIService::resetLocIdlServiceCapabillities() const {
+
+    // Get current capabilities
+    bool retVal = true;
+    cap_t caps = cap_get_proc();
+    if (!caps) {
+        LOC_LOGd("Failed to get capabilities");
+        return false;
+    }
+
+    // Capabilities to drop
+    const cap_value_t dropList[] = {
+        CAP_SETUID,
+        CAP_SETGID
+    };
+    const size_t dropCount = sizeof(dropList) / sizeof(dropList[0]);
+
+    // Capability sets to clear from
+    const cap_flag_t capSets[] = {
+        CAP_EFFECTIVE,
+        CAP_PERMITTED,
+        CAP_INHERITABLE
+    };
+
+    const size_t setCount = sizeof(capSets) / sizeof(capSets[0]);
+
+    for (size_t s = 0; s < setCount; ++s) {
+        if (cap_set_flag(caps, capSets[s], (int)dropCount, dropList, CAP_CLEAR) == -1) {
+            int saved_errno = errno;
+            LOC_LOGe("Failed to clear capabilities from set %zu (%d): %s",
+                     s, capSets[s], strerror(saved_errno));
+            retVal = false;
+        }
+    }
+
+    // Apply all changes at once
+    if (retVal) {
+        if (cap_set_proc(caps) == -1) {
+            int saved_errno = errno;
+            LOC_LOGd("cap_set_proc failed: %s", strerror(saved_errno));
+            retVal = false;
+        } else {
+            LOC_LOGa("Dropped CAP_SETUID, CAP_SETGID from E/P/I");
+        }
+    }
+    cap_free(caps);
+    return retVal;
+}
+
 int main() {
     LocIdlAPIService *pLocIdlService = LocIdlAPIService::getInstance();
     if (nullptr == pLocIdlService) {
         LOC_LOGe("Failed to getInstance of LocIDLService !!");
         return 0;
+    }
+
+    if(!pLocIdlService->resetLocIdlServiceCapabillities()) {
+        LOC_LOGe("Unable to reset Capabilites.. return");
     }
 
     static loc_param_s_type locIdlServiceConfEntryTable[] = {
