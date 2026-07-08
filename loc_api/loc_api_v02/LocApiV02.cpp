@@ -7499,15 +7499,17 @@ bool LocApiV02 :: convertGnssMeasurements(
 #ifndef USE_GLIB
     // satellite PVT
     // find in svPolynomial in mSvPolynomialMap and extract it
-    GnssSvPolynomial  svPolynomial = {};
+    // avoid copying the (~200+ byte) GnssSvPolynomial out of the map on every lookup;
+    // only the GAL E5 fallback below needs a mutable local copy, since it corrects
+    // gnssSvId and must not mutate the map's stored entry in place
+    GnssSvPolynomial  svPolynomialCorrected;
+    GnssSvPolynomial* pSvPolynomial = nullptr;
     std::unordered_map<uint16_t, GnssSvPolynomial>::iterator it;
-    bool bFound = false;
     LocApiProxyBase* locApiProxyObj = getLocApiProxy();
 
     it = mSvPolynomialMap.find(gnss_measurement_info.gnssSvId);
     if (it != mSvPolynomialMap.end()) {
-        svPolynomial = it->second;
-        bFound = true;
+        pSvPolynomial = &it->second;
     }
 
     /* For GAL E5 (code type Q) svId could be +50 */
@@ -7516,17 +7518,17 @@ bool LocApiV02 :: convertGnssMeasurements(
         GNSS_MEASUREMENTS_CODE_TYPE_Q == measurementData.codeType) {
         it = mSvPolynomialMap.find(gnss_measurement_info.gnssSvId + 50);
         if (it != mSvPolynomialMap.end()) {
-            svPolynomial = it->second;
-            bFound = true;
-            if (svPolynomial.gnssSvId > GAL_SV_PRN_MAX) {
-                svPolynomial.gnssSvId -= 50;
+            svPolynomialCorrected = it->second;
+            if (svPolynomialCorrected.gnssSvId > GAL_SV_PRN_MAX) {
+                svPolynomialCorrected.gnssSvId -= 50;
             }
+            pSvPolynomial = &svPolynomialCorrected;
         }
     }
 
-    if (bFound && nullptr != locApiProxyObj) {
+    if (nullptr != pSvPolynomial && nullptr != locApiProxyObj) {
         bool ret = locApiProxyObj->getSatellitePVT(
-                        svPolynomial,
+                        *pSvPolynomial,
                         mGnssMeasurements->gnssSvMeasurementSet.svMeasSetHeader,
                         measurementData);
         if (ret) {
