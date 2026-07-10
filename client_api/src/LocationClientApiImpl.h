@@ -261,6 +261,9 @@ public:
                 std::vector<QzssEphemeris>& lcaEphInfo);
     static void parseNavicEphemeris(const NavicEphemerisResponse& halEph,
                 std::vector<NavicEphemeris>& lcaEphInfo);
+    static void parseSvResidualReport(
+        const ::GnssSvResidualReport &halSvResidualInfo,
+        SvResidualReport &svResidualReportOut);
 
     void logLocation(const Location &location,
                      LocReportTriggerType reportTriggerType);
@@ -362,6 +365,8 @@ private:
     std::unordered_map<uint32_t, Geofence> mGeofenceMap;
 
     LCAReportLoggerUtil        mLogger;
+    // Synchronize response callback for startPositionRequest
+    static std::recursive_mutex mStartPosRequestResponseMutex;
 };
 
 } // namespace location_client

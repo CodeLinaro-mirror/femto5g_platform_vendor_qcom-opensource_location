@@ -211,6 +211,14 @@ void LocHalDaemonClientHandler::updateSubscription(uint32_t mask) {
     } else {
         mCallbacks.svEphemerisCb = nullptr;
     }
+    // Residual report
+    if (mSubscriptionMask & E_LOC_CB_RESIDUAL_REPORT_BIT) {
+        mCallbacks.svResidualDataCb = [this](const GnssSvResidualReport &svResReport) {
+            onSvResidualReportCb(svResReport);
+        };
+    } else {
+        mCallbacks.svResidualDataCb = nullptr;
+    }
 
     // following callbacks are not supported
     mCallbacks.gnssNiCb = nullptr;
@@ -1245,8 +1253,32 @@ void LocHalDaemonClientHandler::onDcReportCb(const GnssDcReportInfo& dcReportInf
     }
 }
 
-void LocHalDaemonClientHandler::onGnssSignalTypesCb(GnssSignalTypeMask signalType) {
+void LocHalDaemonClientHandler::onSvResidualReportCb(const GnssSvResidualReport &svResReport) {
     std::lock_guard<std::recursive_mutex> lock(LocationApiService::mMutex);
+    LOC_LOGd("--< onSvResidualReportCb, client name %s, ipc valid %d, sub mask 0x%x",
+             mName.c_str(), (nullptr != mIpcSender), mSubscriptionMask);
+
+    if ((nullptr != mIpcSender) && (mSubscriptionMask & E_LOC_CB_RESIDUAL_REPORT_BIT) &&
+                (((svResReport.locOutputEngType == LOC_OUTPUT_ENGINE_SPE) &&
+                 (mOptions.locReqEngTypeMask & LOC_REQ_ENGINE_SPE_BIT)) ||
+                ((svResReport.locOutputEngType == LOC_OUTPUT_ENGINE_PPE) &&
+                 (mOptions.locReqEngTypeMask & LOC_REQ_ENGINE_PPE_BIT )))) {
+        string pbStr;
+        LocAPISvResidualReportMsg msg(SERVICE_NAME, svResReport, &mService->mPbufMsgConv);
+        if (msg.serializeToProtobuf(pbStr)) {
+            bool rc = sendMessage(pbStr.c_str(), pbStr.size(), msg.msgId);
+            // purge this client if failed
+            if (!rc) {
+                LOC_LOGe("failed rc=%d purging client=%s", rc, mName.c_str());
+                mService->deleteClientbyName(mName);
+            }
+        } else {
+            LOC_LOGe("serializeToProtobuf failed!");
+        }
+    }
+}
+
+void LocHalDaemonClientHandler::onGnssSignalTypesCb(GnssSignalTypeMask signalType) {
     LOC_LOGd("--< client name %s, ipc valid %d, supported GNSS signal types 0x%x",
              mName.c_str(), (nullptr != mIpcSender), signalType);
 

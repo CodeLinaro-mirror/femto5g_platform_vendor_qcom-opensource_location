@@ -80,6 +80,12 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 int main(int argc, char *argv[])
 {
+
+#ifdef LOC_USE_DLT
+    registerDltApp("LHD", "Location HAL Daemon");
+    registerDltContexts(LHD_CONTEXTS, LHD_CONTEXTS_COUNT);
+#endif
+
     configParamToRead configParamRead = {};
 #if FEATURE_AUTOMOTIVE
     // enable auto start by default with 100 ms TBF
@@ -188,6 +194,11 @@ int main(int argc, char *argv[])
     if (!LocationApiService::getInstance(configParamRead)) {
         LOC_LOGd("Failed to start LocationApiService.");
     }
+
+#ifdef LOC_USE_DLT
+    deregisterDltContexts(LHD_CONTEXTS, LHD_CONTEXTS_COUNT);
+    deregisterDltApp();
+#endif
 
     // should not reach here...
     LOC_LOGd("done");
