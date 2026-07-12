@@ -18,7 +18,8 @@ libloc_api_v02_la_SOURCES = \
     loc_api_v02_log.cpp \
     loc_api_v02_client.cpp \
     loc_api_sync_req.cpp \
-    location_service_v02.c
+    location_service_v02.c \
+    LocApiV02Utils.cpp
 
 if USE_GLIB
 libloc_api_v02_la_CFLAGS = -DUSE_GLIB $(AM_CFLAGS) @GLIB_CFLAGS@

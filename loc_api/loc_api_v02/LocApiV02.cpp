@@ -91,7 +91,9 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #include "loc_pla.h"
 #include <loc_cfg.h>
 #include <LocContext.h>
-
+#ifdef USE_GLIB
+#include "LocApiV02Utils.h"
+#endif //USE_GLIB
 #ifdef PTP_SUPPORTED
 #include <gptp_helper.h>
 #endif
@@ -3397,16 +3399,24 @@ void LocApiV02 :: reportPosition (
             LOC_LOGa("no dgnss station id");
         }
 
+#ifdef USE_GLIB
         if (location_report_ptr->payload_valid) {
-            locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_EXTENDED_DATA;
-            locationExtended.extendedDataLen = location_report_ptr->payload_len;
-            if (locationExtended.extendedDataLen <= sizeof(locationExtended.extendedData)) {
-                memcpy(locationExtended.extendedData,
-                        location_report_ptr->payload,
-                        location_report_ptr->payload_len);
+            // Check against min payload i.e NavPositionStructType. Sv information is dynamic
+            // so we cannot really have check against GnssExtended_FixInfoStructType as size
+            // is dynamically decided based on SV list.
+            if (location_report_ptr->payload_len >= sizeof(GnssExtended_NavPositionStructType)) {
+                GnssSvResidualReport svResidualReport;
+                memset(&svResidualReport, 0, sizeof(svResidualReport));
+                GnssExtended_FixInfoStructType *inFix =
+                    (GnssExtended_FixInfoStructType *)location_report_ptr->payload;
+                decodeSvResidualDataFromExtendedBinaryData(*inFix, svResidualReport);
+                LocApiBase::reportSvResidualData(svResidualReport);
+            } else {
+                LOC_LOGw("Incorrect payload size received for extended payload! %u %u",
+                    location_report_ptr->payload_len, sizeof(GnssExtended_NavPositionStructType));
             }
-
         }
+#endif
 
         if (location_report_ptr->systemTick_valid &&
                 location_report_ptr->systemTickUnc_valid) {
@@ -9993,9 +10003,10 @@ void LocApiV02::getBlacklistSv()
 
 void
 LocApiV02::setConstellationControl(const GnssSvTypeConfig& config,
+                                   bool sendReset,
                                    LocApiResponse *adapterResponse)
 {
-    sendMsg(new LocApiMsg([this, config, adapterResponse] () {
+    sendMsg(new LocApiMsg([this, config, sendReset, adapterResponse] () {
 
     locClientStatusEnumType status = eLOC_CLIENT_FAILURE_GENERAL;
     locClientReqUnionType req_union = {};
@@ -10008,8 +10019,7 @@ LocApiV02::setConstellationControl(const GnssSvTypeConfig& config,
     memset(&genReqStatusIndMsg, 0, sizeof(genReqStatusIndMsg));
 
     // Fill in the request details
-    setConstellationConfigMsg.resetConstellations = false;
-
+    setConstellationConfigMsg.resetConstellations = sendReset;
     bool disableSupported = ContextBase::isFeatureSupported(
             LOC_SUPPORTED_FEATURE_CONSTELLATION_DISABLEMENT);
 
@@ -10053,14 +10063,14 @@ LocApiV02::setConstellationControl(const GnssSvTypeConfig& config,
           QMI_LOC_CONSTELLATION_GAL_V02 | QMI_LOC_CONSTELLATION_NAVIC_V02);
     setConstellationConfigMsg.enableMask &= ~setConstellationConfigMsg.disableMask;
 
-    LOC_LOGI("setConstellationControl:input perferred constellation %d, disableSupported %d,"
-             "enable: 0x%" PRIx64 ", blacklisted: 0x%" PRIx64 "",
-             mPreferredSvSystemType, disableSupported,
+    LOC_LOGI("setConstellationControl: sendReset %d input perferred constellation %d, "
+             "disableSupported %d, enable: 0x%" PRIx64 ", blacklisted: 0x%" PRIx64 "",
+             sendReset, mPreferredSvSystemType, disableSupported,
              config.enabledSvTypesMask, config.blacklistedSvTypesMask);
 
-    LOC_LOGI("setConstellationControl:disableSupported %d,"
+    LOC_LOGI("setConstellationControl: sendReset %d disableSupported %d,"
              "enable: %d 0x%" PRIx64 ", blacklisted: %d 0x%" PRIx64 "",
-             disableSupported,
+             sendReset, disableSupported,
              setConstellationConfigMsg.enableMask_valid,
              setConstellationConfigMsg.enableMask,
              setConstellationConfigMsg.disableMask_valid,
