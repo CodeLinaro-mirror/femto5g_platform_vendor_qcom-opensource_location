@@ -238,6 +238,10 @@ private:
 
   // Below two member variables are for elapsedRealTime calculation
   GnssMeasurementsNotification m1HzMeasurementsNotify;
+
+  //MO MSA session timeout value in ms
+  uint32_t mMsaSessionTimeOutMs;
+
   GnssBasicMeasurementsInfo m1HzMeasurementsInfo;
 
   /* Convert event mask from loc eng to loc_api_v02 format */
@@ -254,14 +258,6 @@ private:
 
   /* Convert error from loc_api_v02 to loc eng format*/
   static enum loc_api_adapter_err convertErr(locClientStatusEnumType status);
-
-  /* convert Ni Encoding type from QMI_LOC to loc eng format */
-  static GnssNiEncodingType convertNiEncoding(
-    qmiLocNiDataCodingSchemeEnumT_v02 loc_encoding);
-
-  /*convert NI notify verify type from QMI LOC to loc eng format*/
-  static bool convertNiNotifyVerifyType (GnssNiNotification *notif,
-      qmiLocNiNotifyVerifyEnumT_v02 notif_priv);
 
   /*convert signal type to carrier frequency*/
   static double convertSignalTypeToCarrierFrequency(
@@ -518,7 +514,7 @@ public:
     deleteAidingData(const GnssAidingData& data, LocApiResponse *adapterResponse);
 
   virtual void
-    informNiResponse(GnssNiResponse userResponse, const void* passThroughData);
+    informNiResponse(GnssNiResponse userResponse, const void* passThroughData) {}
 
   virtual LocationError
     setServerSync(const char* url, int len, LocServerType type);
@@ -551,6 +547,7 @@ public:
       setAGLONASSProtocolSync(GnssConfigAGlonassPositionProtocolMask aGlonassProtocol);
   virtual LocationError setLPPeProtocolCpSync(GnssConfigLppeControlPlaneMask lppeCP);
   virtual LocationError setLPPeProtocolUpSync(GnssConfigLppeUserPlaneMask lppeUP);
+  virtual bool getWwanFixSync(LocGpsLocation &wwanLoc);
   virtual bool getBestAvailableZppFixSync(LocGpsLocation &zppLoc,
           LocPosTechMask &tech_mask, float* vertUnc = nullptr);
   virtual LocationError setGpsLockSync(GnssConfigGpsLock lock);
