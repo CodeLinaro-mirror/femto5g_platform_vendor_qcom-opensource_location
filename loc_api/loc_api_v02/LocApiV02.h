@@ -233,6 +233,8 @@ private:
   // Dwell Time Allignment
   uint8_t mDwellAlignTimeMsValid;
   uint32_t mDwellAlignTimeMs;
+  // Boot timestamp in ms when stopTimeBasedTrackingSync was last called
+  uint64_t mLastSessionStopTimestampInMs;
 
   // Below two member variables are for elapsedRealTime calculation
   GnssMeasurementsNotification m1HzMeasurementsNotify;
@@ -477,6 +479,7 @@ public:
   // Tracking
   void startTimeBasedTracking(const TrackingOptions& options, LocApiResponse* adapterResponse);
   void stopTimeBasedTracking(LocApiResponse* adapterResponse);
+  void stopTimeBasedTrackingSync(LocApiResponse* adapterResponse);
 
   // Batching
   void startBatching(uint32_t sessionId, const LocationOptions& options, uint32_t accuracy,
