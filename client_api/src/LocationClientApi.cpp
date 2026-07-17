@@ -472,7 +472,6 @@ bool LocationClientApi::startTripBatchingSession(uint32_t minInterval, uint32_t 
 
     LocationOptions locOption = {};
     locOption.minInterval = minInterval;
-    locOption.mode = GNSS_SUPL_MODE_STANDALONE;
 
     BatchingOptions     batchOption = {};
     batchOption.setLocationOptions(locOption);
@@ -521,7 +520,6 @@ bool LocationClientApi::startRoutineBatchingSession(uint32_t minInterval, uint32
 
     LocationOptions locOption = {};
     locOption.minInterval = minInterval;
-    locOption.mode = GNSS_SUPL_MODE_STANDALONE;
 
     BatchingOptions     batchOption = {};
     batchOption.batchingMode = BATCHING_MODE_ROUTINE;

@@ -340,23 +340,6 @@ BatchingMode LocationApiPbMsgConv::getEnumForPBBatchingMode(
     return batchMode;
 }
 
-GnssSuplMode LocationApiPbMsgConv::getEnumForPBGnssSuplMode(
-        const PBGnssSuplMode &pbGnssSuplMode) const {
-    GnssSuplMode gnssSuplMode = GNSS_SUPL_MODE_STANDALONE;
-    switch (pbGnssSuplMode) {
-        case PB_GNSS_SUPL_MODE_MSB:
-            gnssSuplMode = GNSS_SUPL_MODE_MSB;
-            break;
-        case PB_GNSS_SUPL_MODE_MSA:
-            gnssSuplMode = GNSS_SUPL_MODE_MSA;
-            break;
-        default:
-            break;
-    }
-    LocApiPb_LOGv("LocApiPB: pbGnssSuplMode:%d, gnssSuplMode:%d", pbGnssSuplMode, gnssSuplMode);
-    return gnssSuplMode;
-}
-
 FixQualityLevel LocationApiPbMsgConv::getEnumForPBFixQualityLevel(
     const PBFixQualityLevel &pbFixQualityLevel) const {
     FixQualityLevel qualityLevelAccepted = QUALITY_HIGH_ACCU_FIX_ONLY;
@@ -1111,26 +1094,6 @@ PBLocationError LocationApiPbMsgConv::getPBEnumForLocationError(
             break;
     }
     return pbLocErr;
-}
-
-PBGnssSuplMode LocationApiPbMsgConv::getPBEnumForGnssSuplMode(
-        const GnssSuplMode &gnssSuplMode) const {
-    PBGnssSuplMode pbGnssSuplMode = PB_GNSS_SUPL_MODE_STANDALONE;
-    switch (gnssSuplMode) {
-        case GNSS_SUPL_MODE_STANDALONE:
-            pbGnssSuplMode = PB_GNSS_SUPL_MODE_STANDALONE;
-            break;
-        case GNSS_SUPL_MODE_MSB:
-            pbGnssSuplMode = PB_GNSS_SUPL_MODE_MSB;
-            break;
-        case GNSS_SUPL_MODE_MSA:
-            pbGnssSuplMode = PB_GNSS_SUPL_MODE_MSA;
-            break;
-        default:
-            break;
-    }
-    LocApiPb_LOGv("LocApiPB: gnssSuplMode:%d, pbGnssSuplMode:%d", gnssSuplMode, pbGnssSuplMode);
-    return pbGnssSuplMode;
 }
 
 PBFixQualityLevel LocationApiPbMsgConv::getPBEnumForFixQualityLevel(
@@ -3968,19 +3931,15 @@ int LocationApiPbMsgConv::convertLocationOptionsToPB(const LocationOptions &locO
     // uint32 minDistance = 2;
     pbLocOpt->set_mindistance(0);
 
-    // PBGnssSuplMode mode = 3;
-    pbLocOpt->set_mode(getPBEnumForGnssSuplMode(locOpt.mode));
-
     // uint32 locReqEngTypeMask = 4; - bitwise OR of PBLocReqEngineTypeMask
     pbLocOpt->set_locreqengtypemask(getPBMaskForLocReqEngineTypeMask(locOpt.locReqEngTypeMask));
 
     // PBFixQualityLevel = 5;
     pbLocOpt->set_qualitylevelaccepted(getPBEnumForFixQualityLevel(locOpt.qualityLevelAccepted));
 
-    LocApiPb_LOGd("LocApiPB: locOpt - MinInterval: %u, GnssSuplMode:%d, "\
+    LocApiPb_LOGd("LocApiPB: locOpt - MinInterval: %u, "\
             "LocReqEngineTypeMask:%x qualityLevelAccepted:%d",
-            locOpt.minInterval, locOpt.mode,
-            locOpt.locReqEngTypeMask, locOpt.qualityLevelAccepted);
+            locOpt.minInterval, locOpt.locReqEngTypeMask, locOpt.qualityLevelAccepted);
     return 0;
 }
 
@@ -5951,8 +5910,6 @@ int LocationApiPbMsgConv::pbConvertToLocationOptions(const PBLocationOptions &pb
         LocationOptions &locOpt) const {
     // uint32 minInterval = 1;
     locOpt.minInterval = pbLocOpt.mininterval();
-    // PBGnssSuplMode mode = 3;
-    locOpt.mode = getEnumForPBGnssSuplMode(pbLocOpt.mode());
 
     // bitwise OR of PBLocReqEngineTypeMask
     // uint32 locReqEngTypeMask = 4;
@@ -5962,10 +5919,9 @@ int LocationApiPbMsgConv::pbConvertToLocationOptions(const PBLocationOptions &pb
     // PBQuailtyLevelAccepted = 5;
     locOpt.qualityLevelAccepted = getEnumForPBFixQualityLevel(pbLocOpt.qualitylevelaccepted());
 
-    LocApiPb_LOGd("LocApiPB: pbLocOpt - MinInterval: %u, GnssSuplMode:%d, "\
+    LocApiPb_LOGd("LocApiPB: pbLocOpt - MinInterval: %u, "\
             "LocReqEngineTypeMask:%x qualityLevelAccepted: %d",
-            locOpt.minInterval, locOpt.mode,
-            locOpt.locReqEngTypeMask, locOpt.qualityLevelAccepted);
+            locOpt.minInterval, locOpt.locReqEngTypeMask, locOpt.qualityLevelAccepted);
     return 0;
 }
 

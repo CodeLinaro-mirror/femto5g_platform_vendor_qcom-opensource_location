@@ -63,7 +63,6 @@ int main(int argc, char *argv[])
         {"GNSS_SESSION_TBF_MS", &configParamRead.gnssSessionTbfMs, NULL, 'n'},
         {"DELETE_ALL_BEFORE_AUTO_START", &configParamRead.deleteAllBeforeAutoStart, NULL, 'n'},
         {"DELETE_ALL_ON_ENGINE_MASK", &configParamRead.posEngineMask, NULL, 'n'},
-        {"POSITION_MODE", &configParamRead.positionMode, NULL, 'n'},
     };
 
     // read a copy of gps conf and izat.conf and cache them for future use
@@ -73,9 +72,6 @@ int main(int argc, char *argv[])
     // read configuration file
     UTIL_READ_CONF_DEFAULT(LOC_PATH_GPS_CONF);
     UTIL_READ_CONF(LOC_PATH_GPS_CONF, configTable);
-    if (configParamRead.positionMode != GNSS_SUPL_MODE_MSB) {
-        configParamRead.positionMode = GNSS_SUPL_MODE_STANDALONE;
-    }
 
     LOC_LOGi("location hal daemon - ver %s", HAL_DAEMON_VERSION);
     loc_boot_kpi_marker("L - Location Probe Start");

@@ -282,7 +282,6 @@ uint32_t LocHalDaemonClientHandler::startBatching(uint32_t minInterval, uint32_t
         // update option
         LocationOptions locOption = {};
         locOption.minInterval = minInterval;
-        locOption.mode = GNSS_SUPL_MODE_STANDALONE;
         mBatchOptions.batchingMode = batchMode;
         mBatchOptions.setLocationOptions(locOption);
 
@@ -305,7 +304,6 @@ void LocHalDaemonClientHandler::updateBatchingOptions(uint32_t minInterval, uint
         // update option
         LocationOptions locOption = {};
         locOption.minInterval = minInterval;
-        locOption.mode = GNSS_SUPL_MODE_STANDALONE;
         mBatchOptions.batchingMode = batchMode;
         mBatchOptions.setLocationOptions(locOption);
 

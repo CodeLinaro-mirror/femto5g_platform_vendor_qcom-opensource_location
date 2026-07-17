@@ -825,7 +825,6 @@ private:
     PBGnssMeasurementsCodeType getPBMeasCodeType(const GnssMeasurementsCodeType &codeType) const;
 
     // **** helper function for enum conversion to protobuf enums
-    PBGnssSuplMode getPBEnumForGnssSuplMode(const GnssSuplMode &gnssSuplMode) const;
     PBFixQualityLevel getPBEnumForFixQualityLevel(const FixQualityLevel &qualityLevel) const;
     PBBatchingStatus getPBEnumForBatchingStatus(const BatchingStatus &batchStatus) const;
     PBLocationReliability getPBEnumForLocationReliability(
@@ -904,7 +903,6 @@ private:
         const PBGnssMeasurementsCodeType &pbMeasCodeType) const;
 
     // **** helper function for enum conversion from protobuf enums to normal format.
-    GnssSuplMode getEnumForPBGnssSuplMode(const PBGnssSuplMode &pbGnssSuplMode) const;
     FixQualityLevel getEnumForPBFixQualityLevel(
                 const PBFixQualityLevel &pbFixQualityLevel) const;
     BatchingStatus getEnumForPBBatchingStatus(const PBBatchingStatus &pbBatchStat) const;
