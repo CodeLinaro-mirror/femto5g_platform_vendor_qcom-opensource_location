@@ -1,0 +1,34 @@
+cc_binary {
+    name: "qsh_location_test_wear",
+    owner: "qti",
+    proprietary: true,
+    srcs: [
+        "src/qsh_location_test.cpp",
+    ],
+    cflags: [
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-Wno-missing-field-initializers",
+        "-Wno-maybe-uninitialized",
+        "-Wunused-private-field",
+    ] + GNSS_CFLAGS,
+    cppflags: ["-fexceptions"],
+    header_libs: [
+        "libgps.utils_headers",
+        "libloc_pla_headers",
+        "libsensinghubcommon_headers",
+        "libqshutils_headers"
+    ],
+    shared_libs: [
+        "libutils",
+        "libcutils",
+        "liblog",
+        "libgps.utils",
+        "libqshlocationwear",
+        "libqshutils",
+        "libsensinghubapi",
+        "libsensinghubsession",
+        "libprotobuf-cpp-lite"
+    ],
+}

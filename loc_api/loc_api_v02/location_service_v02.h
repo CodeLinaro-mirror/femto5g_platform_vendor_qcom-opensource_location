@@ -94,7 +94,7 @@ extern "C" {
 /** Major Version Number of the IDL used to generate this file */
 #define LOC_V02_IDL_MAJOR_VERS 0x02
 /** Revision Number of the IDL used to generate this file */
-#define LOC_V02_IDL_MINOR_VERS 0xBD
+#define LOC_V02_IDL_MINOR_VERS 0xBF
 /** Major Version Number of the qmi_idl_compiler used to generate this file */
 #define LOC_V02_IDL_TOOL_VERS 0x06
 /** Maximum Defined Message ID */
@@ -18934,6 +18934,7 @@ typedef uint64_t qmiLocFeaturesStatusMaskT_v02;
 #define QMI_LOC_FEATURE_STATUS_SBAS_WOCS_V02 ((qmiLocFeaturesStatusMaskT_v02)0x00004000ull) /**<  WCOS correction less mode of operation in QPPE. \n */
 #define QMI_LOC_FEATURE_STATUS_WWAN_STANDARD_POSITIONING_V02 ((qmiLocFeaturesStatusMaskT_v02)0x00008000ull) /**<  WWAN Standard Positioning. \n */
 #define QMI_LOC_FEATURE_STATUS_WWAN_PREMIUM_POSITIONING_V02 ((qmiLocFeaturesStatusMaskT_v02)0x00010000ull) /**<  WWAN Premium Positioning. \n */
+#define QMI_LOC_FEATURE_STATUS_1PPS_TSN_V02 ((qmiLocFeaturesStatusMaskT_v02)0x00020000ull) /**<  1PPS enabled for Time Sensitive Networking. \n */
 /** @addtogroup loc_qmi_messages
     @{
   */
@@ -18998,6 +18999,7 @@ typedef struct {
       - QMI_LOC_FEATURE_STATUS_SBAS_WOCS (0x00004000) --  WCOS correction less mode of operation in QPPE. \n
       - QMI_LOC_FEATURE_STATUS_WWAN_STANDARD_POSITIONING (0x00008000) --  WWAN Standard Positioning. \n
       - QMI_LOC_FEATURE_STATUS_WWAN_PREMIUM_POSITIONING (0x00010000) --  WWAN Premium Positioning. \n
+      - QMI_LOC_FEATURE_STATUS_1PPS_TSN (0x00020000) --  1PPS enabled for Time Sensitive Networking. \n
  */
 }qmiLocGetSupportedFeatureIndMsgT_v02;  /* Message */
 /**
@@ -19553,6 +19555,7 @@ typedef uint32_t qmiLocXtraConfigMaskT_v02;
 #define QMI_LOC_XTRA_CONFIG_DISABLE_AUTO_DOWNLOAD_TIMER_V02 ((qmiLocXtraConfigMaskT_v02)0x00000001) /**<  Ask the engine to disable the XTRA auto download timer \n */
 #define QMI_LOC_XTRA_CONFIG_NAVIC_EPH_ASSIST_V02 ((qmiLocXtraConfigMaskT_v02)0x00000002) /**<  Inform the engine of NavIC ephemeris assist support \n  */
 #define QMI_LOC_XTRA_CONFIG_PRECISE_XTRA_ENABLED_V02 ((qmiLocXtraConfigMaskT_v02)0x00000004) /**<  Xtra Client support for Precise Xtra download  */
+#define QMI_LOC_XTRA_CONFIG_PREF_COMM_MODE_V02 ((qmiLocXtraConfigMaskT_v02)0x00000008) /**<  Xtra Client pref communication mode  */
 typedef uint32_t qmiLocXtraInfoMaskT_v02;
 #define QMI_LOC_XTRA_INFO_MASK_ABS_AGE_V02 ((qmiLocXtraInfoMaskT_v02)0x00000001) /**<  Number of hours for which the current XTRA information is valid \n */
 #define QMI_LOC_XTRA_INFO_MASK_REL_AGE_V02 ((qmiLocXtraInfoMaskT_v02)0x00000002) /**<  Last XTRA data download time \n */
@@ -19570,6 +19573,7 @@ typedef uint32_t qmiLocXtraInfoMaskT_v02;
 #define QMI_LOC_XTRA_INFO_MASK_MAX_FILE_SIZE_ALLOWED_V02 ((qmiLocXtraInfoMaskT_v02)0x00001000) /**<   Max file size allowed for XTRA injection   */
 #define QMI_LOC_XTRA_INFO_MASK_SERIALIZATION_PROT_PB_V02 ((qmiLocXtraInfoMaskT_v02)0x00002000) /**<   Protobuf to be used for serialization over qsockets  */
 #define QMI_LOC_XTRA_INFO_MASK_SERIALIZATION_PROT_BERTLV_V02 ((qmiLocXtraInfoMaskT_v02)0x00004000) /**<   BER-TLV codecs to be used for serialization over qsockets  */
+#define QMI_LOC_XTRA_INFO_MASK_ENHANCED_DEBUG_ENABLED_V02 ((qmiLocXtraInfoMaskT_v02)0x00008000) /**<   support enhanced debug   */
 /** @addtogroup loc_qmi_aggregates
     @{
   */
@@ -19593,7 +19597,8 @@ typedef struct {
       - QMI_LOC_XTRA_INFO_MASK_MAX_PART_SIZE_ALLOWED (0x00000800) --   Max part size allowed for XTRA injection
       - QMI_LOC_XTRA_INFO_MASK_MAX_FILE_SIZE_ALLOWED (0x00001000) --   Max file size allowed for XTRA injection
       - QMI_LOC_XTRA_INFO_MASK_SERIALIZATION_PROT_PB (0x00002000) --   Protobuf to be used for serialization over qsockets
-      - QMI_LOC_XTRA_INFO_MASK_SERIALIZATION_PROT_BERTLV (0x00004000) --   BER-TLV codecs to be used for serialization over qsockets  */
+      - QMI_LOC_XTRA_INFO_MASK_SERIALIZATION_PROT_BERTLV (0x00004000) --   BER-TLV codecs to be used for serialization over qsockets
+      - QMI_LOC_XTRA_INFO_MASK_ENHANCED_DEBUG_ENABLED (0x00008000) --   support enhanced debug   */
 
   uint16_t absAgeHrs;
   /**<   Number of hours for which the current XTRA information is valid.
@@ -19656,6 +19661,7 @@ typedef struct {
       - QMI_LOC_XTRA_CONFIG_DISABLE_AUTO_DOWNLOAD_TIMER (0x00000001) --  Ask the engine to disable the XTRA auto download timer \n
       - QMI_LOC_XTRA_CONFIG_NAVIC_EPH_ASSIST (0x00000002) --  Inform the engine of NavIC ephemeris assist support \n
       - QMI_LOC_XTRA_CONFIG_PRECISE_XTRA_ENABLED (0x00000004) --  Xtra Client support for Precise Xtra download
+      - QMI_LOC_XTRA_CONFIG_PREF_COMM_MODE (0x00000008) --  Xtra Client pref communication mode
  */
 
   /* Optional */
@@ -22797,6 +22803,7 @@ typedef struct {
       - QMI_LOC_FEATURE_STATUS_SBAS_WOCS (0x00004000) --  WCOS correction less mode of operation in QPPE. \n
       - QMI_LOC_FEATURE_STATUS_WWAN_STANDARD_POSITIONING (0x00008000) --  WWAN Standard Positioning. \n
       - QMI_LOC_FEATURE_STATUS_WWAN_PREMIUM_POSITIONING (0x00010000) --  WWAN Premium Positioning. \n
+      - QMI_LOC_FEATURE_STATUS_1PPS_TSN (0x00020000) --  1PPS enabled for Time Sensitive Networking. \n
  */
 
   /* Optional */
@@ -26211,6 +26218,7 @@ typedef struct {
       - QMI_LOC_FEATURE_STATUS_SBAS_WOCS (0x00004000) --  WCOS correction less mode of operation in QPPE. \n
       - QMI_LOC_FEATURE_STATUS_WWAN_STANDARD_POSITIONING (0x00008000) --  WWAN Standard Positioning. \n
       - QMI_LOC_FEATURE_STATUS_WWAN_PREMIUM_POSITIONING (0x00010000) --  WWAN Premium Positioning. \n
+      - QMI_LOC_FEATURE_STATUS_1PPS_TSN (0x00020000) --  1PPS enabled for Time Sensitive Networking. \n
  */
 
   /* Optional */
@@ -26276,6 +26284,7 @@ typedef struct {
       - QMI_LOC_FEATURE_STATUS_SBAS_WOCS (0x00004000) --  WCOS correction less mode of operation in QPPE. \n
       - QMI_LOC_FEATURE_STATUS_WWAN_STANDARD_POSITIONING (0x00008000) --  WWAN Standard Positioning. \n
       - QMI_LOC_FEATURE_STATUS_WWAN_PREMIUM_POSITIONING (0x00010000) --  WWAN Premium Positioning. \n
+      - QMI_LOC_FEATURE_STATUS_1PPS_TSN (0x00020000) --  1PPS enabled for Time Sensitive Networking. \n
  */
 }qmiLocSetSdkFeatureConfigIndMsgT_v02;  /* Message */
 /**

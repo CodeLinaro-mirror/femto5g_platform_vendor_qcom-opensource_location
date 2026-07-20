@@ -89,6 +89,31 @@ enum qsh_location_request
   QSH_LOCATION_MEAS_AND_CLK_REQUEST = 2;
 }
 
+enum qsh_location_pdr_mode
+{
+  option (nanopb_enumopt).long_names = false;
+
+  // Casual mode when GNSS is in PDR.
+  QSH_LOCATION_PDR_MODE_CASUAL = 1;
+
+  // Fitness mode when GNSS is in PDR.
+  QSH_LOCATION_PDR_MODE_FITNESS = 2;
+}
+
+enum qsh_location_session_mode
+{
+  option (nanopb_enumopt).long_names = false;
+
+  // Use regular mode for the GNSS session
+  QSH_LOCATION_SESSION_MODE_NORMAL = 1;
+
+  // Use swimming mode for the GNSS session
+  QSH_LOCATION_SESSION_MODE_SWIM = 2;
+
+  // Use stamina mode for the GNSS session
+  QSH_LOCATION_SESSION_MODE_STAMINA = 3;
+}
+
 message qsh_location_update
 {
   // start/stop indicator, true to start the session, false to stop the session
@@ -99,6 +124,19 @@ message qsh_location_update
 
   // the required interval between positions or measurements in ms
   required uint32 interval = 3;
+
+  // the PDR mode to be used for this session
+  optional qsh_location_pdr_mode pdrMode = 4;
+
+  // the mode to be used for this session
+  // optional parameter, defaults to normal mode
+  optional qsh_location_session_mode sessionMode = 5;
+
+  // the maximum number of measurement reports the client wishes to receive.
+  // the number of received measurments can be between 1 and this value.
+  // the internal filtering logic for the measurements would be based on SNR values.
+  // if not specified, all available measurements would be sent.
+  optional uint32 maxMeasCount = 6;
 }
 
 enum qsh_location_capabilities
@@ -241,6 +279,24 @@ message qsh_location_position_event
 
   // Postion report session status
   optional qsh_location_session_status session_status = 12;
+
+  //Altitude wrt mean sea level
+  optional float altitudeWrtMeanSeaLevel = 13;
+
+  // Position dilusion of precision
+  optional float pdop = 14;
+
+  // Horizontal dilusion of precision
+  optional float hdop = 15;
+
+  // Vertical dilusion of precision
+  optional float vdop = 16;
+
+  // Number of elements in the sv_used list
+  optional uint32 sv_used_count = 17;
+
+  // array of sv used, see qsh_location_sv_used
+  repeated qsh_location_sv_used sv_used = 18;
 }
 
 enum qsh_location_constellation_type

@@ -3,12 +3,6 @@
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
-#undef LOG_NDEBUG
-#define LOG_NDEBUG 0
-
-#undef LOG_TAG
-#define LOG_TAG "QSH_LOCATION_TEST"
-
 /*=============================================================================
   Include Files
   ===========================================================================*/
@@ -24,6 +18,12 @@
 /*=============================================================================
   Macro Definitions
   ===========================================================================*/
+
+#undef LOG_NDEBUG
+#define LOG_NDEBUG 0
+
+#undef LOG_TAG
+#define LOG_TAG "QSH_LOCATION_TEST"
 
 #ifndef UNUSED_VAR
 #define UNUSED_VAR(var) ((void)(var));
@@ -60,6 +60,13 @@ struct timespec timeout;
 sigset_t newmask;
 siginfo_t info;
 bool bVerboseMode = true;
+
+//pdr mode related
+static qsh_location_pdr_mode g_pdr_mode = QSH_LOCATION_PDR_MODE_CASUAL;
+// Session‑mode handling
+static qsh_location_session_mode g_session_mode = QSH_LOCATION_SESSION_MODE_NORMAL;
+// Max measurement count
+static uint32_t g_max_meas_count = 0;
 
 #define GNSS_MAX_MEASUREMENT  128
 
@@ -383,20 +390,41 @@ static void event_cb(const uint8_t *data, size_t size, uint64_t ts) {
 
             if (bVerboseMode) {
                 printf("Received position event\n");
-                printf("session status=%d clock: t=%" PRIu64" lat=%d lon=%d alt=%.2f hacc=%.2f"
-                        "vacc=%.2f sp=%.2f sacc=%.2f b=%.2f bacc=%.2f ci=%.2f\n",
-                        posEvent.session_status(), posEvent.timestamp(), posEvent.latitude(),
-                        posEvent.longitude(), posEvent.altitude(), posEvent.horizontal_accuracy(),
-                        posEvent.vertical_accuracy(),
-                        posEvent.speed(), posEvent.speed_accuracy(), posEvent.bearing(),
-                        posEvent.bearing_accuracy(), posEvent.conformity_index());
+                printf("session status=%d clock: t=%" PRIu64" lat=%d lon=%d alt=%.2f "
+                       "altWrtMeanSeaLevel=%.2f hacc=%.2f vacc=%.2f sp=%.2f "
+                       "sacc=%.2f b=%.2f bacc=%.2f ci=%.2f "
+                       "pDop = %.2f, hDop = %.2f, vDop = %.2f\n",
+                       posEvent.session_status(),
+                       posEvent.timestamp(),
+                       posEvent.latitude(),
+                       posEvent.longitude(),
+                       posEvent.altitude(),
+                       posEvent.altitudewrtmeansealevel(),
+                       posEvent.horizontal_accuracy(),
+                       posEvent.vertical_accuracy(),
+                       posEvent.speed(),
+                       posEvent.speed_accuracy(),
+                       posEvent.bearing(),
+                       posEvent.bearing_accuracy(),
+                       posEvent.conformity_index(),
+                       posEvent.pdop(),
+                       posEvent.hdop(),
+                       posEvent.vdop());
+
+                printf("SV used count = %u\n", posEvent.sv_used_count());
+                for (int i = 0; i < posEvent.sv_used_size(); ++i) {
+                    const qsh_location_sv_used& sv = posEvent.sv_used(i);
+                    printf("SV[%d]: id=%d, constellation=%d\n",
+                        i, sv.sv_id(), sv.constellation_type());
+                }
             }
             LOC_LOGd("timestamp=%" PRIu64" latitude=%d",
                      posEvent.timestamp(),
                      posEvent.latitude());
-            LOC_LOGd("longitude=%d altitude=%f",
+            LOC_LOGd("longitude=%d altitude=%f altitudeWrtMeanSeaLevel=%f",
                      posEvent.longitude(),
-                     posEvent.altitude());
+                     posEvent.altitude(),
+                     posEvent.altitudewrtmeansealevel());
             LOC_LOGd("horizontal_accuracy=%f vertical_accuracy=%f",
                      posEvent.horizontal_accuracy(),
                      posEvent.vertical_accuracy());
@@ -408,7 +436,15 @@ static void event_cb(const uint8_t *data, size_t size, uint64_t ts) {
                      posEvent.bearing_accuracy());
             LOC_LOGd("conformity_index=%f", posEvent.conformity_index());
             LOC_LOGd("session_status=%d", posEvent.session_status());
+            LOC_LOGd("PDOP = %.2f, HDOP = %.2f, VDOP = %.2f\n",
+                        posEvent.pdop(), posEvent.hdop(), posEvent.vdop());
+            LOC_LOGd("SV used count = %u\n", posEvent.sv_used_count());
 
+            for (int i = 0; i < posEvent.sv_used_size(); ++i) {
+                const qsh_location_sv_used& sv = posEvent.sv_used(i);
+                LOC_LOGd("SV[%d]: id=%d, constellation=%d\n",
+                    i, sv.sv_id(), sv.constellation_type());
+            }
         } else if (QSH_LOCATION_MSGID_QSH_LOCATION_MEAS_AND_CLK_EVENT == pb_event.msg_id()) {
             qsh_location_meas_and_clk_event measClkEvent;
             measClkEvent.ParseFromString(pb_event.payload());
@@ -425,7 +461,7 @@ static void event_cb(const uint8_t *data, size_t size, uint64_t ts) {
             LOC_LOGd("Received engine state event, eng state = %d",
                      engStateEvent.engine_state());
         } else {
-            LOC_LOGe("Unsupprted message ID", pb_event.msg_id());
+            LOC_LOGe("Unsupprted message ID: %d", pb_event.msg_id());
         }
     }
 }
@@ -555,6 +591,15 @@ static void send_update_req(bool start,
     location_update.set_start(start);
     location_update.set_location_request(request);
     location_update.set_interval(interval);
+    printf("Setting pdr mode to %d", g_pdr_mode);
+    location_update.set_pdrmode(g_pdr_mode);
+    printf("Setting session mode to %d", g_session_mode);
+    location_update.set_sessionmode(g_session_mode);
+    if (g_max_meas_count > 0) {
+        printf("Setting max meas count to %d", g_max_meas_count);
+        location_update.set_maxmeascount(g_max_meas_count);
+    }
+
     location_update.SerializeToString(&location_update_encoded);
 
     pb_req_msg.set_msg_id(QSH_LOCATION_MSGID_QSH_LOCATION_UPDATE);
@@ -812,7 +857,18 @@ bail:
 // Helper to execute a test entry
 static int executeTest(const std::vector<int>& values) {
     int ret = -1;
-    
+    // Apply PDR and session mode if provided
+    if (values.size() >= 5) {
+        int pdrMode = values[3];
+        g_pdr_mode = (pdrMode == 1) ? QSH_LOCATION_PDR_MODE_CASUAL : QSH_LOCATION_PDR_MODE_FITNESS;
+        int sessMode = values[4];
+        switch (sessMode) {
+            case 1: g_session_mode = QSH_LOCATION_SESSION_MODE_NORMAL; break;
+            case 2: g_session_mode = QSH_LOCATION_SESSION_MODE_SWIM; break;
+            case 3: g_session_mode = QSH_LOCATION_SESSION_MODE_STAMINA; break;
+            default: g_session_mode = QSH_LOCATION_SESSION_MODE_NORMAL; break;
+        }
+    }
     int scenario = values[0];
     int rate = values[1];
     int duration = values[2];
@@ -891,51 +947,29 @@ static int loadReqFromFile(string inputKey) {
     if ((gf_fp = fopen("/vendor/etc/qsh_location_test.txt", "r")) != NULL) {
         while (fgets(line, sizeof(line), gf_fp)) {
             char key[50];
-            int val1, val2, val3;
+            int val1, val2, val3, val4, val5;
 
-            if (sscanf(line, "%s = %d,%d,%d", key, &val1, &val2, &val3) == 4) {
-                data[key] = {val1, val2, val3};
+            //   File format:
+            //   key = case,rate,duration,pdrMode,sessionMode
+            //   pdrMode: 1 = CASUAL, 2 = FITNESS
+            //   sessionMode: 1 = NORMAL, 2 = SWIM, 3 = STAMINA
+            if (sscanf(line, "%49s = %d,%d,%d,%d,%d", key, &val1, &val2, &val3, &val4, &val5) == 6){
+                std::string skey(key);
+                data[skey] = {val1, val2, val3, val4, val5};
+                order.push_back(skey);
             }
         }
         fclose(gf_fp);
-        if (data.find(inputKey) != data.end()) {
-            vector<int> values = data[inputKey];
-            switch (values[0]) {
-            case 1:
-                ret = test_loc_start(LOCATION_START_REQUEST, values[1]);
-                if (0 == ret) {
-                    printf("success - start location request\n");
-                    sleep(values[2]);
-                    ret = test_loc_start(LOCATION_STOP_REQUEST, values[1]);
-                    if (0 == ret) {
-                        printf("success - stop location request\n");
-                    } else {
-                        printf("failed - stop location request\n");
-                    }
-                } else {
-                    printf("failed - start location request\n");
+        if (inputKey == "-ALL-") {
+            // Execute synchronously in the same order as in qsh_location_test.txt
+            for (const auto& key : order) {
+                auto it = data.find(key);
+                if (it != data.end()) {
+                    executeTest(it->second);
                 }
-                test_loc_start(QUIT_REQUEST, 0);
-                break;
-            case 2:
-                ret = test_loc_start(DATA_START_REQUEST, values[1]);
-                if (0 == ret) {
-                    printf("success - start data request\n");
-                    sleep(values[2]);
-                    ret = test_loc_start(DATA_STOP_REQUEST, values[1]);
-                    if (0 == ret) {
-                        printf("success - stop data request\n");
-                    } else {
-                        printf("failed - stop data request\n");
-                    }
-                } else {
-                    printf("failed - start data request\n");
-                }
-                test_loc_start(QUIT_REQUEST, 0);
-                break;
-            default:
-                break;
-                }
+            }
+        } else if (data.find(inputKey) != data.end()) {
+            executeTest(data[inputKey]);
         } else {
             printf("test not defined\n");
         }
@@ -1025,6 +1059,40 @@ int main(int argc, char *argv[]) {
                     if (pch != NULL) {
                         locRate = atoi(pch);
                     }
+
+                    //PDR mode selection
+                    char pdrMode_buf[8];
+                    printf("Enter PDR mode (c for casual, f for fitness): ");
+                    if (fgets(pdrMode_buf, sizeof(pdrMode_buf), stdin) != NULL) {
+                        if (pdrMode_buf[0] == 'c' || pdrMode_buf[0] == 'C') {
+                            g_pdr_mode = QSH_LOCATION_PDR_MODE_CASUAL;
+                            printf("PDR mode set to CASUAL\n");
+                        } else if (pdrMode_buf[0] == 'f' || pdrMode_buf[0] == 'F') {
+                            g_pdr_mode = QSH_LOCATION_PDR_MODE_FITNESS;
+                            printf("PDR mode set to FITNESS\n");
+                        } else {
+                            printf("Invalid selection, PDR mode unchanged\n");
+                        }
+                    }
+
+                    //Session mode selection
+                    char sessionMode_buf[8];
+                    printf("Enter session mode (n for normal, s for swim, t for stamina): ");
+                    if (fgets(sessionMode_buf, sizeof(sessionMode_buf), stdin) != NULL) {
+                        if (sessionMode_buf[0] == 'n' || sessionMode_buf[0] == 'N') {
+                            g_session_mode = QSH_LOCATION_SESSION_MODE_NORMAL;
+                            printf("Session mode set to NORMAL\n");
+                        } else if (sessionMode_buf[0] == 's' || sessionMode_buf[0] == 'S') {
+                            g_session_mode = QSH_LOCATION_SESSION_MODE_SWIM;
+                            printf("Session mode set to SWIM\n");
+                        } else if (sessionMode_buf[0] == 't' || sessionMode_buf[0] == 'T') {
+                            g_session_mode = QSH_LOCATION_SESSION_MODE_STAMINA;
+                            printf("Session mode set to STAMINA\n");
+                        } else {
+                            printf("Invalid selection, session mode unchanged\n");
+                        }
+                    }
+
                     ret = test_loc_start(LOCATION_START_REQUEST, locRate);
                     locInProgress = 1;
                     if (0 == ret) {
@@ -1050,6 +1118,13 @@ int main(int argc, char *argv[]) {
                     pch = fgets(str, BUFFERSIZE, stdin);
                     if (pch != NULL) {
                         measRate = atoi(pch);
+                    }
+
+                    // Max Measurement Count
+                    printf("Enter maxMeasCount (0 = not_specified): ");
+                    pch = fgets(str, BUFFERSIZE, stdin);
+                    if (pch != NULL) {
+                        g_max_meas_count = atoi(pch);
                     }
 
                     ret = test_loc_start(DATA_START_REQUEST, measRate);

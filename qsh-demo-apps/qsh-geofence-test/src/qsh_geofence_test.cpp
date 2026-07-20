@@ -343,11 +343,11 @@ static void event_cb(const uint8_t *data, size_t size, uint64_t ts) {
             LOC_LOGd("location_timestamp=%" PRIu64,
                      breach.location_timestamp());
 
-            printf("latitude=%.2f longitude=%.2f altitude=%.2f\n",
+            printf("latitude=%.5f longitude=%.5f altitude=%.2f\n",
                     breach.latitude() / 1e7,
                     breach.longitude() / 1e7,
                     breach.altitude());
-            LOC_LOGd("latitude=%.2f longitude=%.2f altitude=%.2f",
+            LOC_LOGd("latitude=%.5f longitude=%.5f altitude=%.2f",
                      breach.latitude() / 1e7,
                      breach.longitude() / 1e7,
                      breach.altitude());

@@ -41,8 +41,6 @@
 #include <sstream>
 #include <grp.h>
 #include <sys/types.h>
-#include <sys/prctl.h>
-#include <sys/capability.h>
 #include <semaphore.h>
 #include <getopt.h>
 #include <loc_pla.h>
@@ -702,22 +700,6 @@ void setRequiredPermToRunAsLocClient() {
             printf("Error: setuid failed. %s", strerror(errno));
         }
 
-        // Set capabilities
-        struct __user_cap_header_struct cap_hdr = {};
-        cap_hdr.version = _LINUX_CAPABILITY_VERSION;
-        cap_hdr.pid = getpid();
-        if (prctl(PR_SET_KEEPCAPS, 1) < 0) {
-            printf("Error: prctl failed. %s", strerror(errno));
-        }
-
-        // Set access to CAP_NET_BIND_SERVICE
-        struct __user_cap_data_struct cap_data = {};
-        cap_data.permitted = (1 << CAP_NET_BIND_SERVICE);
-        cap_data.effective = cap_data.permitted;
-        printf("cap_data.permitted: %d", (int)cap_data.permitted);
-        if (capset(&cap_hdr, &cap_data)) {
-            printf("Error: capset failed. %s", strerror(errno));
-        }
     } else {
         int userId = getuid();
         if (UID_LOCCLIENT == userId) {

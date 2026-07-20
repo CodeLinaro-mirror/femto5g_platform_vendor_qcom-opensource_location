@@ -108,7 +108,6 @@ class TrackingSessCbHandler {
                         ::GnssLocationInfoNotification* engineLocationInfoNotification) {
 
                     std::vector<GnssLocation> engLocationsVector;
-                    std::vector<uint8_t> extendedDataVector;
                     for (int i=0; i< count; i++) {
                         GnssLocation gnssLocation =
                             LocationClientApiImpl::parseLocationInfo(
@@ -116,31 +115,8 @@ class TrackingSessCbHandler {
                         engLocationsVector.push_back(gnssLocation);
                         pClientApiImpl->logLocation(gnssLocation,
                                                     LOC_REPORT_TRIGGER_ENGINE_TRACKING_SESSION);
-                        if ((LOC_OUTPUT_ENGINE_SPE == gnssLocation.locOutputEngType) &&
-                                 extendedLocDataCb) {
-                            const ::GnssLocationInfoNotification &halLocationInfo =
-                                    engineLocationInfoNotification[i];
-
-                            if ((halLocationInfo.flags &
-                                    LDT_GNSS_LOCATION_INFO_EXTENDED_DATA_BIT) &&
-                                    halLocationInfo.extendedDataLen > 0) {
-                                //Copy extendedData to extendedDatastr
-                                if (halLocationInfo.extendedDataLen <= sizeof(
-                                        halLocationInfo.extendedData)) {
-                                    extendedDataVector.insert(extendedDataVector.end(),
-                                            &halLocationInfo.extendedData[0],
-                                            &halLocationInfo.extendedData[
-                                                    halLocationInfo.extendedDataLen]);
-                                }
-                            }
-                        }
                     }
                     engineLocCb(engLocationsVector);
-                    // Call ExtendedData Data callback
-                    if (extendedLocDataCb && extendedDataVector.size() > 0) {
-                        pClientApiImpl->getLogger().log(1, extendedDataVector);
-                        extendedLocDataCb(extendedDataVector);
-                    }
                 };
             }
             if (!engineReportCbs.nmeaSentencesCallback && !engineReportCbs.engineNmeaCallback
@@ -1029,7 +1005,8 @@ DECLARE_TBL(GnssSignalTypeMask) = {
     {GNSS_SIGNAL_NAVIC_L5_BIT, "NAVIC_L5"},
     {GNSS_SIGNAL_BEIDOU_B2AQ_BIT, "BDS_B2AQ"},
     {GNSS_SIGNAL_BEIDOU_B2BI_BIT, "BDS_B2BI"},
-    {GNSS_SIGNAL_BEIDOU_B2BQ_BIT, "BDS_B2BQ"}
+    {GNSS_SIGNAL_BEIDOU_B2BQ_BIT, "BDS_B2BQ"},
+    {GNSS_SIGNAL_QZSS_L1CB_BIT, "QZSS_L1CB"},
 };
 // GnssSignalTypes
 DECLARE_TBL(GnssSignalTypes) = {
@@ -1055,7 +1032,8 @@ DECLARE_TBL(GnssSignalTypes) = {
     {GNSS_SIGNAL_TYPE_BEIDOU_B2A_Q, "BDS_B2AQ"},
     {GNSS_SIGNAL_TYPE_BEIDOU_B2B_I, "BDS_B2BI"},
     {GNSS_SIGNAL_TYPE_BEIDOU_B2B_Q, "BDS_B2BQ"},
-    {GNSS_SIGNAL_TYPE_NAVIC_L1, "NAVIC_L1"}
+    {GNSS_SIGNAL_TYPE_NAVIC_L1, "NAVIC_L1"},
+    {GNSS_SIGNAL_TYPE_QZSS_L1CB, "QZSS_L1CB"}
 };
 // GnssSvType
 DECLARE_TBL(GnssSvType) = {

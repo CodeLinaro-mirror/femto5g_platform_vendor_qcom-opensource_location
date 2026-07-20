@@ -1938,6 +1938,9 @@ void LocationIntegrationApiImpl::processRegisterGnssSignalTypesRespCb(
         if (msg->mSignalTypeMask & ::GNSS_SIGNAL_QZSS_L1CA) {
             gnssSignalTypeMask |= location_client::GNSS_SIGNAL_QZSS_L1CA_BIT;
         }
+        if (msg->mSignalTypeMask & ::GNSS_SIGNAL_QZSS_L1CB) {
+            gnssSignalTypeMask |= location_client::GNSS_SIGNAL_QZSS_L1CB_BIT;
+        }
         if (msg->mSignalTypeMask & ::GNSS_SIGNAL_QZSS_L1S) {
             gnssSignalTypeMask |= location_client::GNSS_SIGNAL_QZSS_L1S_BIT;
         }

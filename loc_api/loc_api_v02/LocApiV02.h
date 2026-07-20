@@ -190,7 +190,7 @@ private:
 
   GnssMeasurements*  mGnssMeasurements;
   timeBiases mTimeBiases;
-  std::unordered_map<uint16_t, GnssSvPolynomial> mSvPolynomialMap;
+  std::unordered_map<uint32_t, GnssSvPolynomial> mSvPolynomialMap;
   qmiLocPlatformPowerStateEnumT_v02 mPlatformPowerState;
 
   size_t mBatchSize, mDesiredBatchSize;
@@ -204,6 +204,11 @@ private:
   // Dwell Time Allignment
   uint8_t mDwellAlignTimeMsValid;
   uint32_t mDwellAlignTimeMs;
+  // Boot timestamp in ms when stopTimeBasedTrackingSync was last called
+  uint64_t mLastSessionStopTimestampInMs;
+
+  //MO MSA session timeout value in ms
+  uint32_t mMsaSessionTimeOutMs;
 
   GnssBasicMeasurementsInfo m1HzMeasurementsInfo;
 
@@ -416,6 +421,8 @@ private:
         qmiLocGNSSConstellEnumT_v02 qmiSecondaryBandConfig,
         GnssSvTypeConfig& secondaryBandConfig);
   void injectFeatureConfig();
+
+  uint32_t getSvPolyMapKey(GnssSvType svSystem, uint16_t gnssSvId);
 
 protected:
   virtual enum loc_api_adapter_err

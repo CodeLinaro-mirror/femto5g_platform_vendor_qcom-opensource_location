@@ -265,13 +265,7 @@ void hanldeSllReportStatus(LocGpsStatusValue status, void *context) {
 */
 void hanldeSllReportNmea(const char* nmea, int length, void *context) {
 
-    if (nullptr != context) {
-        SynergyLocApi *synergyLocApiInstance = (SynergyLocApi*)context;
-        synergyLocApiInstance->reportNmea(nmea, length);
-    } else {
-        LOC_LOGw ("Context is NULL");
-    }
-
+    // no impl is needed, as GNSS HAL does not proces the gnss nmea
 }
 
 /**

@@ -1845,9 +1845,6 @@ uint32_t LocationApiPbMsgConv::getPBMaskForGnssLocationInfoExtFlagMask(
     if (gnssLocInfoFlagMask & LDT_GNSS_LOCATION_INFO_REPORT_INTERVAL_BIT) {
         pbGnssLocInfoFlagMask |= PB_GNSS_LOCATION_INFO_REPORT_INTERVAL_BIT;
     }
-    if (gnssLocInfoFlagMask & LDT_GNSS_LOCATION_INFO_EXTENDED_DATA_BIT) {
-        pbGnssLocInfoFlagMask |=  PB_GNSS_LOCATION_INFO_EXTENDED_DATA_BIT;
-    }
 
     return pbGnssLocInfoFlagMask;
 }
@@ -2321,6 +2318,9 @@ uint32_t LocationApiPbMsgConv::getPBMaskForGnssSignalTypeMask(
     }
     if (gnssSignalTypeMask & GNSS_SIGNAL_QZSS_L1CA) {
         pbGnssSignalTypeMask |= PB_GNSS_SIGNAL_QZSS_L1CA_BIT;
+    }
+    if (gnssSignalTypeMask & GNSS_SIGNAL_QZSS_L1CB) {
+        pbGnssSignalTypeMask |= PB_GNSS_SIGNAL_QZSS_L1CB_BIT;
     }
     if (gnssSignalTypeMask & GNSS_SIGNAL_QZSS_L1S) {
         pbGnssSignalTypeMask |= PB_GNSS_SIGNAL_QZSS_L1S_BIT;
@@ -2847,6 +2847,9 @@ uint32_t LocationApiPbMsgConv::getGnssSignalTypeMaskFromPB(
     if (pbGnssSignalTypeMask & PB_GNSS_SIGNAL_QZSS_L1CA_BIT) {
         gnssSignalTypeMask |= GNSS_SIGNAL_QZSS_L1CA;
     }
+    if (pbGnssSignalTypeMask & PB_GNSS_SIGNAL_QZSS_L1CB_BIT) {
+        gnssSignalTypeMask |= GNSS_SIGNAL_QZSS_L1CB;
+    }
     if (pbGnssSignalTypeMask & PB_GNSS_SIGNAL_QZSS_L1S_BIT) {
         gnssSignalTypeMask |= GNSS_SIGNAL_QZSS_L1S;
     }
@@ -3313,9 +3316,6 @@ uint64_t LocationApiPbMsgConv::getGnssLocationInfoFlagMaskFromPB(
     }
     if (pbGnssLocInfoExtFlagMask & PB_GNSS_LOCATION_INFO_REPORT_INTERVAL_BIT) {
         gnssLocInfoFlagMask |= LDT_GNSS_LOCATION_INFO_REPORT_INTERVAL_BIT;
-    }
-    if (pbGnssLocInfoExtFlagMask & PB_GNSS_LOCATION_INFO_EXTENDED_DATA_BIT) {
-        gnssLocInfoFlagMask |= LDT_GNSS_LOCATION_INFO_EXTENDED_DATA_BIT ;
     }
     LocApiPb_LOGv("LocApiPB: pbGnssLocInfoFlagMask:0x%x, pbGnssLocInfoExtFlagMask:0x%x, "
                   "gnssLocInfoFlagMask:0x%" PRIu64"", pbGnssLocInfoFlagMask,
@@ -4472,11 +4472,6 @@ int LocationApiPbMsgConv::convertGnssLocInfoNotifToPB(
     pbGnssLocInfoNotif->set_leapsecondsunc(gnssLocInfoNotif.leapSecondsUnc);
     // uint32 posReportingInterval  = 51;
     pbGnssLocInfoNotif->set_posreportinginterval(gnssLocInfoNotif.posReportingInterval);
-    // bytes gnssExtendedData= 52;
-    if (LDT_GNSS_LOCATION_INFO_EXTENDED_DATA_BIT  & gnssLocInfoNotif.flags) {
-        pbGnssLocInfoNotif->set_gnssextendeddata(gnssLocInfoNotif.extendedData,
-                gnssLocInfoNotif.extendedDataLen);
-    }
 
     LocApiPb_LOGv("LocApiPB: gnssLocInfoNotif - GLocInfoFlgMask:%" PRIx64", pdop:%f, hdop:%f, "
             "vdop:%f",
@@ -5788,19 +5783,6 @@ int LocationApiPbMsgConv::pbConvertToGnssLocInfoNotif(
 
     // uint32 posReportingInterval  = 51;
     gnssLocInfoNotif.posReportingInterval  = pbGnssLocInfoNotif.posreportinginterval();
-
-    // bytes gnssExtendedData = 52;
-    if (LDT_GNSS_LOCATION_INFO_EXTENDED_DATA_BIT  & gnssLocInfoNotif.flags) {
-        const std::string& extendedDataStr = pbGnssLocInfoNotif.gnssextendeddata();
-        gnssLocInfoNotif.extendedDataLen = extendedDataStr.length();
-        if (gnssLocInfoNotif.extendedDataLen > 0 &&
-                (gnssLocInfoNotif.extendedDataLen <= sizeof(gnssLocInfoNotif.extendedData))) {
-            memcpy(gnssLocInfoNotif.extendedData,
-                    extendedDataStr.c_str(), extendedDataStr.length());
-        } else {
-            LOC_LOGw("received incorrect payload for oemDreData %d", extendedDataStr.length());
-        }
-    }
 
     LOC_LOGv("LocApiPB: pbGnssLocInfoNotif -GLocInfoFlgMask:0x%" PRIx64 ", pdop:%f, "
             "hdop:%f, vdop:%f",
