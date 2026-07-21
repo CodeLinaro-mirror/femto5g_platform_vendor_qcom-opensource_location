@@ -1,58 +1,181 @@
 # lines starting with # are comments and are ignored
-# uncomment out one AND ONLY ONE of the following options
+# uncomment out ONE AND ONLY ONE of the following test cases
+
+# ============================================================================
+# BASIC TEST MODES (4 modes)
+# ============================================================================
+
 # QSH_LOC_TEST_POSITION
+# 2000
+# Generates position fixes at 2000ms interval
+
 # QSH_LOC_TEST_MEAS_AND_CLK
+# 4000
+# Generates measurements and clock data at 4000ms interval
+
 # QSH_LOC_TEST_POSITION_MEAS_AND_CLK
+# 1000
+# Generates both position fixes and measurements at 1000ms interval
+
 # QSH_LOC_TEST_GEOFENCE
-#
-# For QSH_LOC_TEST_POSITION, QSH_LOC_TEST_MEAS_AND_CLK and QSH_LOC_TEST_POSITION_MEAS_AND_CLK the second line
-# must be uncommented out as well, it reperesents the interval (time between fixes) in milliseconds
-#
-#QSH_LOC_TEST_POSITION
-#2000
-
-#QSH_LOC_TEST_MEAS_AND_CLK
-#4000
-
-#QSH_LOC_TEST_POSITION_MEAS_AND_CLK
-#1000
-
-#
-# For QSH_LOC_TEST_GEOFENCE the next 'n' lines must be uncommented out as well
-# they represent the parameters of 'n' geofences to be added (see below comment as well)
-#
-# breach_type must be either 1 (ENTER) or 5 (ENTER and DWELL IN) or 2 (EXIT) or 10 (EXIT and DWELL OUT)
-#
-#   breach_type     responsiveness  dwell_time  latitude    longitude       radius
-
-#QSH_LOC_TEST_GEOFENCE
+# breach_type  responsiveness  dwell_time  latitude    longitude       radius
 #    5               150             2           37.3394     -121.8939       5000
 #    10              200             3           37.775      -122.4183       300
-#    10              250             5           30.2669     -97.7428        22
-#    1               150             7           42.3583     -71.0603        5
-#    1               177             8           21.3069     -157.8583       1000
-#    5               312             9           58.3019     -134.4197       23.55
-#    2               335             6           29.9544     -90.075         40000
-#    5               100             5           40.7142     -74.0064        34.55
-#    1               200             4           48.4333     -123.35         10
-#    1               300             3           45.5        -73.5833        10000
-#    10              400             1           52.35       4.9167          200000
-#    2               188             8           -36.8667    174.7667        44
-#    1               34              9           41.3833     2.1833          51.23
-#    10              267             2           22.2833     114.15          3000
-#    2               900             3           18.975      72.8258         5000
-#    5               800             3           55.7522     37.6156         500
-#    2               703             6           28.6        77.2            2
-#    1               665             7           48.8557     2.3333          445
-#    10              522             7           -22.9       -43.2333        100
-#    10              413             4           31.1094     121.3681        500
-#    5               278             5           32.7153        -117.1564       30
-#    10              312             7           41.85        -87.65          4000.23
-#    10              22              8           32.7833        -96.8           222.44
-#    2               444             2           39.7392        -104.9842       39.21
-#    2               200             3           36.175        -115.1364       6900
-#    5               100             9           34.0522        -118.2428       768
-#    5               389             7           25.7739        -80.1939        20.2
-#    1               111             6           36.1658        -86.7844        822.367
-#    10              778             4           45.4167        -75.7           79
-#    2               238             1           43.6667        -79.4167        23456
+# Geofence breach detection with specified geofences
+
+# ============================================================================
+# SINGLE-CLIENT REFERENCE APP TESTS (3 modes)
+# ============================================================================
+
+# QSH_LOC_TEST_TC8_POSITION_CLIENT_REF
+# 2000 [timeout=30] [duration=30] [sessionMode=1] [pdrMode=1] [maxMeasCount=0]
+# Position fixes via qsh_sensor_client reference app.
+# Default (duration unset): one-shot, stops after the first fix.
+# With duration set: holds the session open for that many seconds instead,
+# collecting every fix that arrives.
+
+# QSH_LOC_TEST_TC9_MEAS_AND_CLK_CLIENT_REF
+# 4000 [timeout=30] [duration=60] [sessionMode=1] [pdrMode=1] [maxMeasCount=0]
+# Measurements and clock via qsh_sensor_client reference app.
+# Same one-shot-vs-duration behavior as TC8_POSITION_CLIENT_REF above.
+
+# QSH_LOC_TEST_TC10_POSITION_MEAS_AND_CLK_CLIENT_REF
+# 1000 [timeout=30] [duration=30] [sessionMode=1] [pdrMode=1] [maxMeasCount=0]
+# Combined position and measurements via qsh_sensor_client reference app.
+# With duration set, each half (POSITION then MEAS_AND_CLK) holds for the
+# full duration in turn — total session time is ~2x duration.
+
+# ============================================================================
+# MULTI-CLIENT AND LIFECYCLE TESTS (7 modes)
+# ============================================================================
+
+# QSH_LOC_TEST_TC1_MULTI_CLIENT_CLIENT_REF
+# sessionMode1 pdrMode1 maxMeasCount1 interval1
+# sessionMode2 pdrMode2 maxMeasCount2 interval2
+# Two concurrent clients with independent parameters
+# Example:
+# QSH_LOC_TEST_TC1_MULTI_CLIENT_CLIENT_REF
+# 1 1 0 2000
+# 1 1 0 3000
+
+# QSH_LOC_TEST_TC2_OPEN_CLOSE_CLIENT_REF
+# 1000 [iterations=5] [timeout=30]
+# Open/close cycles (default 5 cycles if iterations not specified)
+
+# QSH_LOC_TEST_TC3_START_STOP_CLIENT_REF
+# 1000 [iterations=5] [timeout=30]
+# Start/stop cycles within one session (default 5 cycles if iterations not specified)
+
+# QSH_LOC_TEST_TC4_FIRST_FIX_CLIENT_REF
+# 1000 [timeout=30]
+# Measures first fix latency
+
+# QSH_LOC_TEST_TC5_FIRST_MEAS_EPOCH_CLIENT_REF
+# 1000 [timeout=30]
+# Measures first measurement epoch latency
+
+# QSH_LOC_TEST_TC6_CAPS_VERSION_CLIENT_REF
+# 1000
+# Queries sensor capabilities and version (no timeout)
+
+# QSH_LOC_TEST_TC7_REQUEST_SWITCH_CLIENT_REF
+# 1000 [timeout=30]
+# Switches between different request types
+
+# ============================================================================
+# GEOFENCE REFERENCE APP TESTS (5 modes)
+# ============================================================================
+
+# QSH_LOC_TEST_TC11_GEOFENCE_ADD_CLIENT_REF
+# breach_type  responsiveness  dwell_time  latitude    longitude       radius
+#    5               150             2           37.3394     -121.8939       5000
+#    10              200             3           37.775      -122.4183       300
+# Add geofences via qsh_sensor_client reference app.
+# No id field here — the driver assigns one and returns it in the ACK log
+# (see "geofence ids count=..." / "id[N]=..." in logcat). Note that value
+# for use in a later REMOVE/MODIFY/PAUSE/RESUME below.
+
+# QSH_LOC_TEST_TC12_GEOFENCE_REMOVE_CLIENT_REF
+# breach_type  responsiveness  dwell_time  latitude    longitude       radius  id
+#    5               150             2           37.3394     -121.8939       5000    1
+# Remove a geofence added earlier in this run — id is REQUIRED and must
+# match the value TC11_GEOFENCE_ADD_CLIENT_REF's ack returned (fields besides
+# id are ignored for REMOVE).
+
+# QSH_LOC_TEST_TC13_GEOFENCE_MODIFY_CLIENT_REF
+# breach_type  responsiveness  dwell_time  latitude    longitude       radius  id
+#    5               150             2           37.3394     -121.8939       5000    1
+# Modify a geofence added earlier in this run — id is REQUIRED.
+
+# QSH_LOC_TEST_TC14_GEOFENCE_PAUSE_CLIENT_REF
+# breach_type  responsiveness  dwell_time  latitude    longitude       radius  id
+#    5               150             2           37.3394     -121.8939       5000    1
+# Pause a geofence added earlier in this run — id is REQUIRED.
+
+# QSH_LOC_TEST_TC15_GEOFENCE_RESUME_CLIENT_REF
+# breach_type  responsiveness  dwell_time  latitude    longitude       radius  id
+#    5               150             2           37.3394     -121.8939       5000    1
+# Resume a geofence added earlier in this run — id is REQUIRED.
+
+# ============================================================================
+# PARAMETER REFERENCE
+# ============================================================================
+# interval: milliseconds between fixes/measurements (required for most tests)
+# timeout: seconds to wait for result before declaring FAIL (optional, default varies)
+# duration: seconds to hold the session open collecting every fix/epoch, for
+#           TC8_POSITION_CLIENT_REF/TC9_MEAS_AND_CLK_CLIENT_REF/TC10_POSITION_MEAS_AND_CLK_CLIENT_REF
+#           only (optional; default unset = one-shot, stop after the first one)
+# iterations: cycle count for TC2/TC3 (optional, default 5)
+# sessionMode: 1=NORMAL, 2=SWIM, 3=STAMINA (optional, default 1)
+# pdrMode: 1=CASUAL, 2=FITNESS (optional, default 1)
+# maxMeasCount: max measurement reports to receive (optional, default 0=unlimited)
+#
+# Breach type values:
+#   1  = ENTER
+#   2  = EXIT
+#   5  = ENTER + DWELL_IN
+#   10 = EXIT + DWELL_OUT
+#
+# Responsiveness: milliseconds (lower = more responsive, higher power)
+# Dwell time: seconds
+# Latitude/Longitude: decimal degrees
+# Radius: meters
+# id (optional 7th geofence field): driver-assigned id, REQUIRED for
+#   TC12-14_REMOVE/MODIFY/PAUSE/RESUME_CLIENT_REF (use the value a prior
+#   TC11_GEOFENCE_ADD_CLIENT_REF's ack returned). Not used by
+#   TC11_GEOFENCE_ADD_CLIENT_REF or QSH_LOC_TEST_GEOFENCE.
+
+# ============================================================================
+# EXAMPLE CONFIGURATIONS
+# ============================================================================
+
+# Example 1: Basic position test
+# QSH_LOC_TEST_POSITION
+# 2000
+
+# Example 2: Position test via reference app with 30s timeout
+# QSH_LOC_TEST_TC8_POSITION_CLIENT_REF
+# 2000 timeout=30
+
+# Example 2b: Sustained 30s tracking session (PDR/SWIM) instead of one-shot
+# QSH_LOC_TEST_TC8_POSITION_CLIENT_REF
+# 1000 duration=30 sessionMode=2 pdrMode=2
+
+# Example 3: Multi-client test with 2 clients
+# QSH_LOC_TEST_TC1_MULTI_CLIENT_CLIENT_REF
+# 1 1 0 2000
+# 1 1 0 3000
+
+# Example 4: Open/close cycles (10 cycles)
+# QSH_LOC_TEST_TC2_OPEN_CLOSE_CLIENT_REF
+# 1000 iterations=10
+
+# Example 5: Geofence add test
+# QSH_LOC_TEST_TC11_GEOFENCE_ADD_CLIENT_REF
+#    5               150             2           37.3394     -121.8939       5000
+#    10              200             3           37.775      -122.4183       300
+
+# Example 6: Geofence remove test — id must match what Example 5's ack
+# returned (check logcat for "id[0]=..."); this is just illustrative
+# QSH_LOC_TEST_TC12_GEOFENCE_REMOVE_CLIENT_REF
+#    5               150             2           37.3394     -121.8939       5000    1
