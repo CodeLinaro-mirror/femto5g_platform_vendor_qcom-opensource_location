@@ -30,7 +30,7 @@
 /*
 Changes from Qualcomm Innovation Center are provided under the following license:
 
-Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted (subject to the limitations in the
@@ -80,6 +80,7 @@ DECLARE_TBL(loc_v02_event_name) =
    {QMI_LOC_STOP_REQ_V02, "STOP_POS_SESSION"},
    {QMI_LOC_EVENT_POSITION_REPORT_IND_V02, "EVENT_POSITION_REPORT"},
    {QMI_LOC_EVENT_GNSS_SV_INFO_IND_V02, "EVENT_GNSS_SV_INFO"},
+   {QMI_LOC_EVENT_NMEA_IND_V02, "EVENT_NMEA"},
    {QMI_LOC_EVENT_NI_NOTIFY_VERIFY_REQ_IND_V02, "EVENT_NI_NOTIFY_VERIFY_REQ"},
    {QMI_LOC_EVENT_INJECT_TIME_REQ_IND_V02, "EVENT_INJECT_TIME_REQ"},
    {QMI_LOC_EVENT_INJECT_PREDICTED_ORBITS_REQ_IND_V02, "EVENT_INJECT_PREDICTED_ORBITS_REQ"},
@@ -95,6 +96,8 @@ DECLARE_TBL(loc_v02_event_name) =
    {QMI_LOC_INJECT_POSITION_REQ_V02, "INJECT_POSITION"},
    {QMI_LOC_SET_ENGINE_LOCK_REQ_V02, "SET_ENGINE_LOCK"},
    {QMI_LOC_GET_ENGINE_LOCK_REQ_V02, "GET_ENGINE_LOCK"},
+   {QMI_LOC_SET_NMEA_TYPES_REQ_V02, "SET_NMEA_TYPES"},
+   {QMI_LOC_GET_NMEA_TYPES_REQ_V02, "GET_NMEA_TYPES"},
    {QMI_LOC_REGISTER_MASTER_CLIENT_REQ_V02, "REGISTER_MASTER_CLIENT"},
    {QMI_LOC_SET_SERVER_REQ_V02, "SET_SERVER"},
    {QMI_LOC_SET_XTRA_T_SESSION_CONTROL_REQ_V02, "SET_XTRA_T_SESSION_CONTROL"},
