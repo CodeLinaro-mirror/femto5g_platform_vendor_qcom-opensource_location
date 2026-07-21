@@ -7156,7 +7156,11 @@ void LocApiV02::reportEngDebugDataInfo(const qmiLocEngineDebugDataIndMsgT_v02*
         gnssEngineDebugDataInfo.galXtraMask = pLocEngDbgDataInfoIndMsg->galXtraMask;
     }
 
-    if (pLocEngDbgDataInfoIndMsg->qzssXtraMask_valid) {
+    if (pLocEngDbgDataInfoIndMsg->qzssXtraMaskExt_valid) {
+        gnssEngineDebugDataInfo.xtraValidMask =
+            gnssEngineDebugDataInfo.xtraValidMask | QZSS_XTRA_VALID_BIT;
+        gnssEngineDebugDataInfo.qzssXtraMask = pLocEngDbgDataInfoIndMsg->qzssXtraMaskExt;
+    } else if (pLocEngDbgDataInfoIndMsg->qzssXtraMask_valid) {
         gnssEngineDebugDataInfo.xtraValidMask =
             gnssEngineDebugDataInfo.xtraValidMask | QZSS_XTRA_VALID_BIT;
         gnssEngineDebugDataInfo.qzssXtraMask = pLocEngDbgDataInfoIndMsg->qzssXtraMask;
@@ -7184,7 +7188,9 @@ void LocApiV02::reportEngDebugDataInfo(const qmiLocEngineDebugDataIndMsgT_v02*
         gnssEngineDebugDataInfo.galEphMask = pLocEngDbgDataInfoIndMsg->galEphMask;
     }
 
-    if (pLocEngDbgDataInfoIndMsg->qzssEphMask_valid) {
+    if (pLocEngDbgDataInfoIndMsg->qzssEphMaskExt_valid) {
+        gnssEngineDebugDataInfo.qzssEphMask = pLocEngDbgDataInfoIndMsg->qzssEphMaskExt;
+    } else if (pLocEngDbgDataInfoIndMsg->qzssEphMask_valid) {
         gnssEngineDebugDataInfo.qzssEphMask = pLocEngDbgDataInfoIndMsg->qzssEphMask;
     }
 
@@ -7212,7 +7218,10 @@ void LocApiV02::reportEngDebugDataInfo(const qmiLocEngineDebugDataIndMsgT_v02*
                 pLocEngDbgDataInfoIndMsg->galHealthUnknownMask;
     }
 
-    if (pLocEngDbgDataInfoIndMsg->qzssHealthUnknownMask_valid) {
+    if (pLocEngDbgDataInfoIndMsg->qzssHealthUnknownMaskExt_valid) {
+        gnssEngineDebugDataInfo.qzssHealthUnknownMask =
+                pLocEngDbgDataInfoIndMsg->qzssHealthUnknownMaskExt;
+    } else if (pLocEngDbgDataInfoIndMsg->qzssHealthUnknownMask_valid) {
         gnssEngineDebugDataInfo.qzssHealthUnknownMask =
                 pLocEngDbgDataInfoIndMsg->qzssHealthUnknownMask;
     }
@@ -7238,7 +7247,10 @@ void LocApiV02::reportEngDebugDataInfo(const qmiLocEngineDebugDataIndMsgT_v02*
         gnssEngineDebugDataInfo.galHealthGoodMask = pLocEngDbgDataInfoIndMsg->galHealthGoodMask;
     }
 
-    if (pLocEngDbgDataInfoIndMsg->qzssHealthGoodMask_valid) {
+    if (pLocEngDbgDataInfoIndMsg->qzssHealthGoodMaskExt_valid) {
+        gnssEngineDebugDataInfo.qzssHealthGoodMask =
+                pLocEngDbgDataInfoIndMsg->qzssHealthGoodMaskExt;
+    } else if (pLocEngDbgDataInfoIndMsg->qzssHealthGoodMask_valid) {
         gnssEngineDebugDataInfo.qzssHealthGoodMask = pLocEngDbgDataInfoIndMsg->qzssHealthGoodMask;
     }
 
@@ -7263,7 +7275,10 @@ void LocApiV02::reportEngDebugDataInfo(const qmiLocEngineDebugDataIndMsgT_v02*
         gnssEngineDebugDataInfo.galHealthBadMask = pLocEngDbgDataInfoIndMsg->galHealthBadMask;
     }
 
-    if (pLocEngDbgDataInfoIndMsg->qzssHealthBadMask_valid) {
+    if (pLocEngDbgDataInfoIndMsg->qzssHealthBadMaskExt_valid) {
+        gnssEngineDebugDataInfo.qzssHealthBadMask =
+                pLocEngDbgDataInfoIndMsg->qzssHealthBadMaskExt;
+    } else if (pLocEngDbgDataInfoIndMsg->qzssHealthBadMask_valid) {
         gnssEngineDebugDataInfo.qzssHealthBadMask = pLocEngDbgDataInfoIndMsg->qzssHealthBadMask;
     }
 
