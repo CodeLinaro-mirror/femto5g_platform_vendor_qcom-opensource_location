@@ -64,9 +64,9 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 /*
-Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
-Copyright (c) 2025 Qualcomm Innovation Center, Inc. All rights reserved.
-SPDX-License-Identifier: BSD-3-Clause-Clear
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
 #include <loc_api_v02_log.h>
@@ -119,6 +119,7 @@ DECLARE_TBL(loc_v02_event_name) =
    {QMI_LOC_DELETE_GEOFENCE_REQ_V02, "DELETE_GEOFENCE"},
    {QMI_LOC_EDIT_GEOFENCE_REQ_V02, "EDIT_GEOFENCE"},
    {QMI_LOC_GET_BEST_AVAILABLE_POSITION_REQ_V02, "GET_BEST_AVAILABLE_POSITION"},
+   {QMI_LOC_GET_AVAILABLE_WWAN_POSITION_REQ_V02, "GET_AVAILABLE_WWAN_POSITION"},
    {QMI_LOC_INJECT_MOTION_DATA_REQ_V02, "INJECT_MOTION_DATA"},
    {QMI_LOC_EVENT_PEDOMETER_CONTROL_IND_V02, "EVENT_PEDOMETER_CONTROL"},
    {QMI_LOC_EVENT_MOTION_DATA_CONTROL_IND_V02, "EVENT_MOTION_DATA_CONTROL"},
@@ -189,6 +190,12 @@ DECLARE_TBL(loc_v02_event_name) =
    {QMI_LOC_SET_NTN_STATUS_REQ_V02, "SET_NTN_STATUS"},
    {QMI_LOC_GET_NTN_STATUS_REQ_V02, "GET_NTN_STATUS"},
    {QMI_LOC_SET_PRECISE_SESSION_CONFIG_REQ_V02, "SET_PRECISE_SESSION_CONFIG"},
+   // FDCL
+   {QMI_LOC_EVENT_FDCL_SERVICE_REQ_IND_V02, "EVENT_FDCL_SERVICE_REQ"},
+   {QMI_LOC_GET_FDCL_BS_LIST_REQ_V02, "GET_FDCL_BS_LIST"},
+   {QMI_LOC_INJECT_FDCL_DATA_REQ_V02, "INJECT_FDCL_DATA"},
+   {QMI_LOC_EVENT_BS_OBS_DATA_SERVICE_REQ_IND_V02, "EVENT_BS_OBS_DATA_SERVICE_REQ"},
+   {QMI_LOC_GET_BS_OBS_DATA_REQ_V02, "GET_BS_OBS_DATA"},
    // Please note, as req, resp, ind has same enum, only one entry need to be added in above table
 };
 
