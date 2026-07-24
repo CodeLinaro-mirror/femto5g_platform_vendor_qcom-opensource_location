@@ -264,7 +264,7 @@ int ConfigFileImpl::find_value(size_t & cursor_begin, size_t & cursor_end, const
 }
 
 ConfigFileImpl::ConfigFileImpl(const char * const filename, const size_t max_line_length, const bool verbose) :
-    m_loaded(false)
+    m_loaded(false), m_config() // Explicitly initialize m_config
 {
   ConfigPair pair;
   pair.name = 0;

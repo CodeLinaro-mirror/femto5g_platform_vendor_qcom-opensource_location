@@ -476,6 +476,11 @@ nv_param_err_code NvParamMgrImpl::saveNvDataBlob (const char* param_name,
     int sqlRes;
     _BREAK_SQLITE_CHECK_OK(sqlite3_prepare_v2((sqlite3 *)m_db, m_sqlite_sentence,
                                               -1, &pStmt, NULL), NV_PARAM_ERR_SQLITE_OTHER_ERR)
+    // Check if pStmt is NULL after prepare_v2 to prevent NULL pointer dereference
+    if (pStmt == NULL) {
+      result = NV_PARAM_ERR_SQLITE_OTHER_ERR;
+      break;
+    }
     _BREAK_SQLITE_CHECK_OK(sqlite3_bind_text (pStmt, 1, param_name,
                                               strlen (param_name), SQLITE_STATIC),
                                               NV_PARAM_ERR_SQLITE_OTHER_ERR)
@@ -1080,7 +1085,15 @@ int NvParamMgrImpl::wrapper_mprintf(char* &output_buf, unsigned int &output_size
       }
       else
       {
-        output_buf = (char*) realloc (output_buf, output_size);
+        // Store original pointer to prevent memory leak if realloc fails
+        char* temp_buf = (char*) realloc (output_buf, output_size);
+        if (temp_buf == NULL) {
+          // realloc failed, original buffer is still valid, free it to prevent leak
+          free(output_buf);
+          output_buf = NULL;
+        } else {
+          output_buf = temp_buf;
+        }
       }
 
       if (output_buf == NULL)

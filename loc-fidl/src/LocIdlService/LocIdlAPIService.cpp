@@ -1164,6 +1164,11 @@ int main() {
         return 0;
     }
 
+#ifdef LOC_USE_DLT
+    registerDltApp("LIDL", "Location IDL Service");
+    registerDltContexts(LOC_IDL_SERVICE_CONTEXTS, LOC_IDL_SERVICE_CONTEXTS_COUNT);
+#endif
+
     static loc_param_s_type locIdlServiceConfEntryTable[] = {
         {"ENABLE_LOC_IDL_SERVICE_STOP_SESSION", &pLocIdlService->mEnableStopSession, NULL, 'n'},
         {"ENABLE_LOC_IDL_SERVICE_AUTO_START", &pLocIdlService->mEnableAutoStartSession, NULL, 'n'},
@@ -1174,7 +1179,7 @@ int main() {
         pLocIdlService->init();
     }
 
-    if (gptpInit()) {
+    if (pLocIdlService && gptpInit()) {
         pLocIdlService->mIsGptpInitialized = true;
         LOC_LOGd(" GPTP init success ");
     } else {
@@ -1190,6 +1195,11 @@ int main() {
             std::this_thread::sleep_for(std::chrono::seconds(1));
         }
     }
+
+#ifdef LOC_USE_DLT
+    deregisterDltContexts(LOC_IDL_SERVICE_CONTEXTS, LOC_IDL_SERVICE_CONTEXTS_COUNT);
+    deregisterDltApp();
+#endif
 
     return 0;
 }

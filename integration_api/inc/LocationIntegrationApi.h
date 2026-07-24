@@ -195,23 +195,57 @@ enum LocIntegrationEngineType {
 
 /** Specify the position engine run state. <br/> */
 enum LocIntegrationEngineRunState {
-    /** Request the position engine to be put into pause state.
-     *  <br/> */
-    LOC_INT_ENGINE_RUN_STATE_PAUSE   = 1,
-    /** Request the position engine to be put into resume state.
-     *  <br/> */
-    LOC_INT_ENGINE_RUN_STATE_RESUME   = 2,
-    /** Request the selected position engine to be put into pause state
-     *  while retaining of any useful state data.
-     *  This engine run state is currently applicable to QDR engine only.
-     *  It is strongly advised to link this state to a vehicle state in which
-     *  the vehicle is expected to be stationary at the time of invocation of API
-     *  and subsequently, until the state is changed to Running.
-     *  For QDR, transition out of PAUSE_RETAIN happens
-     *  when either the state is changed to RESUME state via same command OR
-     *  when the device taken through suspend/resume or reboot power-state cycles.
-     *  <br/> */
-    LOC_INT_ENGINE_RUN_STATE_PAUSE_RETAIN   = 3,
+    /**
+     * Request the position engine to be put into PAUSE state.
+     *
+     * The PAUSE state suspends the functional operation of the engine
+     * while keeping the engine process resident in memory. When placed
+     * in this state, the engine stops producing position fixes.
+     *
+     * PAUSE and RESUME states are supported by the QDR engine and, on
+     * select software product lines, may also be supported by the
+     * precise position engine.
+     *
+     * When the engine is subsequently transitioned from PAUSE to
+     * RESUME, the engine may restart its execution without retaining
+     * any prior positioning or calibration history.
+     *
+     * <br/>
+     */
+    LOC_INT_ENGINE_RUN_STATE_PAUSE = 1,
+
+    /**
+     * Request the position engine to be put into RESUME state.
+     *
+     * This state resumes normal engine execution after a prior PAUSE
+     * or PAUSE_RETAIN state. On transition to RESUME, the engine may
+     * restart execution without restoring prior positioning history.
+     *
+     * GNSS position and heading re-acquisition may be required for DR
+     * engine engagement.
+     *
+     * <br/>
+     */
+    LOC_INT_ENGINE_RUN_STATE_RESUME = 2,
+
+    /**
+     * Request the selected position engine to be put into PAUSE state
+     * while retaining useful internal state data.
+     *
+     * This PAUSE_RETAIN state is applicable to the QDR engine only.
+     * It is strongly advised to link this state to a vehicle condition
+     * in which the vehicle is expected to remain stationary at the
+     * time of invocation of the API and subsequently until the engine
+     * is transitioned back to RESUME.
+     *
+     * For QDR engine, transition out of PAUSE_RETAIN occurs either
+     * when the state is explicitly changed to RESUME via this API or
+     * when the device is taken through suspend/resume or reboot
+     * power‑state cycles.
+     *
+     * <br/>
+     */
+    LOC_INT_ENGINE_RUN_STATE_PAUSE_RETAIN = 3
 };
 
 /**
@@ -1586,44 +1620,71 @@ public:
     bool getMinSvElevation();
 
     /** @brief
-        This API is used to instruct the specified engine to be in
-        the pause/resume state. <br/>
+        This API is used to instruct the specified position engine to
+        change its run state as specified by LocIntegrationEngineRunState.
 
-        When the engine is placed in paused state, the engine will
-        stop. If there is an on-going session, engine will no longer
-        produce fixes. In the paused state, calling API to delete
-        aiding data from the paused engine may not have effect.
-        Request to delete Aiding data shall be issued after
-        engine resume. <br/>
+        The PAUSE and RESUME states provide pause and resume control of
+        the engine. These states are supported by the QDR engine and,
+        on select software product lines, may also be supported by the
+        precise position engine.
 
-        Currently, only DRE engine will support pause/resume
-        request. LocConfigCb() will return
-        LOC_INT_RESPONSE_NOT_SUPPORTED when request is made to
-        pause/resume none-DRE engine. <br/>
+        When the engine is placed in PAUSE state, the engine suspends
+        its functional operation and stops producing fixes while
+        remaining resident in memory. If there is an on-going session,
+        it will be halted. In this state, calling APIs to delete aiding
+        data may not have effect; such requests should be issued after
+        the engine is transitioned to RESUME.
 
-        Request to pause/resume DRE engine can be made with or
-        without an on-going session. With QDR engine, on resume,
-        GNSS position & heading re-acquisition is needed for DR
-        engine to engage. If DR engine is already in the requested
-        state, the request will be no-op and the API call will
-        return success and LocConfigCb() will return
-        LOC_INT_RESPONSE_SUCCESS. <br/>
+        For both QDR and precise position engines, when the engine is
+        subsequently transitioned from PAUSE to RESUME, the engine may
+        restart its execution without retaining any prior positioning
+        or calibration history. Note that positioning will commence only
+        if there is already an active session, if not an explicit session
+        request is needed post RESUME.
+
+        The PAUSE_RETAIN state provides pause functionality while
+        retaining useful internal state data. This state is applicable
+        to the QDR engine only. While configuring this state, it is
+        strongly advised to link it to a vehicle state in which the
+        vehicle is expected to remain stationary, and the engine
+        should be transitioned back to RESUME before the vehicle is
+        expected to move.
+
+        For QDR engine, transition out of PAUSE_RETAIN occurs either
+        via an explicit request to set the state to RESUME using this
+        API or when the device is taken through suspend/resume or
+        reboot power-state cycles.
+
+        Requests to change engine run state can be made with or without
+        an on-going session. On transition to RESUME, GNSS position
+        and heading re-acquisition may be required for DR engine
+        engagement. If the engine is already in the requested state,
+        the request is treated as a no-op; the API will return success
+        and LocConfigCb() will return LOC_INT_RESPONSE_SUCCESS.
+
+        If a requested run state is not supported for the specified
+        engine, LocConfigCb() will return
+        LOC_INT_RESPONSE_NOT_SUPPORTED.
 
         @param
-        engType: the engine that is instructed to change its run
-        state. <br/>
+        engType: The engine that is instructed to change its run
+        state.
 
-        engState: the new engine run state that the engine is
-        instructed to be in. <br/>
 
-        @return true, if the API request has been accepted. The
-                status will be returned via configCB. When returning
-                true, LocConfigCb() will be invoked to deliver
-                asynchronous processing status.
-                <br/>
+        @param
+        engState: The requested engine run state.
 
-        @return false, if the API request has not been accepted for
-                further processing. <br/>
+
+        @return true
+                If the API request has been accepted for asynchronous
+                processing. The final status will be delivered via
+                LocConfigCb().
+
+
+        @return false
+                If the API request has not been accepted for further
+                processing.
+
     */
     bool configEngineRunState(LocIntegrationEngineType engType,
                               LocIntegrationEngineRunState engState);

@@ -184,6 +184,7 @@ private:
     void onGnssMeasurementsCb(const GnssMeasurementsNotification &gnssMeasurementsNotification);
     void onLocationSystemInfoCb(LocationSystemInfo systemInfo);
     void onDcReportCb(const GnssDcReportInfo& dcReportInfo);
+    void onSvResidualReportCb(const GnssSvResidualReport &svResReport);
     void onLocationApiDestroyCompleteCb();
     void onAntennaInfoCb(std::vector<GnssAntennaInformation>& gnssAntennaInformations);
     void onGnssSvEphemerisCb(const GnssSvEphemerisReport &notification);

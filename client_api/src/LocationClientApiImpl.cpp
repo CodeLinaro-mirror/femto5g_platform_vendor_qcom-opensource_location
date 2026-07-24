@@ -1011,6 +1011,165 @@ GnssLocation LocationClientApiImpl::parseLocationInfo(
     return locationInfo;
 }
 
+void LocationClientApiImpl::parseSvResidualReport(
+    const ::GnssSvResidualReport &halSvResidualInfo,
+    SvResidualReport &svResidualReportOut) {
+
+    // Fill Engine type
+    svResidualReportOut.locOutputEngType = (LocOutputEngineType)halSvResidualInfo.locOutputEngType;
+
+    // Fill GNSS System Time
+    switch (halSvResidualInfo.gnssSystemTime.gnssSystemTimeSrc) {
+        case GNSS_LOC_SV_SYSTEM_GPS:
+            svResidualReportOut.gnssSystemTime.gnssSystemTimeSrc = GNSS_LOC_SV_SYSTEM_GPS;
+            svResidualReportOut.gnssSystemTime.u.gpsSystemTime =
+                parseGnssTime(halSvResidualInfo.gnssSystemTime.u.gpsSystemTime);
+            break;
+        case GNSS_LOC_SV_SYSTEM_GALILEO:
+            svResidualReportOut.gnssSystemTime.gnssSystemTimeSrc = GNSS_LOC_SV_SYSTEM_GALILEO;
+            svResidualReportOut.gnssSystemTime.u.galSystemTime =
+                parseGnssTime(halSvResidualInfo.gnssSystemTime.u.galSystemTime);
+            break;
+        case GNSS_LOC_SV_SYSTEM_BDS:
+            svResidualReportOut.gnssSystemTime.gnssSystemTimeSrc = GNSS_LOC_SV_SYSTEM_BDS;
+            svResidualReportOut.gnssSystemTime.u.bdsSystemTime =
+                parseGnssTime(halSvResidualInfo.gnssSystemTime.u.bdsSystemTime);
+            break;
+        case GNSS_LOC_SV_SYSTEM_QZSS:
+            svResidualReportOut.gnssSystemTime.gnssSystemTimeSrc = GNSS_LOC_SV_SYSTEM_QZSS;
+            svResidualReportOut.gnssSystemTime.u.qzssSystemTime =
+                parseGnssTime(halSvResidualInfo.gnssSystemTime.u.qzssSystemTime);
+            break;
+        case GNSS_LOC_SV_SYSTEM_GLONASS:
+            svResidualReportOut.gnssSystemTime.gnssSystemTimeSrc = GNSS_LOC_SV_SYSTEM_GLONASS;
+            svResidualReportOut.gnssSystemTime.u.gloSystemTime =
+                parseGloTime(halSvResidualInfo.gnssSystemTime.u.gloSystemTime);
+            break;
+        case GNSS_LOC_SV_SYSTEM_NAVIC:
+            svResidualReportOut.gnssSystemTime.gnssSystemTimeSrc = GNSS_LOC_SV_SYSTEM_NAVIC;
+            svResidualReportOut.gnssSystemTime.u.navicSystemTime =
+                parseGnssTime(halSvResidualInfo.gnssSystemTime.u.navicSystemTime);
+            break;
+        default:
+            // Defensive: zero out all
+            memset(&svResidualReportOut.gnssSystemTime.u, 0,
+                sizeof(svResidualReportOut.gnssSystemTime.u));
+            break;
+    }
+
+    // 3. Residual PVT Data
+    svResidualReportOut.residualPvtData.validityMask =
+        halSvResidualInfo.residualPvtData.validityMask;
+    for (int i = 0; i < 3; ++i) {
+        svResidualReportOut.residualPvtData.posLla[i] =
+            halSvResidualInfo.residualPvtData.posLla[i];
+        svResidualReportOut.residualPvtData.velEnu[i] =
+            halSvResidualInfo.residualPvtData.velEnu[i];
+    }
+    svResidualReportOut.residualPvtData.headingRad =
+        halSvResidualInfo.residualPvtData.headingRad;
+    svResidualReportOut.residualPvtData.headingUncRad =
+        halSvResidualInfo.residualPvtData.headingUncRad;
+    svResidualReportOut.residualPvtData.puncLatLonMeters[0] =
+        halSvResidualInfo.residualPvtData.puncLatLonMeters[0];
+    svResidualReportOut.residualPvtData.puncLatLonMeters[1] =
+        halSvResidualInfo.residualPvtData.puncLatLonMeters[1];
+    svResidualReportOut.residualPvtData.puncVertMeters =
+        halSvResidualInfo.residualPvtData.puncVertMeters;
+    svResidualReportOut.residualPvtData.vuncEastNorthMps[0] =
+        halSvResidualInfo.residualPvtData.vuncEastNorthMps[0];
+    svResidualReportOut.residualPvtData.vuncEastNorthMps[1] =
+        halSvResidualInfo.residualPvtData.vuncEastNorthMps[1];
+    svResidualReportOut.residualPvtData.vuncVertMps =
+        halSvResidualInfo.residualPvtData.vuncVertMps;
+    svResidualReportOut.residualPvtData.clockBias =
+        halSvResidualInfo.residualPvtData.clockBias;
+    svResidualReportOut.residualPvtData.clockBiasUncMs =
+        halSvResidualInfo.residualPvtData.clockBiasUncMs;
+    svResidualReportOut.residualPvtData.clockDriftRate =
+        halSvResidualInfo.residualPvtData.clockDriftRate;
+    svResidualReportOut.residualPvtData.clockDriftRateUncMps =
+        halSvResidualInfo.residualPvtData.clockDriftRateUncMps;
+    svResidualReportOut.residualPvtData.pdop =
+        halSvResidualInfo.residualPvtData.pdop;
+
+    // 4. SV Residual Info (vector)
+    svResidualReportOut.svResidualInfo.clear();
+    uint32_t count = halSvResidualInfo.numSvs;
+    for (uint16_t i = 0; i < count && i < GNSS_MEASUREMENTS_MAX; i++) {
+        SvResidualInfo out;
+        const GnssSvResidualInfo &in = halSvResidualInfo.svResidualInfo[i];
+        out.svId = in.svId;
+        out.signalType = parseGnssSignalType(in.signalTypeMask);
+        out.validityMask = in.validityMask;
+        out.prRes = in.prRes;
+        out.prUnc = in.prUnc;
+        out.cpRes = in.cpRes;
+        out.cpUnc = in.cpUnc;
+        out.dopplerRes = in.dopplerRes;
+        out.dopplerUnc = in.dopplerUnc;
+        out.iode = in.iode;
+        out.gloTb = in.gloTb;
+        out.freqNum = in.freqNum;
+        out.cNo = in.cNo;
+        out.azim = in.azim;
+        out.elev = in.elev;
+        svResidualReportOut.svResidualInfo.push_back(out);
+    }
+
+    // 5. SV Available/Used Info
+    svResidualReportOut.svAvailableUsedInfo.validityMask =
+        halSvResidualInfo.svAvailableUsedInfo.validityMask;
+    svResidualReportOut.svAvailableUsedInfo.gpsNumSvMeas =
+        halSvResidualInfo.svAvailableUsedInfo.gpsNumSvMeas;
+    svResidualReportOut.svAvailableUsedInfo.gpsNumSvPosFix =
+        halSvResidualInfo.svAvailableUsedInfo.gpsNumSvPosFix;
+    svResidualReportOut.svAvailableUsedInfo.gpsNumSvVelFix =
+        halSvResidualInfo.svAvailableUsedInfo.gpsNumSvVelFix;
+    svResidualReportOut.svAvailableUsedInfo.gpsSvMaskUsed =
+        halSvResidualInfo.svAvailableUsedInfo.gpsSvMaskUsed;
+    svResidualReportOut.svAvailableUsedInfo.gloNumSvMeas =
+        halSvResidualInfo.svAvailableUsedInfo.gloNumSvMeas;
+    svResidualReportOut.svAvailableUsedInfo.gloNumSvPosFix =
+        halSvResidualInfo.svAvailableUsedInfo.gloNumSvPosFix;
+    svResidualReportOut.svAvailableUsedInfo.gloNumSvVelFix =
+        halSvResidualInfo.svAvailableUsedInfo.gloNumSvVelFix;
+    svResidualReportOut.svAvailableUsedInfo.gloSvMaskUsed =
+        halSvResidualInfo.svAvailableUsedInfo.gloSvMaskUsed;
+    svResidualReportOut.svAvailableUsedInfo.bdsNumSvMeas =
+        halSvResidualInfo.svAvailableUsedInfo.bdsNumSvMeas;
+    svResidualReportOut.svAvailableUsedInfo.bdsNumSvPosFix =
+        halSvResidualInfo.svAvailableUsedInfo.bdsNumSvPosFix;
+    svResidualReportOut.svAvailableUsedInfo.bdsNumSvVelFix =
+        halSvResidualInfo.svAvailableUsedInfo.bdsNumSvVelFix;
+    svResidualReportOut.svAvailableUsedInfo.bdsSvMaskUsed =
+        halSvResidualInfo.svAvailableUsedInfo.bdsSvMaskUsed;
+    svResidualReportOut.svAvailableUsedInfo.galNumSvMeas =
+        halSvResidualInfo.svAvailableUsedInfo.galNumSvMeas;
+    svResidualReportOut.svAvailableUsedInfo.galNumSvPosFix =
+        halSvResidualInfo.svAvailableUsedInfo.galNumSvPosFix;
+    svResidualReportOut.svAvailableUsedInfo.galNumSvVelFix =
+        halSvResidualInfo.svAvailableUsedInfo.galNumSvVelFix;
+    svResidualReportOut.svAvailableUsedInfo.galSvMaskUsed =
+        halSvResidualInfo.svAvailableUsedInfo.galSvMaskUsed;
+    svResidualReportOut.svAvailableUsedInfo.qzssNumSvMeas =
+        halSvResidualInfo.svAvailableUsedInfo.qzssNumSvMeas;
+    svResidualReportOut.svAvailableUsedInfo.qzssNumSvPosFix =
+        halSvResidualInfo.svAvailableUsedInfo.qzssNumSvPosFix;
+    svResidualReportOut.svAvailableUsedInfo.qzssNumSvVelFix =
+        halSvResidualInfo.svAvailableUsedInfo.qzssNumSvVelFix;
+    svResidualReportOut.svAvailableUsedInfo.qzssSvMaskUsed =
+        halSvResidualInfo.svAvailableUsedInfo.qzssSvMaskUsed;
+    svResidualReportOut.svAvailableUsedInfo.navicNumSvMeas =
+        halSvResidualInfo.svAvailableUsedInfo.navicNumSvMeas;
+    svResidualReportOut.svAvailableUsedInfo.navicNumSvPosFix =
+        halSvResidualInfo.svAvailableUsedInfo.navicNumSvPosFix;
+    svResidualReportOut.svAvailableUsedInfo.navicNumSvVelFix =
+        halSvResidualInfo.svAvailableUsedInfo.navicNumSvVelFix;
+    svResidualReportOut.svAvailableUsedInfo.navicSvMaskUsed =
+        halSvResidualInfo.svAvailableUsedInfo.navicSvMaskUsed;
+}
+
 GnssSv LocationClientApiImpl::parseGnssSv(const ::GnssSv &halGnssSv) {
     GnssSv gnssSv = {};
 
@@ -1878,6 +2037,8 @@ LocationClientApiImpl
 uint32_t LocationClientApiImpl::mClientIdGenerator = LOCATION_CLIENT_SESSION_ID_INVALID;
 uint32_t LocationClientApiImpl::mClientIdIndex = 0;
 mutex LocationClientApiImpl::mMutex;
+std::recursive_mutex LocationClientApiImpl::mStartPosRequestResponseMutex;
+
 
 /******************************************************************************
 LocationClientApiImpl - constructors
@@ -2139,6 +2300,11 @@ void LocationClientApiImpl::updateCallbacksSync(LocationCallbacks& callbacks) {
         mLocationCbs.svEphemerisCb = callbacks.svEphemerisCb;
     }
 
+    if (callbacks.svResidualDataCb) {
+        LOC_LOGd("Register for svResidualDataCb");
+        callBacksMask |= E_LOC_CB_RESIDUAL_REPORT_BIT;
+        mLocationCbs.svResidualDataCb = callbacks.svResidualDataCb;
+    }
     // Callbacks may get increamentally updated, hence OR with the existing
     // callback mask
     if ((mCallbacksMask & callBacksMask) != callBacksMask) {
@@ -2280,8 +2446,9 @@ void LocationClientApiImpl::startPositionSession(
                 mCallbacksOption(callbacksOption), mTrackingOptions(trackingOptions) {}
         virtual ~StartPositionSessionReqMsg() {}
         void proc() const {
+            std::lock_guard<std::recursive_mutex> lock(mApiImpl->mStartPosRequestResponseMutex);
             if (mApiImpl->mPositionSessionResponseCbPending) {
-                mApiImpl->mLocationCbs.responseCb(::LOCATION_ERROR_ALREADY_STARTED, 0);
+                mCallbacksOption.responseCb(::LOCATION_ERROR_ALREADY_STARTED, 0);
                 return;
             }
             if (mApiImpl->isInBatching()) {
@@ -2360,6 +2527,9 @@ void LocationClientApiImpl::stopTrackingSync(bool clearSubscriptions) {
     mLocationOptions.minInterval = 0;
     mLocationOptions.minDistance = 0;
     mSessionId = LOCATION_CLIENT_SESSION_ID_INVALID;
+    if (mPositionSessionResponseCbPending) {
+        invokePositionSessionResponseCb(LOCATION_ERROR_GENERAL_FAILURE);
+    }
     mPositionSessionResponseCbPending = false;
     mSessionStartBootTimestampNs = 0;
 }
@@ -2507,6 +2677,7 @@ void LocationClientApiImpl::startBatchingSession(const LocationCallbacks& callba
                 mBatchingOptions(batchingOptions) {}
         virtual ~StartBatchingSessionReqMsg() {}
         void proc() const {
+            std::lock_guard<std::recursive_mutex> lock(mApiImpl->mStartPosRequestResponseMutex);
             if (mApiImpl->mPositionSessionResponseCbPending) {
                 mApiImpl->mLocationCbs.responseCb(::LOCATION_ERROR_ALREADY_STARTED, 0);
                 return;
@@ -2685,6 +2856,7 @@ void LocationClientApiImpl::addGeofences(const LocationCallbacks& callbacksOptio
                 return;
             }
             // set up the flag to indicate that responseCb is pending
+            std::lock_guard<std::recursive_mutex> lock(mApiImpl->mStartPosRequestResponseMutex);
             mApiImpl->mPositionSessionResponseCbPending = true;
             mApiImpl->updateCallbacksSync(mCallbacksOption);
 
@@ -3412,6 +3584,7 @@ void LocationClientApiImpl::pingTest(PingTestCb pingTestCallback) {
 }
 
 void LocationClientApiImpl::invokePositionSessionResponseCb(LocationError errCode) {
+    std::lock_guard<std::recursive_mutex> lock(mStartPosRequestResponseMutex);
     if (mPositionSessionResponseCbPending) {
         if (nullptr != mLocationCbs.responseCb) {
             mLocationCbs.responseCb(errCode, 0);
@@ -3578,7 +3751,9 @@ void IpcListener::onReceive(const char* data, uint32_t length,
                         delete[] errs;
                     }
                 }
+
                 if (mApiImpl.mPositionSessionResponseCbPending) {
+                    std::lock_guard<std::recursive_mutex> lock(mApiImpl.mStartPosRequestResponseMutex);
                     mApiImpl.mPositionSessionResponseCbPending = false;
                 }
                 break;
@@ -4002,7 +4177,29 @@ void IpcListener::onReceive(const char* data, uint32_t length,
                 }
                 break;
             }
+            case E_LOCAPI_RESIDUAL_REPORT_MSG_ID:
+            {
+                LOC_LOGd("<<< message = Residual Report");
 
+                if ((mApiImpl.mSessionId != LOCATION_CLIENT_SESSION_ID_INVALID) &&
+                        (mApiImpl.mPositionSessionResponseCbPending == false)) {
+                    PBLocAPISvResidualReportIndMsg pbLocApiResReportMsg;
+                    if (0 == pbLocApiResReportMsg.ParseFromString(pbLocApiMsg.payload())) {
+                        LOC_LOGe("Failed to parse PBLocAPISvResidualReportIndMsg from payload!!");
+                        return;
+                    }
+                    LocAPISvResidualReportMsg msg(sockName.c_str(), pbLocApiResReportMsg,
+                            &mApiImpl.mPbufMsgConv);
+                    const LocAPISvResidualReportMsg* pResidualIndMsg = (LocAPISvResidualReportMsg*)(&msg);
+
+                    if ((mApiImpl.mCallbacksMask & E_LOC_CB_RESIDUAL_REPORT_BIT) &&
+                            (nullptr != mApiImpl.mLocationCbs.svResidualDataCb)) {
+                        mApiImpl.mLocationCbs.svResidualDataCb(pResidualIndMsg->residualReport);
+                    }
+
+                }
+                break;
+            }
             case E_LOCAPI_PINGTEST_MSG_ID:
             {
                 LOC_LOGd("<<< ping message %d", locApiMsg.msgId);
