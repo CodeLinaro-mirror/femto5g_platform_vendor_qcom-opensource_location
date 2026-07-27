@@ -235,7 +235,7 @@ LocationApiService::LocationApiService(const configParamToRead & configParamRead
         pClient->updateSubscription(
                 E_LOC_CB_GNSS_LOCATION_INFO_BIT | E_LOC_CB_GNSS_SV_BIT);
 
-        LocationOptions locationOption = {};
+        TrackingOptions locationOption = {};
         locationOption.size = sizeof(locationOption);
         locationOption.minInterval = configParamRead.gnssSessionTbfMs;
         locationOption.mode = mPositionMode;
@@ -893,7 +893,7 @@ void LocationApiService::startTracking(LocAPIStartTrackingReqMsg *pMsg) {
         return;
     }
 
-    LocationOptions locationOption = pMsg->locOptions;
+    TrackingOptions locationOption = pMsg->locOptions;
     // set the mode according to the master position mode
     locationOption.mode = mPositionMode;
 
@@ -939,7 +939,7 @@ void LocationApiService::updateTrackingOptions(LocAPIUpdateTrackingOptionsReqMsg
 
     std::shared_ptr<LocHalDaemonClientHandler> pClient = getClient(pMsg->mSocketName);
     if (pClient) {
-        LocationOptions locationOption = pMsg->locOptions;
+        TrackingOptions locationOption = pMsg->locOptions;
         // set the mode according to the master position mode
         locationOption.mode = mPositionMode;
         pClient->updateTrackingOptions(locationOption);

@@ -74,8 +74,8 @@ public:
             PBXtraConfigParams* pbXtraParams) const;
     int convertXtraStatusToPB(const XtraStatus& xtraStatus, PBXtraStatus* pbXtraStatus) const;
 
-    // LocationOptions to PBLocationOptions
-    int convertLocationOptionsToPB(const LocationOptions &locOpt,
+    // TrackingOptions to PBLocationOptions
+    int convertLocationOptionsToPB(const TrackingOptions &locOpt,
             PBLocationOptions *pbLocOpt) const;
     // GeofencesAddedReqPayload to PBGeofencesAddedReqPayload
     int convertGfAddedReqPayloadToPB(const GeofencesAddedReqPayload &gfAddReqPayload,
@@ -555,9 +555,9 @@ public:
     // PBCollectiveResPayload to CollectiveResPayload
     int pbConvertToCollectiveResPayload(const PBCollectiveResPayload &pbClctResPayload,
             CollectiveResPayload &clctResPayload) const;
-    // PBLocationOptions to LocationOptions
+    // PBLocationOptions to TrackingOptions
     int pbConvertToLocationOptions(const PBLocationOptions &pbLocOpt,
-            LocationOptions &locOpt) const;
+            TrackingOptions &locOpt) const;
     // PBGeofencesAddedReqPayload to GeofencesAddedReqPayload
     int pbConvertToGfAddReqPayload(const PBGeofencesAddedReqPayload &pbGfAddReqPload,
             GeofencesAddedReqPayload &gfAddReqPload) const;
@@ -871,6 +871,7 @@ private:
     // **** helper function for enum conversion to protobuf enums
     PBGnssSuplMode getPBEnumForGnssSuplMode(const GnssSuplMode &gnssSuplMode) const;
     PBFixQualityLevel getPBEnumForFixQualityLevel(const FixQualityLevel &qualityLevel) const;
+    PBGnssPowerMode getPBEnumForGnssPowerMode(const GnssPowerMode &powerMode) const;
     PBBatchingStatus getPBEnumForBatchingStatus(const BatchingStatus &batchStatus) const;
     PBLocationReliability getPBEnumForLocationReliability(
             const LocationReliability &locReliab) const;
@@ -958,6 +959,7 @@ private:
 
     // **** helper function for enum conversion from protobuf enums to normal format.
     GnssSuplMode getEnumForPBGnssSuplMode(const PBGnssSuplMode &pbGnssSuplMode) const;
+    GnssPowerMode getEnumForPBGnssPowerMode(const PBGnssPowerMode &pbPowerMode) const;
     FixQualityLevel getEnumForPBFixQualityLevel(
                 const PBFixQualityLevel &pbFixQualityLevel) const;
     BatchingStatus getEnumForPBBatchingStatus(const PBBatchingStatus &pbBatchStat) const;
