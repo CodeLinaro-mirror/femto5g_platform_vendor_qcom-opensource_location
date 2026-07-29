@@ -1069,7 +1069,7 @@ void LocHalDaemonClientHandler::onGnssNmeaCb(GnssNmeaNotification notification) 
     if ((nullptr != mIpcSender) &&
             (mSubscriptionMask & E_LOC_CB_GNSS_NMEA_BIT) &&
             ((notification.locOutputEngType == LOC_OUTPUT_ENGINE_FUSED) || notification.isSvNmea)) {
-        LOC_LOGd("--< onGnssNmeaCb[%s] t=%" PRIu64" l=%zu engType=%u isSvNmea=%u nmea=%s",
+        LOC_LOGa("--< onGnssNmeaCb[%s] t=%" PRIu64" l=%zu engType=%u isSvNmea=%u nmea=%s",
                 mName.c_str(),
                 notification.timestamp,
                 notification.length,
