@@ -3479,7 +3479,7 @@ void IpcListener::onReceive(const char* data, uint32_t length,
             uint32_t payloadSize = pbLocApiMsg.payloadsize();
             // pbLocApiMsg.payload() contains the payload data.
 
-            LOC_LOGi(">-- onReceive Rcvd msg id: %d %s, sockname: %s, payload size: %d",
+            LOC_LOGd(">-- onReceive Rcvd msg id: %d %s, sockname: %s, payload size: %d",
                     eLocMsgid, LocApiMsgString(eLocMsgid), sockName.c_str(), payloadSize);
             LocAPIMsgHeader locApiMsg(sockName.c_str(), eLocMsgid);
 
@@ -3598,7 +3598,7 @@ void IpcListener::onReceive(const char* data, uint32_t length,
             // async indication messages
             case E_LOCAPI_LOCATION_MSG_ID:
             {
-                LOC_LOGd("<<< message = simple location");
+                LOC_LOGa("<<< message = simple location");
                 PBLocAPILocationIndMsg pbLocApiLocIndMsg;
                 if (0 == pbLocApiLocIndMsg.ParseFromString(pbLocApiMsg.payload())) {
                     LOC_LOGe("Failed to parse pbLocApiLocIndMsg from payload!!");
@@ -3619,7 +3619,7 @@ void IpcListener::onReceive(const char* data, uint32_t length,
 
             case E_LOCAPI_BATCHING_MSG_ID:
             {
-                LOC_LOGd("<<< message = batching");
+                LOC_LOGa("<<< message = batching");
                 bool repStatusDone = false;
 
                 if (mApiImpl.mCallbacksMask & E_LOC_CB_BATCHING_BIT) {
@@ -3675,7 +3675,7 @@ void IpcListener::onReceive(const char* data, uint32_t length,
 
             case E_LOCAPI_GEOFENCE_BREACH_MSG_ID:
             {
-                LOC_LOGd("<<< message = geofence breach");
+                LOC_LOGa("<<< message = geofence breach");
                 if (mApiImpl.mCallbacksMask & E_LOC_CB_GEOFENCE_BREACH_BIT &&
                         mApiImpl.mLocationCbs.geofenceBreachCb) {
                     PBLocAPIGeofenceBreachIndMsg pbLocApiGfBreachIndMsg;
@@ -3713,7 +3713,7 @@ void IpcListener::onReceive(const char* data, uint32_t length,
 
             case E_LOCAPI_LOCATION_INFO_MSG_ID:
             {
-                LOC_LOGd("<<< message = location info");
+                LOC_LOGa("<<< message = location info");
                 if ((mApiImpl.mSessionId != LOCATION_CLIENT_SESSION_ID_INVALID) &&
                         (mApiImpl.mPositionSessionResponseCbPending == false) &&
                         (mApiImpl.mCallbacksMask & E_LOC_CB_GNSS_LOCATION_INFO_BIT) &&
@@ -3734,7 +3734,7 @@ void IpcListener::onReceive(const char* data, uint32_t length,
             }
             case E_LOCAPI_ENGINE_LOCATIONS_INFO_MSG_ID:
             {
-                LOC_LOGd("<<< message = engine location info\n");
+                LOC_LOGa("<<< message = engine location info\n");
 
                 if ((mApiImpl.mSessionId != LOCATION_CLIENT_SESSION_ID_INVALID) &&
                         (mApiImpl.mPositionSessionResponseCbPending == false) &&
@@ -3751,7 +3751,7 @@ void IpcListener::onReceive(const char* data, uint32_t length,
                             (LocAPIEngineLocationsInfoIndMsg*)(&msg);
 
                     if (pEngLocationsInfoIndMsg->getMsgSize() != payloadSize) {
-                        LOC_LOGw("payload size does not match for message with id: %d",
+                        LOC_LOGa("payload size does not match for message with id: %d",
                                 locApiMsg.msgId);
                     }
                     mApiImpl.mLocationCbs.engineLocationsInfoCb(
@@ -3764,7 +3764,7 @@ void IpcListener::onReceive(const char* data, uint32_t length,
 
             case E_LOCAPI_SATELLITE_VEHICLE_MSG_ID:
             {
-                LOC_LOGd("<<< message = sv");
+                LOC_LOGa("<<< message = sv");
                 if ((mApiImpl.mSessionId != LOCATION_CLIENT_SESSION_ID_INVALID) &&
                         (mApiImpl.mPositionSessionResponseCbPending == false) &&
                         (mApiImpl.mCallbacksMask & E_LOC_CB_GNSS_SV_BIT) &&
@@ -3785,7 +3785,7 @@ void IpcListener::onReceive(const char* data, uint32_t length,
 
             case E_LOCAPI_NMEA_MSG_ID:
             {
-                LOC_LOGd("<<< message = nmea");
+                LOC_LOGa("<<< message = nmea");
                 if ((mApiImpl.mSessionId != LOCATION_CLIENT_SESSION_ID_INVALID) &&
                         (mApiImpl.mPositionSessionResponseCbPending == false) &&
                         (mApiImpl.mCallbacksMask & (E_LOC_CB_GNSS_NMEA_BIT |
@@ -3821,7 +3821,7 @@ void IpcListener::onReceive(const char* data, uint32_t length,
 
             case E_LOCAPI_DATA_MSG_ID:
             {
-                LOC_LOGd("<<< message = data");
+                LOC_LOGa("<<< message = data");
                 if ((mApiImpl.mSessionId != LOCATION_CLIENT_SESSION_ID_INVALID) &&
                         (mApiImpl.mPositionSessionResponseCbPending == false) &&
                         (mApiImpl.mCallbacksMask & E_LOC_CB_GNSS_DATA_BIT) &&
@@ -3840,7 +3840,7 @@ void IpcListener::onReceive(const char* data, uint32_t length,
 
             case E_LOCAPI_DC_REPORT_MSG_ID:
             {
-                LOC_LOGd("<<< message = DC report");
+                LOC_LOGa("<<< message = DC report");
                 if ((mApiImpl.mSessionId != LOCATION_CLIENT_SESSION_ID_INVALID) &&
                         (mApiImpl.mPositionSessionResponseCbPending == false) &&
                         (mApiImpl.mCallbacksMask & E_LOC_CB_GNSS_DC_REPORT_BIT) &&
@@ -3858,7 +3858,7 @@ void IpcListener::onReceive(const char* data, uint32_t length,
 
             case E_LOCAPI_MEAS_MSG_ID:
             {
-                LOC_LOGd("<<< message = measurements");
+                LOC_LOGa("<<< message = measurements");
                 if ((mApiImpl.mSessionId != LOCATION_CLIENT_SESSION_ID_INVALID) &&
                         (mApiImpl.mPositionSessionResponseCbPending == false)) {
                     PBLocAPIMeasIndMsg pbLocApiMeasIndMsg;
@@ -3888,7 +3888,7 @@ void IpcListener::onReceive(const char* data, uint32_t length,
 
             case E_LOCAPI_GET_GNSS_ENGERY_CONSUMED_MSG_ID:
             {
-                LOC_LOGd("<<< message = GNSS power consumption\n");
+                LOC_LOGa("<<< message = GNSS power consumption\n");
                 PBLocAPIGnssEnergyConsumedIndMsg pbLocApiGnssEnergyConsmdIndMsg;
                 if (0 == pbLocApiGnssEnergyConsmdIndMsg.ParseFromString(pbLocApiMsg.payload())) {
                     LOC_LOGe("Failed to parse pbLocApiGnssEnergyConsmdIndMsg from payload!!");
@@ -3919,7 +3919,7 @@ void IpcListener::onReceive(const char* data, uint32_t length,
 
             case E_LOCAPI_LOCATION_SYSTEM_INFO_MSG_ID:
             {
-                LOC_LOGd("<<< message = location system info");
+                LOC_LOGa("<<< message = location system info");
                 if (mApiImpl.mCallbacksMask & E_LOC_CB_SYSTEM_INFO_BIT) {
                     PBLocAPILocationSystemInfoIndMsg pbLocApiLocSysInfoIndMsg;
                     if (0 == pbLocApiLocSysInfoIndMsg.ParseFromString(pbLocApiMsg.payload())) {
@@ -3952,7 +3952,7 @@ void IpcListener::onReceive(const char* data, uint32_t length,
 
             case E_LOCAPI_GET_SINGLE_TERRESTRIAL_POS_RESP_MSG_ID:
             {
-                LOC_LOGd("<<< message = terrestrial pos info");
+                LOC_LOGa("<<< message = terrestrial pos info");
                 if (mApiImpl.mSingleTerrestrialPosCb) {
                     PBLocAPIGetSingleTerrestrialPosRespMsg pbMsg;
                     if (0 == pbMsg.ParseFromString(pbLocApiMsg.payload())) {
@@ -3990,7 +3990,7 @@ void IpcListener::onReceive(const char* data, uint32_t length,
 
             case E_LOCAPI_GET_SINGLE_POS_RESP_MSG_ID:
             {
-                LOC_LOGd("<<< message = single fused pos info");
+                LOC_LOGa("<<< message = single fused pos info");
                 if (mApiImpl.mSinglePosCb) {
                     PBLocAPIGetSinglePosRespMsg pbMsg;
                     if (0 == pbMsg.ParseFromString(pbLocApiMsg.payload())) {
@@ -4016,7 +4016,7 @@ void IpcListener::onReceive(const char* data, uint32_t length,
 
             case E_LOCAPI_PINGTEST_MSG_ID:
             {
-                LOC_LOGd("<<< ping message %d", locApiMsg.msgId);
+                LOC_LOGa("<<< ping message %d", locApiMsg.msgId);
                 PBLocAPIPingTestIndMsg pbLocApiPingTestIndMsg;
                 if (0 == pbLocApiPingTestIndMsg.ParseFromString(pbLocApiMsg.payload())) {
                     LOC_LOGe("Failed to parse pbLocApiPingTestIndMsg from payload!!");
@@ -4033,7 +4033,7 @@ void IpcListener::onReceive(const char* data, uint32_t length,
             }
             case E_LOCAPI_EPH_MSG_ID:
             {
-                LOC_LOGd("<<< message = Ephemeris");
+                LOC_LOGa("<<< message = Ephemeris");
                 if ((mApiImpl.mSessionId != LOCATION_CLIENT_SESSION_ID_INVALID) &&
                         (mApiImpl.mPositionSessionResponseCbPending == false)) {
                     PBLocAPIEphIndMsg pbLocApiEphIndMsg;
