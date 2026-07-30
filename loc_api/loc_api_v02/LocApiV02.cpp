@@ -5392,9 +5392,9 @@ void LocApiV02::reportGnssMeasurementData(
     // are more than 24 SVs in the preferred signal type, we only need to
     // process the first sub sequence
     if ((mPreferredSignalType == gnss_measurement_report_ptr.gnssSignalType) &&
-            (subSeqNum == 1)) {
+            (subSeqNum <= 1)) {
         // the clock time reading from preferred signal type
-        convertGnssClock(mGnssMeasurements->gnssMeasNotification.clock,
+        mMsInWeek = convertGnssClock(mGnssMeasurements->gnssMeasNotification.clock,
                 gnss_measurement_report_ptr);
     }
 
@@ -5495,11 +5495,6 @@ void LocApiV02::reportGnssMeasurementData(
         }
     }
 
-    // the GPS clock time reading
-    if (mPreferredSignalType == gnss_measurement_report_ptr.gnssSignalType && subSeqNum <= 1) {
-            mMsInWeek = convertGnssClock(mGnssMeasurements->gnssMeasNotification.clock,
-                                         gnss_measurement_report_ptr);
-    }
     // AGC
     uint32_t temp;
     mAgcIsPresent = convertJammerIndicator(gnss_measurement_report_ptr,
