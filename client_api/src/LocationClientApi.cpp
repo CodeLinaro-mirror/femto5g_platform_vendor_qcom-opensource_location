@@ -391,6 +391,7 @@ bool LocationClientApi::startPositionSession(
     LocationOptions locationOption;
     locationOption.size = sizeof(locationOption);
     locationOption.minInterval = intervalInMs;
+    locationOption.minDistance = distanceInMeters;
     locationOption.qualityLevelAccepted = QUALITY_ANY_OR_FAILED_FIX;
 
     TrackingOptions trackingOption(locationOption);
