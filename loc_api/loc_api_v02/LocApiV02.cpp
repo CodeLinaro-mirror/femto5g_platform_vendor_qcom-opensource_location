@@ -73,23 +73,6 @@ using namespace loc_core;
 /* Default session id ; TBD needs incrementing for each */
 #define LOC_API_V02_DEF_SESSION_ID (1)
 
-/* UMTS CP Address key*/
-#define LOC_NI_NOTIF_KEY_ADDRESS           "Address"
-
-/* GPS SV Id offset */
-#define GPS_SV_ID_OFFSET        (1)
-
-/* GLONASS SV Id offset */
-#define GLONASS_SV_ID_OFFSET    (65)
-
-/* SV ID range */
-#define SV_ID_RANGE             (32)
-
-#define BDS_SV_ID_OFFSET         (201)
-
-/* BeiDou SV ID RANGE*/
-#define BDS_SV_ID_RANGE          QMI_LOC_DELETE_MAX_BDS_SV_INFO_LENGTH_V02
-
 /* GPS week unknown*/
 #define C_GPS_WEEK_UNKNOWN      (65535)
 
@@ -111,11 +94,6 @@ using namespace loc_core;
 
 /* speed of light */
 #define SPEED_OF_LIGHT          299792458.0
-
-#define MAX_SV_CNT_SUPPORTED_IN_ONE_CONSTELLATION 64
-
-/* the time, in seconds, to wait for user response for NI  */
-#define LOC_NI_NO_RESPONSE_TIME 20
 
 #define LAT_LONG_TO_RADIANS .000005364418
 #define GF_RESPONSIVENESS_THRESHOLD_MSEC_HIGH   120000 //2 mins
@@ -262,11 +240,19 @@ static void globalRespCb(locClientHandleType clientHandle,
     return;
   }
 
-  // process the sync call
-  // use pSetEngineLockInd as a dummy pointer
-  // Plz note this is required to pass a valid locClientRespIndUnionType ind msg
-  loc_sync_process_ind(clientHandle, respId,
+  switch (respId)
+  {
+    case QMI_LOC_GET_AVAILABLE_WWAN_POSITION_IND_V02:
+        [[fallthrough]];
+    case QMI_LOC_GET_BEST_AVAILABLE_POSITION_IND_V02:
+    default:
+      // process the sync call
+      // use pSetEngineLockInd as a dummy pointer
+      // Plz note this is required to pass a valid locClientRespIndUnionType ind msg
+      loc_sync_process_ind(clientHandle, respId,
           (void *)respPayload.pSetEngineLockInd, respPayloadSize);
+      break;
+  }
 }
 
 /* global error callback, it will call the handle service down
@@ -331,6 +317,7 @@ LocApiV02 :: LocApiV02(LOC_API_ADAPTER_EVENT_MASK_T exMask,
     mDwellAlignTimeMsValid(0),
     mDwellAlignTimeMs(0),
     mLastSessionStopTimestampInMs(0),
+    mMsaSessionTimeOutMs(0),
     mPreferredSignalType(QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L1CA_V02),
     mPreferredSvSystemType(GNSS_SV_TYPE_GPS)
 {
@@ -1245,110 +1232,6 @@ LocApiV02::deleteAidingData(const GnssAidingData& data, LocApiResponse *adapterR
   }));
 }
 
-/* send NI user repsonse to the engine */
-void
-LocApiV02::informNiResponse(GnssNiResponse userResponse, const void* passThroughData)
-{
-    sendMsg(new LocApiMsg([this, userResponse, passThroughData] () {
-
-        LocationError err = LOCATION_ERROR_SUCCESS;
-        locClientReqUnionType req_union;
-        locClientStatusEnumType status;
-        qmiLocNiUserRespReqMsgT_v02 ni_resp;
-        qmiLocNiUserRespIndMsgT_v02 ni_resp_ind;
-
-        qmiLocEventNiNotifyVerifyReqIndMsgT_v02 *request_pass_back =
-            (qmiLocEventNiNotifyVerifyReqIndMsgT_v02 *)passThroughData;
-
-        memset(&ni_resp,0, sizeof(ni_resp));
-
-        memset(&ni_resp_ind,0, sizeof(ni_resp_ind));
-
-        switch (userResponse) {
-        case GNSS_NI_RESPONSE_ACCEPT:
-            ni_resp.userResp = eQMI_LOC_NI_LCS_NOTIFY_VERIFY_ACCEPT_V02;
-            break;
-        case GNSS_NI_RESPONSE_DENY:
-            ni_resp.userResp = eQMI_LOC_NI_LCS_NOTIFY_VERIFY_DENY_V02;
-            break;
-        case GNSS_NI_RESPONSE_NO_RESPONSE:
-            ni_resp.userResp = eQMI_LOC_NI_LCS_NOTIFY_VERIFY_NORESP_V02;
-            break;
-        default:
-            err = LOCATION_ERROR_INVALID_PARAMETER;
-            free((void *)passThroughData);
-            return;
-        }
-
-        LOC_LOGV("informNiResponse: user response: %d", ni_resp.userResp);
-
-        ni_resp.notificationType = request_pass_back->notificationType;
-
-        // copy SUPL payload from request
-        if (1 == request_pass_back->NiSuplInd_valid) {
-            ni_resp.NiSuplPayload_valid = 1;
-            memcpy(&(ni_resp.NiSuplPayload),
-                   &(request_pass_back->NiSuplInd),
-                   sizeof(qmiLocNiSuplNotifyVerifyStructT_v02));
-        }
-        // should this be an "else if"?? we don't need to decide
-
-        // copy UMTS-CP payload from request
-        if (1 == request_pass_back->NiUmtsCpInd_valid) {
-            ni_resp.NiUmtsCpPayload_valid = 1;
-            memcpy(&(ni_resp.NiUmtsCpPayload),
-                   &(request_pass_back->NiUmtsCpInd),
-                   sizeof(qmiLocNiUmtsCpNotifyVerifyStructT_v02));
-        }
-
-        //copy Vx payload from the request
-        if (1 == request_pass_back->NiVxInd_valid) {
-            ni_resp.NiVxPayload_valid = 1;
-            memcpy(&(ni_resp.NiVxPayload),
-                   &(request_pass_back->NiVxInd),
-                   sizeof(qmiLocNiVxNotifyVerifyStructT_v02));
-        }
-
-        // copy Vx service interaction payload from the request
-        if (1 == request_pass_back->NiVxServiceInteractionInd_valid) {
-            ni_resp.NiVxServiceInteractionPayload_valid = 1;
-            memcpy(&(ni_resp.NiVxServiceInteractionPayload),
-                   &(request_pass_back->NiVxServiceInteractionInd),
-                   sizeof(qmiLocNiVxServiceInteractionStructT_v02));
-        }
-
-        // copy Network Initiated SUPL Version 2 Extension
-        if (1 == request_pass_back->NiSuplVer2ExtInd_valid) {
-            ni_resp.NiSuplVer2ExtPayload_valid = 1;
-            memcpy(&(ni_resp.NiSuplVer2ExtPayload),
-                   &(request_pass_back->NiSuplVer2ExtInd),
-                   sizeof(qmiLocNiSuplVer2ExtStructT_v02));
-        }
-
-        // copy SUPL Emergency Notification
-        if (request_pass_back->suplEmergencyNotification_valid) {
-            ni_resp.suplEmergencyNotification_valid = 1;
-            memcpy(&(ni_resp.suplEmergencyNotification),
-                   &(request_pass_back->suplEmergencyNotification),
-                   sizeof(qmiLocEmergencyNotificationStructT_v02));
-        }
-
-        req_union.pNiUserRespReq = &ni_resp;
-
-        status = locSyncSendReq(QMI_LOC_NI_USER_RESPONSE_REQ_V02,
-                                req_union, LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
-                                QMI_LOC_NI_USER_RESPONSE_IND_V02,
-                                &ni_resp_ind);
-
-        if (status != eLOC_CLIENT_SUCCESS ||
-                eQMI_LOC_SUCCESS_V02 != ni_resp_ind.status) {
-            err = LOCATION_ERROR_GENERAL_FAILURE;
-        }
-
-        free((void *)passThroughData);
-    }));
-}
-
 void
 LocApiV02::registerMasterClient()
 {
@@ -2124,6 +2007,10 @@ locClientEventMaskType LocApiV02 :: convertLocClientEventMask(
 
   if (mask & LOC_API_ADAPTER_BIT_NTN_CONFIG_UPDATE) {
       eventMask |= QMI_LOC_EVENT_MASK_NTN_CONFIG_UPDATE_V02;
+  }
+
+  if (mask & LOC_API_ADAPTER_BIT_FDCL_SERVICE_REQ) {
+      eventMask |= QMI_LOC_EVENT_MASK_FDCL_SERVICE_REQ_V02;
   }
 
   return eventMask;
@@ -5008,131 +4895,63 @@ void LocApiV02 :: reportAtlRequest(
 void LocApiV02 :: reportNiRequest(
     const qmiLocEventNiNotifyVerifyReqIndMsgT_v02 *ni_req_ptr)
 {
-    GnssNiNotification notif = {};
-    notif.messageEncoding = GNSS_NI_ENCODING_TYPE_NONE ;
-    notif.requestorEncoding = GNSS_NI_ENCODING_TYPE_NONE;
-    notif.timeoutResponse = GNSS_NI_RESPONSE_NO_RESPONSE;
-    notif.timeout = LOC_NI_NO_RESPONSE_TIME;
+    LOC_LOGd("notif type: %d, supl es: %d", ni_req_ptr->notificationType,
+            ni_req_ptr->suplEmergencyNotification_valid);
+    //Accept NI when privacy overrides or no notify/verify required
+    if ((ni_req_ptr->notificationType == eQMI_LOC_NI_USER_NOTIFY_VERIFY_PRIVACY_OVERRIDE_V02) ||
+            (ni_req_ptr->notificationType == eQMI_LOC_NI_USER_NO_NOTIFY_NO_VERIFY_V02) ||
+            // for notify only or notify/verify allow no resp, ack back to modem,
+            // no need to display the dialog
+            (ni_req_ptr->notificationType == eQMI_LOC_NI_USER_NOTIFY_ONLY_V02) ||
+            (ni_req_ptr->notificationType == eQMI_LOC_NI_USER_NOTIFY_VERIFY_ALLOW_NO_RESP_V02)) {
+        sendMsg(new LocApiMsg([this, request_pass_back = *ni_req_ptr] () {
+            locClientReqUnionType req_union;
+            qmiLocNiUserRespReqMsgT_v02 ni_resp = {};
+            qmiLocNiUserRespIndMsgT_v02 ni_resp_ind = {};
+            ni_resp.userResp = eQMI_LOC_NI_LCS_NOTIFY_VERIFY_ACCEPT_V02;
+            LOC_LOGd("ACCEPT privacy override and no notify/verify NI request or allow no resp");
+            ni_resp.notificationType = request_pass_back.notificationType;
 
-    /* Handle Vx request */
-    if (1 == ni_req_ptr->NiVxInd_valid) {
-        const qmiLocNiVxNotifyVerifyStructT_v02 *vx_req = &(ni_req_ptr->NiVxInd);
-
-        notif.type = GNSS_NI_TYPE_VOICE;
-
-        // Requestor ID, the requestor id recieved is NULL terminated
-        hexcode(notif.requestor, sizeof notif.requestor,
-                (char *)vx_req->requestorId, vx_req->requestorId_len );
-    }
-
-    /* Handle UMTS CP request*/
-    else if (1 == ni_req_ptr->NiUmtsCpInd_valid) {
-        const qmiLocNiUmtsCpNotifyVerifyStructT_v02 *umts_cp_req =
-            &ni_req_ptr->NiUmtsCpInd;
-
-        notif.type = GNSS_NI_TYPE_CONTROL_PLANE;
-
-        /* notificationText should always be a NULL terminated string */
-        hexcode(notif.message, sizeof notif.message,
-                (char *)umts_cp_req->notificationText,
-                umts_cp_req->notificationText_len);
-
-        /* Store requestor ID */
-        hexcode(notif.requestor, sizeof(notif.requestor),
-                (char *)umts_cp_req->requestorId.codedString,
-                umts_cp_req->requestorId.codedString_len);
-
-        /* convert encodings */
-        notif.messageEncoding = convertNiEncoding(umts_cp_req->dataCodingScheme);
-
-        notif.requestorEncoding =
-            convertNiEncoding(umts_cp_req->requestorId.dataCodingScheme);
-
-        /* LCS address (using extras field) */
-        if (0 != umts_cp_req->clientAddress_len) {
-            char lcs_addr[32]; // Decoded LCS address for UMTS CP NI
-
-            // Copy LCS Address into notif.extras in the format: Address = 012345
-            strlcat(notif.extras, LOC_NI_NOTIF_KEY_ADDRESS, sizeof (notif.extras));
-            strlcat(notif.extras, " = ", sizeof notif.extras);
-            int addr_len = 0;
-            const char *address_source = NULL;
-            address_source = (char *)umts_cp_req->clientAddress;
-            // client Address is always NULL terminated
-            addr_len = decodeAddress(lcs_addr, sizeof(lcs_addr), address_source,
-                                     umts_cp_req->clientAddress_len);
-
-            // The address is ASCII string
-            if (addr_len) {
-                strlcat(notif.extras, lcs_addr, sizeof notif.extras);
+            // copy SUPL payload from request
+            if (1 == request_pass_back.NiSuplInd_valid) {
+                ni_resp.NiSuplPayload_valid = 1;
+                memcpy(&(ni_resp.NiSuplPayload),
+                       &(request_pass_back.NiSuplInd),
+                       sizeof(qmiLocNiSuplNotifyVerifyStructT_v02));
             }
-        }
-    } else if (1 == ni_req_ptr->NiSuplInd_valid) {
-        const qmiLocNiSuplNotifyVerifyStructT_v02 *supl_req =
-            &ni_req_ptr->NiSuplInd;
 
-        notif.type = GNSS_NI_TYPE_SUPL;
+            // copy UMTS-CP payload from request
+            if (1 == request_pass_back.NiUmtsCpInd_valid) {
+                ni_resp.NiUmtsCpPayload_valid = 1;
+                memcpy(&(ni_resp.NiUmtsCpPayload),
+                       &(request_pass_back.NiUmtsCpInd),
+                       sizeof(qmiLocNiUmtsCpNotifyVerifyStructT_v02));
+            }
 
-        // Client name
-        if (supl_req->valid_flags & QMI_LOC_SUPL_CLIENT_NAME_MASK_V02) {
-            hexcode(notif.message, sizeof(notif.message),
-                    (char *)supl_req->clientName.formattedString,
-                    supl_req->clientName.formattedString_len);
-            LOC_LOGv("SUPL NI: client_name: %s \n", notif.message);
-        } else {
-            LOC_LOGv("SUPL NI: client_name not present.");
-        }
+            // copy Network Initiated SUPL Version 2 Extension
+            if (1 == request_pass_back.NiSuplVer2ExtInd_valid) {
+                ni_resp.NiSuplVer2ExtPayload_valid = 1;
+                memcpy(&(ni_resp.NiSuplVer2ExtPayload),
+                       &(request_pass_back.NiSuplVer2ExtInd),
+                       sizeof(qmiLocNiSuplVer2ExtStructT_v02));
+            }
 
-        // Requestor ID
-        if (supl_req->valid_flags & QMI_LOC_SUPL_REQUESTOR_ID_MASK_V02) {
-            hexcode(notif.requestor, sizeof notif.requestor,
-                    (char*)supl_req->requestorId.formattedString,
-                    supl_req->requestorId.formattedString_len);
+            // copy SUPL Emergency Notification
+            if (request_pass_back.suplEmergencyNotification_valid) {
+                ni_resp.suplEmergencyNotification_valid = 1;
+                memcpy(&(ni_resp.suplEmergencyNotification),
+                       &(request_pass_back.suplEmergencyNotification),
+                       sizeof(qmiLocEmergencyNotificationStructT_v02));
+            }
 
-            LOC_LOGv("SUPL NI: requestor: %s", notif.requestor);
-        } else {
-            LOC_LOGv("SUPL NI: requestor not present.");
-        }
+            req_union.pNiUserRespReq = &ni_resp;
 
-        // Encoding type
-        if (supl_req->valid_flags & QMI_LOC_SUPL_DATA_CODING_SCHEME_MASK_V02) {
-            notif.messageEncoding = convertNiEncoding(supl_req->dataCodingScheme);
-            notif.requestorEncoding = convertNiEncoding(supl_req->dataCodingScheme);
-        } else {
-            notif.messageEncoding = notif.requestorEncoding = GNSS_NI_ENCODING_TYPE_NONE;
-        }
+            locSyncSendReq(QMI_LOC_NI_USER_RESPONSE_REQ_V02,
+                                    req_union, LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
+                                    QMI_LOC_NI_USER_RESPONSE_IND_V02,
+                                    &ni_resp_ind);
 
-        // ES SUPL
-        if (1 == ni_req_ptr->suplEmergencyNotification_valid) {
-            notif.type = GNSS_NI_TYPE_EMERGENCY_SUPL;
-        }
-    } //ni_req_ptr->NiSuplInd_valid == 1
-    else {
-        LOC_LOGe("unknown request event");
-        return;
-    }
-
-    // Set default_response & notify_flags
-    convertNiNotifyVerifyType(&notif, ni_req_ptr->notificationType);
-
-    qmiLocEventNiNotifyVerifyReqIndMsgT_v02 *ni_req_copy_ptr =
-        (qmiLocEventNiNotifyVerifyReqIndMsgT_v02 *)malloc(sizeof(*ni_req_copy_ptr));
-
-    LocInEmergency emergencyState = LOC_IN_EMERGENCY_UNKNOWN;
-
-    if (ni_req_ptr->isInEmergencySession_valid) {
-        emergencyState =
-            ni_req_ptr->isInEmergencySession ? LOC_IN_EMERGENCY_SET : LOC_IN_EMERGENCY_NOT_SET;
-    } else {
-        emergencyState = ni_req_ptr->suplEmergencyNotification_valid ?
-                LOC_IN_EMERGENCY_SET : LOC_IN_EMERGENCY_UNKNOWN;
-    }
-
-    if (NULL != ni_req_copy_ptr) {
-        memcpy(ni_req_copy_ptr, ni_req_ptr, sizeof(*ni_req_copy_ptr));
-        requestNiNotify(notif, (const void*)ni_req_copy_ptr, emergencyState);
-    } else {
-        LOC_LOGe("Error copying NI request");
+        }));
     }
 }
 
@@ -5159,69 +4978,6 @@ void LocApiV02 :: scaleAccuracyTo68PercentConfidence(
       }
     }
   }
-}
-
-/* convert Ni Encoding type from QMI_LOC to loc eng format */
-GnssNiEncodingType LocApiV02 ::convertNiEncoding(
-  qmiLocNiDataCodingSchemeEnumT_v02 loc_encoding)
-{
-   GnssNiEncodingType enc = GNSS_NI_ENCODING_TYPE_NONE;
-
-   switch (loc_encoding)
-   {
-     case eQMI_LOC_NI_SUPL_UTF8_V02:
-       enc = GNSS_NI_ENCODING_TYPE_UTF8;
-       break;
-     case eQMI_LOC_NI_SUPL_UCS2_V02:
-       enc = GNSS_NI_ENCODING_TYPE_UCS2;
-       break;
-     case eQMI_LOC_NI_SUPL_GSM_DEFAULT_V02:
-       enc = GNSS_NI_ENCODING_TYPE_GSM_DEFAULT;
-       break;
-     case eQMI_LOC_NI_SS_LANGUAGE_UNSPEC_V02:
-       enc = GNSS_NI_ENCODING_TYPE_GSM_DEFAULT; // SS_LANGUAGE_UNSPEC = GSM
-       break;
-     default:
-       break;
-   }
-
-   return enc;
-}
-
-/*convert NI notify verify type from QMI LOC to loc eng format*/
-bool LocApiV02 :: convertNiNotifyVerifyType (
-  GnssNiNotification *notif,
-  qmiLocNiNotifyVerifyEnumT_v02 notif_priv)
-{
-  switch (notif_priv)
-   {
-   case eQMI_LOC_NI_USER_NO_NOTIFY_NO_VERIFY_V02:
-      notif->options = 0;
-      break;
-
-   case eQMI_LOC_NI_USER_NOTIFY_ONLY_V02:
-      notif->options = GNSS_NI_OPTIONS_NOTIFICATION_BIT;
-      break;
-
-   case eQMI_LOC_NI_USER_NOTIFY_VERIFY_ALLOW_NO_RESP_V02:
-      notif->options = GNSS_NI_OPTIONS_NOTIFICATION_BIT | GNSS_NI_OPTIONS_VERIFICATION_BIT;
-      notif->timeoutResponse = GNSS_NI_RESPONSE_ACCEPT;
-      break;
-
-   case eQMI_LOC_NI_USER_NOTIFY_VERIFY_NOT_ALLOW_NO_RESP_V02:
-      notif->options = GNSS_NI_OPTIONS_NOTIFICATION_BIT | GNSS_NI_OPTIONS_VERIFICATION_BIT;
-      notif->timeoutResponse = GNSS_NI_RESPONSE_DENY;
-      break;
-
-   case eQMI_LOC_NI_USER_NOTIFY_VERIFY_PRIVACY_OVERRIDE_V02:
-      notif->options = GNSS_NI_OPTIONS_PRIVACY_OVERRIDE_BIT;
-      break;
-
-   default:
-      return false;
-   }
-
-   return true;
 }
 
 /* convert and report GNSS measurement data to loc eng */
@@ -7575,6 +7331,10 @@ void LocApiV02 :: eventCb(locClientHandleType /*clientHandle*/,
     case QMI_LOC_NTN_CONFIG_UPDATE_IND_V02:
       LocApiBase::reportNtnConfigUpdateEvent(eventPayload.pNtnConfigUpdateIndMsg->signalType);
       break;
+
+    case QMI_LOC_EVENT_DBT_POSITION_REPORT_IND_V02:
+      onDbtPosReportEvent(eventPayload.pDbtPositionReportEvent);
+      break;
   }
 }
 
@@ -7588,6 +7348,77 @@ void LocApiV02 :: errorCb(locClientHandleType /*handle*/,
 
     handleEngineDownEvent();
   }
+}
+
+
+bool LocApiV02::getWwanFixSync(LocGpsLocation &wwanLoc)
+{
+    qmiLocGetAvailWwanPositionReqMsgT_v02 wwanReq = {};
+    qmiLocGetAvailWwanPositionIndMsgT_v02 wwanInd = {};
+    locClientReqUnionType reqUnion = {};
+    locClientStatusEnumType status;
+
+    LOC_LOGd("Get WWAN fix sync\n");
+    memset(&wwanLoc, 0, sizeof(wwanLoc));
+    wwanLoc.size = sizeof(wwanLoc);
+
+    reqUnion.pGetAvailWwanPositionReq = &wwanReq;
+    wwanReq.transactionId = 1;
+    status = locSyncSendReq(QMI_LOC_GET_AVAILABLE_WWAN_POSITION_REQ_V02,
+                            reqUnion,
+                            LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
+                            QMI_LOC_GET_AVAILABLE_WWAN_POSITION_IND_V02,
+                            &wwanInd);
+
+    if ((eLOC_CLIENT_SUCCESS != status) ||
+        (eQMI_LOC_SUCCESS_V02 != wwanInd.status))
+    {
+        LOC_LOGe("error! status = %d, wwanInd.status = %d\n",
+                  (status),
+                  (wwanInd.status));
+        return false;
+    }
+
+    if ((wwanInd.latitude_valid == false) ||
+        (wwanInd.longitude_valid == false) ||
+        (wwanInd.horUncCircular_valid == false)) {
+        LOC_LOGe("Location not valid lat=%u lon=%u unc=%u",
+                 wwanInd.latitude_valid,
+                 wwanInd.longitude_valid,
+                 wwanInd.horUncCircular_valid);
+        return false;
+    }
+
+    if (wwanInd.timestampUtc_valid) {
+        wwanLoc.timestamp = wwanInd.timestampUtc;
+    } else {
+        struct timespec time_info_current = {};
+        clock_gettime(CLOCK_REALTIME, &time_info_current);
+        wwanLoc.timestamp = (time_info_current.tv_sec)*1e3 +
+                            (time_info_current.tv_nsec)/1e6;
+        LOC_LOGd("wwan timestamp got from system: %" PRIu64, wwanLoc.timestamp);
+    }
+
+    wwanLoc.flags = LOC_GPS_LOCATION_HAS_LAT_LONG | LOC_GPS_LOCATION_HAS_ACCURACY;
+    wwanLoc.latitude = wwanInd.latitude;
+    wwanLoc.longitude = wwanInd.longitude;
+    wwanLoc.accuracy = wwanInd.horUncCircular;
+
+    if (wwanInd.horCircularConfidence_valid) {
+        scaleAccuracyTo68PercentConfidence(wwanInd.horCircularConfidence, wwanLoc, true);
+    }
+
+    if (wwanInd.altitudeWrtEllipsoid_valid) {
+        wwanLoc.flags |= LOC_GPS_LOCATION_HAS_ALTITUDE;
+        wwanLoc.altitude = wwanInd.altitudeWrtEllipsoid;
+    }
+
+    if (wwanInd.vertUnc_valid) {
+        wwanLoc.flags |= LOC_GPS_LOCATION_HAS_VERT_UNCERTAINITY;
+        wwanLoc.vertUncertainity = wwanInd.vertUnc;
+    }
+
+    return true;
 }
 
 bool LocApiV02::getBestAvailableZppFixSync(LocGpsLocation &zppLoc,
@@ -7624,27 +7455,21 @@ bool LocApiV02::getBestAvailableZppFixSync(LocGpsLocation &zppLoc,
         if (zpp_ind.timestampUtc_valid) {
             zppLoc.timestamp = zpp_ind.timestampUtc;
         } else {
-            /* The UTC time from modem is not valid.
-                    In this case, we use current system time instead.*/
-
-          struct timespec time_info_current = {};
-          clock_gettime(CLOCK_REALTIME, &time_info_current);
-          zppLoc.timestamp = (time_info_current.tv_sec)*1e3 +
-                  (time_info_current.tv_nsec)/1e6;
-          LOC_LOGd("zpp timestamp got from system: %" PRIu64, zppLoc.timestamp);
+            struct timespec time_info_current = {};
+            clock_gettime(CLOCK_REALTIME, &time_info_current);
+            zppLoc.timestamp = (time_info_current.tv_sec)*1e3 +
+                    (time_info_current.tv_nsec)/1e6;
+            LOC_LOGd("zpp timestamp got from system: %" PRIu64, zppLoc.timestamp);
         }
 
         if (zpp_ind.latitude_valid && zpp_ind.longitude_valid &&
-                zpp_ind.horUncCircular_valid ) {
+                zpp_ind.horUncCircular_valid) {
             zppLoc.flags = LOC_GPS_LOCATION_HAS_LAT_LONG | LOC_GPS_LOCATION_HAS_ACCURACY;
             zppLoc.latitude = zpp_ind.latitude;
             zppLoc.longitude = zpp_ind.longitude;
             zppLoc.accuracy = zpp_ind.horUncCircular;
 
-            // If horCircularConfidence_valid is true, and horCircularConfidence value
-            // is less than 68%, then scale the accuracy value to 68% confidence.
-            if (zpp_ind.horCircularConfidence_valid)
-            {
+            if (zpp_ind.horCircularConfidence_valid) {
                 scaleAccuracyTo68PercentConfidence(zpp_ind.horCircularConfidence,
                                                    zppLoc, true);
             }
@@ -10334,6 +10159,20 @@ LocApiV02::startTimeBasedTracking(const TrackingOptions& options, LocApiResponse
     start_msg.configAltitudeAssumed =
         eQMI_LOC_ALTITUDE_ASSUMED_IN_GNSS_SV_INFO_DISABLED_V02;
 
+    if (options.mode == GNSS_SUPL_MODE_MSA) {
+        if (mMsaSessionTimeOutMs == 0) {
+            mMsaSessionTimeOutMs = 16000;
+            const loc_param_s_type mo_msa_timeout_table[] =
+            {
+                { "MO_MSA_SESSION_TIME_OUT_IN_MS", &mMsaSessionTimeOutMs, NULL, 'n' },
+            };
+            UTIL_READ_CONF(LOC_PATH_GPS_CONF_STR, mo_msa_timeout_table);
+        }
+        start_msg.positionReportTimeout_valid = 1;
+        start_msg.positionReportTimeout = mMsaSessionTimeOutMs;
+        LOC_LOGd("MO MSA session time out set to %d", start_msg.positionReportTimeout);
+    }
+
     // power mode
     if (options.powerMode >= GNSS_POWER_MODE_M1 && options.powerMode <= GNSS_POWER_MODE_M5) {
         mPowerMode = options.powerMode;
@@ -10983,6 +10822,122 @@ LocApiV02::stopTimeBasedTrackingSync(LocApiResponse* adapterResponse) {
 }
 
 void
+LocApiV02::startDistanceBasedTracking(uint32_t sessionId,
+                                       const LocationOptions& options,
+                                       LocApiResponse* adapterResponse)
+{
+    sendMsg(new LocApiMsg([this, sessionId, options, adapterResponse] () {
+
+    LOC_LOGD("startDistanceBasedTracking: session id %u, minInterval %u minDistance %u",
+             sessionId, options.minInterval, options.minDistance);
+    LocationError err = LOCATION_ERROR_SUCCESS;
+
+    /** start distance based tracking session*/
+    locClientStatusEnumType status;
+    locClientReqUnionType req_union;
+    qmiLocStartDbtReqMsgT_v02 start_dbt_req;
+    qmiLocStartDbtIndMsgT_v02 start_dbt_ind;
+    memset(&start_dbt_req, 0, sizeof(start_dbt_req));
+    memset(&start_dbt_ind, 0, sizeof(start_dbt_ind));
+
+    // request id
+    if (sessionId > 0xFF) {
+        LOC_LOGe("sessionId: %" PRIu32 " is greater than 0xFF, cannot start DBT", sessionId);
+        if (NULL != adapterResponse) {
+            adapterResponse->returnToSender(LOCATION_ERROR_INVALID_PARAMETER);
+        }
+        return;
+    }
+    start_dbt_req.reqId = static_cast<uint8_t>(sessionId);
+
+    // distance
+    start_dbt_req.minDistance = options.minDistance;
+
+    // time
+    uint32_t minInterval = options.minInterval;
+    start_dbt_req.maxLatency_valid = 1;
+    start_dbt_req.maxLatency = minInterval/1000; //in seconds
+    if (0 == start_dbt_req.maxLatency) {
+        start_dbt_req.maxLatency = 1; //in seconds
+    }
+
+    // type
+    start_dbt_req.distanceType = eQMI_LOC_DBT_DISTANCE_TYPE_STRAIGHT_LINE_V02;
+
+    /* original location disabled by default, as the original location is
+       the one cached in the modem buffer and its timestamps is not fresh.*/
+    start_dbt_req.needOriginLocation = 0;
+
+    start_dbt_req.usageType_valid = 1;
+    start_dbt_req.usageType = eQMI_LOC_DBT_USAGE_NAVIGATION_V02;
+    req_union.pStartDbtReq = &start_dbt_req;
+
+    status = locSyncSendReq(QMI_LOC_START_DBT_REQ_V02,
+                            req_union,
+                            LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
+                            QMI_LOC_START_DBT_IND_V02,
+                            &start_dbt_ind);
+
+    if (eLOC_CLIENT_SUCCESS != status ||
+            eQMI_LOC_SUCCESS_V02 != start_dbt_ind.status) {
+        if (ENGINE_LOCK_STATE_DISABLED == getEngineLockState()) {
+            LOC_LOGD("startDistanceBasedTracking: engine state disabled");
+            err = LOCATION_ERROR_TZ_LOCKED;
+        } else {
+            err = LOCATION_ERROR_GENERAL_FAILURE;
+        }
+    }
+
+    if (adapterResponse != NULL) {
+        adapterResponse->returnToSender(err);
+    }
+    }));
+}
+
+void
+LocApiV02::stopDistanceBasedTracking(uint32_t sessionId, LocApiResponse* adapterResponse)
+{
+    sendMsg(new LocApiMsg([this, sessionId, adapterResponse] () {
+
+    LOC_LOGD("stopDistanceBasedTracking: session id %u", sessionId);
+    LocationError err = LOCATION_ERROR_SUCCESS;
+
+    locClientStatusEnumType status;
+    locClientReqUnionType req_union;
+    qmiLocStopDbtReqMsgT_v02 stop_dbt_req;
+    qmiLocStopDbtIndMsgT_v02 stop_dbt_Ind;
+    memset(&stop_dbt_req, 0, sizeof(stop_dbt_req));
+    memset(&stop_dbt_Ind, 0, sizeof(stop_dbt_Ind));
+
+    if (sessionId > 0xFF) {
+        LOC_LOGe("sessionId: %" PRIu32 " is greater than 0xFF, cannot stop DBT", sessionId);
+        if (NULL != adapterResponse) {
+            adapterResponse->returnToSender(LOCATION_ERROR_INVALID_PARAMETER);
+        }
+        return;
+    }
+    stop_dbt_req.reqId = static_cast<uint8_t>(sessionId);
+
+    req_union.pStopDbtReq = &stop_dbt_req;
+
+    status = locSyncSendReq(QMI_LOC_STOP_DBT_REQ_V02,
+                            req_union,
+                            LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
+                            QMI_LOC_STOP_DBT_IND_V02,
+                            &stop_dbt_Ind);
+
+    if (eLOC_CLIENT_SUCCESS != status ||
+            eQMI_LOC_SUCCESS_V02 != stop_dbt_Ind.status) {
+        err = LOCATION_ERROR_GENERAL_FAILURE;
+    }
+
+    if (nullptr != adapterResponse) {
+        adapterResponse->returnToSender(err);
+    }
+    }));
+}
+
+void
 LocApiV02::startBatching(uint32_t sessionId,
                           const LocationOptions& options,
                           uint32_t accuracy,
@@ -11518,4 +11473,87 @@ AgcStatus LocApiV02::convertQmiAgcStatusType(qmiLocAgcStatusEnumT_v02 qmiAgcStat
             break;
     }
     return agcStatus;
+}
+
+void LocApiV02::onDbtPosReportEvent(
+        const qmiLocEventDbtPositionReportIndMsgT_v02* pDbtPosReport)
+{
+    if (NULL == pDbtPosReport) {
+        LOC_LOGe("NULL pDbtPosReport");
+        return;
+    }
+
+    UlpLocation location;
+    memset(&location, 0, sizeof(location));
+    location.size = sizeof(location);
+
+    GpsLocationExtended locationExtended;
+    memset(&locationExtended, 0, sizeof(locationExtended));
+    locationExtended.size = sizeof(locationExtended);
+
+    const qmiLocDbtPositionStructT_v02 &dbtPos = pDbtPosReport->dbtPosition;
+
+    location.gpsLocation.flags |= LOC_GPS_LOCATION_HAS_LAT_LONG;
+    location.gpsLocation.latitude  = dbtPos.latitude;
+    location.gpsLocation.longitude = dbtPos.longitude;
+    location.gpsLocation.timestamp = dbtPos.timestampUtc;
+
+    if (dbtPos.altitudeWrtEllipsoid_valid) {
+        location.gpsLocation.flags |= LOC_GPS_LOCATION_HAS_ALTITUDE;
+        location.gpsLocation.altitude = dbtPos.altitudeWrtEllipsoid;
+    }
+
+    if (dbtPos.speedHorizontal_valid) {
+        location.gpsLocation.flags |= LOC_GPS_LOCATION_HAS_SPEED;
+        location.gpsLocation.speed = dbtPos.speedHorizontal;
+    }
+
+    if (dbtPos.heading_valid) {
+        location.gpsLocation.flags |= LOC_GPS_LOCATION_HAS_BEARING;
+        location.gpsLocation.bearing = dbtPos.heading;
+    }
+
+    float unc = sqrt((dbtPos.horUncEllipseSemiMinor * dbtPos.horUncEllipseSemiMinor) +
+                     (dbtPos.horUncEllipseSemiMajor * dbtPos.horUncEllipseSemiMajor)) /
+                     sqrt(2.0f);
+    location.gpsLocation.flags |= LOC_GPS_LOCATION_HAS_ACCURACY;
+    location.gpsLocation.accuracy = unc;
+
+    if (pDbtPosReport->headingUnc_valid) {
+        locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_BEARING_UNC;
+        locationExtended.bearing_unc = pDbtPosReport->headingUnc;
+    }
+
+    if (pDbtPosReport->speedUnc_valid) {
+        locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_SPEED_UNC;
+        locationExtended.speed_unc = pDbtPosReport->speedUnc;
+    }
+
+    LocPosTechMask techMask = LOC_POS_TECH_MASK_DEFAULT;
+    if (pDbtPosReport->positionSrc_valid) {
+        switch (pDbtPosReport->positionSrc) {
+        case eQMI_LOC_POSITION_SRC_GNSS_V02:
+            techMask = LOC_POS_TECH_MASK_SATELLITE;
+            break;
+        case eQMI_LOC_POSITION_SRC_CELLID_V02:
+        case eQMI_LOC_POSITION_SRC_ENH_CELLID_V02:
+            techMask = LOC_POS_TECH_MASK_CELLID;
+            break;
+        case eQMI_LOC_POSITION_SRC_WIFI_V02:
+            techMask = LOC_POS_TECH_MASK_WIFI;
+            break;
+        default:
+            techMask = LOC_POS_TECH_MASK_DEFAULT;
+            break;
+        }
+    }
+
+    LOC_LOGd("DBT position: lat=%f lon=%f unc=%f posType=%d",
+             location.gpsLocation.latitude,
+             location.gpsLocation.longitude,
+             location.gpsLocation.accuracy,
+             pDbtPosReport->positionType);
+
+    LocApiBase::reportDBTPosition(location, locationExtended,
+                                  LOC_SESS_INTERMEDIATE, techMask);
 }

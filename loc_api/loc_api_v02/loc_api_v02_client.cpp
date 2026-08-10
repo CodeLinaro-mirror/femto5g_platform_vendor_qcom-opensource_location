@@ -25,6 +25,11 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+/*
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
 
  /*
 Changes from Qualcomm Innovation Center are provided under the following license:
@@ -294,6 +299,17 @@ static const locClientEventIndTableStructT locClientEventIndTable[]= {
   // supported bands and the preferred one ind
   { QMI_LOC_GNSS_BANDS_SUPPORTED_IND_V02,
     sizeof(qmiLocGnssBandsSupportedIndMsgT_v02)},
+
+  // FDCL service request event inds
+  { QMI_LOC_EVENT_FDCL_SERVICE_REQ_IND_V02,
+    sizeof(qmiLocEventFdclServiceReqIndMsgT_v02)},
+
+  { QMI_LOC_EVENT_BS_OBS_DATA_SERVICE_REQ_IND_V02,
+    sizeof(qmiLocEventBsObsDataServiceReqIndMsgT_v02)},
+
+  // DBT position report event ind
+  { QMI_LOC_EVENT_DBT_POSITION_REPORT_IND_V02,
+    sizeof(qmiLocEventDbtPositionReportIndMsgT_v02)},
 };
 
 /* table to relate the respInd Id with its size */
@@ -451,8 +467,17 @@ static const locClientRespIndTableStructT locClientRespIndTable[]= {
    { QMI_LOC_SET_PREMIUM_SERVICES_CONFIG_IND_V02,
      sizeof(qmiLocSetPremiumServicesCfgIndMsgT_v02)},
 
+   { QMI_LOC_GET_AVAILABLE_WWAN_POSITION_IND_V02,
+     sizeof(qmiLocGetAvailWwanPositionIndMsgT_v02)},
+
    { QMI_LOC_SET_GNSS_CONSTELL_REPORT_CONFIG_IND_V02,
      sizeof(qmiLocSetGNSSConstRepConfigIndMsgT_v02)},
+
+   { QMI_LOC_START_DBT_IND_V02,
+     sizeof(qmiLocStartDbtIndMsgT_v02)},
+
+   { QMI_LOC_STOP_DBT_IND_V02,
+     sizeof(qmiLocStopDbtIndMsgT_v02)},
 
    { QMI_LOC_INJECT_TIME_ZONE_INFO_IND_V02,
      sizeof(qmiLocInjectTimeZoneInfoIndMsgT_v02)},
@@ -550,6 +575,16 @@ static const locClientRespIndTableStructT locClientRespIndTable[]= {
 
    { QMI_LOC_SET_PRECISE_SESSION_CONFIG_IND_V02,
      sizeof(qmiLocGenReqStatusIndMsgT_v02) },
+
+   // FDCL
+   { QMI_LOC_GET_FDCL_BS_LIST_IND_V02,
+     sizeof(qmiLocGetFdclBsListIndMsgT_v02) },
+
+   { QMI_LOC_INJECT_FDCL_DATA_IND_V02,
+     sizeof(qmiLocInjectFdclDataIndMsgT_v02) },
+
+   { QMI_LOC_GET_BS_OBS_DATA_IND_V02,
+     sizeof(qmiLocGetBsObsDataIndMsgT_v02) },
 };
 
 
@@ -1206,9 +1241,46 @@ bool validateRequest(
         break;
     }
 
+    case QMI_LOC_GET_AVAILABLE_WWAN_POSITION_REQ_V02:
+    {
+        *pOutLen = sizeof(qmiLocGetAvailWwanPositionReqMsgT_v02);
+        break;
+    }
+
+    // FDCL
+    case QMI_LOC_GET_FDCL_BS_LIST_REQ_V02:
+    {
+        *pOutLen = sizeof(qmiLocGetFdclBsListReqMsgT_v02);
+        break;
+    }
+
+    case QMI_LOC_INJECT_FDCL_DATA_REQ_V02:
+    {
+        *pOutLen = sizeof(qmiLocInjectFdclDataReqMsgT_v02);
+        break;
+    }
+
+    case QMI_LOC_GET_BS_OBS_DATA_REQ_V02:
+    {
+        *pOutLen = sizeof(qmiLocGetBsObsDataReqMsgT_v02);
+        break;
+    }
+
     case QMI_LOC_SET_GNSS_CONSTELL_REPORT_CONFIG_V02:
     {
         *pOutLen = sizeof(qmiLocSetGNSSConstRepConfigReqMsgT_v02);
+        break;
+    }
+
+    case QMI_LOC_START_DBT_REQ_V02:
+    {
+        *pOutLen = sizeof(qmiLocStartDbtReqMsgT_v02);
+        break;
+    }
+
+    case QMI_LOC_STOP_DBT_REQ_V02:
+    {
+        *pOutLen = sizeof(qmiLocStopDbtReqMsgT_v02);
         break;
     }
 
