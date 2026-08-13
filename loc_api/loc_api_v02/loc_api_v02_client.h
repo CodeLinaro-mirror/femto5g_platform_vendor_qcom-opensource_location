@@ -27,41 +27,6 @@
  */
 
 /*
-Changes from Qualcomm Innovation Center are provided under the following license:
-
-Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted (subject to the limitations in the
-disclaimer below) provided that the following conditions are met:
-
-    * Redistributions of source code must retain the above copyright
-      notice, this list of conditions and the following disclaimer.
-
-    * Redistributions in binary form must reproduce the above
-      copyright notice, this list of conditions and the following
-      disclaimer in the documentation and/or other materials provided
-      with the distribution.
-
-    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
-      contributors may be used to endorse or promote products derived
-      from this software without specific prior written permission.
-
-NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
-WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
-GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
-IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
-OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
-/*
  * Changes from Qualcomm Technologies, Inc. are provided under the following license:
  * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
@@ -538,6 +503,12 @@ typedef union
     const qmiLocSetGNSSConstRepConfigReqMsgT_v02 *pSetGNSSConstRepConfigReq;
     /*QMI_LOC_SET_GNSS_CONSTELL_REPORT_CONFIG_V02*/
 
+    const qmiLocStartDbtReqMsgT_v02 *pStartDbtReq;
+    /*QMI_LOC_START_DBT_REQ_V02*/
+
+    const qmiLocStopDbtReqMsgT_v02 *pStopDbtReq;
+    /*QMI_LOC_STOP_DBT_REQ_V02*/
+
     const qmiLocInjectTimeZoneInfoReqMsgT_v02 *pInjectTimeZoneInfoReq;
     /*QMI_LOC_INJECT_TIME_ZONE_INFO*/
 
@@ -871,6 +842,10 @@ typedef union
    const qmiLocNtnConfigUpdateIndMsgT_v02* pNtnConfigUpdateIndMsg;
    /** Sent by the engine to inform the NTN config upodate event
     QMI_LOC_NTN_CONFIG_UPDATE_IND_V02 */
+
+   const qmiLocEventDbtPositionReportIndMsgT_v02* pDbtPositionReportEvent;
+   /** Sent by the engine to report a DBT position
+    QMI_LOC_EVENT_DBT_POSITION_REPORT_IND_V02 */
 }locClientEventIndUnionType;
 
 
@@ -1070,6 +1045,12 @@ typedef union
 
     const qmiLocSetGNSSConstRepConfigIndMsgT_v02 *pSetGNSSConstRepConfigInd;
     /*QMI_LOC_SET_GNSS_CONSTELL_REPORT_CONFIG_IND_V02*/
+
+    const qmiLocStartDbtIndMsgT_v02 *pStartDbtInd;
+    /*QMI_LOC_START_DBT_IND_V02*/
+
+    const qmiLocStopDbtIndMsgT_v02 *pStopDbtInd;
+    /*QMI_LOC_STOP_DBT_IND_V02*/
 
     const qmiLocInjectTimeZoneInfoIndMsgT_v02 *pInjectTimeZoneInfoInd;
     /*QMI_LOC_INJECT_TIME_ZONE_INFO_IND_V02*/

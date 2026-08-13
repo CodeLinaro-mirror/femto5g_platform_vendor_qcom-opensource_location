@@ -292,6 +292,7 @@ static void onLocationCb(const location_client::Location& location) {
                    location.altitude,
                    location.horizontalAccuracy);
         }
+        fflush(stdout);
     }
     if (numValidFixes >= fixCnt) {
         printf("<<< onLocationCb: numValidFixes:%u exceeds fixCnt:%u\n", numValidFixes, fixCnt);
@@ -612,6 +613,7 @@ static void printHelp() {
     printf("\n************* options *************\n");
     printf("e reprottype tbf: Concurrent engine report session with 100 ms interval\n");
     printf("g reporttype tbf engmask: Gnss report session with 100 ms interval\n");
+    printf("d intervalMs distanceM: Simple location session with distance trigger\n");
     printf("u: Update a session with 2000 ms interval\n");
     printf("m: Interleaving fix session with 1000 and 2000 ms interval, change every 3 seconds\n");
     printf("s: Stop a session \n");
@@ -1678,6 +1680,7 @@ static bool checkForAutoStart(int argc, char *argv[]) {
     string gfStr = "-g";
     uint32_t aidingDataMask = 0;
     int interval = 100;
+    int distance = 0;
     LocReqEngineTypeMask reqEngMask = (LocReqEngineTypeMask) 0x7;
     uint32_t reportType = 0xff;
     TrackingSessionType trackingType = NO_TRACKING;
@@ -1698,12 +1701,13 @@ static bool checkForAutoStart(int argc, char *argv[]) {
         {"reportType", required_argument, 0,  'r' },
         {"addgeofences", required_argument, 0,  'g' },
         {"startBatching", required_argument, 0,  'b' },
+        {"distance",      required_argument, 0,  'm' },
         {0,           0,                 0,   0  }
     };
 
     int long_index =0;
     int opt = -1;
-    while ((opt = getopt_long(argc, argv, "aVNDd:s:e:i:t:l:r:U:z:g:b:",
+    while ((opt = getopt_long(argc, argv, "aVNDd:s:e:i:t:l:r:U:z:g:b:m:",
                    long_options, &long_index)) != -1) {
         switch (opt) {
              case 'a' :
@@ -1756,6 +1760,18 @@ static bool checkForAutoStart(int argc, char *argv[]) {
                  }
                  if (trackingType == NO_TRACKING) {
                      trackingType = ENGINE_REPORT_TRACKING;
+                 }
+                 break;
+             // distance-based tracking: trigger a fix after travelling distanceInMeters
+             case 'm':
+                 printf("distance: %s\n", optarg);
+                 distance = atoi(optarg);
+                 if (distance < 0) {
+                     distance = 0;
+                     printf("setting distance to 0");
+                 }
+                 if (trackingType == NO_TRACKING) {
+                     trackingType = SIMPLE_REPORT_TRACKING;
                  }
                  break;
              case 't':
@@ -1860,7 +1876,8 @@ static bool checkForAutoStart(int argc, char *argv[]) {
 
             resetCounters();
             if (trackingType == SIMPLE_REPORT_TRACKING) {
-                pLcaClient->startPositionSession(interval, 0, onLocationCb, onResponseCb);
+                pLcaClient->startPositionSession(interval, (uint32_t)distance, onLocationCb,
+                                                 onResponseCb);
             } else if (trackingType == DETAILED_REPORT_TRACKING) {
                 GnssReportCbs reportcbs = {};
                 setupGnssReportCbs(reportType, reportcbs);
@@ -2782,6 +2799,33 @@ int main(int argc, char *argv[]) {
         } else {
             int command = buf[0];
             switch(command) {
+            // distance-based tracking: trigger a fix after travelling distanceInMeters
+            case 'd':
+                if (!pLcaClient) {
+                    pLcaClient = new LocationClientApi(onCapabilitiesCb);
+                }
+                if (pLcaClient) {
+                    uint32_t tbfMsec = 1000;
+                    uint32_t distanceMeters = 0;
+                    {
+                        std::istringstream ss(buf);
+                        std::string cmd;
+                        int intervalArg = 1000, distanceArg = 0;
+                        ss >> cmd;  // skip 'd'
+                        if (ss >> intervalArg && intervalArg > 0) {
+                            tbfMsec = (uint32_t)intervalArg;
+                        }
+                        if (ss >> distanceArg && distanceArg > 0) {
+                            distanceMeters = (uint32_t)distanceArg;
+                        }
+                    }
+                    printf("distance-based tracking: interval %u ms, distance %u m\n",
+                           tbfMsec, distanceMeters);
+                    resetCounters();
+                    retVal = pLcaClient->startPositionSession(tbfMsec, distanceMeters,
+                                                              onLocationCb, onResponseCb);
+                }
+                break;
             case 'e':
                 if (!pLcaClient) {
                     pLcaClient = new LocationClientApi(onCapabilitiesCb);
