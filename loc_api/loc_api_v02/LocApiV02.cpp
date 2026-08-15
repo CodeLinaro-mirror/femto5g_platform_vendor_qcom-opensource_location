@@ -27,9 +27,9 @@
  */
 
 /*
-Changes from Qualcomm Innovation Center are provided under the following license:
-Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
-SPDX-License-Identifier: BSD-3-Clause-Clear
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
 #define LOG_NDEBUG 0
@@ -5265,6 +5265,8 @@ void LocApiV02 :: reportNmea (
     }
 }
 
+#define ATL_OPEN_WAIT_DEFAULT_TIMEOUT_MSEC 15000
+#define ATL_CLOSE_WAIT_DEFAULT_TIMEOUT_MSEC 5000
 /* convert and report an ATL request to loc engine */
 void LocApiV02 :: reportAtlRequest(
   const qmiLocEventLocationServerConnectionReqIndMsgT_v02 * server_request_ptr)
@@ -5316,12 +5318,16 @@ void LocApiV02 :: reportAtlRequest(
         }
     }
     LOC_LOGd("agpsSubId=%d", agpsSubId);
-    requestATL(connHandle, agpsType, apnTypeMask, agpsSubId);
+    requestATL(connHandle, agpsType, apnTypeMask, agpsSubId, ATL_OPEN_WAIT_DEFAULT_TIMEOUT_MSEC);
   }
   // service the ATL close request
   else if (server_request_ptr->requestType == eQMI_LOC_SERVER_REQUEST_CLOSE_V02)
   {
-    releaseATL(connHandle);
+    uint32_t atlClosetimeOutMsec = ATL_CLOSE_WAIT_DEFAULT_TIMEOUT_MSEC;
+    if (server_request_ptr->connectionRequestTimeout_valid) {
+        atlClosetimeOutMsec = server_request_ptr->connectionRequestTimeout;
+    }
+    releaseATL(connHandle, atlClosetimeOutMsec);
   }
 }
 
@@ -7733,7 +7739,9 @@ int LocApiV02 :: convertGnssClock (GnssMeasurementsClock& clock,
             uint32_t systemMsec = gnss_measurement_info.systemTime.systemMsec;
             float sysClkBiasMs = gnss_measurement_info.systemTime.systemClkTimeBias;
             float sysClkUncMs = gnss_measurement_info.systemTime.systemClkTimeUncMs;
-            bool isTimeValid = (sysClkUncMs <= 16.0f); // 16ms
+            bool isTimeValid =
+                    (sysClkUncMs <= (system == eQMI_LOC_SV_SYSTEM_GPS_V02 ? 16.0f:25.0f));
+            // 16ms for GPS and 25ms for BDS
 
             if (systemWeek != C_GPS_WEEK_UNKNOWN && isTimeValid) {
                 // fullBiasNs, biasNs & biasUncertaintyNs
