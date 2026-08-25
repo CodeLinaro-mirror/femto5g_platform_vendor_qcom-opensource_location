@@ -679,6 +679,9 @@ public:
         qmiLocGNSSConstellEnumT_v02 qmiSecondaryBandConfig,
         GnssSvTypeConfig& secondaryBandConfig);
 
+  void convertQmiOsnmaStateToNavMsgAuthStatus(
+        const qmiLocGetOsnmaStateIndMsgT_v02& ind, NavMsgAuthStatus& out);
+
   virtual void configPrecisePositioning(uint32_t featureId, bool enable,
           std::string appHash, LocApiResponse* adapterResponse=nullptr);
   /* Requests for SV/Constellation Control */
@@ -698,6 +701,9 @@ public:
           LocApiResponse* adapterResponse=nullptr);
 
   virtual void configOsnmaEnablement(bool enable, LocApiResponse* adapterResponse=nullptr);
+
+  virtual void getNavMsgAuthStatus(GnssSvType svType, uint32_t sessionId,
+          LocApiResponse* adapterResponse=nullptr);
 
   virtual void getConstellationMultiBandConfig(uint32_t sessionId,
                                       LocApiResponse* adapterResponse=nullptr);

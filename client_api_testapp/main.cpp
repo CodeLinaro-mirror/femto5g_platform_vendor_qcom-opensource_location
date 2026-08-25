@@ -156,6 +156,7 @@ enum TrackingSessionType {
 #define REGISTER_XTRA_STATUS_UPDATE "registerXtraUpdateStatus"
 #define ENABLE_XTRA_ON_DEMAND_DOWNLOAD "enableXtraOnDemandDownload"
 #define REGISTER_SIGNAL_TYPES_UPDATE "registerGnssSignalTypesUpdate"
+#define GET_NAV_MSG_AUTH_STATUS     "getNavMsgAuthStatus"
 #define ADD_GEOFENCES               "addGeofences"
 #define PAUSE_GEOFENCES             "pauseGeofences"
 #define RESUME_GEOFENCES            "resumeGeofences"
@@ -691,6 +692,38 @@ static void onGnssEphemerisCb(const location_client::GnssEphemeris& ephInfo) {
 static void onGNSSExtendedDataInfoCb(const std::vector<uint8_t>& payload) {
     printf("<<<  onGNSSExtendedDataInfoCb payload size %d \n", payload.size());
 }
+static void onNavMsgAuthStatusCb(const NavMsgAuthStatus& navMsgAuthStatus) {
+    printf("<<< onNavMsgAuthStatusCb, constellation %d\n",
+           navMsgAuthStatus.constellation);
+    if (navMsgAuthStatus.constellation == location_client::GNSS_SV_TYPE_GALILEO) {
+        const GalOsnmaStatus& gal = navMsgAuthStatus.navMsgAuthInfo.galOsnmaStatus;
+        printf("    GAL OSNMA validityMask 0x%x\n", gal.validityMask);
+        if (gal.validityMask & GAL_OSNMA_STATUS_FEATURE_ENABLED_VALID) {
+            printf("    featureEnabled %d\n", gal.featureEnabled);
+        }
+        if (gal.validityMask & GAL_OSNMA_STATUS_MERKLE_TREE_PROVISIONED_VALID) {
+            printf("    merkleTreeProvisioned %d\n", gal.merkleTreeProvisioned);
+        }
+        if (gal.validityMask & GAL_OSNMA_STATUS_PUBLIC_KEY_STATUS_VALID) {
+            printf("    publicKeyStatusMask 0x%x (provisioned %d, verified %d)\n",
+                   gal.publicKeyStatusMask,
+                   (gal.publicKeyStatusMask & GAL_OSNMA_PUBLIC_KEY_PROVISIONED) != 0,
+                   (gal.publicKeyStatusMask & GAL_OSNMA_PUBLIC_KEY_VERIFIED) != 0);
+        }
+        if (gal.validityMask & GAL_OSNMA_STATUS_GAL_WEEK_VALID) {
+            printf("    galWeek %u\n", gal.galWeek);
+        }
+        if (gal.validityMask & GAL_OSNMA_STATUS_GAL_SEC_OF_WEEK_VALID) {
+            printf("    galSecOfWeek %u\n", gal.galSecOfWeek);
+        }
+        if (gal.validityMask & GAL_OSNMA_STATUS_NAV_DATA_AUTH_PASSED_VALID) {
+            printf("    navDataAuthPassedMask 0x%" PRIx64 "\n", gal.navDataAuthPassedMask);
+        }
+        if (gal.validityMask & GAL_OSNMA_STATUS_NAV_DATA_AUTH_FAILED_VALID) {
+            printf("    navDataAuthFailedMask 0x%" PRIx64 "\n", gal.navDataAuthFailedMask);
+        }
+    }
+}
 
 static void printHelp() {
     printf("\n************* options *************\n");
@@ -741,6 +774,8 @@ static void printHelp() {
     printf("%s: register xtra status update \n", REGISTER_XTRA_STATUS_UPDATE);
     printf("%s: enable xtra on demand download \n", ENABLE_XTRA_ON_DEMAND_DOWNLOAD);
     printf("%s: register GNSS signal types update \n", REGISTER_SIGNAL_TYPES_UPDATE);
+    printf("%s [svType]: query nav msg auth status (default Galileo) \n",
+            GET_NAV_MSG_AUTH_STATUS);
     printf("%s: add geofences with lat/lon/radius/breachtype/responsiveness/dwelltime\n",
             ADD_GEOFENCES);
     printf("%s: pause geofences with indexes\n",  PAUSE_GEOFENCES );
@@ -2225,6 +2260,7 @@ int main(int argc, char *argv[]) {
             LocConfigGetConstellationSecondaryBandConfigCb(onGetSecondaryBandConfigCb);
     intCbs.getXtraStatusCb = LocConfigGetXtraStatusCb(onGetXtraStatusCb);
     intCbs.gnssSignalTypesCb = LocConfigGnssSignalTypesCb(onGnssSignalTypesCb);
+    intCbs.navMsgAuthStatusCb = LocConfigNavMsgAuthStatusCb(onNavMsgAuthStatusCb);
 
     LocConfigPriorityMap priorityMap;
     pIntClient = new LocationIntegrationApi(priorityMap, intCbs);
@@ -2622,6 +2658,20 @@ int main(int argc, char *argv[]) {
             }
             printf("register GNSS signal types update %d\n", registerUpdate);
             pIntClient->registerGnssSignalTypesUpdate(registerUpdate);
+        } else if (strncmp(buf, GET_NAV_MSG_AUTH_STATUS,
+                           strlen(GET_NAV_MSG_AUTH_STATUS)) == 0) {
+            // optional constellation arg; defaults to Galileo (6)
+            int svType = location_client::GNSS_SV_TYPE_GALILEO;
+            static char *save = nullptr;
+            char* token = strtok_r(buf, " ", &save);
+            token = strtok_r(NULL, " ", &save);
+            if (token != NULL) {
+                svType = atoi(token);
+            }
+            printf("get nav msg auth status, svType %d\n", svType);
+            retVal = pIntClient->getNavMsgAuthStatus(
+                    (location_client::GnssSvType)svType);
+            printf("getNavMsgAuthStatus request accepted %d\n", retVal);
         } else if (strncmp(buf, ADD_GEOFENCES,
                            strlen(ADD_GEOFENCES)) == 0) {
             printf("usage: addGeofences "

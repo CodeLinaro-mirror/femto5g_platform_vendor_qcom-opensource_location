@@ -11508,6 +11508,103 @@ void LocApiV02::configOsnmaEnablement(bool enable, LocApiResponse* adapterRespon
     }));
 }
 
+void LocApiV02::convertQmiOsnmaStateToNavMsgAuthStatus(
+        const qmiLocGetOsnmaStateIndMsgT_v02& ind, NavMsgAuthStatus& out) {
+
+    LOC_LOGd("OSNMA state IND: featureEnabled=%u "
+             "PublicKeyMerkleTreeMask_valid=%u PublicKeyMerkleTreeMask=0x%" PRIx64 " "
+             "galWeek_valid=%u galWeek=%u "
+             "galSecOfWeek_valid=%u galSecOfWeek=%u "
+             "galNavAvailMask_valid=%u galNavAvailMask=0x%" PRIx64 " "
+             "galNavAuthDataMask_valid=%u galNavAuthDataMask=0x%" PRIx64 " "
+             "galNavAuthPassedMask_valid=%u galNavAuthPassedMask=0x%" PRIx64 " "
+             "galNavAuthFailedMask_valid=%u galNavAuthFailedMask=0x%" PRIx64,
+             ind.featureEnabled,
+             ind.PublicKeyMerkleTreeMask_valid, ind.PublicKeyMerkleTreeMask,
+             ind.galWeek_valid, ind.galWeek,
+             ind.galSecOfWeek_valid, ind.galSecOfWeek,
+             ind.galNavAvailMask_valid, ind.galNavAvailMask,
+             ind.galNavAuthDataMask_valid, ind.galNavAuthDataMask,
+             ind.galNavAuthPassedMask_valid, ind.galNavAuthPassedMask,
+             ind.galNavAuthFailedMask_valid, ind.galNavAuthFailedMask);
+
+    out.constellation = GNSS_SV_TYPE_GALILEO;
+    GalOsnmaStatus& gal = out.navMsgAuthInfo.galOsnmaStatus;
+    memset(&gal, 0, sizeof(gal));
+
+    // featureEnabled is a mandatory field of the indication.
+    gal.featureEnabled = (ind.featureEnabled != 0);
+    gal.validityMask |= GAL_OSNMA_STATUS_FEATURE_ENABLED_VALID;
+
+    if (gal.featureEnabled) {
+        if (ind.PublicKeyMerkleTreeMask_valid) {
+            if (ind.PublicKeyMerkleTreeMask & QMI_LOC_MASK_OSNMA_PUBLIC_KEY_PROVISIONED_V02) {
+                gal.publicKeyStatusMask |= GAL_OSNMA_PUBLIC_KEY_PROVISIONED;
+            }
+            if (ind.PublicKeyMerkleTreeMask & QMI_LOC_MASK_OSNMA_PUBLIC_KEY_VERIFIED_V02) {
+                gal.publicKeyStatusMask |= GAL_OSNMA_PUBLIC_KEY_VERIFIED;
+            }
+            gal.validityMask |= GAL_OSNMA_STATUS_PUBLIC_KEY_STATUS_VALID;
+
+            gal.merkleTreeProvisioned =
+                    (0 != (ind.PublicKeyMerkleTreeMask &
+                           QMI_LOC_MASK_OSNMA_MERKLE_TREE_PROVISIONED_V02));
+            gal.validityMask |= GAL_OSNMA_STATUS_MERKLE_TREE_PROVISIONED_VALID;
+        }
+
+        if (ind.galWeek_valid) {
+            gal.galWeek = ind.galWeek;
+            gal.validityMask |= GAL_OSNMA_STATUS_GAL_WEEK_VALID;
+        }
+        if (ind.galSecOfWeek_valid) {
+            gal.galSecOfWeek = ind.galSecOfWeek;
+            gal.validityMask |= GAL_OSNMA_STATUS_GAL_SEC_OF_WEEK_VALID;
+        }
+        if (ind.galNavAuthPassedMask_valid) {
+            gal.navDataAuthPassedMask = ind.galNavAuthPassedMask;
+            gal.validityMask |= GAL_OSNMA_STATUS_NAV_DATA_AUTH_PASSED_VALID;
+        }
+        if (ind.galNavAuthFailedMask_valid) {
+            gal.navDataAuthFailedMask = ind.galNavAuthFailedMask;
+            gal.validityMask |= GAL_OSNMA_STATUS_NAV_DATA_AUTH_FAILED_VALID;
+        }
+    }
+}
+
+void LocApiV02::getNavMsgAuthStatus(GnssSvType svType, uint32_t sessionId,
+        LocApiResponse* adapterResponse) {
+    sendMsg(new LocApiMsg([this, svType, sessionId, adapterResponse] () {
+
+    LocationError err = LOCATION_ERROR_SUCCESS;
+    locClientStatusEnumType status = eLOC_CLIENT_FAILURE_GENERAL;
+    locClientReqUnionType req_union = {};
+
+    qmiLocGetOsnmaStateIndMsgT_v02 osnmaStateInd = {};
+    GnssConfig gnssConfig = {};
+
+    // The GET_OSNMA_STATE request carries no payload.
+    status = locSyncSendReq(QMI_LOC_GET_OSNMA_STATE_REQ_V02,
+                            req_union, LOC_ENGINE_SYNC_REQUEST_LONG_TIMEOUT,
+                            QMI_LOC_GET_OSNMA_STATE_IND_V02,
+                            &osnmaStateInd);
+    if (status == eLOC_CLIENT_SUCCESS) {
+        convertQmiOsnmaStateToNavMsgAuthStatus(osnmaStateInd, gnssConfig.navMsgAuthStatus);
+        gnssConfig.flags |= GNSS_CONFIG_FLAGS_NAV_MSG_AUTH_STATUS_BIT;
+    } else if (status == eLOC_CLIENT_FAILURE_UNSUPPORTED ||
+               status == eLOC_CLIENT_FAILURE_INVALID_MESSAGE_ID) {
+        err = LOCATION_ERROR_NOT_SUPPORTED;
+    } else {
+        err = LOCATION_ERROR_GENERAL_FAILURE;
+    }
+
+    if (gnssConfig.flags) {
+        LocApiBase::reportGnssConfig(sessionId, gnssConfig);
+    } else if (adapterResponse) {
+        adapterResponse->returnToSender(err);
+    }
+    }));
+}
+
 void LocApiV02::convertQmiSecondaryConfigToGnssConfig(
         qmiLocGNSSConstellEnumT_v02 qmiSecondaryBandConfig,
         GnssSvTypeConfig& secondaryBandConfig) {

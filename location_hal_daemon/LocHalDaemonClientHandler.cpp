@@ -704,6 +704,15 @@ void LocHalDaemonClientHandler::onGnssConfigCb(ELocMsgID configMsgId,
         }
         break;
 
+    case E_INTAPI_GET_NAV_MSG_AUTH_STATUS_REQ_MSG_ID:
+        if (gnssConfig.flags & GNSS_CONFIG_FLAGS_NAV_MSG_AUTH_STATUS_BIT)
+        {
+            LocConfigGetNavMsgAuthStatusRespMsg msg(SERVICE_NAME,
+                    gnssConfig.navMsgAuthStatus, &mService->mPbufMsgConv);
+            msg.serializeToProtobuf(pbStr);
+        }
+        break;
+
     case E_INTAPI_GET_XTRA_STATUS_REQ_MSG_ID:
         if (gnssConfig.flags & GNSS_CONFIG_FLAGS_XTRA_STATUS_BIT)
         {

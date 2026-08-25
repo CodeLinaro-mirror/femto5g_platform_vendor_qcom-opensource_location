@@ -707,6 +707,17 @@ void LocationApiService::processClientMsg(const char* data, uint32_t length) {
             break;
         }
 
+        case E_INTAPI_GET_NAV_MSG_AUTH_STATUS_REQ_MSG_ID : {
+            PBLocConfigGetNavMsgAuthStatusReqMsg pbLocConf;
+            if (0 == pbLocConf.ParseFromString(pbLocApiMsg.payload())) {
+                LOC_LOGe("Failed to parse pbLocConfigGetNavMsgAuthStatus from payload!!");
+                return;
+            }
+            LocConfigGetNavMsgAuthStatusReqMsg msg(sockName.c_str(), pbLocConf, &mPbufMsgConv);
+            getNavMsgAuthStatus(reinterpret_cast<LocConfigGetNavMsgAuthStatusReqMsg*>(&msg));
+            break;
+        }
+
         case E_INTAPI_GET_ROBUST_LOCATION_CONFIG_REQ_MSG_ID: {
             getGnssConfig(&locApiMsg, GNSS_CONFIG_FLAGS_ROBUST_LOCATION_BIT);
             break;
@@ -1645,12 +1656,10 @@ void LocationApiService::configOsnmaEnablement(const LocConfigOsnmaEnablementReq
 }
 
 void LocationApiService::configMmfData(const LocInjectMmfDataReqMsg* pMsg) {
-
     if (!pMsg) {
         return;
     }
     std::lock_guard<std::recursive_mutex> lock(mMutex);
-
     LOC_LOGi(">-- client %s, MapMatchedFeedback Data ",
              pMsg->mSocketName);
 
@@ -1669,6 +1678,22 @@ void LocationApiService::configXtraUserConsent(const LocInjectXtraUserConsentMsg
              pMsg->mSocketName);
 
     uint32_t sessionId = mLocationControlApi->configureUserConsentForXtra(pMsg->xtraUserConsent);
+    addConfigRequestToMap(sessionId, pMsg);
+}
+
+void LocationApiService::getNavMsgAuthStatus(const LocConfigGetNavMsgAuthStatusReqMsg* pMsg) {
+    if (!pMsg) {
+        return;
+    }
+    std::lock_guard<std::recursive_mutex> lock(mMutex);
+
+    LOC_LOGi("client %s, nav msg auth status query, svType %d",
+             pMsg->mSocketName, (int)pMsg->mSvType);
+
+    uint32_t sessionId = mLocationControlApi->getNavMsgAuthStatus(pMsg->mSvType);
+
+    // The queried status is reported back via the gnssConfigCb path; the
+    // session id maps the report to this client (see onGnssConfigCallback).
     addConfigRequestToMap(sessionId, pMsg);
 }
 
