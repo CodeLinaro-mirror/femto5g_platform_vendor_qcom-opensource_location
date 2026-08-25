@@ -1102,7 +1102,7 @@ bool LocationIntegrationApi::updateNetworkInfo(const NetworkInfoData& data) {
                 || data.mccmnc.length() > 7) {
         LOC_LOGe ("Invalid mccmnc %s", data.mccmnc.c_str());
         return false;
-    }
+        }
         std::string mcc = data.mccmnc.substr(0, 3);
         std::string mnc = data.mccmnc.substr(4);
         if (mcc.length() != 3 || (mnc.length() != 2 && mnc.length() != 3) ||
@@ -1111,7 +1111,6 @@ bool LocationIntegrationApi::updateNetworkInfo(const NetworkInfoData& data) {
             return false;
         }
     }
-
     if (mApiImpl) {
         NetworkInfo nwData = {};
         nwData.connection = (NetworkConnectionStatus)data.connection;
@@ -1124,5 +1123,15 @@ bool LocationIntegrationApi::updateNetworkInfo(const NetworkInfoData& data) {
         return false;
     }
 }
+
+bool LocationIntegrationApi::getNavMsgAuthStatus(location_client::GnssSvType svType) {
+    if (mApiImpl) {
+        return (mApiImpl->getNavMsgAuthStatus((::GnssSvType)svType) == 0);
+    } else {
+        LOC_LOGe ("NULL mApiImpl");
+        return false;
+    }
+}
+
 } // namespace location_integration
 

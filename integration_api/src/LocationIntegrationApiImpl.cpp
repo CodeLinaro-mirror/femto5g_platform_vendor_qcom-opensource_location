@@ -177,6 +177,10 @@ static LocConfigTypeEnum getLocConfigTypeFromMsgId(ELocMsgID  msgId) {
     case E_INTAPI_NETWORK_UPDATE_INFO_MSG_ID:
         configType = NETWORK_INFO_UPDATE;
         break;
+    case E_INTAPI_GET_NAV_MSG_AUTH_STATUS_REQ_MSG_ID:
+    case E_INTAPI_GET_NAV_MSG_AUTH_STATUS_RESP_MSG_ID:
+        configType = GET_NAV_MSG_AUTH_STATUS;
+        break;
     default:
         break;
     }
@@ -505,6 +509,7 @@ void IpcListener::onReceive(const char* data, uint32_t length,
             case E_INTAPI_DEREGISTER_XTRA_STATUS_UPDATE_REQ_MSG_ID:
             case E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_REQ_MSG_ID:
             case E_INTAPI_NETWORK_UPDATE_INFO_MSG_ID:
+            case E_INTAPI_GET_NAV_MSG_AUTH_STATUS_REQ_MSG_ID:
             {
                 PBLocAPIGenericRespMsg pbLocApiGenericRsp;
                 if (0 == pbLocApiGenericRsp.ParseFromString(pbLocApiMsg.payload())) {
@@ -600,6 +605,21 @@ void IpcListener::onReceive(const char* data, uint32_t length,
                                                             &mApiImpl.mPbufMsgConv);
                 mApiImpl.processRegisterGnssSignalTypesRespCb(
                         (LocConfigRegisterGnssSignalTypesUpdateRespMsg*)&msg);
+                break;
+            }
+
+            case E_INTAPI_GET_NAV_MSG_AUTH_STATUS_RESP_MSG_ID:
+            {
+                PBLocConfigGetNavMsgAuthStatusRespMsg respMsg;
+                if (0 == respMsg.ParseFromString(pbLocApiMsg.payload())) {
+                    LOC_LOGe("Failed to parse GetNavMsgAuthStatusRespMsg from payload!!");
+                    return;
+                }
+
+                LocConfigGetNavMsgAuthStatusRespMsg msg(sockName.c_str(), respMsg,
+                                                        &mApiImpl.mPbufMsgConv);
+                mApiImpl.processGetNavMsgAuthStatusRespCb(
+                        (LocConfigGetNavMsgAuthStatusRespMsg*)&msg);
                 break;
             }
 
@@ -719,6 +739,48 @@ uint32_t LocationIntegrationApiImpl::getConstellationSecondaryBandConfig() {
         return 1;
     }
     mMsgTask.sendMsg(new (nothrow) GetConstellationSecondaryBandConfigReq(this));
+
+    return 0;
+}
+
+uint32_t LocationIntegrationApiImpl::getNavMsgAuthStatus(GnssSvType svType) {
+
+    struct GetNavMsgAuthStatusReq : public LocMsg {
+        GetNavMsgAuthStatusReq(LocationIntegrationApiImpl* apiImpl,
+                GnssSvType svType) :
+                mApiImpl(apiImpl), mSvType(svType) {}
+        virtual ~GetNavMsgAuthStatusReq() {}
+        void proc() const {
+            // Only Galileo OSNMA is currently supported. Report NOT_SUPPORTED
+            // via configCb for any other constellation without wasting the IPC
+            // call flow to the LocApiV02 layer.
+            if (mSvType != ::GNSS_SV_TYPE_GALILEO) {
+                LOC_LOGe("getNavMsgAuthStatus: unsupported svType %d", (int)mSvType);
+                if (mApiImpl->mIntegrationCbs.configCb) {
+                    mApiImpl->mIntegrationCbs.configCb(
+                            GET_NAV_MSG_AUTH_STATUS, LOC_INT_RESPONSE_NOT_SUPPORTED);
+                }
+                return;
+            }
+            string pbStr;
+            LocConfigGetNavMsgAuthStatusReqMsg msg(mApiImpl->mSocketName,
+                    mSvType, &mApiImpl->mPbufMsgConv);
+            if (msg.serializeToProtobuf(pbStr)) {
+                mApiImpl->sendConfigMsgToHalDaemon(GET_NAV_MSG_AUTH_STATUS, pbStr);
+            } else {
+                LOC_LOGe("LocConfigGetNavMsgAuthStatusReqMsg serializeToProtobuf failed");
+            }
+        }
+        LocationIntegrationApiImpl* mApiImpl;
+        GnssSvType mSvType;
+    };
+
+    if (mIntegrationCbs.navMsgAuthStatusCb == nullptr) {
+        LOC_LOGd("no callback in constructor to receive nav msg auth status");
+        // return 1 to signal error
+        return 1;
+    }
+    mMsgTask.sendMsg(new (nothrow) GetNavMsgAuthStatusReq(this, svType));
 
     return 0;
 }
@@ -1982,6 +2044,34 @@ void LocationIntegrationApiImpl::processRegisterGnssSignalTypesRespCb(
         LOC_LOGd("received GNSS signal Types : %x, send out supported GNSS signal types: %x",
                 msg->mSignalTypeMask, gnssSignalTypeMask);
         mIntegrationCbs.gnssSignalTypesCb((location_client::GnssSignalTypeMask)gnssSignalTypeMask);
+    }
+}
+
+void LocationIntegrationApiImpl::processGetNavMsgAuthStatusRespCb(
+        const LocConfigGetNavMsgAuthStatusRespMsg* msg) {
+    if (mIntegrationCbs.navMsgAuthStatusCb && msg) {
+        // Convert the engine-internal NavMsgAuthStatus (LocationDataTypes.h)
+        // to the public location_integration::NavMsgAuthStatus.
+        NavMsgAuthStatus navMsgAuthStatus = {};
+        navMsgAuthStatus.constellation =
+                (location_client::GnssSvType)msg->mNavMsgAuthStatus.constellation;
+
+        if (msg->mNavMsgAuthStatus.constellation == ::GNSS_SV_TYPE_GALILEO) {
+            const ::GalOsnmaStatus& in = msg->mNavMsgAuthStatus.navMsgAuthInfo.galOsnmaStatus;
+            GalOsnmaStatus& out = navMsgAuthStatus.navMsgAuthInfo.galOsnmaStatus;
+            out.validityMask          = in.validityMask;
+            out.featureEnabled        = in.featureEnabled;
+            out.merkleTreeProvisioned = in.merkleTreeProvisioned;
+            out.publicKeyStatusMask   = in.publicKeyStatusMask;
+            out.galWeek               = in.galWeek;
+            out.galSecOfWeek          = in.galSecOfWeek;
+            out.navDataAuthPassedMask = in.navDataAuthPassedMask;
+            out.navDataAuthFailedMask = in.navDataAuthFailedMask;
+        }
+
+        LOC_LOGd("nav msg auth status for constellation %d",
+                 (int)navMsgAuthStatus.constellation);
+        mIntegrationCbs.navMsgAuthStatusCb(navMsgAuthStatus);
     }
 }
 
