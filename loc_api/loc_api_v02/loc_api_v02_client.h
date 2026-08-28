@@ -503,6 +503,12 @@ typedef union
     const qmiLocSetGNSSConstRepConfigReqMsgT_v02 *pSetGNSSConstRepConfigReq;
     /*QMI_LOC_SET_GNSS_CONSTELL_REPORT_CONFIG_V02*/
 
+    const qmiLocStartDbtReqMsgT_v02 *pStartDbtReq;
+    /*QMI_LOC_START_DBT_REQ_V02*/
+
+    const qmiLocStopDbtReqMsgT_v02 *pStopDbtReq;
+    /*QMI_LOC_STOP_DBT_REQ_V02*/
+
     const qmiLocInjectTimeZoneInfoReqMsgT_v02 *pInjectTimeZoneInfoReq;
     /*QMI_LOC_INJECT_TIME_ZONE_INFO*/
 
@@ -836,6 +842,10 @@ typedef union
    const qmiLocNtnConfigUpdateIndMsgT_v02* pNtnConfigUpdateIndMsg;
    /** Sent by the engine to inform the NTN config upodate event
     QMI_LOC_NTN_CONFIG_UPDATE_IND_V02 */
+
+   const qmiLocEventDbtPositionReportIndMsgT_v02* pDbtPositionReportEvent;
+   /** Sent by the engine to report a DBT position
+    QMI_LOC_EVENT_DBT_POSITION_REPORT_IND_V02 */
 }locClientEventIndUnionType;
 
 
@@ -1035,6 +1045,12 @@ typedef union
 
     const qmiLocSetGNSSConstRepConfigIndMsgT_v02 *pSetGNSSConstRepConfigInd;
     /*QMI_LOC_SET_GNSS_CONSTELL_REPORT_CONFIG_IND_V02*/
+
+    const qmiLocStartDbtIndMsgT_v02 *pStartDbtInd;
+    /*QMI_LOC_START_DBT_IND_V02*/
+
+    const qmiLocStopDbtIndMsgT_v02 *pStopDbtInd;
+    /*QMI_LOC_STOP_DBT_IND_V02*/
 
     const qmiLocInjectTimeZoneInfoIndMsgT_v02 *pInjectTimeZoneInfoInd;
     /*QMI_LOC_INJECT_TIME_ZONE_INFO_IND_V02*/
