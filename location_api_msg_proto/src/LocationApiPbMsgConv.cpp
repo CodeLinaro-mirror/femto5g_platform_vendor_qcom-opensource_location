@@ -4280,7 +4280,8 @@ int LocationApiPbMsgConv::convertGnssSvResidualReportToPB(
         LOC_LOGe("pbSvResidualReport is NULL!");
         return 1;
     }
-
+    pbSvResidualReport->set_locoutputengtype(
+            getPBEnumForLocOutputEngineType(svResidualReport.locOutputEngType));
     // 1. GNSS System Time
     PBLocApiGnssSystemTime *pbSysTime = pbSvResidualReport->mutable_gnsssystemtime();
     if (pbSysTime) {
@@ -4378,6 +4379,8 @@ int LocationApiPbMsgConv::pbConvertToGnssSvResidualReport(
     const PBSvResidualReport &pbSvResidualReport,
     GnssSvResidualReport &svResidualReport) const
 {
+    svResidualReport.locOutputEngType =
+            getEnumForPBLocOutputEngineType(pbSvResidualReport.locoutputengtype());
     // 1. GNSS System Time
     svResidualReport.gnssSystemTime.gnssSystemTimeSrc =
         getEnumForPBGnssLocSvSystem(pbSvResidualReport.gnsssystemtime().gnsssystemtimesrc());
