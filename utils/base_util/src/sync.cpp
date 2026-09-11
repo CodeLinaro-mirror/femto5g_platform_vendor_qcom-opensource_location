@@ -56,11 +56,15 @@ private:
   const bool m_flagEnableVerboseLog;
 
   pthread_mutex_t m_mutex;
+
+  // set to true only after pthread_mutex_init succeeds
+  bool m_mutexInitialized;
 };
 
 MutexImpl::MutexImpl(const char * const tag, const bool verboseLog) :
         m_tag(tag),
-        m_flagEnableVerboseLog(verboseLog)
+        m_flagEnableVerboseLog(verboseLog),
+        m_mutexInitialized(false)
 {
   int result = 1;
   pthread_mutexattr_t mutex_attr;
@@ -76,6 +80,7 @@ MutexImpl::MutexImpl(const char * const tag, const bool verboseLog) :
     destroy_attr = true;
     BREAK_IF_NON_ZERO(3, pthread_mutexattr_settype(&mutex_attr, PTHREAD_MUTEX_ERRORCHECK));
     BREAK_IF_NON_ZERO(4, pthread_mutex_init(&m_mutex, &mutex_attr));
+    m_mutexInitialized = true;
     result = 0;
   } while (0);
 
@@ -95,6 +100,12 @@ MutexImpl::MutexImpl(const char * const tag, const bool verboseLog) :
 
 MutexImpl::~MutexImpl()
 {
+  if(!m_mutexInitialized)
+  {
+    log_error_no_lock(m_tag, "~MutexImpl: mutex was never initialized, skipping destroy");
+    return;
+  }
+
   int rc = pthread_mutex_destroy(&m_mutex);
   if(0 != rc)
   {
@@ -104,6 +115,12 @@ MutexImpl::~MutexImpl()
 
 int MutexImpl::lock()
 {
+  if(!m_mutexInitialized)
+  {
+    log_error_no_lock(m_tag, "lock: mutex was never initialized");
+    return 1;
+  }
+
   if(m_flagEnableVerboseLog)
   {
     log_verbose(m_tag, "lock: about to lock");
@@ -125,6 +142,12 @@ int MutexImpl::lock()
 
 int MutexImpl::unlock()
 {
+  if(!m_mutexInitialized)
+  {
+    log_error_no_lock(m_tag, "unlock: mutex was never initialized");
+    return 1;
+  }
+
   if(0 != pthread_mutex_unlock(&m_mutex))
   {
     log_error_no_lock(m_tag, "unlock: pthread_mutex_unlock error: %d, [%s]", errno, strerror(errno));
@@ -230,12 +253,16 @@ private:
   MutexImpl m_mutex;
   const char * m_tag;
   bool m_verboseLog;
+
+  // set to true only after pthread_cond_init succeeds
+  bool m_condInitialized;
 };
 
 WaitableBase::WaitableBase(const char * const name, const bool verboseLog) :
         m_mutex(name, verboseLog),
         m_tag(name),
-        m_verboseLog(verboseLog)
+        m_verboseLog(verboseLog),
+        m_condInitialized(false)
 {
   int result = 1;
   pthread_condattr_t cond_attr;
@@ -255,6 +282,7 @@ WaitableBase::WaitableBase(const char * const name, const bool verboseLog) :
     BREAK_IF_NON_ZERO(3, pthread_condattr_setclock(&cond_attr, CLOCK_REALTIME));
 
     BREAK_IF_NON_ZERO(4, pthread_cond_init(&m_cond, &cond_attr));
+    m_condInitialized = true;
 
     result = 0;
   } while(0);
@@ -276,6 +304,12 @@ WaitableBase::WaitableBase(const char * const name, const bool verboseLog) :
 
 WaitableBase::~WaitableBase()
 {
+  if(!m_condInitialized)
+  {
+    log_error_no_lock(m_tag, "~WaitableBase: cond was never initialized, skipping destroy");
+    return;
+  }
+
   if(0 != pthread_cond_destroy(&m_cond))
   {
     log_error_no_lock(m_tag, "~WaitableBase: pthread_cond_destroy error: %d, [%s]", errno, strerror(errno));
@@ -346,6 +380,14 @@ int WaitableBase::signal_one_and_then_unlock()
   {
     // we should be already locked
 
+    if(!m_condInitialized)
+    {
+      log_error_no_lock(m_tag, "signal_one_and_then_unlock: cond was never initialized");
+      BREAK_IF_NON_ZERO(2, unlock());
+      result = 2;
+      break;
+    }
+
     if(m_verboseLog)
     {
       log_verbose(m_tag, "about to signal");
@@ -381,6 +423,14 @@ int WaitableBase::signal_all_and_then_unlock()
   do
   {
     // we should be already locked
+
+    if(!m_condInitialized)
+    {
+      log_error_no_lock(m_tag, "signal_all_and_then_unlock: cond was never initialized");
+      BREAK_IF_NON_ZERO(2, unlock());
+      result = 2;
+      break;
+    }
 
     if(m_verboseLog)
     {
