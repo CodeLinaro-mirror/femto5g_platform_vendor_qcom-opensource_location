@@ -36,10 +36,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <errno.h>
 #include <inttypes.h>
 #include <string>
 #include <sstream>
 #include <grp.h>
+#include <signal.h>
+#include <pthread.h>
 #include <sys/types.h>
 #include <sys/prctl.h>
 #include <sys/capability.h>
@@ -53,6 +56,7 @@
 #include <iostream>
 #include <algorithm>
 #include <future>
+#include <atomic>
 
 #include <LocationClientApi.h>
 #include <LocationIntegrationApi.h>
@@ -81,6 +85,7 @@ static sem_t semGfCompleted;
 static sem_t semBatchingCompleted;
 static sem_t semLcaDestroyCompleted;
 static sem_t semLiaDestroyCompleted;
+static std::atomic_bool autoTestShutdownRequested(false);
 
 static int fixCnt = 0x7fffffff;
 static uint64_t autoTestStartTimeMs = 0;
@@ -233,6 +238,47 @@ static void resetCounters() {
     numDataCb = 0;
     numGnssMeasurementsCb = 0;
     numNmeaSentencesCb = 0;
+}
+
+static void startAutoTestSignalWaiter(const sigset_t& signalSet) {
+    std::thread([signalSet] {
+        int signal = 0;
+        if (sigwait(&signalSet, &signal) == 0 &&
+                (signal == SIGTERM || signal == SIGINT)) {
+            autoTestShutdownRequested.store(true);
+            sem_post(&semCompleted);
+            sem_post(&semGfCompleted);
+            sem_post(&semBatchingCompleted);
+        }
+    }).detach();
+}
+
+static void waitForKeepWarmCompletion(bool hasTimeout) {
+    if (!hasTimeout) {
+        printf("keep warm running indefinitely; terminate process to stop\n");
+        sem_wait(&semCompleted);
+        return;
+    }
+
+    struct timespec timeout = {};
+    if (clock_gettime(CLOCK_REALTIME, &timeout) != 0) {
+        perror("clock_gettime for keep warm timeout failed");
+        return;
+    }
+    timeout.tv_sec += autoTestTimeoutSec;
+
+    int result;
+    do {
+        result = sem_timedwait(&semCompleted, &timeout);
+    } while (result != 0 && errno == EINTR);
+
+    if (result == 0 && autoTestShutdownRequested.load()) {
+        printf("keep warm stopped by termination signal\n");
+    } else if (result != 0 && errno == ETIMEDOUT) {
+        printf("complete due to keep warm run time exceeded %d sec\n", autoTestTimeoutSec);
+    } else if (result != 0) {
+        perror("sem_timedwait for keep warm completion failed");
+    }
 }
 
 static void cleanupAfterAutoStart() {
@@ -1676,6 +1722,15 @@ void removeGeofences(char* buf) {
 }
 
 static bool checkForAutoStart(int argc, char *argv[]) {
+    sigset_t terminationSignalSet;
+    sigemptyset(&terminationSignalSet);
+    sigaddset(&terminationSignalSet, SIGTERM);
+    sigaddset(&terminationSignalSet, SIGINT);
+    int signalMaskResult = pthread_sigmask(SIG_BLOCK, &terminationSignalSet, nullptr);
+    if (signalMaskResult != 0) {
+        printf("failed to block SIGTERM/SIGINT: %d\n", signalMaskResult);
+    }
+
     bool autoRun = false;
     bool deleteAll = false;
     bool addGfs = false;
@@ -1686,6 +1741,9 @@ static bool checkForAutoStart(int argc, char *argv[]) {
     LocReqEngineTypeMask reqEngMask = (LocReqEngineTypeMask) 0x7;
     uint32_t reportType = 0xff;
     TrackingSessionType trackingType = NO_TRACKING;
+    bool startKeepWarm = false;
+    bool keepWarmSessionStarted = false;
+    bool autoTestTimeoutSet = false;
 
     //Specifying the expected options
     //The two options l and b expect numbers as argument
@@ -1704,12 +1762,13 @@ static bool checkForAutoStart(int argc, char *argv[]) {
         {"addgeofences", required_argument, 0,  'g' },
         {"startBatching", required_argument, 0,  'b' },
         {"distance",      required_argument, 0,  'm' },
+        {"keepwarm",      no_argument,       0,  'k' },
         {0,           0,                 0,   0  }
     };
 
     int long_index =0;
     int opt = -1;
-    while ((opt = getopt_long(argc, argv, "aVNDd:s:e:i:t:l:r:U:z:g:b:m:",
+    while ((opt = getopt_long(argc, argv, "aVNDd:s:e:i:t:l:r:U:z:g:b:m:k",
                    long_options, &long_index)) != -1) {
         switch (opt) {
              case 'a' :
@@ -1783,6 +1842,7 @@ static bool checkForAutoStart(int argc, char *argv[]) {
                      autoTestTimeoutSec = 30;
                      printf("setting autoTestTimeoutSec to %d", autoTestTimeoutSec);
                  }
+                 autoTestTimeoutSet = true;
                  break;
              case 'r' :
                  reportType = atoi(optarg);
@@ -1830,21 +1890,29 @@ static bool checkForAutoStart(int argc, char *argv[]) {
                              sem_post(&semBatchingCompleted);
                              });
                      t.detach();
-                 }
-                 break;
+                  }
+                  break;
+             case 'k' :
+                  printf("keep warm requested\n");
+                  startKeepWarm = true;
+                  break;
              default:
-                 printf("unsupported args provided\n");
-                 break;
+                  printf("unsupported args provided\n");
+                  break;
         }
     }
 
     printf("auto run %d, deleteAll %d, delete mask 0x%x, session type %d,"
-           "outputEnabled %d, detailedOutputEnabled %d routeToNMEAPort %d",
+           "outputEnabled %d, detailedOutputEnabled %d routeToNMEAPort %d startKeepWarm %d",
            autoRun, deleteAll, aidingDataMask, trackingType,
-           outputEnabled, detailedOutputEnabled, routeToNMEAPort);
+           outputEnabled, detailedOutputEnabled, routeToNMEAPort, startKeepWarm);
 
     // check for auto-start option
     if (autoRun) {
+        if (signalMaskResult == 0) {
+            autoTestShutdownRequested.store(false);
+            startAutoTestSignalWaiter(terminationSignalSet);
+        }
         uint32_t pid = (uint32_t)getpid();
         printf("pid: %d\n", pid);
 
@@ -1891,8 +1959,22 @@ static bool checkForAutoStart(int argc, char *argv[]) {
                                                        reportcbs, onResponseCb);
             }
             autoTestStartTimeMs = getTimestampMs();
+        } else if (startKeepWarm) {
+            if (!pLcaClient) {
+                pLcaClient = new LocationClientApi(onCapabilitiesCb);
+                sleep(1); // wait for capability callback
+            }
+            if (nullptr == pLcaClient) {
+                printf("can not create Location client API");
+                exit(1);
+            }
+            resetCounters();
+            pLcaClient->startKeepWarmSession(onResponseCb);
+            keepWarmSessionStarted = true;
         }
 
+    } else if (signalMaskResult == 0) {
+        pthread_sigmask(SIG_UNBLOCK, &terminationSignalSet, nullptr);
     }
     if (addGfs) {
         printf("addGeofence option param %s: \n", gfStr.c_str());
@@ -1906,7 +1988,9 @@ static bool checkForAutoStart(int argc, char *argv[]) {
         t.detach();
     }
     if (pLcaClient || pIntClient) {
-        if (trackingType != NO_TRACKING && autoTestStartTimeMs != 0) {
+        if (keepWarmSessionStarted) {
+            waitForKeepWarmCompletion(autoTestTimeoutSet);
+        } else if (trackingType != NO_TRACKING && autoTestStartTimeMs != 0) {
             sem_wait(&semCompleted);
         }
         if (autoTestStartGfTimeMs != 0) {
