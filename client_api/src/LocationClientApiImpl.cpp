@@ -25,41 +25,10 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
 /*
-Changes from Qualcomm Innovation Center are provided under the following license:
-
-Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted (subject to the limitations in the
-disclaimer below) provided that the following conditions are met:
-
-    * Redistributions of source code must retain the above copyright
-      notice, this list of conditions and the following disclaimer.
-
-    * Redistributions in binary form must reproduce the above
-      copyright notice, this list of conditions and the following
-      disclaimer in the documentation and/or other materials provided
-      with the distribution.
-
-    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
-      contributors may be used to endorse or promote products derived
-      from this software without specific prior written permission.
-
-NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
-WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
-GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
-IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
-OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
 #define LOG_TAG "LocSvc_LocationClientApi"
@@ -2011,10 +1980,8 @@ LocationClientApiImpl::~LocationClientApiImpl() {
 void LocationClientApiImpl::destroy(locationApiDestroyCompleteCallback destroyCompleteCb) {
 
     struct DestroyReq : public LocMsg {
-        DestroyReq(LocationClientApiImpl* apiImpl,
-                locationApiDestroyCompleteCallback destroyCompleteCb) :
-                mApiImpl(apiImpl),
-                mDestroyCompleteCb(destroyCompleteCb) {}
+        DestroyReq(LocationClientApiImpl* apiImpl) :
+                mApiImpl(apiImpl) {}
         virtual ~DestroyReq() {}
         void proc() const {
             // deregister
@@ -2040,19 +2007,17 @@ void LocationClientApiImpl::destroy(locationApiDestroyCompleteCallback destroyCo
                          mApiImpl->mClientIdGenerator, mApiImpl->mClientId);
             }
 #endif //FEATURE_EXTERNAL_AP
-            if (mDestroyCompleteCb) {
-                (mDestroyCompleteCb) ();
-            }
-            usleep(50000); //give 50ms for socket clean up
-
-            delete mApiImpl;
         }
         LocationClientApiImpl* mApiImpl;
-        locationApiDestroyCompleteCallback mDestroyCompleteCb;
     };
 
-    mMsgTask.sendMsg(new (nothrow) DestroyReq(this, destroyCompleteCb));
-    usleep(100000); //100ms for handling onReceive() messages
+    mMsgTask.sendMsg(new (nothrow) DestroyReq(this));
+    wait(500); //500ms
+    LOC_LOGw("wait deregister received");
+    if (destroyCompleteCb) {
+        destroyCompleteCb();
+    }
+    delete this;
 }
 
 /******************************************************************************
@@ -3519,6 +3484,7 @@ void IpcListener::onReceive(const char* data, uint32_t length,
             case E_LOCAPI_START_BATCHING_MSG_ID:
             case E_LOCAPI_STOP_BATCHING_MSG_ID:
             case E_LOCAPI_UPDATE_BATCHING_OPTIONS_MSG_ID:
+            case E_LOCAPI_CLIENT_DEREGISTER_MSG_ID:
             {
                 LOC_LOGd("<<< response message %d\n", locApiMsg.msgId);
                 PBLocAPIGenericRespMsg pbLocApiGenericRsp;
@@ -3526,6 +3492,11 @@ void IpcListener::onReceive(const char* data, uint32_t length,
                     LOC_LOGe("Failed to parse pbLocApiGenericRsp from payload!!");
                     return;
                 }
+                if (locApiMsg.msgId == E_LOCAPI_CLIENT_DEREGISTER_MSG_ID) {
+                    mApiImpl.notify(); //for the wait in destroy()
+                    return;
+                }
+
                 if (locApiMsg.msgId != E_LOCAPI_STOP_TRACKING_MSG_ID) {
                     LocAPIGenericRespMsg respMsg(sockName.c_str(), eLocMsgid, pbLocApiGenericRsp,
                             &mApiImpl.mPbufMsgConv);
