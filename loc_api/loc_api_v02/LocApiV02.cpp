@@ -5171,7 +5171,13 @@ void LocApiV02 :: reportNiRequest(
             LOC_IN_EMERGENCY_UNKNOWN;
     if (NULL != ni_req_copy_ptr) {
         memcpy(ni_req_copy_ptr, ni_req_ptr, sizeof(*ni_req_copy_ptr));
-        requestNiNotify(notif, (const void*)ni_req_copy_ptr, emergencyState);
+        if ((ni_req_copy_ptr->notificationType == eQMI_LOC_NI_USER_NOTIFY_VERIFY_PRIVACY_OVERRIDE_V02) ||
+                (ni_req_copy_ptr->notificationType == eQMI_LOC_NI_USER_NO_NOTIFY_NO_VERIFY_V02)) {
+            informNiResponse(GNSS_NI_RESPONSE_ACCEPT,(const void*)ni_req_copy_ptr);
+        }
+        else {
+            requestNiNotify(notif, (const void*)ni_req_copy_ptr, emergencyState);
+        }
     } else {
         LOC_LOGe("Error copying NI request");
     }
@@ -5386,9 +5392,9 @@ void LocApiV02::reportGnssMeasurementData(
     // are more than 24 SVs in the preferred signal type, we only need to
     // process the first sub sequence
     if ((mPreferredSignalType == gnss_measurement_report_ptr.gnssSignalType) &&
-            (subSeqNum == 1)) {
+            (subSeqNum <= 1)) {
         // the clock time reading from preferred signal type
-        convertGnssClock(mGnssMeasurements->gnssMeasNotification.clock,
+        mMsInWeek = convertGnssClock(mGnssMeasurements->gnssMeasNotification.clock,
                 gnss_measurement_report_ptr);
     }
 
@@ -5489,11 +5495,6 @@ void LocApiV02::reportGnssMeasurementData(
         }
     }
 
-    // the GPS clock time reading
-    if (mPreferredSignalType == gnss_measurement_report_ptr.gnssSignalType && subSeqNum <= 1) {
-            mMsInWeek = convertGnssClock(mGnssMeasurements->gnssMeasNotification.clock,
-                                         gnss_measurement_report_ptr);
-    }
     // AGC
     uint32_t temp;
     mAgcIsPresent = convertJammerIndicator(gnss_measurement_report_ptr,
