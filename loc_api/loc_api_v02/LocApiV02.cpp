@@ -450,13 +450,16 @@ LocApiV02 :: open(LOC_API_ADAPTER_EVENT_MASK_T mask)
 
   LOC_API_ADAPTER_EVENT_MASK_T newMask = mask & ~mExcludedMask;
 
+#if defined(LOC_USE_CLOG) || defined(LOC_USE_DLT)
+  LOC_LOGi("%p loc_open: pid %d, Enter mask 0x%" PRIx64 ", mExcludedMask: 0x%" PRIx64","
+           "mMask: 0x%" PRIx64 ", newMask: 0x%" PRIx64 ",  mQmiMask: 0x%" PRIx64"",
+           clientHandle, (uint32_t)getpid(), mask, mExcludedMask, mMask, newMask, mQmiMask);
+#else
   syslog(LOG_INFO, "%p loc_open: pid %d, enter mask 0x%" PRIx64 ", "
          "mExcludedMask: 0x%" PRIx64", current mMask: 0x%" PRIx64 ", "
          "newMask: 0x%" PRIx64 ",  mQmiMask: 0x%" PRIx64"",
          clientHandle, (uint32_t)getpid(), mask, mExcludedMask, mMask, newMask, mQmiMask);
-  LOC_LOGi("%p Enter mask 0x%" PRIx64 ", mExcludedMask: 0x%" PRIx64","
-           "mMask: 0x%" PRIx64 ", newMask: 0x%" PRIx64 ",  mQmiMask: 0x%" PRIx64"",
-           clientHandle, mask, mExcludedMask, mMask, newMask, mQmiMask);
+#endif
 
   /* If the client is not already open, create one */
   if(LOC_CLIENT_INVALID_HANDLE_VALUE == clientHandle)
@@ -661,13 +664,14 @@ void LocApiV02 :: registerEventMask()
     }
     mQmiMask = qmiMask;
   }
-
+#if defined(LOC_USE_CLOG) || defined(LOC_USE_DLT)
+    LOC_LOGi("registerEventMask: mMask: 0x%" PRIx64 " mQmiMask=0x%" PRIx64 " qmiMask=0x%" PRIx64"",
+            mMask, mQmiMask, qmiMask);
+#else
     syslog(LOG_INFO, "registerEventMask:  mMask: 0x%" PRIx64 " "
            "mQmiMask=0x%" PRIx64 " qmiMask=0x%" PRIx64"",
            mMask, mQmiMask, qmiMask);
-
-    LOC_LOGi("mMask: 0x%" PRIx64 " mQmiMask=0x%" PRIx64 " qmiMask=0x%" PRIx64"",
-            mMask, mQmiMask, qmiMask);
+#endif
 }
 
 bool LocApiV02::sendRequestForAidingData(locClientEventMaskType qmiMask) {
@@ -761,9 +765,15 @@ locClientEventMaskType LocApiV02 :: adjustLocClientEventMask(locClientEventMaskT
         qmiMask &= ~(QMI_LOC_EVENT_MASK_ENGINE_STATE_V02 |
                 QMI_LOC_EVENT_MASK_NEXT_LS_INFO_REPORT_V02 |
                 QMI_LOC_EVENT_DWELL_TIME_ALIGNMENT_INFO_V02);
+#if defined(LOC_USE_CLOG) || defined(LOC_USE_DLT)
+        LOC_LOGi("adjustLocClientEventMask, oldQmiMask=0x%" PRIx64 " "
+                "qmiMask=0x%" PRIx64 " mInSession: %d, power state %d, retry queue empty %d",
+                oldQmiMask, qmiMask, mInSession, mPlatformPowerState, mResenders.empty());
+#else
         syslog(LOG_INFO, "adjustLocClientEventMask, oldQmiMask=0x%" PRIx64 " "
                "qmiMask=0x%" PRIx64 " mInSession: %d, power state %d, retry queue empty %d",
                oldQmiMask, qmiMask, mInSession, mPlatformPowerState, mResenders.empty());
+#endif
     } else if (mResenders.empty() == false) {
         qmiMask |= QMI_LOC_EVENT_MASK_ENGINE_STATE_V02;
     }
@@ -7899,8 +7909,13 @@ void LocApiV02 :: eventCb(locClientHandleType /*clientHandle*/,
   if ((eQMI_LOC_POWER_STATE_SUSPENDED_V02 == mPlatformPowerState) ||
         (eQMI_LOC_POWER_STATE_DEEP_SLEEP_ENTRY_V02 == mPlatformPowerState) ||
             (eQMI_LOC_POWER_STATE_SHUTDOWN_V02 == mPlatformPowerState)) {
+#if defined(LOC_USE_CLOG) || defined(LOC_USE_DLT)
+      LOC_LOGi("eventCb: event id = 0x%X, event name %s",
+             eventId, loc_get_v02_event_name(eventId));
+#else
       syslog(LOG_INFO, "eventCb: event id = 0x%X, event name %s",
              eventId, loc_get_v02_event_name(eventId));
+#endif
   }
 
   switch(eventId)
@@ -8398,7 +8413,11 @@ void LocApiV02 :: updateSystemPowerState(PowerStateType powerState){
     locClientStatusEnumType status;
     locClientReqUnionType req_union;
 
+#if defined(LOC_USE_CLOG) || defined(LOC_USE_DLT)
+    LOC_LOGi("updatePowerState: power state %d", powerState);
+#else
     syslog(LOG_INFO, "updatePowerState: power state %d", powerState);
+#endif
     qmiLocPlatformPowerStateEnumT_v02 qmiPowerState = eQMI_LOC_POWER_STATE_UNKNOWN_V02;
     switch (powerState) {
     case POWER_STATE_SUSPEND:
@@ -10313,11 +10332,19 @@ void LocApiV02::reportPowerStateChangeInfo(
         }
     };
 
+#if defined(LOC_USE_CLOG) || defined(LOC_USE_DLT)
+    LOC_LOGi("reportPowerStateChangeInfo, old state: %d %d, new state: %d, %d",
+             pPowerStateChangedInfo->powerStateOld_valid,
+             pPowerStateChangedInfo->powerStateOld,
+             pPowerStateChangedInfo->powerStateNew_valid,
+             pPowerStateChangedInfo->powerStateNew);
+#else
     syslog(LOG_INFO, "reportPowerStateChangeInfo, old state: %d %d, new state: %d, %d",
              pPowerStateChangedInfo->powerStateOld_valid,
              pPowerStateChangedInfo->powerStateOld,
              pPowerStateChangedInfo->powerStateNew_valid,
              pPowerStateChangedInfo->powerStateNew);
+#endif
 
     if (pPowerStateChangedInfo->powerStateNew_valid) {
         sendMsg(new MsgUpdatePowerState(this, pPowerStateChangedInfo->powerStateNew));
