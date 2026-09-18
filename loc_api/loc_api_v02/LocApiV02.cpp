@@ -349,6 +349,7 @@ LocApiV02 :: LocApiV02(LOC_API_ADAPTER_EVENT_MASK_T exMask,
     mIsFullTracking(true),
     mIsGptpInitialized(false),
     mDwellAlignTimeMsValid(0),
+    mEmergencyNotifyVerifyType((qmiLocNiNotifyVerifyEnumT_v02) 0),
     mDwellAlignTimeMs(0)
 {
   // initialize loc_sync_req interface
@@ -4962,6 +4963,12 @@ void LocApiV02::reportLocationRequestNotification(
 {
     GnssNfwNotification notification = {};
 
+    if ((mEmergencyNotifyVerifyType == eQMI_LOC_NI_USER_NO_NOTIFY_NO_VERIFY_V02) &&
+            loc_req_notif->inEmergencyMode) {
+        LOC_LOGd("E911, no notify, no verify, return");
+        return;
+    }
+
     LOC_LOGv("IN: protocolStack=%d"
              " ,clientStrId_valid=%d"
              " ,clientStrId=%s"
@@ -5305,6 +5312,13 @@ void LocApiV02 :: reportAtlRequest(
 void LocApiV02 :: reportNiRequest(
     const qmiLocEventNiNotifyVerifyReqIndMsgT_v02 *ni_req_ptr)
 {
+    if ((ni_req_ptr->isInEmergencySession_valid && ni_req_ptr->isInEmergencySession) ||
+            ni_req_ptr->suplEmergencyNotification_valid) {
+        mEmergencyNotifyVerifyType = ni_req_ptr->notificationType;
+    } else {
+        mEmergencyNotifyVerifyType = (qmiLocNiNotifyVerifyEnumT_v02)0;
+    }
+
     GnssNiNotification notif = {};
     notif.messageEncoding = GNSS_NI_ENCODING_TYPE_NONE ;
     notif.requestorEncoding = GNSS_NI_ENCODING_TYPE_NONE;

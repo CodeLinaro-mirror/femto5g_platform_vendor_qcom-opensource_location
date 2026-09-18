@@ -233,6 +233,8 @@ private:
   // Dwell Time Allignment
   uint8_t mDwellAlignTimeMsValid;
   uint32_t mDwellAlignTimeMs;
+  // ni notify verify type
+  qmiLocNiNotifyVerifyEnumT_v02 mEmergencyNotifyVerifyType;
 
   // Below two member variables are for elapsedRealTime calculation
   RealtimeEstimator mMeasElapsedRealTimeCal;
