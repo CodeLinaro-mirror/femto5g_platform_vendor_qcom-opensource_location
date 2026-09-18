@@ -27,9 +27,9 @@
  */
 
 /*
-Changes from Qualcomm Innovation Center are provided under the following license:
-Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
-SPDX-License-Identifier: BSD-3-Clause-Clear
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
 #define LOG_NDEBUG 0
@@ -73,22 +73,11 @@ using namespace loc_core;
 /* Default session id ; TBD needs incrementing for each */
 #define LOC_API_V02_DEF_SESSION_ID (1)
 
-/* UMTS CP Address key*/
-#define LOC_NI_NOTIF_KEY_ADDRESS           "Address"
-
 /* GPS SV Id offset */
 #define GPS_SV_ID_OFFSET        (1)
 
-/* GLONASS SV Id offset */
-#define GLONASS_SV_ID_OFFSET    (65)
-
 /* SV ID range */
 #define SV_ID_RANGE             (32)
-
-#define BDS_SV_ID_OFFSET         (201)
-
-/* BeiDou SV ID RANGE*/
-#define BDS_SV_ID_RANGE          QMI_LOC_DELETE_MAX_BDS_SV_INFO_LENGTH_V02
 
 /* GPS week unknown*/
 #define C_GPS_WEEK_UNKNOWN      (65535)
@@ -112,13 +101,8 @@ using namespace loc_core;
 /* speed of light */
 #define SPEED_OF_LIGHT          299792458.0
 
-#define MAX_SV_CNT_SUPPORTED_IN_ONE_CONSTELLATION 64
-
 /* number of QMI_LOC messages that need to be checked*/
 #define NUMBER_OF_MSG_TO_BE_CHECKED        (3)
-
-/* the time, in seconds, to wait for user response for NI  */
-#define LOC_NI_NO_RESPONSE_TIME 20
 
 #define LAT_LONG_TO_RADIANS .000005364418
 #define GF_RESPONSIVENESS_THRESHOLD_MSEC_HIGH   120000 //2 mins
@@ -1474,110 +1458,6 @@ LocApiV02::deleteAidingData(const GnssAidingData& data, LocApiResponse *adapterR
       adapterResponse->returnToSender(err);
   }
   }));
-}
-
-/* send NI user repsonse to the engine */
-void
-LocApiV02::informNiResponse(GnssNiResponse userResponse, const void* passThroughData)
-{
-    sendMsg(new LocApiMsg([this, userResponse, passThroughData] () {
-
-        LocationError err = LOCATION_ERROR_SUCCESS;
-        locClientReqUnionType req_union;
-        locClientStatusEnumType status;
-        qmiLocNiUserRespReqMsgT_v02 ni_resp;
-        qmiLocNiUserRespIndMsgT_v02 ni_resp_ind;
-
-        qmiLocEventNiNotifyVerifyReqIndMsgT_v02 *request_pass_back =
-            (qmiLocEventNiNotifyVerifyReqIndMsgT_v02 *)passThroughData;
-
-        memset(&ni_resp,0, sizeof(ni_resp));
-
-        memset(&ni_resp_ind,0, sizeof(ni_resp_ind));
-
-        switch (userResponse) {
-        case GNSS_NI_RESPONSE_ACCEPT:
-            ni_resp.userResp = eQMI_LOC_NI_LCS_NOTIFY_VERIFY_ACCEPT_V02;
-            break;
-        case GNSS_NI_RESPONSE_DENY:
-            ni_resp.userResp = eQMI_LOC_NI_LCS_NOTIFY_VERIFY_DENY_V02;
-            break;
-        case GNSS_NI_RESPONSE_NO_RESPONSE:
-            ni_resp.userResp = eQMI_LOC_NI_LCS_NOTIFY_VERIFY_NORESP_V02;
-            break;
-        default:
-            err = LOCATION_ERROR_INVALID_PARAMETER;
-            free((void *)passThroughData);
-            return;
-        }
-
-        LOC_LOGV("informNiResponse: user response: %d", ni_resp.userResp);
-
-        ni_resp.notificationType = request_pass_back->notificationType;
-
-        // copy SUPL payload from request
-        if (1 == request_pass_back->NiSuplInd_valid) {
-            ni_resp.NiSuplPayload_valid = 1;
-            memcpy(&(ni_resp.NiSuplPayload),
-                   &(request_pass_back->NiSuplInd),
-                   sizeof(qmiLocNiSuplNotifyVerifyStructT_v02));
-        }
-        // should this be an "else if"?? we don't need to decide
-
-        // copy UMTS-CP payload from request
-        if (1 == request_pass_back->NiUmtsCpInd_valid) {
-            ni_resp.NiUmtsCpPayload_valid = 1;
-            memcpy(&(ni_resp.NiUmtsCpPayload),
-                   &(request_pass_back->NiUmtsCpInd),
-                   sizeof(qmiLocNiUmtsCpNotifyVerifyStructT_v02));
-        }
-
-        //copy Vx payload from the request
-        if (1 == request_pass_back->NiVxInd_valid) {
-            ni_resp.NiVxPayload_valid = 1;
-            memcpy(&(ni_resp.NiVxPayload),
-                   &(request_pass_back->NiVxInd),
-                   sizeof(qmiLocNiVxNotifyVerifyStructT_v02));
-        }
-
-        // copy Vx service interaction payload from the request
-        if (1 == request_pass_back->NiVxServiceInteractionInd_valid) {
-            ni_resp.NiVxServiceInteractionPayload_valid = 1;
-            memcpy(&(ni_resp.NiVxServiceInteractionPayload),
-                   &(request_pass_back->NiVxServiceInteractionInd),
-                   sizeof(qmiLocNiVxServiceInteractionStructT_v02));
-        }
-
-        // copy Network Initiated SUPL Version 2 Extension
-        if (1 == request_pass_back->NiSuplVer2ExtInd_valid) {
-            ni_resp.NiSuplVer2ExtPayload_valid = 1;
-            memcpy(&(ni_resp.NiSuplVer2ExtPayload),
-                   &(request_pass_back->NiSuplVer2ExtInd),
-                   sizeof(qmiLocNiSuplVer2ExtStructT_v02));
-        }
-
-        // copy SUPL Emergency Notification
-        if (request_pass_back->suplEmergencyNotification_valid) {
-            ni_resp.suplEmergencyNotification_valid = 1;
-            memcpy(&(ni_resp.suplEmergencyNotification),
-                   &(request_pass_back->suplEmergencyNotification),
-                   sizeof(qmiLocEmergencyNotificationStructT_v02));
-        }
-
-        req_union.pNiUserRespReq = &ni_resp;
-
-        status = locSyncSendReq(QMI_LOC_NI_USER_RESPONSE_REQ_V02,
-                                req_union, LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
-                                QMI_LOC_NI_USER_RESPONSE_IND_V02,
-                                &ni_resp_ind);
-
-        if (status != eLOC_CLIENT_SUCCESS ||
-                eQMI_LOC_SUCCESS_V02 != ni_resp_ind.status) {
-            err = LOCATION_ERROR_GENERAL_FAILURE;
-        }
-
-        free((void *)passThroughData);
-    }));
 }
 
 void
@@ -5265,6 +5145,8 @@ void LocApiV02 :: reportNmea (
     }
 }
 
+#define ATL_OPEN_WAIT_DEFAULT_TIMEOUT_MSEC 15000
+#define ATL_CLOSE_WAIT_DEFAULT_TIMEOUT_MSEC 5000
 /* convert and report an ATL request to loc engine */
 void LocApiV02 :: reportAtlRequest(
   const qmiLocEventLocationServerConnectionReqIndMsgT_v02 * server_request_ptr)
@@ -5316,12 +5198,16 @@ void LocApiV02 :: reportAtlRequest(
         }
     }
     LOC_LOGd("agpsSubId=%d", agpsSubId);
-    requestATL(connHandle, agpsType, apnTypeMask, agpsSubId);
+    requestATL(connHandle, agpsType, apnTypeMask, agpsSubId, ATL_OPEN_WAIT_DEFAULT_TIMEOUT_MSEC);
   }
   // service the ATL close request
   else if (server_request_ptr->requestType == eQMI_LOC_SERVER_REQUEST_CLOSE_V02)
   {
-    releaseATL(connHandle);
+    uint32_t atlClosetimeOutMsec = ATL_CLOSE_WAIT_DEFAULT_TIMEOUT_MSEC;
+    if (server_request_ptr->connectionRequestTimeout_valid) {
+        atlClosetimeOutMsec = server_request_ptr->connectionRequestTimeout;
+    }
+    releaseATL(connHandle, atlClosetimeOutMsec);
   }
 }
 
@@ -5329,127 +5215,62 @@ void LocApiV02 :: reportAtlRequest(
 void LocApiV02 :: reportNiRequest(
     const qmiLocEventNiNotifyVerifyReqIndMsgT_v02 *ni_req_ptr)
 {
-    GnssNiNotification notif = {};
-    notif.messageEncoding = GNSS_NI_ENCODING_TYPE_NONE ;
-    notif.requestorEncoding = GNSS_NI_ENCODING_TYPE_NONE;
-    notif.timeoutResponse = GNSS_NI_RESPONSE_NO_RESPONSE;
-    notif.timeout = LOC_NI_NO_RESPONSE_TIME;
+    LOC_LOGd("notif type: %d, supl es: %d", ni_req_ptr->notificationType,
+            ni_req_ptr->suplEmergencyNotification_valid);
+    //Accept NI when privacy overrides or no notify/verify required
+    if ((ni_req_ptr->notificationType == eQMI_LOC_NI_USER_NOTIFY_VERIFY_PRIVACY_OVERRIDE_V02) ||
+            (ni_req_ptr->notificationType == eQMI_LOC_NI_USER_NO_NOTIFY_NO_VERIFY_V02) ||
+            // for notify only or notify/verify allow no resp, ack back to modem,
+            // no need to display the dialog
+            (ni_req_ptr->notificationType == eQMI_LOC_NI_USER_NOTIFY_ONLY_V02) ||
+            (ni_req_ptr->notificationType == eQMI_LOC_NI_USER_NOTIFY_VERIFY_ALLOW_NO_RESP_V02)) {
+        sendMsg(new LocApiMsg([this, request_pass_back = *ni_req_ptr] () {
+            locClientReqUnionType req_union;
+            qmiLocNiUserRespReqMsgT_v02 ni_resp = {};
+            qmiLocNiUserRespIndMsgT_v02 ni_resp_ind = {};
+            ni_resp.userResp = eQMI_LOC_NI_LCS_NOTIFY_VERIFY_ACCEPT_V02;
+            LOC_LOGd("ACCEPT privacy override and no notify/verify NI request or allow no resp");
+            ni_resp.notificationType = request_pass_back.notificationType;
 
-    /* Handle Vx request */
-    if (1 == ni_req_ptr->NiVxInd_valid) {
-        const qmiLocNiVxNotifyVerifyStructT_v02 *vx_req = &(ni_req_ptr->NiVxInd);
-
-        notif.type = GNSS_NI_TYPE_VOICE;
-
-        // Requestor ID, the requestor id recieved is NULL terminated
-        hexcode(notif.requestor, sizeof notif.requestor,
-                (char *)vx_req->requestorId, vx_req->requestorId_len );
-    }
-
-    /* Handle UMTS CP request*/
-    else if (1 == ni_req_ptr->NiUmtsCpInd_valid) {
-        const qmiLocNiUmtsCpNotifyVerifyStructT_v02 *umts_cp_req =
-            &ni_req_ptr->NiUmtsCpInd;
-
-        notif.type = GNSS_NI_TYPE_CONTROL_PLANE;
-
-        /* notificationText should always be a NULL terminated string */
-        hexcode(notif.message, sizeof notif.message,
-                (char *)umts_cp_req->notificationText,
-                umts_cp_req->notificationText_len);
-
-        /* Store requestor ID */
-        hexcode(notif.requestor, sizeof(notif.requestor),
-                (char *)umts_cp_req->requestorId.codedString,
-                umts_cp_req->requestorId.codedString_len);
-
-        /* convert encodings */
-        notif.messageEncoding = convertNiEncoding(umts_cp_req->dataCodingScheme);
-
-        notif.requestorEncoding =
-            convertNiEncoding(umts_cp_req->requestorId.dataCodingScheme);
-
-        /* LCS address (using extras field) */
-        if (0 != umts_cp_req->clientAddress_len) {
-            char lcs_addr[32]; // Decoded LCS address for UMTS CP NI
-
-            // Copy LCS Address into notif.extras in the format: Address = 012345
-            strlcat(notif.extras, LOC_NI_NOTIF_KEY_ADDRESS, sizeof (notif.extras));
-            strlcat(notif.extras, " = ", sizeof notif.extras);
-            int addr_len = 0;
-            const char *address_source = NULL;
-            address_source = (char *)umts_cp_req->clientAddress;
-            // client Address is always NULL terminated
-            addr_len = decodeAddress(lcs_addr, sizeof(lcs_addr), address_source,
-                                     umts_cp_req->clientAddress_len);
-
-            // The address is ASCII string
-            if (addr_len) {
-                strlcat(notif.extras, lcs_addr, sizeof notif.extras);
+            // copy SUPL payload from request
+            if (1 == request_pass_back.NiSuplInd_valid) {
+                ni_resp.NiSuplPayload_valid = 1;
+                memcpy(&(ni_resp.NiSuplPayload),
+                       &(request_pass_back.NiSuplInd),
+                       sizeof(qmiLocNiSuplNotifyVerifyStructT_v02));
             }
-        }
-    } else if (1 == ni_req_ptr->NiSuplInd_valid) {
-        const qmiLocNiSuplNotifyVerifyStructT_v02 *supl_req =
-            &ni_req_ptr->NiSuplInd;
 
-        notif.type = GNSS_NI_TYPE_SUPL;
+            // copy UMTS-CP payload from request
+            if (1 == request_pass_back.NiUmtsCpInd_valid) {
+                ni_resp.NiUmtsCpPayload_valid = 1;
+                memcpy(&(ni_resp.NiUmtsCpPayload),
+                       &(request_pass_back.NiUmtsCpInd),
+                       sizeof(qmiLocNiUmtsCpNotifyVerifyStructT_v02));
+            }
 
-        // Client name
-        if (supl_req->valid_flags & QMI_LOC_SUPL_CLIENT_NAME_MASK_V02) {
-            hexcode(notif.message, sizeof(notif.message),
-                    (char *)supl_req->clientName.formattedString,
-                    supl_req->clientName.formattedString_len);
-            LOC_LOGv("SUPL NI: client_name: %s \n", notif.message);
-        } else {
-            LOC_LOGv("SUPL NI: client_name not present.");
-        }
+            // copy Network Initiated SUPL Version 2 Extension
+            if (1 == request_pass_back.NiSuplVer2ExtInd_valid) {
+                ni_resp.NiSuplVer2ExtPayload_valid = 1;
+                memcpy(&(ni_resp.NiSuplVer2ExtPayload),
+                       &(request_pass_back.NiSuplVer2ExtInd),
+                       sizeof(qmiLocNiSuplVer2ExtStructT_v02));
+            }
 
-        // Requestor ID
-        if (supl_req->valid_flags & QMI_LOC_SUPL_REQUESTOR_ID_MASK_V02) {
-            hexcode(notif.requestor, sizeof notif.requestor,
-                    (char*)supl_req->requestorId.formattedString,
-                    supl_req->requestorId.formattedString_len);
+            // copy SUPL Emergency Notification
+            if (request_pass_back.suplEmergencyNotification_valid) {
+                ni_resp.suplEmergencyNotification_valid = 1;
+                memcpy(&(ni_resp.suplEmergencyNotification),
+                       &(request_pass_back.suplEmergencyNotification),
+                       sizeof(qmiLocEmergencyNotificationStructT_v02));
+            }
 
-            LOC_LOGv("SUPL NI: requestor: %s", notif.requestor);
-        } else {
-            LOC_LOGv("SUPL NI: requestor not present.");
-        }
+            req_union.pNiUserRespReq = &ni_resp;
 
-        // Encoding type
-        if (supl_req->valid_flags & QMI_LOC_SUPL_DATA_CODING_SCHEME_MASK_V02) {
-            notif.messageEncoding = convertNiEncoding(supl_req->dataCodingScheme);
-            notif.requestorEncoding = convertNiEncoding(supl_req->dataCodingScheme);
-        } else {
-            notif.messageEncoding = notif.requestorEncoding = GNSS_NI_ENCODING_TYPE_NONE;
-        }
-
-        // ES SUPL
-        if (1 == ni_req_ptr->suplEmergencyNotification_valid) {
-            notif.type = GNSS_NI_TYPE_EMERGENCY_SUPL;
-        }
-    } //ni_req_ptr->NiSuplInd_valid == 1
-    else {
-        LOC_LOGe("unknown request event");
-        return;
-    }
-
-    // Set default_response & notify_flags
-    convertNiNotifyVerifyType(&notif, ni_req_ptr->notificationType);
-
-    qmiLocEventNiNotifyVerifyReqIndMsgT_v02 *ni_req_copy_ptr =
-        (qmiLocEventNiNotifyVerifyReqIndMsgT_v02 *)malloc(sizeof(*ni_req_copy_ptr));
-
-    LocInEmergency emergencyState = LOC_IN_EMERGENCY_UNKNOWN;
-    if ((ni_req_ptr->isInEmergencySession_valid && ni_req_ptr->isInEmergencySession) ||
-        ni_req_ptr->suplEmergencyNotification_valid) {
-        emergencyState = LOC_IN_EMERGENCY_SET;
-    }
-
-    if (NULL != ni_req_copy_ptr) {
-        memcpy(ni_req_copy_ptr, ni_req_ptr, sizeof(*ni_req_copy_ptr));
-        requestNiNotify(notif, (const void*)ni_req_copy_ptr, emergencyState);
-    } else {
-        LOC_LOGe("Error copying NI request");
+            locSyncSendReq(QMI_LOC_NI_USER_RESPONSE_REQ_V02,
+                                    req_union, LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
+                                    QMI_LOC_NI_USER_RESPONSE_IND_V02,
+                                    &ni_resp_ind);
+        }));
     }
 }
 
@@ -5506,69 +5327,6 @@ void LocApiV02 :: reportXtraServerUrl(
                      QMI_LOC_MAX_SERVER_ADDR_LENGTH_V02);
   }
 
-}
-
-/* convert Ni Encoding type from QMI_LOC to loc eng format */
-GnssNiEncodingType LocApiV02 ::convertNiEncoding(
-  qmiLocNiDataCodingSchemeEnumT_v02 loc_encoding)
-{
-   GnssNiEncodingType enc = GNSS_NI_ENCODING_TYPE_NONE;
-
-   switch (loc_encoding)
-   {
-     case eQMI_LOC_NI_SUPL_UTF8_V02:
-       enc = GNSS_NI_ENCODING_TYPE_UTF8;
-       break;
-     case eQMI_LOC_NI_SUPL_UCS2_V02:
-       enc = GNSS_NI_ENCODING_TYPE_UCS2;
-       break;
-     case eQMI_LOC_NI_SUPL_GSM_DEFAULT_V02:
-       enc = GNSS_NI_ENCODING_TYPE_GSM_DEFAULT;
-       break;
-     case eQMI_LOC_NI_SS_LANGUAGE_UNSPEC_V02:
-       enc = GNSS_NI_ENCODING_TYPE_GSM_DEFAULT; // SS_LANGUAGE_UNSPEC = GSM
-       break;
-     default:
-       break;
-   }
-
-   return enc;
-}
-
-/*convert NI notify verify type from QMI LOC to loc eng format*/
-bool LocApiV02 :: convertNiNotifyVerifyType (
-  GnssNiNotification *notif,
-  qmiLocNiNotifyVerifyEnumT_v02 notif_priv)
-{
-  switch (notif_priv)
-   {
-   case eQMI_LOC_NI_USER_NO_NOTIFY_NO_VERIFY_V02:
-      notif->options = 0;
-      break;
-
-   case eQMI_LOC_NI_USER_NOTIFY_ONLY_V02:
-      notif->options = GNSS_NI_OPTIONS_NOTIFICATION_BIT;
-      break;
-
-   case eQMI_LOC_NI_USER_NOTIFY_VERIFY_ALLOW_NO_RESP_V02:
-      notif->options = GNSS_NI_OPTIONS_NOTIFICATION_BIT | GNSS_NI_OPTIONS_VERIFICATION_BIT;
-      notif->timeoutResponse = GNSS_NI_RESPONSE_ACCEPT;
-      break;
-
-   case eQMI_LOC_NI_USER_NOTIFY_VERIFY_NOT_ALLOW_NO_RESP_V02:
-      notif->options = GNSS_NI_OPTIONS_NOTIFICATION_BIT | GNSS_NI_OPTIONS_VERIFICATION_BIT;
-      notif->timeoutResponse = GNSS_NI_RESPONSE_DENY;
-      break;
-
-   case eQMI_LOC_NI_USER_NOTIFY_VERIFY_PRIVACY_OVERRIDE_V02:
-      notif->options = GNSS_NI_OPTIONS_PRIVACY_OVERRIDE_BIT;
-      break;
-
-   default:
-      return false;
-   }
-
-   return true;
 }
 
 /* convert and report GNSS measurement data to loc eng */
