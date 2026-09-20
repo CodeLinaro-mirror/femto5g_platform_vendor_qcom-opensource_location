@@ -8,7 +8,7 @@
  module parameters coming from server that need to be persistent
  across bootup.
 
- Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  SPDX-License-Identifier: BSD-3-Clause-Clear
  =============================================================================*/
 #include <stdio.h>
@@ -1080,7 +1080,12 @@ int NvParamMgrImpl::wrapper_mprintf(char* &output_buf, unsigned int &output_size
       }
       else
       {
-        output_buf = (char*) realloc (output_buf, output_size);
+        char* temp_ptr = (char*) realloc (output_buf, output_size);
+        if (NULL == temp_ptr)
+        {
+          free(output_buf);
+        }
+        output_buf = temp_ptr;
       }
 
       if (output_buf == NULL)
