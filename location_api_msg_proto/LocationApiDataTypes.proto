@@ -48,9 +48,9 @@ enum LocationApiDataTypesVersion {
     // Major changes - compatibility breakage. Bump the first byte of version i.e. 1.x to 2.0
     LOCAPI_DATA_TYPES_VER_MAJOR = 1;
     // Minor - New features / API addition, new message/elemtent addition.
-    // Bump the last byte of version i.e. x.4 to x.5
-    // Minor version 56: Support Residual reporting
-    LOCAPI_DATA_TYPES_VER_MINOR = 56;
+    // Bump the last byte of version i.e. x.6 to x.7
+    // Minor version 57: Add powerMode field to PBLocationOptions
+    LOCAPI_DATA_TYPES_VER_MINOR = 57;
 }
 
 // ============================================================================
@@ -67,6 +67,15 @@ enum PBFixQualityLevel {
     PB_QUALITY_HIGH_ACCU_FIX_ONLY = 0;
     PB_QUALITY_ANY_VALID_FIX = 1;
     PB_QUALITY_ANY_OR_FAILED_FIX = 2;
+}
+
+enum PBGnssPowerMode {
+    PB_GNSS_POWER_MODE_INVALID = 0;
+    PB_GNSS_POWER_MODE_M1 = 1;
+    PB_GNSS_POWER_MODE_M2 = 2;
+    PB_GNSS_POWER_MODE_M3 = 3;
+    PB_GNSS_POWER_MODE_M4 = 4;
+    PB_GNSS_POWER_MODE_M5 = 5;
 }
 
 /** GNSS Signal Type and RF Band */
@@ -666,7 +675,7 @@ enum PBLocationCapabilitiesMask {
     PB_LOCATION_CAPS_QWES_GNSS_MULTI_FREQUENCY                 = 0x00000800;
     /** This mask indicates VEPP license bundle is enabled.
      *  VEPP bundle include Carrier Phase and SV Polynomial
-     *  features.  <br/>   */
+     *  features. (deprecated) <br/>   */
     PB_LOCATION_CAPS_QWES_VPE                                  = 0x00001000;
     /** This mask indicates support for CV2X Location basic
      *  features. This bundle includes features for GTS Time
@@ -761,7 +770,7 @@ enum PBLIALeverArmTypeMask {
     PB_LEVER_ARM_TYPE_DR_IMU_TO_GNSS_BIT = 2;
     // Lever arm regarding GNSS Antenna w.r.t the origin at the
     // IMU (inertial measurement unit) for VEPP (vision enhanced
-    // precise positioning engine)
+    // precise positioning engine) (deprecated)
     PB_LEVER_ARM_TYPE_VEPP_IMU_TO_GNSS_BIT = 4;
 }
 
@@ -912,6 +921,8 @@ message PBLocationOptions {
     uint32 locReqEngTypeMask = 4;
     // Fix Quality Level
     PBFixQualityLevel qualityLevelAccepted = 5;
+    // Power Mode to be used for time based tracking sessions
+    PBGnssPowerMode powerMode = 6;
 }
 
 message PBAidingData {
@@ -1513,7 +1524,7 @@ message PBLIALeverArmConfigInfo {
     // (inertial measurement unit) for DR (dead reckoning engine)
     PBLIALeverArmParams   drImuToGnss = 3;
     // Lever arm regarding GNSS Antenna w.r.t the origin at the IMU
-    // (inertial measurement unit) for VEPP (vision enhanced precise position engine)
+    // (inertial measurement unit) for VEPP (vision enhanced precise position engine) (deprecated)
     PBLIALeverArmParams   veppImuToGnss = 4;
 }
 
