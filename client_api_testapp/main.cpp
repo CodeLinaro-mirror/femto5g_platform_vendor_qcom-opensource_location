@@ -517,8 +517,8 @@ static void onNmeaSentencesCb(LocOutputEngineType engType,
                            const std::string& nmea) {
     numNmeaSentencesCb++;
     if (outputEnabled) {
-        printf("<<< onNmeaSentencesCb cnt=%u engine type=%u time=%" PRIu64" nmea=%s \n",
-            numNmeaSentencesCb, engType, timestamp, nmea.c_str());
+        printf("<<< onNmeaSentencesCb cnt=%u engine type=%u time=%" PRIu64" nmea=%.*s \n",
+            numNmeaSentencesCb, engType, timestamp, MAX_NMEA_PRINT_LEN, nmea.c_str());
     }
     if (routeToNMEAPort && openPort()) {
                 sendNMEAToTty(nmea);
@@ -2011,6 +2011,7 @@ bool menuAddGeofence() {
     }
     sGeofences.insert(sGeofences.end(), addGfVec.begin(), addGfVec.end());
     pLcaClient->addGeofences(addGfVec, onGeofenceBreachCb, onCollectiveResponseCb);
+    return true;
 }
 
 void menuModifyGeofence() {

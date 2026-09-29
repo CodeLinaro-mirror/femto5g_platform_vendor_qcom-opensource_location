@@ -48,7 +48,9 @@ static void onResponseCb(location_client::LocationResponse response) {
 class LocationTrackingSessCbHandler {
     public:
         LocationTrackingSessCbHandler(const LocIdlAPIService *pClientApiService,
-                const uint32_t &reportCbMask) {
+                const uint32_t &reportCbMask): mCallbackOptions{},
+            mEngineCallbackOptions{},
+            mLcaLocReqEngMask{} {
             if (NULL != pClientApiService) {
                 LOC_LOGd(" ==== LocationTrackingSessCbHandler --> ");
                 memset(&mCallbackOptions, 0, sizeof(GnssReportCbs));
@@ -106,7 +108,10 @@ class LocationTrackingSessCbHandler {
         }
 
         LocationTrackingSessCbHandler(const LocIdlAPIService *pClientApiService,
-                const uint32_t &locReqEngMask, const uint32_t &engReportCallbackMask) {
+                const uint32_t &locReqEngMask, const uint32_t &engReportCallbackMask):
+            mCallbackOptions{},
+            mEngineCallbackOptions{},
+            mLcaLocReqEngMask{} {
             if (NULL != pClientApiService) {
                 memset(&mEngineCallbackOptions, 0, sizeof(EngineReportCbs));
 
