@@ -3724,8 +3724,32 @@ public:
                               const EngineReportCbs& engReportCallbacks,
                               ResponseCb responseCallback);
 
+    /** @brief Start or update a GNSS "keep warm" time-based tracking
+        session, running the GNSS engine at power mode M5 (Background
+        Mode). <br/>
+
+        A keep warm session never delivers regular position reports,
+        since M5 sessions are data-less by design; only the processing
+        status is returned via responseCallback. If this client already
+        has an active position/keep-warm session, that session is
+        updated in place (no stop/restart) to power mode M5. <br/>
+
+        @param responseCallback
+        Callback to receive system responses. <br/>
+        This callback is allowed to be null. <br/>
+
+        @return True, if a keep warm session is successfully started
+                or the existing session is successfully updated to
+                power mode M5. If responseCallback is not null, it
+                will then be invoked to deliver the processing
+                status. <br/>
+    */
+    bool startKeepWarmSession(ResponseCb responseCallback);
+
     /** @brief Stop the ongoing positioning session and
      *  de-register the callbacks of previous startPositionSession.
+     *  An ongoing keep warm session started by startKeepWarmSession()
+     *  will also be stopped.
      *  No callback will be issued regarding the procesing status.
      *  <br/> */
     void stopPositionSession();

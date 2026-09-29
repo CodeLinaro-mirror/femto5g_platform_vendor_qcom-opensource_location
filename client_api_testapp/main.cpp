@@ -122,6 +122,7 @@ enum TrackingSessionType {
 #define ENABLE_DETAILED_REPORT_OUTPUT  "enableDetailedReportOutput"
 #define DISABLE_TUNC          "disableTunc"
 #define ENABLE_TUNC           "enableTunc"
+#define START_KEEP_WARM       "startKeepWarm"
 #define DISABLE_PACE          "disablePACE"
 #define ENABLE_PACE           "enablePACE"
 #define RESET_SV_CONFIG       "resetSVConfig"
@@ -624,6 +625,7 @@ static void printHelp() {
     printf("%s: enable detailed output from various reports\n", ENABLE_DETAILED_REPORT_OUTPUT);
     printf("%s tuncThreshold energyBudget: enable tunc\n", ENABLE_TUNC);
     printf("%s: disable tunc\n", DISABLE_TUNC);
+    printf("%s: start/update a keep warm (M5) tracking session\n", START_KEEP_WARM);
     printf("%s: enable PACE\n", ENABLE_PACE);
     printf("%s: disable PACE\n", DISABLE_PACE);
     printf("%s: reset sv config to default\n", RESET_SV_CONFIG);
@@ -2346,6 +2348,15 @@ int main(int argc, char *argv[]) {
             printf("tuncThreshold %f, energyBudget %d\n", tuncThreshold, energyBudget);
             retVal = pIntClient->configConstrainedTimeUncertainty(
                     true, tuncThreshold, energyBudget);
+        } else if (strncmp(buf, START_KEEP_WARM, strlen(START_KEEP_WARM)) == 0) {
+            if (!pLcaClient) {
+                pLcaClient = new LocationClientApi(onCapabilitiesCb);
+                sleep(1); // wait for capability callback
+            }
+            if (pLcaClient) {
+                resetCounters();
+                retVal = pLcaClient->startKeepWarmSession(onResponseCb);
+            }
         } else if (strncmp(buf, DISABLE_PACE, strlen(DISABLE_TUNC)) == 0) {
             retVal = pIntClient->configPositionAssistedClockEstimator(false);
         } else if (strncmp(buf, ENABLE_PACE, strlen(ENABLE_TUNC)) == 0) {
