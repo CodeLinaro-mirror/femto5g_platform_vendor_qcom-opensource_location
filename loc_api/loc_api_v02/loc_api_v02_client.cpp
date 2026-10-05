@@ -2198,7 +2198,7 @@ locClientStatusEnumType locClientOpenInstance (
     *pLocClientHandle = LOC_CLIENT_INVALID_HANDLE_VALUE;
     LOC_LOGe("Error! status = %d", status);
   }
-  else
+  else if (NULL != pCallbackData)
   {
     LOC_LOGd("returning handle = %p, user_handle=%p, status = %d",
              *pLocClientHandle, pCallbackData->userHandle, status);
