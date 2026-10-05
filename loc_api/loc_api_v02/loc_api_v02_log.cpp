@@ -28,45 +28,9 @@
  */
 
 /*
-Changes from Qualcomm Innovation Center are provided under the following license:
-
-Copyright (c) 2022-2023 Qualcomm Innovation Center, Inc. All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted (subject to the limitations in the
-disclaimer below) provided that the following conditions are met:
-
-    * Redistributions of source code must retain the above copyright
-      notice, this list of conditions and the following disclaimer.
-
-    * Redistributions in binary form must reproduce the above
-      copyright notice, this list of conditions and the following
-      disclaimer in the documentation and/or other materials provided
-      with the distribution.
-
-    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
-      contributors may be used to endorse or promote products derived
-      from this software without specific prior written permission.
-
-NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
-WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
-GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
-IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
-OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
-
-/*
-Changes from Qualcomm Innovation Center, Inc. are provided under the following license:
-Copyright (c) 2025 Qualcomm Innovation Center, Inc. All rights reserved.
-SPDX-License-Identifier: BSD-3-Clause-Clear
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
 */
 
 #include <loc_api_v02_log.h>
@@ -119,6 +83,7 @@ DECLARE_TBL(loc_v02_event_name) =
    {QMI_LOC_DELETE_GEOFENCE_REQ_V02, "DELETE_GEOFENCE"},
    {QMI_LOC_EDIT_GEOFENCE_REQ_V02, "EDIT_GEOFENCE"},
    {QMI_LOC_GET_BEST_AVAILABLE_POSITION_REQ_V02, "GET_BEST_AVAILABLE_POSITION"},
+   {QMI_LOC_GET_AVAILABLE_WWAN_POSITION_REQ_V02, "GET_AVAILABLE_WWAN_POSITION"},
    {QMI_LOC_INJECT_MOTION_DATA_REQ_V02, "INJECT_MOTION_DATA"},
    {QMI_LOC_EVENT_PEDOMETER_CONTROL_IND_V02, "EVENT_PEDOMETER_CONTROL"},
    {QMI_LOC_EVENT_MOTION_DATA_CONTROL_IND_V02, "EVENT_MOTION_DATA_CONTROL"},
@@ -140,6 +105,9 @@ DECLARE_TBL(loc_v02_event_name) =
    {QMI_LOC_EVENT_GNSS_MEASUREMENT_REPORT_IND_V02, "EVENT_GNSS_MEASUREMENT_REPORT"},
    {QMI_LOC_EVENT_SV_POLYNOMIAL_REPORT_IND_V02, "EVENT_SV_POLYNOMIAL_REPORT"},
    {QMI_LOC_SET_GNSS_CONSTELL_REPORT_CONFIG_V02, "SET_GNSS_CONSTELL_REPORT_CONFIG"},
+   {QMI_LOC_START_DBT_REQ_V02, "START_DBT"},
+   {QMI_LOC_STOP_DBT_REQ_V02, "STOP_DBT"},
+   {QMI_LOC_EVENT_DBT_POSITION_REPORT_IND_V02, "EVENT_DBT_POSITION_REPORT"},
    {QMI_LOC_EVENT_GEOFENCE_BATCHED_DWELL_NOTIFICATION_IND_V02,
        "EVENT_GEOFENCE_BATCHED_DWELL_NOTIFICATION"},
    {QMI_LOC_EVENT_GET_TIME_ZONE_INFO_IND_V02, "EVENT_GET_TIME_ZONE_INFO"},
@@ -189,6 +157,12 @@ DECLARE_TBL(loc_v02_event_name) =
    {QMI_LOC_SET_NTN_STATUS_REQ_V02, "SET_NTN_STATUS"},
    {QMI_LOC_GET_NTN_STATUS_REQ_V02, "GET_NTN_STATUS"},
    {QMI_LOC_SET_PRECISE_SESSION_CONFIG_REQ_V02, "SET_PRECISE_SESSION_CONFIG"},
+   // FDCL
+   {QMI_LOC_EVENT_FDCL_SERVICE_REQ_IND_V02, "EVENT_FDCL_SERVICE_REQ"},
+   {QMI_LOC_GET_FDCL_BS_LIST_REQ_V02, "GET_FDCL_BS_LIST"},
+   {QMI_LOC_INJECT_FDCL_DATA_REQ_V02, "INJECT_FDCL_DATA"},
+   {QMI_LOC_EVENT_BS_OBS_DATA_SERVICE_REQ_IND_V02, "EVENT_BS_OBS_DATA_SERVICE_REQ"},
+   {QMI_LOC_GET_BS_OBS_DATA_REQ_V02, "GET_BS_OBS_DATA"},
    // Please note, as req, resp, ind has same enum, only one entry need to be added in above table
 };
 

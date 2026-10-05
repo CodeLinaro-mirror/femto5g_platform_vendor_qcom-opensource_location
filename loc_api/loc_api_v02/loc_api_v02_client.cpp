@@ -25,42 +25,11 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
- /*
-Changes from Qualcomm Innovation Center are provided under the following license:
-
-Copyright (c) 2022-2025 Qualcomm Innovation Center, Inc. All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted (subject to the limitations in the
-disclaimer below) provided that the following conditions are met:
-
-    * Redistributions of source code must retain the above copyright
-      notice, this list of conditions and the following disclaimer.
-
-    * Redistributions in binary form must reproduce the above
-      copyright notice, this list of conditions and the following
-      disclaimer in the documentation and/or other materials provided
-      with the distribution.
-
-    * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
-      contributors may be used to endorse or promote products derived
-      from this software without specific prior written permission.
-
-NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
-GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
-HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
-WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
-ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
-GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
-IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
-OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+/*
+ * Changes from Qualcomm Technologies, Inc. are provided under the following license:
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ */
 
 #include <stdlib.h>
 #include <string.h>
@@ -294,6 +263,17 @@ static const locClientEventIndTableStructT locClientEventIndTable[]= {
   // supported bands and the preferred one ind
   { QMI_LOC_GNSS_BANDS_SUPPORTED_IND_V02,
     sizeof(qmiLocGnssBandsSupportedIndMsgT_v02)},
+
+  // FDCL service request event inds
+  { QMI_LOC_EVENT_FDCL_SERVICE_REQ_IND_V02,
+    sizeof(qmiLocEventFdclServiceReqIndMsgT_v02)},
+
+  { QMI_LOC_EVENT_BS_OBS_DATA_SERVICE_REQ_IND_V02,
+    sizeof(qmiLocEventBsObsDataServiceReqIndMsgT_v02)},
+
+  // DBT position report event ind
+  { QMI_LOC_EVENT_DBT_POSITION_REPORT_IND_V02,
+    sizeof(qmiLocEventDbtPositionReportIndMsgT_v02)},
 };
 
 /* table to relate the respInd Id with its size */
@@ -451,8 +431,17 @@ static const locClientRespIndTableStructT locClientRespIndTable[]= {
    { QMI_LOC_SET_PREMIUM_SERVICES_CONFIG_IND_V02,
      sizeof(qmiLocSetPremiumServicesCfgIndMsgT_v02)},
 
+   { QMI_LOC_GET_AVAILABLE_WWAN_POSITION_IND_V02,
+     sizeof(qmiLocGetAvailWwanPositionIndMsgT_v02)},
+
    { QMI_LOC_SET_GNSS_CONSTELL_REPORT_CONFIG_IND_V02,
      sizeof(qmiLocSetGNSSConstRepConfigIndMsgT_v02)},
+
+   { QMI_LOC_START_DBT_IND_V02,
+     sizeof(qmiLocStartDbtIndMsgT_v02)},
+
+   { QMI_LOC_STOP_DBT_IND_V02,
+     sizeof(qmiLocStopDbtIndMsgT_v02)},
 
    { QMI_LOC_INJECT_TIME_ZONE_INFO_IND_V02,
      sizeof(qmiLocInjectTimeZoneInfoIndMsgT_v02)},
@@ -550,6 +539,16 @@ static const locClientRespIndTableStructT locClientRespIndTable[]= {
 
    { QMI_LOC_SET_PRECISE_SESSION_CONFIG_IND_V02,
      sizeof(qmiLocGenReqStatusIndMsgT_v02) },
+
+   // FDCL
+   { QMI_LOC_GET_FDCL_BS_LIST_IND_V02,
+     sizeof(qmiLocGetFdclBsListIndMsgT_v02) },
+
+   { QMI_LOC_INJECT_FDCL_DATA_IND_V02,
+     sizeof(qmiLocInjectFdclDataIndMsgT_v02) },
+
+   { QMI_LOC_GET_BS_OBS_DATA_IND_V02,
+     sizeof(qmiLocGetBsObsDataIndMsgT_v02) },
 };
 
 
@@ -1206,9 +1205,46 @@ bool validateRequest(
         break;
     }
 
+    case QMI_LOC_GET_AVAILABLE_WWAN_POSITION_REQ_V02:
+    {
+        *pOutLen = sizeof(qmiLocGetAvailWwanPositionReqMsgT_v02);
+        break;
+    }
+
+    // FDCL
+    case QMI_LOC_GET_FDCL_BS_LIST_REQ_V02:
+    {
+        *pOutLen = sizeof(qmiLocGetFdclBsListReqMsgT_v02);
+        break;
+    }
+
+    case QMI_LOC_INJECT_FDCL_DATA_REQ_V02:
+    {
+        *pOutLen = sizeof(qmiLocInjectFdclDataReqMsgT_v02);
+        break;
+    }
+
+    case QMI_LOC_GET_BS_OBS_DATA_REQ_V02:
+    {
+        *pOutLen = sizeof(qmiLocGetBsObsDataReqMsgT_v02);
+        break;
+    }
+
     case QMI_LOC_SET_GNSS_CONSTELL_REPORT_CONFIG_V02:
     {
         *pOutLen = sizeof(qmiLocSetGNSSConstRepConfigReqMsgT_v02);
+        break;
+    }
+
+    case QMI_LOC_START_DBT_REQ_V02:
+    {
+        *pOutLen = sizeof(qmiLocStartDbtReqMsgT_v02);
+        break;
+    }
+
+    case QMI_LOC_STOP_DBT_REQ_V02:
+    {
+        *pOutLen = sizeof(qmiLocStopDbtReqMsgT_v02);
         break;
     }
 

@@ -168,6 +168,9 @@ LocationCapabilitiesMask LocationClientApiImpl::parseCapabilitiesMask(
     if (LOCATION_CAPABILITIES_TIME_BASED_BATCHING_BIT & mask) {
         capsMask |=  LOCATION_CAPS_TIME_BASED_BATCHING_BIT;
     }
+    if (LOCATION_CAPABILITIES_DISTANCE_BASED_TRACKING_BIT & mask) {
+        capsMask |=  LOCATION_CAPS_DISTANCE_BASED_TRACKING_BIT;
+    }
     if (LOCATION_CAPABILITIES_GEOFENCE_BIT & mask) {
         capsMask |=  LOCATION_CAPS_GEOFENCE_BIT;
     }
@@ -2172,6 +2175,7 @@ uint32_t LocationClientApiImpl::startTrackingSync(const TrackingOptions& option)
     bool isOptionUpdated = false;
 
     if ((mLocationOptions.minInterval != option.minInterval) ||
+        (mLocationOptions.minDistance != option.minDistance) ||
         (mLocationOptions.locReqEngTypeMask != option.locReqEngTypeMask)) {
         isOptionUpdated = true;
     }
@@ -2189,16 +2193,19 @@ uint32_t LocationClientApiImpl::startTrackingSync(const TrackingOptions& option)
         //start a new tracking session
         mSessionId = mClientId;
 
-        if (0 != mLocationOptions.minInterval) {
+        if ((0 != mLocationOptions.minInterval) ||
+                (0 != mLocationOptions.minDistance)) {
             string pbStr;
             LocAPIStartTrackingReqMsg msg(mSocketName, mLocationOptions, &mPbufMsgConv);
             if (msg.serializeToProtobuf(pbStr)) {
                 bool rc = sendMessage(
                    reinterpret_cast<uint8_t *>((uint8_t *)pbStr.c_str()), pbStr.size());
-                LOC_LOGd(">>> StartTrackingReq Interval=%d "
-                         " locReqEngTypeMask=0x%x rc=%d",
+                LOC_LOGd(">>> StartTrackingReq Interval=%u Distance=%u,"
+                         " locReqEngTypeMask=0x%x powerMode=%d rc=%d",
                          mLocationOptions.minInterval,
-                         mLocationOptions.locReqEngTypeMask, rc);
+                         mLocationOptions.minDistance,
+                         mLocationOptions.locReqEngTypeMask,
+                         mLocationOptions.powerMode, rc);
             } else {
                 LOC_LOGe("LocAPIStartTrackingReqMsg serializeToProtobuf failed");
             }
@@ -2226,6 +2233,7 @@ void LocationClientApiImpl::updateTrackingOptions(uint32_t id, const TrackingOpt
             bool isOptionUpdated = false;
 
             if ((mApiImpl->mLocationOptions.minInterval != mUpdatedOptions.minInterval) ||
+                (mApiImpl->mLocationOptions.minDistance != mUpdatedOptions.minDistance) ||
                 (mApiImpl->mLocationOptions.locReqEngTypeMask !=
                         mUpdatedOptions.locReqEngTypeMask)) {
                 isOptionUpdated = true;
@@ -2328,7 +2336,8 @@ void LocationClientApiImpl::stopTrackingAndClearSubscriptions(uint32_t) {
 void LocationClientApiImpl::stopTrackingSync(bool clearSubscriptions) {
     if (mSessionId != LOCATION_CLIENT_SESSION_ID_INVALID) {
         if (mHalRegistered &&
-                (mLocationOptions.minInterval != 0)) {
+                ((mLocationOptions.minInterval != 0) ||
+                    (mLocationOptions.minDistance != 0))) {
             string pbStr;
             LocAPIStopTrackingReqMsg msg(mSocketName, &mPbufMsgConv,
                     clearSubscriptions);
@@ -2344,6 +2353,7 @@ void LocationClientApiImpl::stopTrackingSync(bool clearSubscriptions) {
     }
 
     mLocationOptions.minInterval = 0;
+    mLocationOptions.minDistance = 0;
     mSessionId = LOCATION_CLIENT_SESSION_ID_INVALID;
     mPositionSessionResponseCbPending = false;
     mSessionStartBootTimestampNs = 0;
@@ -3289,9 +3299,7 @@ void LocationClientApiImpl::capabilitesCallback(ELocMsgID msgId, const void* msg
         // force mSessionId to invalid so startTracking will start the sesssion
         // if hal deamon crashes and restarts in the middle of a session
         mSessionId = LOCATION_CLIENT_SESSION_ID_INVALID;
-        TrackingOptions trackOption;
-        trackOption.setLocationOptions(mLocationOptions);
-        (void)startTrackingSync(trackOption);
+        (void)startTrackingSync(mLocationOptions);
     } else if (isInBatching()) {
         // force mBatchingId to invalid so startBatching will start the sesssion
         // if hal deamon crashes and restarts in the middle of a session
