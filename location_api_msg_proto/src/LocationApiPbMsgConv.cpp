@@ -369,6 +369,32 @@ GnssSuplMode LocationApiPbMsgConv::getEnumForPBGnssSuplMode(
     return gnssSuplMode;
 }
 
+GnssPowerMode LocationApiPbMsgConv::getEnumForPBGnssPowerMode(
+        const PBGnssPowerMode &pbPowerMode) const {
+    GnssPowerMode powerMode = GNSS_POWER_MODE_DEFAULT;
+    switch (pbPowerMode) {
+        case PB_GNSS_POWER_MODE_M1:
+            powerMode = GNSS_POWER_MODE_M1;
+            break;
+        case PB_GNSS_POWER_MODE_M2:
+            powerMode = GNSS_POWER_MODE_M2;
+            break;
+        case PB_GNSS_POWER_MODE_M3:
+            powerMode = GNSS_POWER_MODE_M3;
+            break;
+        case PB_GNSS_POWER_MODE_M4:
+            powerMode = GNSS_POWER_MODE_M4;
+            break;
+        case PB_GNSS_POWER_MODE_M5:
+            powerMode = GNSS_POWER_MODE_M5;
+            break;
+        default:
+            break;
+    }
+    LocApiPb_LOGv("LocApiPB: pbPowerMode:%d, powerMode:%d", pbPowerMode, powerMode);
+    return powerMode;
+}
+
 FixQualityLevel LocationApiPbMsgConv::getEnumForPBFixQualityLevel(
     const PBFixQualityLevel &pbFixQualityLevel) const {
     FixQualityLevel qualityLevelAccepted = QUALITY_HIGH_ACCU_FIX_ONLY;
@@ -1191,6 +1217,32 @@ PBGnssSuplMode LocationApiPbMsgConv::getPBEnumForGnssSuplMode(
     }
     LocApiPb_LOGv("LocApiPB: gnssSuplMode:%d, pbGnssSuplMode:%d", gnssSuplMode, pbGnssSuplMode);
     return pbGnssSuplMode;
+}
+
+PBGnssPowerMode LocationApiPbMsgConv::getPBEnumForGnssPowerMode(
+        const GnssPowerMode &powerMode) const {
+    PBGnssPowerMode pbPowerMode = PB_GNSS_POWER_MODE_INVALID;
+    switch (powerMode) {
+        case GNSS_POWER_MODE_M1:
+            pbPowerMode = PB_GNSS_POWER_MODE_M1;
+            break;
+        case GNSS_POWER_MODE_M2:
+            pbPowerMode = PB_GNSS_POWER_MODE_M2;
+            break;
+        case GNSS_POWER_MODE_M3:
+            pbPowerMode = PB_GNSS_POWER_MODE_M3;
+            break;
+        case GNSS_POWER_MODE_M4:
+            pbPowerMode = PB_GNSS_POWER_MODE_M4;
+            break;
+        case GNSS_POWER_MODE_M5:
+            pbPowerMode = PB_GNSS_POWER_MODE_M5;
+            break;
+        default:
+            break;
+    }
+    LocApiPb_LOGv("LocApiPB: powerMode:%d, pbPowerMode:%d", powerMode, pbPowerMode);
+    return pbPowerMode;
 }
 
 PBFixQualityLevel LocationApiPbMsgConv::getPBEnumForFixQualityLevel(
@@ -4063,7 +4115,7 @@ int LocationApiPbMsgConv::pbConvertToXtraStatus(
     return 0;
 }
 
-int LocationApiPbMsgConv::convertLocationOptionsToPB(const LocationOptions &locOpt,
+int LocationApiPbMsgConv::convertLocationOptionsToPB(const TrackingOptions &locOpt,
         PBLocationOptions *pbLocOpt) const {
     if (nullptr == pbLocOpt) {
         LOC_LOGe("pbLocOpt is NULL!, return");
@@ -4084,11 +4136,14 @@ int LocationApiPbMsgConv::convertLocationOptionsToPB(const LocationOptions &locO
     // PBFixQualityLevel = 5;
     pbLocOpt->set_qualitylevelaccepted(getPBEnumForFixQualityLevel(locOpt.qualityLevelAccepted));
 
+    // PBGnssPowerMode powerMode = 6;
+    pbLocOpt->set_powermode(getPBEnumForGnssPowerMode(locOpt.powerMode));
+
     LocApiPb_LOGd(
         "LocApiPB: locOpt - MinInterval: %u, MinDistance: %u, GnssSuplMode:%d, "
-        "LocReqEngineTypeMask:%x qualityLevelAccepted:%d",
+        "LocReqEngineTypeMask:%x qualityLevelAccepted:%d powerMode:%d",
         locOpt.minInterval, locOpt.minDistance, locOpt.mode, locOpt.locReqEngTypeMask,
-        locOpt.qualityLevelAccepted);
+        locOpt.qualityLevelAccepted, locOpt.powerMode);
     return 0;
 }
 
@@ -6085,8 +6140,8 @@ int LocationApiPbMsgConv::pbConvertToLocationSystemInfo(const PBLocationSystemIn
 }
 
 int LocationApiPbMsgConv::pbConvertToLocationOptions(const PBLocationOptions &pbLocOpt,
-        LocationOptions &locOpt) const {
-    locOpt.size = sizeof(LocationOptions);
+        TrackingOptions &locOpt) const {
+    locOpt.size = sizeof(TrackingOptions);
     // uint32 minInterval = 1;
     locOpt.minInterval = pbLocOpt.mininterval();
     // uint32 minDistance = 2;
@@ -6102,10 +6157,13 @@ int LocationApiPbMsgConv::pbConvertToLocationOptions(const PBLocationOptions &pb
     // PBQuailtyLevelAccepted = 5;
     locOpt.qualityLevelAccepted = getEnumForPBFixQualityLevel(pbLocOpt.qualitylevelaccepted());
 
+    // PBGnssPowerMode powerMode = 6;
+    locOpt.powerMode = getEnumForPBGnssPowerMode(pbLocOpt.powermode());
+
     LocApiPb_LOGd("LocApiPB: pbLocOpt - MinInterval: %u, MinDistance: %u, GnssSuplMode:%d, "\
-            "LocReqEngineTypeMask:%x qualityLevelAccepted: %d",
+            "LocReqEngineTypeMask:%x qualityLevelAccepted: %d powerMode:%d",
             locOpt.minInterval, locOpt.minDistance, locOpt.mode,
-            locOpt.locReqEngTypeMask, locOpt.qualityLevelAccepted);
+            locOpt.locReqEngTypeMask, locOpt.qualityLevelAccepted, locOpt.powerMode);
     return 0;
 }
 

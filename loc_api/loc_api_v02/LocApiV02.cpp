@@ -11529,6 +11529,14 @@ void LocApiV02::onDbtPosReportEvent(
         locationExtended.speed_unc = pDbtPosReport->speedUnc;
     }
 
+    if (pDbtPosReport->conformityIndex_valid) {
+        if (pDbtPosReport->conformityIndex >= 0.0f &&
+            pDbtPosReport->conformityIndex <= 1.0f) {
+            locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_CONFORMITY_INDEX;
+            locationExtended.conformityIndex = pDbtPosReport->conformityIndex;
+        }
+    }
+
     LocPosTechMask techMask = LOC_POS_TECH_MASK_DEFAULT;
     if (pDbtPosReport->positionSrc_valid) {
         switch (pDbtPosReport->positionSrc) {
