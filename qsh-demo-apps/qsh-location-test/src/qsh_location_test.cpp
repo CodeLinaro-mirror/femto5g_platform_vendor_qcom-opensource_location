@@ -16,10 +16,9 @@
 #include <qsh_location.pb.h>
 #include <loc_pla.h>
 #include <loc_cfg.h>
-#include <loc_log.h>
 #include <log_util.h>
-#include <map>
 #include <qsh_utils_suid_util.h>
+#include <map>
 
 /*=============================================================================
   Macro Definitions
@@ -174,8 +173,6 @@ static const char* event_cb_msg_string(uint32_t message_id) {
         return "QSH_LOCATION_MSGID_QSH_LOCATION_POSITION_EVENT";
     case 1025:
         return "QSH_LOCATION_MSGID_QSH_LOCATION_MEAS_AND_CLK_EVENT";
-    case 1026:
-        return "QSH_LOCATION_MSGID_QSH_LOCATION_ENGINE_STATE_EVENT";
     default:
         return "unsupprted MSGID";
     }
@@ -408,22 +405,10 @@ static void event_cb(const uint8_t *data, size_t size, uint64_t ts) {
                      posEvent.bearing_accuracy());
             LOC_LOGd("conformity_index=%f", posEvent.conformity_index());
             LOC_LOGd("session_status=%d", posEvent.session_status());
-
         } else if (QSH_LOCATION_MSGID_QSH_LOCATION_MEAS_AND_CLK_EVENT == pb_event.msg_id()) {
             qsh_location_meas_and_clk_event measClkEvent;
             measClkEvent.ParseFromString(pb_event.payload());
             parse_meas_and_clk(&measClkEvent);
-        } else if (QSH_LOCATION_MSGID_QSH_LOCATION_ENGINE_STATE_EVENT == pb_event.msg_id()) {
-            qsh_location_engine_state_event engStateEvent;
-            engStateEvent.ParseFromString(pb_event.payload());
-
-            if (bVerboseMode) {
-                printf("Received engine state event\n");
-                printf("engine state = %d\n",
-                       engStateEvent.engine_state());
-            }
-            LOC_LOGd("Received engine state event, eng state = %d",
-                     engStateEvent.engine_state());
         } else {
             LOC_LOGe("Unsupprted message ID", pb_event.msg_id());
         }
@@ -885,7 +870,6 @@ static int loadReqFromFile(string inputKey) {
     FILE *gf_fp;
     char line[256];
     std::map<std::string, std::vector<int>> data;
-    std::vector<std::string> order; // preserve file order
     int ret = -1;
 
     if ((gf_fp = fopen("/vendor/etc/qsh_location_test.txt", "r")) != NULL) {
@@ -939,7 +923,6 @@ static int loadReqFromFile(string inputKey) {
         } else {
             printf("test not defined\n");
         }
-        test_loc_start(QUIT_REQUEST, 0);
     } else {
         LOC_LOGe("Cannot open qsh_location_test.txt for read!");
         printf("Cannot open qsh_location_test.txt for read!\n");
@@ -983,7 +966,7 @@ int main(int argc, char *argv[]) {
 
     if (argc == 2) {
         ret = loadReqFromFile(argv[1]);
-        exit_loop = 1;
+        return ret;
     }
 
     while (0 == exit_loop) {
@@ -1051,7 +1034,6 @@ int main(int argc, char *argv[]) {
                     if (pch != NULL) {
                         measRate = atoi(pch);
                     }
-
                     ret = test_loc_start(DATA_START_REQUEST, measRate);
                     measInProgress = 1;
                     if (0 == ret) {
@@ -1073,12 +1055,7 @@ int main(int argc, char *argv[]) {
 
     if (myIsession){
         myIsession->close();
-        myIsession.reset();
     }
-
-    // Explicitly destroy lookup before exiting main to ensure any
-    // internal resources/threads it owns are cleaned up deterministically.
-    lookup.~LocIsession();
 
     LOC_LOGd("Sensors Location Test completed - Exiting");
     return ret;

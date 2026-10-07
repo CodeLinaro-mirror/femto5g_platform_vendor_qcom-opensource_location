@@ -10,6 +10,7 @@
 syntax = "proto2";
 import "nanopb.proto";
 import "sns_std.proto";
+import "sns_std_sensor.proto";
 
 option optimize_for = LITE_RUNTIME;
 
@@ -51,6 +52,52 @@ enum qsh_loc_test_request
 
   // geofence test
   QSH_LOC_TEST_GEOFENCE = 4;
+
+  // location test cases via qsh_sensor_client (mirrors qsh-location-test TC1-TC7)
+  QSH_LOC_TEST_TC1_MULTI_CLIENT_CLIENT_REF = 8;
+  QSH_LOC_TEST_TC2_OPEN_CLOSE_CLIENT_REF = 9;
+  QSH_LOC_TEST_TC3_START_STOP_CLIENT_REF = 10;
+  QSH_LOC_TEST_TC4_FIRST_FIX_CLIENT_REF = 11;
+  QSH_LOC_TEST_TC5_FIRST_MEAS_EPOCH_CLIENT_REF = 12;
+  QSH_LOC_TEST_TC6_CAPS_VERSION_CLIENT_REF = 13;
+  QSH_LOC_TEST_TC7_REQUEST_SWITCH_CLIENT_REF = 14;
+
+  // single-client position/measurement test cases via qsh_sensor_client
+  QSH_LOC_TEST_TC8_POSITION_CLIENT_REF = 5;
+  QSH_LOC_TEST_TC9_MEAS_AND_CLK_CLIENT_REF = 6;
+  QSH_LOC_TEST_TC10_POSITION_MEAS_AND_CLK_CLIENT_REF = 7;
+
+  // geofence test cases via qsh_sensor_client (mirrors qsh-geofence-test subcommands)
+  QSH_LOC_TEST_TC11_GEOFENCE_ADD_CLIENT_REF = 15;
+  QSH_LOC_TEST_TC12_GEOFENCE_REMOVE_CLIENT_REF = 16;
+  QSH_LOC_TEST_TC13_GEOFENCE_MODIFY_CLIENT_REF = 17;
+  QSH_LOC_TEST_TC14_GEOFENCE_PAUSE_CLIENT_REF = 18;
+  QSH_LOC_TEST_TC15_GEOFENCE_RESUME_CLIENT_REF = 19;
+
+  // TC16: full location lifecycle (OPEN -> caps/version -> POSITION ->
+  // MEAS_AND_CLK -> session-options -> CLOSE) in one request.
+  // TC17: full geofence lifecycle (ADD -> MODIFY -> PAUSE -> RESUME ->
+  // REMOVE) in one request.
+  QSH_LOC_TEST_TC16_LOCATION_FULL_LIFECYCLE_CLIENT_REF = 20;
+  QSH_LOC_TEST_TC17_GEOFENCE_FULL_LIFECYCLE_CLIENT_REF = 21;
+
+  // Location test cases promoting the remaining qsh_location_sensor_client_ref
+  // use cases not already covered above, each with sessionMode/pdrMode/
+  // maxMeasCount forwarded from this request's own fields.
+  QSH_LOC_TEST_TC18_ONE_SHOT_POSITION_CLIENT_REF = 22;
+  QSH_LOC_TEST_TC19_ONE_SHOT_MEAS_AND_CLK_CLIENT_REF = 23;
+  QSH_LOC_TEST_TC20_SUSTAINED_POSITION_TRACKING_CLIENT_REF = 24;
+  QSH_LOC_TEST_TC21_SUSTAINED_MEAS_TRACKING_CLIENT_REF = 25;
+  QSH_LOC_TEST_TC22_LOCATION_REQUEST_SWITCH_CLIENT_REF = 26;
+  QSH_LOC_TEST_TC23_SESSION_OPTIONS_CLIENT_REF = 27;
+
+  // Geofence test cases calling qsh_geofence_sensor_client_ref's per-
+  // subcommand functions directly, one subcommand per request.
+  QSH_LOC_TEST_TC24_GEOFENCE_REF_ADD_CLIENT_REF = 28;
+  QSH_LOC_TEST_TC25_GEOFENCE_REF_MODIFY_CLIENT_REF = 29;
+  QSH_LOC_TEST_TC26_GEOFENCE_REF_PAUSE_CLIENT_REF = 30;
+  QSH_LOC_TEST_TC27_GEOFENCE_REF_RESUME_CLIENT_REF = 31;
+  QSH_LOC_TEST_TC28_GEOFENCE_REF_REMOVE_CLIENT_REF = 32;
 }
 
 enum qsh_loc_test_geofence_breach_type_mask
@@ -101,10 +148,26 @@ message qsh_loc_test_geofence_specification
   optional float radius = 7;
 }
 
+// Per-client parameters for TC1_MULTI_CLIENT_CLIENT_REF's concurrent clients.
+message qsh_loc_test_client_params
+{
+  // session mode; matches qsh_location.proto's qsh_location_session_mode
+  // (kept as uint32 since qsh_loc_test and qsh_location are separate proto targets)
+  optional uint32 sessionMode = 1;
+
+  // PDR mode; matches qsh_location.proto's qsh_location_pdr_mode
+  optional uint32 pdrMode = 2;
+
+  // max measurement reports this client wishes to receive
+  optional uint32 maxMeasCount = 3;
+
+  // interval between positions/measurements in ms, for this client
+  optional uint32 interval = 4;
+}
+
 message qsh_loc_test_config
 {
-  // indicate if positions, measurements/clock,
-  // positions and measurements/clock or geofences test is requested
+  // indicate which test is requested, see qsh_loc_test_request
   required qsh_loc_test_request loc_test_request = 1;
 
   // the required interval between positions or measurements in ms
@@ -112,10 +175,42 @@ message qsh_loc_test_config
 
   // array of geofence specifications, see qsh_loc_test_geofence_specification
   repeated qsh_loc_test_geofence_specification specs = 3;
+
+  // session mode for single-client _CLIENT_REF tests, see qsh_loc_test_client_params
+  optional uint32 sessionMode = 4;
+
+  // PDR mode for single-client _CLIENT_REF tests, see qsh_loc_test_client_params
+  optional uint32 pdrMode = 5;
+
+  // max measurement reports to receive, for single-client _CLIENT_REF tests
+  optional uint32 maxMeasCount = 6;
+
+  // seconds to wait for a result before declaring FAIL; falls back to a
+  // hardcoded default per test if unset (0)
+  optional uint32 timeout = 7;
+
+  // cycle count for TC2_OPEN_CLOSE_CLIENT_REF / TC3_START_STOP_CLIENT_REF
+  optional uint32 iterations = 8;
+
+  // per-client parameters for TC1_MULTI_CLIENT_CLIENT_REF
+  repeated qsh_loc_test_client_params client_params = 9;
+
+  // sustained-tracking window in seconds; if unset (0), affected tests
+  // default to one-shot (stop after the first fix/epoch)
+  optional uint32 duration = 10;
 }
 
 message qsh_loc_test_ack
 {
-  // The command/report was succesful or not (true/false)
+  // true == FAILED, false == PASSED. Note: opposite polarity from
+  // qsh_location_ack.error / qsh_geofence_ack.error (true == success there).
   required bool error = 1;
+
+  // the command (see qsh_loc_test_request) this ACK is for; optional for
+  // backward compatibility with older sensor images
+  optional qsh_loc_test_request command = 2;
+
+  // driver-assigned geofence id(s), set only on ADD/REF_ADD acks; thread
+  // into specs[i].id for a later REMOVE/MODIFY/PAUSE/RESUME call
+  repeated uint32 ids = 3;
 }

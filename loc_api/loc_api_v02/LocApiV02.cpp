@@ -267,7 +267,6 @@ LocApiV02::LocApiV02(LOC_API_ADAPTER_EVENT_MASK_T exMask, ContextBase* context):
     mDwellAlignTimeMsValid(0),
     mDwellAlignTimeMs(0),
     mLastSessionStopTimestampInMs(0),
-    mMsaSessionTimeOutMs(0),
     mPreferredSignalType(QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GPS_L1CA_V02),
     mPreferredSvSystemType(GNSS_SV_TYPE_GPS) {
   // initialize loc_sync_req interface
@@ -7156,7 +7155,11 @@ void LocApiV02::reportEngDebugDataInfo(const qmiLocEngineDebugDataIndMsgT_v02*
         gnssEngineDebugDataInfo.galXtraMask = pLocEngDbgDataInfoIndMsg->galXtraMask;
     }
 
-    if (pLocEngDbgDataInfoIndMsg->qzssXtraMask_valid) {
+    if (pLocEngDbgDataInfoIndMsg->qzssXtraMaskExt_valid) {
+        gnssEngineDebugDataInfo.xtraValidMask =
+            gnssEngineDebugDataInfo.xtraValidMask | QZSS_XTRA_VALID_BIT;
+        gnssEngineDebugDataInfo.qzssXtraMask = pLocEngDbgDataInfoIndMsg->qzssXtraMaskExt;
+    } else if (pLocEngDbgDataInfoIndMsg->qzssXtraMask_valid) {
         gnssEngineDebugDataInfo.xtraValidMask =
             gnssEngineDebugDataInfo.xtraValidMask | QZSS_XTRA_VALID_BIT;
         gnssEngineDebugDataInfo.qzssXtraMask = pLocEngDbgDataInfoIndMsg->qzssXtraMask;
@@ -7184,7 +7187,9 @@ void LocApiV02::reportEngDebugDataInfo(const qmiLocEngineDebugDataIndMsgT_v02*
         gnssEngineDebugDataInfo.galEphMask = pLocEngDbgDataInfoIndMsg->galEphMask;
     }
 
-    if (pLocEngDbgDataInfoIndMsg->qzssEphMask_valid) {
+    if (pLocEngDbgDataInfoIndMsg->qzssEphMaskExt_valid) {
+        gnssEngineDebugDataInfo.qzssEphMask = pLocEngDbgDataInfoIndMsg->qzssEphMaskExt;
+    } else if (pLocEngDbgDataInfoIndMsg->qzssEphMask_valid) {
         gnssEngineDebugDataInfo.qzssEphMask = pLocEngDbgDataInfoIndMsg->qzssEphMask;
     }
 
@@ -7212,7 +7217,10 @@ void LocApiV02::reportEngDebugDataInfo(const qmiLocEngineDebugDataIndMsgT_v02*
                 pLocEngDbgDataInfoIndMsg->galHealthUnknownMask;
     }
 
-    if (pLocEngDbgDataInfoIndMsg->qzssHealthUnknownMask_valid) {
+    if (pLocEngDbgDataInfoIndMsg->qzssHealthUnknownMaskExt_valid) {
+        gnssEngineDebugDataInfo.qzssHealthUnknownMask =
+                pLocEngDbgDataInfoIndMsg->qzssHealthUnknownMaskExt;
+    } else if (pLocEngDbgDataInfoIndMsg->qzssHealthUnknownMask_valid) {
         gnssEngineDebugDataInfo.qzssHealthUnknownMask =
                 pLocEngDbgDataInfoIndMsg->qzssHealthUnknownMask;
     }
@@ -7238,7 +7246,10 @@ void LocApiV02::reportEngDebugDataInfo(const qmiLocEngineDebugDataIndMsgT_v02*
         gnssEngineDebugDataInfo.galHealthGoodMask = pLocEngDbgDataInfoIndMsg->galHealthGoodMask;
     }
 
-    if (pLocEngDbgDataInfoIndMsg->qzssHealthGoodMask_valid) {
+    if (pLocEngDbgDataInfoIndMsg->qzssHealthGoodMaskExt_valid) {
+        gnssEngineDebugDataInfo.qzssHealthGoodMask =
+                pLocEngDbgDataInfoIndMsg->qzssHealthGoodMaskExt;
+    } else if (pLocEngDbgDataInfoIndMsg->qzssHealthGoodMask_valid) {
         gnssEngineDebugDataInfo.qzssHealthGoodMask = pLocEngDbgDataInfoIndMsg->qzssHealthGoodMask;
     }
 
@@ -7263,7 +7274,10 @@ void LocApiV02::reportEngDebugDataInfo(const qmiLocEngineDebugDataIndMsgT_v02*
         gnssEngineDebugDataInfo.galHealthBadMask = pLocEngDbgDataInfoIndMsg->galHealthBadMask;
     }
 
-    if (pLocEngDbgDataInfoIndMsg->qzssHealthBadMask_valid) {
+    if (pLocEngDbgDataInfoIndMsg->qzssHealthBadMaskExt_valid) {
+        gnssEngineDebugDataInfo.qzssHealthBadMask =
+                pLocEngDbgDataInfoIndMsg->qzssHealthBadMaskExt;
+    } else if (pLocEngDbgDataInfoIndMsg->qzssHealthBadMask_valid) {
         gnssEngineDebugDataInfo.qzssHealthBadMask = pLocEngDbgDataInfoIndMsg->qzssHealthBadMask;
     }
 
@@ -8744,6 +8758,8 @@ LocationError LocApiV02::queryBatchBuffer(size_t desiredSize, size_t &allocatedS
 }
 
 void LocApiV02::setOperationMode(GnssSuplMode mode) {
+    sendMsg(new LocApiMsg([this, mode] () {
+
     locClientReqUnionType req_union;
 
     qmiLocSetOperationModeReqMsgT_v02 set_mode_msg;
@@ -8762,19 +8778,22 @@ void LocApiV02::setOperationMode(GnssSuplMode mode) {
 
     req_union.pSetOperationModeReq = &set_mode_msg;
 
+    LOC_LOGi("operationMode: %d", set_mode_msg.operationMode);
     locSyncSendReq(QMI_LOC_SET_OPERATION_MODE_REQ_V02,
                    req_union, LOC_ENGINE_SYNC_REQUEST_TIMEOUT,
                    QMI_LOC_SET_OPERATION_MODE_IND_V02,
                    &set_mode_ind);
+
+    }));
 }
 
 void
 LocApiV02::startTimeBasedTracking(const TrackingOptions& options, LocApiResponse* adapterResponse) {
     sendMsg(new LocApiMsg([this, options, adapterResponse] () {
 
-    LOC_LOGI("startTimeBasedTracking: minInterval %u, mode %u, power mode %d, "
+    LOC_LOGI("startTimeBasedTracking: minInterval %u, power mode %d, "
              "prev in session %d, prev minInterval %u, prev power mode %u)",
-             options.minInterval, options.mode, options.powerMode,
+             options.minInterval, options.powerMode,
              mInSession, mMinInterval, mPowerMode);
     LocationError err = LOCATION_ERROR_SUCCESS;
 
@@ -8795,7 +8814,6 @@ LocApiV02::startTimeBasedTracking(const TrackingOptions& options, LocApiResponse
 
     mInSession = true;
     registerEventMask();
-    setOperationMode(options.mode);
 
     locClientStatusEnumType status;
     locClientReqUnionType req_union;
@@ -8823,20 +8841,6 @@ LocApiV02::startTimeBasedTracking(const TrackingOptions& options, LocApiResponse
     // recurrence
     start_msg.fixRecurrence_valid = 1;
     start_msg.fixRecurrence = eQMI_LOC_RECURRENCE_PERIODIC_V02;
-
-    if (options.mode == GNSS_SUPL_MODE_MSA) {
-        if (mMsaSessionTimeOutMs == 0) {
-            mMsaSessionTimeOutMs = 16000;
-            const loc_param_s_type mo_msa_timeout_table[] =
-            {
-                { "MO_MSA_SESSION_TIME_OUT_IN_MS", &mMsaSessionTimeOutMs, NULL, 'n' },
-            };
-            UTIL_READ_CONF(LOC_PATH_GPS_CONF_STR, mo_msa_timeout_table);
-        }
-        start_msg.positionReportTimeout_valid = 1;
-        start_msg.positionReportTimeout = mMsaSessionTimeOutMs;
-        LOC_LOGd("MO MSA session time out set to %d", start_msg.positionReportTimeout);
-    }
 
     // power mode
     if (options.powerMode >= GNSS_POWER_MODE_M1 && options.powerMode <= GNSS_POWER_MODE_M5) {
@@ -9322,8 +9326,6 @@ void LocApiV02::startBatching(uint32_t sessionId,
     sendMsg(new LocApiMsg([this, sessionId, options, accuracy, timeout, adapterResponse] () {
     LOC_LOGD("startBatching: session id %u minInterval %u "
              "accuracy %u timeout %u", sessionId, options.minInterval, accuracy, timeout);
-
-    setOperationMode(options.mode);
 
     //get batch size if needs
     if (mBatchSize == 0) {
