@@ -1307,7 +1307,7 @@ SynergyLocApi::SynergyLocApi(LOC_API_ADAPTER_EVENT_MASK_T exMask,
         char *errorDll = dlerror();
 
         LOC_LOGe("dlopen for %s failed, handle %p error: %s", libName, handle,
-             ((nullptr != errorDll) ? errorDll : "No Error"))
+             ((nullptr != errorDll) ? errorDll : "No Error"));
     }
 
     sllReqIf = &sllDefultReq;
