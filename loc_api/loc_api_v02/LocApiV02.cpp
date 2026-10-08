@@ -303,6 +303,10 @@ LocApiV02::LocApiV02(LOC_API_ADAPTER_EVENT_MASK_T exMask, ContextBase* context):
 
 /* Helper to free mGnssMeasurements and clear GNSS measurement caches */
 void LocApiV02::cleanupGnssResources() {
+    std::lock_guard<std::mutex> lock(mMutex);
+    if (mInSession) {
+        return;
+    }
     if (mGnssMeasurements) {
         if (mGnssMeasurements->gnssSvMeasurementSet) {
             free(mGnssMeasurements->gnssSvMeasurementSet);
@@ -591,7 +595,10 @@ enum loc_api_adapter_err LocApiV02::close() {
 
   mMask = 0;
   mQmiMask = 0;
-  mInSession = false;
+  {
+      std::lock_guard<std::mutex> lock(mMutex);
+      mInSession = false;
+  }
   mClientHandle = LOC_CLIENT_INVALID_HANDLE_VALUE;
 
   return rtv;
@@ -2952,6 +2959,10 @@ static GnssRfBand getLocApiSvRfBand(qmiLocGnssSignalTypeMaskT_v02 qmiGnssSignalT
 /* convert satellite polynomial to loc eng format and  send the converted
    report to loc eng */
 void  LocApiV02::reportSvPolynomial(const qmiLocEventGnssSvPolyIndMsgT_v02 *gnss_sv_poly_ptr) {
+    std::lock_guard<std::mutex> lock(mMutex);
+    if (!mInSession) {
+        return;
+    }
     GnssSvPolynomial  svPolynomial;
     memset(&svPolynomial, 0, sizeof(GnssSvPolynomial));
     svPolynomial.is_valid = 0;
@@ -4393,6 +4404,10 @@ void LocApiV02::reportGnssMeasurementData(
              gnss_measurement_report_ptr.leapSecondInfo.leapSec,
              gnss_measurement_report_ptr.leapSecondInfo.leapSecUnc);
 
+    std::lock_guard<std::mutex> lock(mMutex);
+    if (!mInSession) {
+        return;
+    }
     if (!mGnssMeasurements) {
         mGnssMeasurements = (GnssMeasurements*)malloc(sizeof(GnssMeasurements));
         if (!mGnssMeasurements) {
@@ -6536,9 +6551,7 @@ void LocApiV02::eventCb(locClientHandleType /*clientHandle*/,
       break;
 
     case QMI_LOC_EVENT_GNSS_MEASUREMENT_REPORT_IND_V02:
-      if (mInSession) {
-          reportGnssMeasurementData(*eventPayload.pGnssSvRawInfoEvent);
-      }
+      reportGnssMeasurementData(*eventPayload.pGnssSvRawInfoEvent);
       break;
 
     case QMI_LOC_EVENT_SV_POLYNOMIAL_REPORT_IND_V02:
@@ -8812,7 +8825,10 @@ LocApiV02::startTimeBasedTracking(const TrackingOptions& options, LocApiResponse
         }
     }
 
-    mInSession = true;
+    {
+        std::lock_guard<std::mutex> lock(mMutex);
+        mInSession = true;
+    }
     registerEventMask();
 
     locClientStatusEnumType status;
@@ -9307,7 +9323,10 @@ LocApiV02::stopTimeBasedTrackingSync(LocApiResponse* adapterResponse) {
         // Record boot timestamp in ms when session stops
         mLastSessionStopTimestampInMs = getBootTimeMilliSec();
         mIsFirstFinalFixReported = false;
-        mInSession = false;
+        {
+            std::lock_guard<std::mutex> lock(mMutex);
+            mInSession = false;
+        }
         mPowerMode = GNSS_POWER_MODE_DEFAULT;
         registerEventMask();
     }

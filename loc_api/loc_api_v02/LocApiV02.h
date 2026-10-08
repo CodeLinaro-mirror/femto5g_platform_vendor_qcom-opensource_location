@@ -42,6 +42,7 @@ SPDX-License-Identifier: BSD-3-Clause-Clear
 #include <vector>
 #include <functional>
 #include <unordered_map>
+#include <mutex>
 
 #define LOC_SEND_SYNC_REQ(NAME, ID, REQ)  \
     LocationError err = LOCATION_ERROR_SUCCESS; \
@@ -189,6 +190,8 @@ private:
   CycleSlipCountMap mCurrentCycleSlipCountMapNHz;
 
   GnssMeasurements*  mGnssMeasurements;
+  // Serializes access to the session-scoped GNSS resources and the mInSession flag
+  std::mutex mMutex;
   timeBiases mTimeBiases;
   std::unordered_map<uint32_t, GnssSvPolynomial> mSvPolynomialMap;
   qmiLocPlatformPowerStateEnumT_v02 mPlatformPowerState;
