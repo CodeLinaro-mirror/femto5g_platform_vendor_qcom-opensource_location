@@ -11329,6 +11329,10 @@ void LocApiV02::convertQmiOsnmaStateToNavMsgAuthStatus(
             if (ind.PublicKeyMerkleTreeMask & QMI_LOC_MASK_OSNMA_PUBLIC_KEY_VERIFIED_V02) {
                 gal.publicKeyStatusMask |= GAL_OSNMA_PUBLIC_KEY_VERIFIED;
             }
+            if (ind.PublicKeyMerkleTreeMask &
+                    QMI_LOC_MASK_OSNMA_ACTIVE_PUBLIC_KEY_ID_AVAILABLE_V02) {
+                gal.publicKeyStatusMask |= GAL_OSNMA_ACTIVE_PUBLIC_KEY_ID_AVAILABLE;
+            }
             gal.validityMask |= GAL_OSNMA_STATUS_PUBLIC_KEY_STATUS_VALID;
 
             gal.merkleTreeProvisioned =

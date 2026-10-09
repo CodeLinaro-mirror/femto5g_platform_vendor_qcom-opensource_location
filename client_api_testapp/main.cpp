@@ -705,10 +705,12 @@ static void onNavMsgAuthStatusCb(const NavMsgAuthStatus& navMsgAuthStatus) {
             printf("    merkleTreeProvisioned %d\n", gal.merkleTreeProvisioned);
         }
         if (gal.validityMask & GAL_OSNMA_STATUS_PUBLIC_KEY_STATUS_VALID) {
-            printf("    publicKeyStatusMask 0x%x (provisioned %d, verified %d)\n",
+            printf("    publicKeyStatusMask 0x%x (provisioned %d, verified %d, "
+                   "active PKID avail %d)\n",
                    gal.publicKeyStatusMask,
                    (gal.publicKeyStatusMask & GAL_OSNMA_PUBLIC_KEY_PROVISIONED) != 0,
-                   (gal.publicKeyStatusMask & GAL_OSNMA_PUBLIC_KEY_VERIFIED) != 0);
+                   (gal.publicKeyStatusMask & GAL_OSNMA_PUBLIC_KEY_VERIFIED) != 0,
+                   (gal.publicKeyStatusMask & GAL_OSNMA_ACTIVE_PUBLIC_KEY_ID_AVAILABLE) != 0);
         }
         if (gal.validityMask & GAL_OSNMA_STATUS_GAL_WEEK_VALID) {
             printf("    galWeek %u\n", gal.galWeek);

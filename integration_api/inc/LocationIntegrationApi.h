@@ -726,7 +726,11 @@ typedef std::function<void(
 )> LocConfigGnssSignalTypesCb;
 
 /** Specify the Galileo OSNMA public key provisioning /
- *  verification state. */
+ *  verification state. When all bits are set, the OSNMA
+ *  trust material required for processing is available.
+ *  These bits do not indicate whether navigation data
+ *  authentication has succeeded;
+ *  use the navigation-authentication masks for that result. */
 using GalOsnmaPublicKeyStatusMask = uint32_t;
 enum GalOsnmaPublicKeyStatusBits : uint32_t {
     /** The public key is installed on the device. When no bits are
@@ -734,6 +738,8 @@ enum GalOsnmaPublicKeyStatusBits : uint32_t {
     GAL_OSNMA_PUBLIC_KEY_PROVISIONED = 1u << 0,
     /** The public key has been verified against the Merkle tree. */
     GAL_OSNMA_PUBLIC_KEY_VERIFIED    = 1u << 1,
+    /** The active public-key ID from a Galileo DSM-KROOT message has been decoded. */
+    GAL_OSNMA_ACTIVE_PUBLIC_KEY_ID_AVAILABLE = 1u << 2,
 };
 
 /** Specify which fields of GalOsnmaStatus carry a value. The
@@ -773,7 +779,7 @@ struct GalOsnmaStatus {
     bool                                featureEnabled;
     /** Galileo OSNMA Merkle tree is installed on the device. */
     bool                                merkleTreeProvisioned;
-    /** Galileo OSNMA public key installation and validation state. */
+    /** Galileo OSNMA public key installation/validation/active-PKID state. */
     GalOsnmaPublicKeyStatusMask         publicKeyStatusMask;
     /** Galileo System week number when this report was generated. */
     uint16_t galWeek;
