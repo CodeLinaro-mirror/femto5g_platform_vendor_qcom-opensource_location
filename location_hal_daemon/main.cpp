@@ -81,9 +81,9 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 int main(int argc, char *argv[])
 {
 
-#ifdef LOC_USE_DLT
-    registerDltApp("LHD", "Location HAL Daemon");
-    registerDltContexts(LHD_CONTEXTS, LHD_CONTEXTS_COUNT);
+#if defined(LOC_USE_CLOG) || defined(LOC_USE_DLT)
+    locRegisterLogApp("LHD", "Location HAL Daemon");
+    locRegisterLogContexts(LHD_CONTEXTS, LHD_CONTEXTS_COUNT);
 #endif
 
     configParamToRead configParamRead = {};
@@ -195,9 +195,9 @@ int main(int argc, char *argv[])
         LOC_LOGd("Failed to start LocationApiService.");
     }
 
-#ifdef LOC_USE_DLT
-    deregisterDltContexts(LHD_CONTEXTS, LHD_CONTEXTS_COUNT);
-    deregisterDltApp();
+#if defined(LOC_USE_CLOG) || defined(LOC_USE_DLT)
+    locUnregisterLogContexts(LHD_CONTEXTS, LHD_CONTEXTS_COUNT);
+    locUnregisterLogApp();
 #endif
 
     // should not reach here...

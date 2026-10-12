@@ -289,14 +289,6 @@ private:
   /* Convert error from loc_api_v02 to loc eng format*/
   static enum loc_api_adapter_err convertErr(locClientStatusEnumType status);
 
-  /* convert Ni Encoding type from QMI_LOC to loc eng format */
-  static GnssNiEncodingType convertNiEncoding(
-    qmiLocNiDataCodingSchemeEnumT_v02 loc_encoding);
-
-  /*convert NI notify verify type from QMI LOC to loc eng format*/
-  static bool convertNiNotifyVerifyType (GnssNiNotification *notif,
-      qmiLocNiNotifyVerifyEnumT_v02 notif_priv);
-
   /*convert signal type to carrier frequency*/
   static double convertSignalTypeToCarrierFrequency(
       qmiLocGnssSignalTypeMaskT_v02 signalType,
@@ -595,7 +587,7 @@ public:
     deleteAidingData(const GnssAidingData& data, LocApiResponse *adapterResponse);
 
   virtual void
-    informNiResponse(GnssNiResponse userResponse, const void* passThroughData);
+    informNiResponse(GnssNiResponse userResponse, const void* passThroughData) {}
 
   virtual LocationError
     setServerSync(const char* url, int len, LocServerType type);
@@ -679,6 +671,9 @@ public:
         qmiLocGNSSConstellEnumT_v02 qmiSecondaryBandConfig,
         GnssSvTypeConfig& secondaryBandConfig);
 
+  void convertQmiOsnmaStateToNavMsgAuthStatus(
+        const qmiLocGetOsnmaStateIndMsgT_v02& ind, NavMsgAuthStatus& out);
+
   virtual void configPrecisePositioning(uint32_t featureId, bool enable,
           std::string appHash, LocApiResponse* adapterResponse=nullptr);
   /* Requests for SV/Constellation Control */
@@ -698,6 +693,9 @@ public:
           LocApiResponse* adapterResponse=nullptr);
 
   virtual void configOsnmaEnablement(bool enable, LocApiResponse* adapterResponse=nullptr);
+
+  virtual void getNavMsgAuthStatus(GnssSvType svType, uint32_t sessionId,
+          LocApiResponse* adapterResponse=nullptr);
 
   virtual void getConstellationMultiBandConfig(uint32_t sessionId,
                                       LocApiResponse* adapterResponse=nullptr);

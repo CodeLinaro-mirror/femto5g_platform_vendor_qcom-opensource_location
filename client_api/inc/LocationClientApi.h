@@ -3605,9 +3605,10 @@ typedef std::function<void(
 )> GnssEphReportCb;
 
 /** @brief
-    GNSSExtendedDataInfoCb is for receiving gnss extended Data
+    GNSSExtendedDataInfoCb is for receiving gnss extended Data. This API is deprecated on
+    certain Product lines. Recommendation is to use SvResidualReportCb.
     <br/>
-    @param payload: vectory of binary data
+    @param payload: vector of binary data
            <br/>
 */
 typedef std::function<void(
@@ -3740,7 +3741,9 @@ struct EngineReportCbs {
      * Recommend to use NmeaSentencesCb. <br/> */
     NmeaSentencesCb nmeaSentencesCallback;
     /** Callback to receive GNSS Extended Data from modem GNSS
-     *  engine. <br/> */
+     *  engine.
+     *  This API is deprecated on certain software product lines.
+     *  Recommended to use SvResidualReportCb <br/> */
     GNSSExtendedDataInfoCb gnssExtendedDataInfoCallback;
 
     /**

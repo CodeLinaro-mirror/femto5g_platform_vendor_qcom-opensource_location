@@ -308,11 +308,11 @@ int read_pps(pps_handle *handle)
         skipPulseCnt = skipPPSPulseCnt;
         isFirstPulseReceived = true;
         LOC_LOGV("%s:%d first pps pulse received %ld (sec) %ld (nsec)",
-                  __func__, __LINE__, infobuf.tv_sec, infobuf.tv_nsec)
+                  __func__, __LINE__, infobuf.tv_sec, infobuf.tv_nsec);
     }else if (isFirstPulseReceived && (skipPPSPulseCnt > 0) &&
               ((infobuf.tv_sec - prevDrsyncKernelTs.tv_sec) > gnssOutageInSec)) {
         LOC_LOGV("%s:%d long RF outage detected, ignore next %d PPS Pulses",
-                  __func__, __LINE__, skipPPSPulseCnt)
+                  __func__, __LINE__, skipPPSPulseCnt);
         skipPulseCnt = skipPPSPulseCnt;
     }
     prevDrsyncKernelTs.tv_sec = infobuf.tv_sec;

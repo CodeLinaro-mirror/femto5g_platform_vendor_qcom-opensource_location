@@ -52,8 +52,8 @@ enum LocationApiMsgVersion {
     LOCAPI_MSG_VER_MAJOR = 1;
     // Minor - New features / API addition, new message/elemtent addition.
     // Bump the last byte of version i.e. x.2 to x.3
-    // Minor version 25: Support Residual reporting
-    LOCAPI_MSG_VER_MINOR = 26;
+    // Minor version 27: add navigation message authentication status reporting
+    LOCAPI_MSG_VER_MINOR = 27;
 }
 
 // ============================================================================
@@ -191,6 +191,9 @@ enum PBELocMsgID {
     PB_E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_REQ_MSG_ID = 312;
     PB_E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_RESP_MSG_ID = 313;
     PB_E_INTAPI_NETWORK_UPDATE_INFO_MSG_ID = 314;
+
+    PB_E_INTAPI_GET_NAV_MSG_AUTH_STATUS_REQ_MSG_ID = 315;
+    PB_E_INTAPI_GET_NAV_MSG_AUTH_STATUS_RESP_MSG_ID = 316;
 }
 
 enum PBClientType {
@@ -752,6 +755,34 @@ message PBLocConfigRegisterGnssSignalTypesUpdateReqMsg {
 // PB_E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_RESP_MSG_ID
 message PBLocConfigRegisterGnssSignalTypesUpdateRespMsg {
     uint32 mSignalTypeMask = 1; //Specifies GNSS signal type - bitwise OR of PBGnssSignalTypeMask
+}
+
+// Galileo OSNMA navigation message authentication status.
+message PBGalOsnmaStatus {
+    uint32 validityMask = 1;           // bitwise OR of GalOsnmaStatusValidityBits
+    bool   featureEnabled = 2;
+    bool   merkleTreeProvisioned = 3;
+    uint32 publicKeyStatusMask = 4;    // bitwise OR of GalOsnmaPublicKeyStatusBits
+    uint32 galWeek = 5;
+    uint32 galSecOfWeek = 6;
+    uint64 navDataAuthPassedMask = 7;
+    uint64 navDataAuthFailedMask = 8;
+}
+
+// Navigation message authentication status, constellation-discriminated.
+message PBNavMsgAuthStatus {
+    uint32 constellation = 1;          // GnssSvType value
+    PBGalOsnmaStatus galOsnmaStatus = 2;
+}
+
+// defintion for message with msg id of PB_E_INTAPI_GET_NAV_MSG_AUTH_STATUS_REQ_MSG_ID
+message PBLocConfigGetNavMsgAuthStatusReqMsg {
+    uint32 mSvType = 1;                // GnssSvType constellation to query
+}
+
+// defintion for message with msg id of PB_E_INTAPI_GET_NAV_MSG_AUTH_STATUS_RESP_MSG_ID
+message PBLocConfigGetNavMsgAuthStatusRespMsg {
+    PBNavMsgAuthStatus mNavMsgAuthStatus = 1;
 }
 
 //*****************************

@@ -377,6 +377,7 @@ LocationClientApi::LocationClientApi(CapabilitiesCb capaCb) {
 }
 
 LocationClientApi::~LocationClientApi() {
+    LOC_LOGe("");
 }
 
 void LocationClientApi::destroy(LocClientDestroyCb destroyCompleteCb) {

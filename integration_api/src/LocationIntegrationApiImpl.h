@@ -221,6 +221,7 @@ public:
     uint32_t configMerkleTree(const char * merkleTreeXml, int xmlSize);
     uint32_t configOsnmaEnablement(bool isEnabled);
     uint32_t registerGnssSignalTypesUpdate(bool registerUpdate);
+    uint32_t getNavMsgAuthStatus(GnssSvType svType);
 
 private:
     ~LocationIntegrationApiImpl();
@@ -244,6 +245,8 @@ private:
             const LocConfigGetXtraStatusRespMsg* pRespMsg);
     void processRegisterGnssSignalTypesRespCb(
             const LocConfigRegisterGnssSignalTypesUpdateRespMsg* msg);
+    void processGetNavMsgAuthStatusRespCb(
+            const LocConfigGetNavMsgAuthStatusRespMsg* msg);
 
     // protobuf conversion util class
     LocationApiPbMsgConv mPbufMsgConv;

@@ -815,6 +815,9 @@ static const locClientRespIndTableStructT locClientRespIndTable[]= {
 
    { QMI_LOC_SET_OSNMA_STATE_IND_V02,
      sizeof(qmiLocGenReqStatusIndMsgT_v02) },
+
+   { QMI_LOC_GET_OSNMA_STATE_IND_V02,
+       sizeof(qmiLocGetOsnmaStateIndMsgT_v02) },
 };
 
 
@@ -1952,6 +1955,7 @@ bool validateRequest(
     case QMI_LOC_GET_ROBUST_LOCATION_CONFIG_REQ_V02:
     case QMI_LOC_GET_MIN_GPS_WEEK_NUMBER_REQ_V02:
     case QMI_LOC_GET_MULTIBAND_CONFIG_REQ_V02:
+    case QMI_LOC_GET_OSNMA_STATE_REQ_V02:
     {
       noPayloadFlag = true;
       break;

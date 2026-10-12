@@ -1090,8 +1090,16 @@ bool LocationIntegrationApi::registerGnssSignalTypesUpdate(bool registerUpdate) 
     }
 }
 
-bool LocationIntegrationApi::injectMapMatchedData(const mapMatchedFeedbackData& mapData) {
+bool LocationIntegrationApi::getNavMsgAuthStatus(location_client::GnssSvType svType) {
+    if (mApiImpl) {
+        return (mApiImpl->getNavMsgAuthStatus((::GnssSvType)svType) == 0);
+    } else {
+        LOC_LOGe ("NULL mApiImpl");
+        return false;
+    }
+}
 
+bool LocationIntegrationApi::injectMapMatchedData(const mapMatchedFeedbackData& mapData) {
     if (mApiImpl) {
         GnssMapMatchedData mmfData = {};
         if (LOC_HAS_VALID_MMFD_UTC_TIME & mapData.validityMask) {
