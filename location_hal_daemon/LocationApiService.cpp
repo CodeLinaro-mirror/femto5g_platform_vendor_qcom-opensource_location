@@ -2147,7 +2147,6 @@ void LocationApiService::getSinglePos(LocAPIGetSinglePosReqMsg* pReqMsg) {
             LOC_LOGe("failed to create LocationAPI to serve single shot fix requests");
             return;
         }
-        mSingleFixLocationApi->enableNetworkProvider();
     }
 
     mSingleFixReqMap.erase(clientName);
