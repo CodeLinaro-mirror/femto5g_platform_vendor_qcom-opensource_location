@@ -365,6 +365,9 @@ enum ELocMsgID {
 
     E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_REQ_MSG_ID = 312,
     E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_RESP_MSG_ID = 313,
+
+    E_INTAPI_GET_NAV_MSG_AUTH_STATUS_REQ_MSG_ID = 315,
+    E_INTAPI_GET_NAV_MSG_AUTH_STATUS_RESP_MSG_ID = 316,
 };
 
 const char* LocApiMsgString(ELocMsgID msgId);
@@ -1761,6 +1764,39 @@ struct LocConfigGetXtraStatusRespMsg: LocAPIMsgHeader
     LocConfigGetXtraStatusRespMsg(const char* name,
                                   const PBLocConfigGetXtraStatusRespMsg &pbGetXtraStatusMsg,
                                   const LocationApiPbMsgConv *pbMsgConv);
+
+    int serializeToProtobuf(string& protoStr) override;
+};
+
+/**************** Nav msg auth (OSNMA) status section ****************/
+struct LocConfigGetNavMsgAuthStatusReqMsg: LocAPIMsgHeader
+{
+    GnssSvType mSvType;
+
+    inline LocConfigGetNavMsgAuthStatusReqMsg(const char* name,
+                                              GnssSvType svType,
+                                              const LocationApiPbMsgConv *pbMsgConv) :
+        LocAPIMsgHeader(name, E_INTAPI_GET_NAV_MSG_AUTH_STATUS_REQ_MSG_ID, pbMsgConv),
+        mSvType(svType) { }
+    LocConfigGetNavMsgAuthStatusReqMsg(const char* name,
+                                       const PBLocConfigGetNavMsgAuthStatusReqMsg &pbMsg,
+                                       const LocationApiPbMsgConv *pbMsgConv);
+
+    int serializeToProtobuf(string& protoStr) override;
+};
+
+struct LocConfigGetNavMsgAuthStatusRespMsg: LocAPIMsgHeader
+{
+    NavMsgAuthStatus mNavMsgAuthStatus;
+
+    inline LocConfigGetNavMsgAuthStatusRespMsg(const char* name,
+                                               NavMsgAuthStatus navMsgAuthStatus,
+                                               const LocationApiPbMsgConv *pbMsgConv) :
+        LocAPIMsgHeader(name, E_INTAPI_GET_NAV_MSG_AUTH_STATUS_RESP_MSG_ID, pbMsgConv),
+        mNavMsgAuthStatus(navMsgAuthStatus) { }
+    LocConfigGetNavMsgAuthStatusRespMsg(const char* name,
+                                        const PBLocConfigGetNavMsgAuthStatusRespMsg &pbMsg,
+                                        const LocationApiPbMsgConv *pbMsgConv);
 
     int serializeToProtobuf(string& protoStr) override;
 };

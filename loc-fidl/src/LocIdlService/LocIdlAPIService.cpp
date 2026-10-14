@@ -48,7 +48,9 @@ static void onResponseCb(location_client::LocationResponse response) {
 class LocationTrackingSessCbHandler {
     public:
         LocationTrackingSessCbHandler(const LocIdlAPIService *pClientApiService,
-                const uint32_t &reportCbMask) {
+                const uint32_t &reportCbMask): mCallbackOptions{},
+            mEngineCallbackOptions{},
+            mLcaLocReqEngMask{} {
             if (NULL != pClientApiService) {
                 LOC_LOGd(" ==== LocationTrackingSessCbHandler --> ");
                 memset(&mCallbackOptions, 0, sizeof(GnssReportCbs));
@@ -106,7 +108,10 @@ class LocationTrackingSessCbHandler {
         }
 
         LocationTrackingSessCbHandler(const LocIdlAPIService *pClientApiService,
-                const uint32_t &locReqEngMask, const uint32_t &engReportCallbackMask) {
+                const uint32_t &locReqEngMask, const uint32_t &engReportCallbackMask):
+            mCallbackOptions{},
+            mEngineCallbackOptions{},
+            mLcaLocReqEngMask{} {
             if (NULL != pClientApiService) {
                 memset(&mEngineCallbackOptions, 0, sizeof(EngineReportCbs));
 
@@ -1164,9 +1169,9 @@ int main() {
         return 0;
     }
 
-#ifdef LOC_USE_DLT
-    registerDltApp("LIDL", "Location IDL Service");
-    registerDltContexts(LOC_IDL_SERVICE_CONTEXTS, LOC_IDL_SERVICE_CONTEXTS_COUNT);
+#if defined(LOC_USE_CLOG) || defined(LOC_USE_DLT)
+    locRegisterLogApp("LIDL", "Location IDL Service");
+    locRegisterLogContexts(LOC_IDL_SERVICE_CONTEXTS, LOC_IDL_SERVICE_CONTEXTS_COUNT);
 #endif
 
     static loc_param_s_type locIdlServiceConfEntryTable[] = {
@@ -1196,9 +1201,9 @@ int main() {
         }
     }
 
-#ifdef LOC_USE_DLT
-    deregisterDltContexts(LOC_IDL_SERVICE_CONTEXTS, LOC_IDL_SERVICE_CONTEXTS_COUNT);
-    deregisterDltApp();
+#if defined(LOC_USE_CLOG) || defined(LOC_USE_DLT)
+    locUnregisterLogContexts(LOC_IDL_SERVICE_CONTEXTS, LOC_IDL_SERVICE_CONTEXTS_COUNT);
+    locUnregisterLogApp();
 #endif
 
     return 0;

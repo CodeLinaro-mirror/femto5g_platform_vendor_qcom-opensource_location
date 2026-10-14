@@ -226,6 +226,10 @@ const char* LocApiMsgString(ELocMsgID msgId) {
         return "E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_RESP_MSG_ID";
     case E_INTAPI_CONFIG_MAP_MATCHED_FEEDBACK_MSG_ID:
         return "E_INTAPI_CONFIG_MAP_MATCHED_FEEDBACK_MSG_ID";
+    case E_INTAPI_GET_NAV_MSG_AUTH_STATUS_REQ_MSG_ID:
+        return "E_INTAPI_GET_NAV_MSG_AUTH_STATUS_REQ_MSG_ID";
+    case E_INTAPI_GET_NAV_MSG_AUTH_STATUS_RESP_MSG_ID:
+        return "E_INTAPI_GET_NAV_MSG_AUTH_STATUS_RESP_MSG_ID";
     default:
         return "unknown ELocMsgID";
     }
@@ -3364,6 +3368,101 @@ int LocConfigRegisterGnssSignalTypesUpdateRespMsg::serializeToProtobuf(string& p
     return protoStr.size();
 }
 
+// Convert LocConfigGetNavMsgAuthStatusReqMsg ->
+// PBLocConfigGetNavMsgAuthStatusReqMsg
+int LocConfigGetNavMsgAuthStatusReqMsg::serializeToProtobuf(string& protoStr) {
+    PBLocAPIMsgHeader pLocApiMsgHdr;
+    PBLocConfigGetNavMsgAuthStatusReqMsg pbMsg;
+
+    if (nullptr == pLocApiPbMsgConv) {
+        LOC_LOGe("pLocApiPbMsgConv is null!");
+        return 0;
+    }
+    // string      mSocketName = 1;
+    pLocApiMsgHdr.set_msocketname(mSocketName);
+    // PBELocMsgID  msgId = 2;
+    pLocApiMsgHdr.set_msgid(pLocApiPbMsgConv->getPBEnumForELocMsgID(msgId));
+    // uint32   msgVersion = 3;
+    pLocApiMsgHdr.set_msgversion(msgVersion);
+
+    // uint32 mSvType = 1;
+    pbMsg.set_msvtype((uint32_t)mSvType);
+
+    string pbStr;
+    if (!pbMsg.SerializeToString(&pbStr)) {
+        LOC_LOGe("SerializeToString failed!");
+        return 0;
+    }
+    // bytes       payload = 4;
+    pLocApiMsgHdr.set_payload(pbStr);
+    // uint32   payloadSize = 5;
+    pLocApiMsgHdr.set_payloadsize(sizeof(LocConfigGetNavMsgAuthStatusReqMsg));
+
+    if (!pLocApiMsgHdr.SerializeToString(&protoStr)) {
+        LOC_LOGe("SerializeToString on pLocApiMsgHdr failed!");
+        return 0;
+    }
+    return protoStr.size();
+}
+
+// Convert LocConfigGetNavMsgAuthStatusRespMsg ->
+// PBLocConfigGetNavMsgAuthStatusRespMsg
+int LocConfigGetNavMsgAuthStatusRespMsg::serializeToProtobuf(string& protoStr) {
+    PBLocAPIMsgHeader pLocApiMsgHdr;
+    PBLocConfigGetNavMsgAuthStatusRespMsg pbMsg;
+
+    if (nullptr == pLocApiPbMsgConv) {
+        LOC_LOGe("pLocApiPbMsgConv is null!");
+        return 0;
+    }
+    // string      mSocketName = 1;
+    pLocApiMsgHdr.set_msocketname(mSocketName);
+    // PBELocMsgID  msgId = 2;
+    pLocApiMsgHdr.set_msgid(pLocApiPbMsgConv->getPBEnumForELocMsgID(msgId));
+    // uint32   msgVersion = 3;
+    pLocApiMsgHdr.set_msgversion(msgVersion);
+
+    // PBNavMsgAuthStatus mNavMsgAuthStatus = 1;
+    PBNavMsgAuthStatus *pbNavMsgAuthStatus = pbMsg.mutable_mnavmsgauthstatus();
+    if (nullptr != pbNavMsgAuthStatus) {
+        pbNavMsgAuthStatus->set_constellation((uint32_t)mNavMsgAuthStatus.constellation);
+        PBGalOsnmaStatus *pbGal = pbNavMsgAuthStatus->mutable_galosnmastatus();
+        if (nullptr != pbGal) {
+            const GalOsnmaStatus& gal = mNavMsgAuthStatus.navMsgAuthInfo.galOsnmaStatus;
+            pbGal->set_validitymask(gal.validityMask);
+            pbGal->set_featureenabled(gal.featureEnabled);
+            pbGal->set_merkletreeprovisioned(gal.merkleTreeProvisioned);
+            pbGal->set_publickeystatusmask(gal.publicKeyStatusMask);
+            pbGal->set_galweek(gal.galWeek);
+            pbGal->set_galsecofweek(gal.galSecOfWeek);
+            pbGal->set_navdataauthpassedmask(gal.navDataAuthPassedMask);
+            pbGal->set_navdataauthfailedmask(gal.navDataAuthFailedMask);
+        } else {
+            LOC_LOGe("mutable_galosnmastatus failed");
+            return 0;
+        }
+    } else {
+        LOC_LOGe("mutable_mnavmsgauthstatus failed");
+        return 0;
+    }
+
+    string pbStr;
+    if (!pbMsg.SerializeToString(&pbStr)) {
+        LOC_LOGe("SerializeToString on pbMsg failed!");
+        return 0;
+    }
+    // bytes       payload = 4;
+    pLocApiMsgHdr.set_payload(pbStr);
+    // uint32   payloadSize = 5;
+    pLocApiMsgHdr.set_payloadsize(sizeof(LocConfigGetNavMsgAuthStatusRespMsg));
+
+    if (!pLocApiMsgHdr.SerializeToString(&protoStr)) {
+        LOC_LOGe("SerializeToString on pLocApiMsgHdr failed!");
+        return 0;
+    }
+    return protoStr.size();
+}
+
 
 // Convert LocAPIGetAntennaInfoMsg ->
 // PBLocAPIGetAntennaInfoMsg
@@ -4410,6 +4509,44 @@ LocConfigRegisterGnssSignalTypesUpdateRespMsg::LocConfigRegisterGnssSignalTypesU
         LocAPIMsgHeader(name, E_INTAPI_REGISTER_GNSS_SIGNAL_TYPES_UPDATE_RESP_MSG_ID, pbMsgConv) {
     mSignalTypeMask = pLocApiPbMsgConv->getPBMaskForGnssSignalTypeMask(pbMsg.msignaltypemask());
     LOC_LOGd("supported GNSS signal type: %x", mSignalTypeMask);
+}
+
+// Decode PBLocConfigGetNavMsgAuthStatusReqMsg ->
+// LocConfigGetNavMsgAuthStatusReqMsg
+LocConfigGetNavMsgAuthStatusReqMsg::LocConfigGetNavMsgAuthStatusReqMsg(
+        const char* name, const PBLocConfigGetNavMsgAuthStatusReqMsg &pbMsg,
+        const LocationApiPbMsgConv *pbMsgConv) :
+        LocAPIMsgHeader(name, E_INTAPI_GET_NAV_MSG_AUTH_STATUS_REQ_MSG_ID, pbMsgConv) {
+    mSvType = (GnssSvType)pbMsg.msvtype();
+    LOC_LOGd("nav msg auth status query svType: %d", (int)mSvType);
+}
+
+// Decode PBLocConfigGetNavMsgAuthStatusRespMsg ->
+// LocConfigGetNavMsgAuthStatusRespMsg
+LocConfigGetNavMsgAuthStatusRespMsg::LocConfigGetNavMsgAuthStatusRespMsg(
+        const char* name, const PBLocConfigGetNavMsgAuthStatusRespMsg &pbMsg,
+        const LocationApiPbMsgConv *pbMsgConv) :
+        LocAPIMsgHeader(name, E_INTAPI_GET_NAV_MSG_AUTH_STATUS_RESP_MSG_ID, pbMsgConv) {
+    memset(&mNavMsgAuthStatus, 0, sizeof(mNavMsgAuthStatus));
+    const PBNavMsgAuthStatus& pbStatus = pbMsg.mnavmsgauthstatus();
+    mNavMsgAuthStatus.constellation = (GnssSvType)pbStatus.constellation();
+    if (mNavMsgAuthStatus.constellation == GNSS_SV_TYPE_GALILEO) {
+        const PBGalOsnmaStatus& pbGal = pbStatus.galosnmastatus();
+        GalOsnmaStatus& gal = mNavMsgAuthStatus.navMsgAuthInfo.galOsnmaStatus;
+        gal.validityMask = pbGal.validitymask();
+        gal.featureEnabled = pbGal.featureenabled();
+        gal.merkleTreeProvisioned = pbGal.merkletreeprovisioned();
+        gal.publicKeyStatusMask = pbGal.publickeystatusmask();
+        gal.galWeek = (uint16_t)pbGal.galweek();
+        gal.galSecOfWeek = pbGal.galsecofweek();
+        gal.navDataAuthPassedMask = pbGal.navdataauthpassedmask();
+        gal.navDataAuthFailedMask = pbGal.navdataauthfailedmask();
+        LOC_LOGd("nav msg auth status resp constellation: %d, validityMask: 0x%x",
+                (int)mNavMsgAuthStatus.constellation, gal.validityMask);
+    } else {
+        LOC_LOGd("nav msg auth status resp constellation: %d",
+                (int)mNavMsgAuthStatus.constellation);
+    }
 }
 
 // Decode PBLocAPIGetDebugRespMsg ->

@@ -97,6 +97,11 @@ if (POWER_DAEMON_MGR_ENABLED)
     SYSR_INCLUDE_DIR(powermanager)
 endif (POWER_DAEMON_MGR_ENABLED)
 
+if (LOC_USE_CLOG)
+    add_definitions(-DLOC_USE_CLOG)
+    SYSR_INCLUDE_DIR(commonlog-lib)
+endif (LOC_USE_CLOG)
+
 if (LOC_USE_DLT)
     add_definitions(-DLOC_USE_DLT)
     SYSR_INCLUDE_DIR(automotive-dlt)
@@ -175,6 +180,10 @@ endif()
 
 if (LOC_USE_DLT)
     list(APPEND EXTRA_LIBS dlt)
+endif()
+
+if (LOC_USE_CLOG)
+    list(APPEND EXTRA_LIBS clog)
 endif()
 
 target_link_libraries(${PRJ_NAME_SERVICE} ${LINK_LIBRARIES} ${EXTRA_LIBS})

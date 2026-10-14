@@ -161,6 +161,8 @@ enum LocConfigTypeEnum{
      *  status. <br/> */
     CONFIG_XTRA_USER_CONSENT = 107,
 
+    /** Query navigation message authentication status */
+    GET_NAV_MSG_AUTH_STATUS = 109,
 } ;
 
 /**
@@ -723,6 +725,109 @@ typedef std::function<void(
     location_client::GnssSignalTypeMask signalType
 )> LocConfigGnssSignalTypesCb;
 
+/** Specify the Galileo OSNMA public key provisioning /
+ *  verification state. */
+using GalOsnmaPublicKeyStatusMask = uint32_t;
+enum GalOsnmaPublicKeyStatusBits : uint32_t {
+    /** The public key is installed on the device. When no bits are
+     *  set, the public key is not installed. */
+    GAL_OSNMA_PUBLIC_KEY_PROVISIONED = 1u << 0,
+    /** The public key has been verified against the Merkle tree. */
+    GAL_OSNMA_PUBLIC_KEY_VERIFIED    = 1u << 1,
+};
+
+/** Specify which fields of GalOsnmaStatus carry a value. The
+ *  position engine reports only the fields the modem actually
+ *  provided; a field whose bit is clear must be ignored by the
+ *  client rather than read as zero. <br/> */
+using GalOsnmaStatusValidityMask = uint32_t;
+enum GalOsnmaStatusValidityBits : uint32_t {
+    /** GalOsnmaStatus::featureEnabled is valid. <br/> */
+    GAL_OSNMA_STATUS_FEATURE_ENABLED_VALID         = 1u << 0,
+    /** GalOsnmaStatus::merkleTreeProvisioned is valid. <br/> */
+    GAL_OSNMA_STATUS_MERKLE_TREE_PROVISIONED_VALID = 1u << 1,
+    /** GalOsnmaStatus::publicKeyStatusMask is valid. <br/> */
+    GAL_OSNMA_STATUS_PUBLIC_KEY_STATUS_VALID       = 1u << 2,
+    /** GalOsnmaStatus::galWeek is valid. <br/> */
+    GAL_OSNMA_STATUS_GAL_WEEK_VALID                = 1u << 3,
+    /** GalOsnmaStatus::galSecOfWeek is valid. <br/> */
+    GAL_OSNMA_STATUS_GAL_SEC_OF_WEEK_VALID         = 1u << 4,
+    /** GalOsnmaStatus::navDataAuthPassedMask is valid. <br/> */
+    GAL_OSNMA_STATUS_NAV_DATA_AUTH_PASSED_VALID    = 1u << 5,
+    /** GalOsnmaStatus::navDataAuthFailedMask is valid. <br/> */
+    GAL_OSNMA_STATUS_NAV_DATA_AUTH_FAILED_VALID    = 1u << 6,
+};
+
+struct GalOsnmaStatus {
+    /** Bitwise OR of GalOsnmaStatusValidityBits to specify which
+     *  fields below carry a value. A field whose bit is clear was
+     *  not reported by the modem and shall not be interpreted;
+     *  in particular a clear bit does not mean "false" or "zero".
+     *  <br/> */
+    GalOsnmaStatusValidityMask          validityMask;
+    /** OSNMA is enabled or disabled, as set via
+     *  configOsnmaEnablement(). When false, every field below is
+     *  not applicable and its validity bit is cleared, so an
+     *  OSNMA-disabled report carries only
+     *  GAL_OSNMA_STATUS_FEATURE_ENABLED_VALID. <br/> */
+    bool                                featureEnabled;
+    /** Galileo OSNMA Merkle tree is installed on the device. */
+    bool                                merkleTreeProvisioned;
+    /** Galileo OSNMA public key installation and validation state. */
+    GalOsnmaPublicKeyStatusMask         publicKeyStatusMask;
+    /** Galileo System week number when this report was generated. */
+    uint16_t galWeek;
+    /** System time of week, in seconds, when this report was
+     *  generated. */
+    uint32_t galSecOfWeek;
+    /** Specify the set of SVs whose navigation data passed OSNMA
+     *  authentication. Dummy tag verifications are excluded, so a
+     *  bit set here always reflects authentication of real
+     *  navigation data. <br/>
+     *  This mask is mutually exclusive with
+     *  navDataAuthFailedMask. An SV absent from both masks has
+     *  either not been tracked or has not completed
+     *  authentication yet. <br/>
+     *  Bit 0 to Bit 35 corresponds to GAL SV id 301 to 336.
+     *  <br/> */
+    uint64_t navDataAuthPassedMask;
+    /** Specify the set of SVs whose navigation data failed OSNMA
+     *  authentication. The ephemeris of these SVs has been
+     *  discarded and is not used to compute position. <br/>
+     *  This mask is mutually exclusive with
+     *  navDataAuthPassedMask. <br/>
+     *  Bit 0 to Bit 35 corresponds to GAL SV id 301 to 336.
+     *  <br/> */
+    uint64_t navDataAuthFailedMask;
+};
+
+/** Navigation message authentication status report, for whichever
+ *  authentication scheme the constellation defines. <br/>
+ *  The constellation field selects which member of navMsgAuthInfo is
+ *  valid, following the same discriminated-union convention as
+ *  GnssSvEphemerisReport. Each constellation authenticates its
+ *  navigation message under its own scheme - Galileo OSNMA, QZSS
+ *  QZNMA, GPS Chimera - so each gets its own member rather than one
+ *  shared layout. Additional constellations are added as new members
+ *  of navMsgAuthInfo. <br/> */
+struct NavMsgAuthStatus {
+    /** Constellation whose navigation data this report describes,
+     *  and which selects the valid member of navMsgAuthInfo below.
+     *  Mandatory field. <br/> */
+    location_client::GnssSvType constellation;
+    union {
+        /** Galileo OSNMA status. Valid when constellation is
+         *  GNSS_SV_TYPE_GALILEO. <br/> */
+        GalOsnmaStatus galOsnmaStatus;
+    } navMsgAuthInfo;
+};
+
+typedef std::function<void(
+        /** Navigation message authentication status for the
+         *  constellation that was queried. <br/> */
+        const NavMsgAuthStatus&       navMsgAuthStatus
+)> LocConfigNavMsgAuthStatusCb;
+
 /**
  *  Specify the set of callbacks that can be passed to
  *  LocationIntegrationAPI constructor to receive configuration
@@ -749,6 +854,9 @@ struct LocIntegrationCbs {
     /** Callback to receive the supported GNSS signal type
      *  capabilities. <br/> */
     LocConfigGnssSignalTypesCb gnssSignalTypesCb;
+    /** Callback to receive the navigation message
+     *  authentication status. <br/> */
+    LocConfigNavMsgAuthStatusCb navMsgAuthStatusCb;
 };
 
 /** Specify the NMEA sentence types that the device will output
@@ -2025,7 +2133,7 @@ public:
     bool configMerkleTree(const char * merkleTreeXml, int xmlSize);
 
     /** @brief
-        API to Enable/Disable OSNMA (Open Source Navigation Message Authentication)
+        API to Enable/Disable OSNMA (Open Service Navigation Message Authentication)
         operation in standard position engine (SPE).
         Client should wait for the command to finish, e.g.: via
         LocConfigCb() received before issuing a second configOsnmaEnablement()
@@ -2085,6 +2193,33 @@ public:
 
     */
     bool registerGnssSignalTypesUpdate(bool registerUpdate);
+
+    /** @brief
+        Query the navigation message authentication status for one
+        constellation, under whichever authentication scheme that
+        constellation defines. For GNSS_SV_TYPE_GALILEO this reports
+        the OSNMA feature setting, Merkle tree installation state,
+        public key installation / verification state
+        and the per-SV authentication result. The status will be
+        returned via LocConfigNavMsgAuthStatusCb(). <br/>
+
+        @param
+        svType: Constellation to query the navigation message
+        authentication status for. Only GNSS_SV_TYPE_GALILEO is
+        currently supported. <br/>
+
+        @return true, if the API request has been accepted.
+        The successful status will be returned via configCB, and the
+        LocConfigNavMsgAuthStatusCb() will be invoked <br/>
+
+        @return false, if the API request has not been accepted for
+        further processing, e.g.: if
+        LocConfigNavMsgAuthStatusCb() was not passed to the
+        LocationIntegrationApi constructor. When returning
+        false, LocConfigNavMsgAuthStatusCb() will not be invoked. <br/>
+    */
+    bool getNavMsgAuthStatus(location_client::GnssSvType svType);
+
 
     /** @brief
         API to support passing map-matched Feedback data to the DRE engine.

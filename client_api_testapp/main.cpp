@@ -156,6 +156,7 @@ enum TrackingSessionType {
 #define REGISTER_XTRA_STATUS_UPDATE "registerXtraUpdateStatus"
 #define ENABLE_XTRA_ON_DEMAND_DOWNLOAD "enableXtraOnDemandDownload"
 #define REGISTER_SIGNAL_TYPES_UPDATE "registerGnssSignalTypesUpdate"
+#define GET_NAV_MSG_AUTH_STATUS     "getNavMsgAuthStatus"
 #define ADD_GEOFENCES               "addGeofences"
 #define PAUSE_GEOFENCES             "pauseGeofences"
 #define RESUME_GEOFENCES            "resumeGeofences"
@@ -516,8 +517,8 @@ static void onNmeaSentencesCb(LocOutputEngineType engType,
                            const std::string& nmea) {
     numNmeaSentencesCb++;
     if (outputEnabled) {
-        printf("<<< onNmeaSentencesCb cnt=%u engine type=%u time=%" PRIu64" nmea=%s \n",
-            numNmeaSentencesCb, engType, timestamp, nmea.c_str());
+        printf("<<< onNmeaSentencesCb cnt=%u engine type=%u time=%" PRIu64" nmea=%.*s \n",
+            numNmeaSentencesCb, engType, timestamp, MAX_NMEA_PRINT_LEN, nmea.c_str());
     }
     if (routeToNMEAPort && openPort()) {
                 sendNMEAToTty(nmea);
@@ -691,6 +692,38 @@ static void onGnssEphemerisCb(const location_client::GnssEphemeris& ephInfo) {
 static void onGNSSExtendedDataInfoCb(const std::vector<uint8_t>& payload) {
     printf("<<<  onGNSSExtendedDataInfoCb payload size %d \n", payload.size());
 }
+static void onNavMsgAuthStatusCb(const NavMsgAuthStatus& navMsgAuthStatus) {
+    printf("<<< onNavMsgAuthStatusCb, constellation %d\n",
+           navMsgAuthStatus.constellation);
+    if (navMsgAuthStatus.constellation == location_client::GNSS_SV_TYPE_GALILEO) {
+        const GalOsnmaStatus& gal = navMsgAuthStatus.navMsgAuthInfo.galOsnmaStatus;
+        printf("    GAL OSNMA validityMask 0x%x\n", gal.validityMask);
+        if (gal.validityMask & GAL_OSNMA_STATUS_FEATURE_ENABLED_VALID) {
+            printf("    featureEnabled %d\n", gal.featureEnabled);
+        }
+        if (gal.validityMask & GAL_OSNMA_STATUS_MERKLE_TREE_PROVISIONED_VALID) {
+            printf("    merkleTreeProvisioned %d\n", gal.merkleTreeProvisioned);
+        }
+        if (gal.validityMask & GAL_OSNMA_STATUS_PUBLIC_KEY_STATUS_VALID) {
+            printf("    publicKeyStatusMask 0x%x (provisioned %d, verified %d)\n",
+                   gal.publicKeyStatusMask,
+                   (gal.publicKeyStatusMask & GAL_OSNMA_PUBLIC_KEY_PROVISIONED) != 0,
+                   (gal.publicKeyStatusMask & GAL_OSNMA_PUBLIC_KEY_VERIFIED) != 0);
+        }
+        if (gal.validityMask & GAL_OSNMA_STATUS_GAL_WEEK_VALID) {
+            printf("    galWeek %u\n", gal.galWeek);
+        }
+        if (gal.validityMask & GAL_OSNMA_STATUS_GAL_SEC_OF_WEEK_VALID) {
+            printf("    galSecOfWeek %u\n", gal.galSecOfWeek);
+        }
+        if (gal.validityMask & GAL_OSNMA_STATUS_NAV_DATA_AUTH_PASSED_VALID) {
+            printf("    navDataAuthPassedMask 0x%" PRIx64 "\n", gal.navDataAuthPassedMask);
+        }
+        if (gal.validityMask & GAL_OSNMA_STATUS_NAV_DATA_AUTH_FAILED_VALID) {
+            printf("    navDataAuthFailedMask 0x%" PRIx64 "\n", gal.navDataAuthFailedMask);
+        }
+    }
+}
 
 static void printHelp() {
     printf("\n************* options *************\n");
@@ -741,6 +774,8 @@ static void printHelp() {
     printf("%s: register xtra status update \n", REGISTER_XTRA_STATUS_UPDATE);
     printf("%s: enable xtra on demand download \n", ENABLE_XTRA_ON_DEMAND_DOWNLOAD);
     printf("%s: register GNSS signal types update \n", REGISTER_SIGNAL_TYPES_UPDATE);
+    printf("%s [svType]: query nav msg auth status (default Galileo) \n",
+            GET_NAV_MSG_AUTH_STATUS);
     printf("%s: add geofences with lat/lon/radius/breachtype/responsiveness/dwelltime\n",
             ADD_GEOFENCES);
     printf("%s: pause geofences with indexes\n",  PAUSE_GEOFENCES );
@@ -754,8 +789,17 @@ static void printHelp() {
 void setRequiredPermToRunAsLocClient() {
 #ifdef USE_GLIB
     if (0 == getuid()) {
+
+#if defined(LOC_USE_CLOG)
+        char groupNames[LOC_MAX_PARAM_NAME] = "dlt diag logd locclient";
+        printf("group ids: dlt diag logd locclient \n");
+#elif defined (LOC_USE_DLT)
+        char groupNames[LOC_MAX_PARAM_NAME] = "diag locclient dlt";
+        printf("group ids: diag locclient dlt \n");
+#else
         char groupNames[LOC_MAX_PARAM_NAME] = "diag locclient";
         printf("group ids: diag locclient\n");
+#endif
 
         gid_t groupIds[LOC_PROCESS_MAX_NUM_GROUPS] = {};
         char *splitGrpString[LOC_PROCESS_MAX_NUM_GROUPS];
@@ -1976,6 +2020,7 @@ bool menuAddGeofence() {
     }
     sGeofences.insert(sGeofences.end(), addGfVec.begin(), addGfVec.end());
     pLcaClient->addGeofences(addGfVec, onGeofenceBreachCb, onCollectiveResponseCb);
+    return true;
 }
 
 void menuModifyGeofence() {
@@ -2174,30 +2219,18 @@ void liaDestroyCompleteCb() {
     sem_post(&semLiaDestroyCompleted);
 }
 
-static inline void makeAppIdFromPid(char appid[5]) {
-    // Example: 'L' + 3 hex nibbles of pid (4 chars total)
-    unsigned pid = static_cast<unsigned>(getpid()) & 0xFFF; // 12 bits
-    const char hex[] = "0123456789ABCDEF";
-    appid[0] = 'L';
-    appid[1] = hex[(pid >> 8) & 0xF];
-    appid[2] = hex[(pid >> 4) & 0xF];
-    appid[3] = hex[(pid >> 0) & 0xF];
-    appid[4] = '\0';
-}
-
 /******************************************************************************
 Main function
 ******************************************************************************/
 int main(int argc, char *argv[]) {
 
-#ifdef LOC_USE_DLT
-    char appId[5];
-    makeAppIdFromPid(appId);
-    registerDltApp(appId, "Location Client API TestApp (per-instance)");
-    registerDltContexts(LCA_CONTEXTS, LCA_CONTEXTS_COUNT);
+    setRequiredPermToRunAsLocClient();
+
+#if defined(LOC_USE_CLOG) || defined(LOC_USE_DLT)
+    locRegisterLogApp("LCAT", "Location Client API TestApp (per-instance)");
+    locRegisterLogContexts(LCA_CONTEXTS, LCA_CONTEXTS_COUNT);
 #endif
 
-    setRequiredPermToRunAsLocClient();
     checkForAutoStart(argc, argv);
 
     // create Location client API
@@ -2225,6 +2258,7 @@ int main(int argc, char *argv[]) {
             LocConfigGetConstellationSecondaryBandConfigCb(onGetSecondaryBandConfigCb);
     intCbs.getXtraStatusCb = LocConfigGetXtraStatusCb(onGetXtraStatusCb);
     intCbs.gnssSignalTypesCb = LocConfigGnssSignalTypesCb(onGnssSignalTypesCb);
+    intCbs.navMsgAuthStatusCb = LocConfigNavMsgAuthStatusCb(onNavMsgAuthStatusCb);
 
     LocConfigPriorityMap priorityMap;
     pIntClient = new LocationIntegrationApi(priorityMap, intCbs);
@@ -2622,6 +2656,20 @@ int main(int argc, char *argv[]) {
             }
             printf("register GNSS signal types update %d\n", registerUpdate);
             pIntClient->registerGnssSignalTypesUpdate(registerUpdate);
+        } else if (strncmp(buf, GET_NAV_MSG_AUTH_STATUS,
+                           strlen(GET_NAV_MSG_AUTH_STATUS)) == 0) {
+            // optional constellation arg; defaults to Galileo (6)
+            int svType = location_client::GNSS_SV_TYPE_GALILEO;
+            static char *save = nullptr;
+            char* token = strtok_r(buf, " ", &save);
+            token = strtok_r(NULL, " ", &save);
+            if (token != NULL) {
+                svType = atoi(token);
+            }
+            printf("get nav msg auth status, svType %d\n", svType);
+            retVal = pIntClient->getNavMsgAuthStatus(
+                    (location_client::GnssSvType)svType);
+            printf("getNavMsgAuthStatus request accepted %d\n", retVal);
         } else if (strncmp(buf, ADD_GEOFENCES,
                            strlen(ADD_GEOFENCES)) == 0) {
             printf("usage: addGeofences "
@@ -2810,10 +2858,12 @@ int main(int argc, char *argv[]) {
     }//while(1)
 
 EXIT:
-#ifdef LOC_USE_DLT
-    deregisterDltContexts(LCA_CONTEXTS, LCA_CONTEXTS_COUNT);
-    deregisterDltApp();
+
+#if defined(LOC_USE_CLOG) || defined(LOC_USE_DLT)
+    locUnregisterLogContexts(LCA_CONTEXTS, LCA_CONTEXTS_COUNT);
+    locUnregisterLogApp();
 #endif
+
     if (nullptr != pLcaClient) {
         pLcaClient->stopPositionSession();
         pLcaClient->destroy(lcaDestroyCompleteCb);

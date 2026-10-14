@@ -268,6 +268,7 @@ private:
     void configXtraParams(const LocConfigXtraReqMsg* pMsg);
     void configMerkleTree(const LocConfigMerkleTreeReqMsg* pMsg);
     void configOsnmaEnablement(const LocConfigOsnmaEnablementReqMsg* pMsg);
+    void getNavMsgAuthStatus(const LocConfigGetNavMsgAuthStatusReqMsg* pMsg);
     void registerGnssSignalTypesUpdate(const LocConfigRegisterGnssSignalTypesUpdateReqMsg* pReqMsg);
     void configMmfData(const LocInjectMmfDataReqMsg* pMsg);
     void registerLocApiForGnssSignalTypesUpdates (bool registerForUpdate);

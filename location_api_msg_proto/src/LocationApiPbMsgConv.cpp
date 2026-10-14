@@ -341,6 +341,12 @@ ELocMsgID LocationApiPbMsgConv::getEnumForPBELocMsgID(const PBELocMsgID &pbLocMs
         case PB_E_INTAPI_CONFIG_XTRA_USER_CONSENT_MSG_ID:
             eLocMsgId = E_INTAPI_CONFIG_XTRA_USER_CONSENT_MSG_ID;
             break;
+        case PB_E_INTAPI_GET_NAV_MSG_AUTH_STATUS_REQ_MSG_ID:
+            eLocMsgId = E_INTAPI_GET_NAV_MSG_AUTH_STATUS_REQ_MSG_ID;
+            break;
+        case PB_E_INTAPI_GET_NAV_MSG_AUTH_STATUS_RESP_MSG_ID:
+            eLocMsgId = E_INTAPI_GET_NAV_MSG_AUTH_STATUS_RESP_MSG_ID;
+            break;
         default:
             break;
     }
@@ -1150,7 +1156,12 @@ PBELocMsgID LocationApiPbMsgConv::getPBEnumForELocMsgID(const ELocMsgID &eLocMsg
         case E_INTAPI_CONFIG_XTRA_USER_CONSENT_MSG_ID:
             pbLocMsgId = PB_E_INTAPI_CONFIG_XTRA_USER_CONSENT_MSG_ID;
             break;
-
+        case E_INTAPI_GET_NAV_MSG_AUTH_STATUS_REQ_MSG_ID:
+            pbLocMsgId = PB_E_INTAPI_GET_NAV_MSG_AUTH_STATUS_REQ_MSG_ID;
+            break;
+        case E_INTAPI_GET_NAV_MSG_AUTH_STATUS_RESP_MSG_ID:
+            pbLocMsgId = PB_E_INTAPI_GET_NAV_MSG_AUTH_STATUS_RESP_MSG_ID;
+            break;
         default:
             break;
     }
