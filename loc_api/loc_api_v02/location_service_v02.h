@@ -25,11 +25,13 @@
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
 /*
  * Changes from Qualcomm Technologies, Inc. are provided under the following license:
  * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
+
 #ifndef LOC_SERVICE_02_H
 #define LOC_SERVICE_02_H
 /**
@@ -68,7 +70,7 @@
  *====*====*====*====*====*====*====*====*====*====*====*====*====*====*====*/
 
 /* This file was generated with Tool version 6.14.11
-   It was generated on: Mon Aug 24 2026 (Spin 0)
+   It was generated on: Thu Oct  8 2026 (Spin 0)
    From IDL File: location_service_v02.idl */
 
 /** @defgroup loc_qmi_consts Constant values defined in the IDL */
@@ -94,11 +96,11 @@ extern "C" {
 /** Major Version Number of the IDL used to generate this file */
 #define LOC_V02_IDL_MAJOR_VERS 0x02
 /** Revision Number of the IDL used to generate this file */
-#define LOC_V02_IDL_MINOR_VERS 0xC1
+#define LOC_V02_IDL_MINOR_VERS 0xC2
 /** Major Version Number of the qmi_idl_compiler used to generate this file */
 #define LOC_V02_IDL_TOOL_VERS 0x06
 /** Maximum Defined Message ID */
-#define LOC_V02_MAX_MESSAGE_ID 0x00F2
+#define LOC_V02_MAX_MESSAGE_ID 0x00F3
 /**
     @}
   */
@@ -17670,6 +17672,14 @@ typedef struct {
   uint32_t gnssSvUsedSignalTypeList_len;  /**< Must be set to # of elements in gnssSvUsedSignalTypeList */
   qmiLocGnssSignalTypeMaskT_v02 gnssSvUsedSignalTypeList[QMI_LOC_EXPANDED_SV_INFO_LIST_MAX_SIZE_V02];
   /**<   This TLV is deprecated. */
+
+  /* Optional */
+  /*  Conformity Index */
+  uint8_t conformityIndex_valid;  /**< Must be set to true if conformityIndex is being passed */
+  float conformityIndex;
+  /**<   Indicates how well the input data considered for navigation solution conforms to expectations. \n
+       - Range -- 0 (least conforming) to 1 (most conforming)
+  */
 }qmiLocEventDbtPositionReportIndMsgT_v02;  /* Message */
 /**
     @}
@@ -27027,9 +27037,13 @@ typedef struct {
   */
 
 typedef uint64_t qmiLocOsnmaStatusMaskT_v02;
-#define QMI_LOC_MASK_OSNMA_PUBLIC_KEY_PROVISIONED_V02 ((qmiLocOsnmaStatusMaskT_v02)0x00000001ull) /**<  The public key is installed on the device. \n  */
-#define QMI_LOC_MASK_OSNMA_PUBLIC_KEY_VERIFIED_V02 ((qmiLocOsnmaStatusMaskT_v02)0x00000002ull) /**<  The public key has been verified against the Merkle tree. \n  */
-#define QMI_LOC_MASK_OSNMA_MERKLE_TREE_PROVISIONED_V02 ((qmiLocOsnmaStatusMaskT_v02)0x00000004ull) /**<  The Merkle tree is installed on the device.  */
+#define QMI_LOC_MASK_OSNMA_PUBLIC_KEY_PROVISIONED_V02 ((qmiLocOsnmaStatusMaskT_v02)0x00000001ull) /**<  The public key is available for OSNMA processing after a valid
+       provisioning operation. \n  */
+#define QMI_LOC_MASK_OSNMA_PUBLIC_KEY_VERIFIED_V02 ((qmiLocOsnmaStatusMaskT_v02)0x00000002ull) /**<  The provisioned public key has been verified against its associated
+       Merkle-tree authentication material. \n  */
+#define QMI_LOC_MASK_OSNMA_MERKLE_TREE_PROVISIONED_V02 ((qmiLocOsnmaStatusMaskT_v02)0x00000004ull) /**<  The Merkle-tree authentication material associated with the
+       provisioned public key is available for OSNMA processing. \n  */
+#define QMI_LOC_MASK_OSNMA_ACTIVE_PUBLIC_KEY_ID_AVAILABLE_V02 ((qmiLocOsnmaStatusMaskT_v02)0x00000008ull) /**<  The Galileo active public-key ID is available. \n  */
 /** @addtogroup loc_qmi_messages
     @{
   */
@@ -27045,14 +27059,21 @@ typedef struct {
   /*  Galileo Public Key/Merkle Tree Status */
   uint8_t PublicKeyMerkleTreeMask_valid;  /**< Must be set to true if PublicKeyMerkleTreeMask is being passed */
   qmiLocOsnmaStatusMaskT_v02 PublicKeyMerkleTreeMask;
-  /**<   Galileo public key and Merkle tree installation and validation
- state. A bitmask, since the states are not mutually exclusive:
- a public key can be provisioned while the Merkle tree
- is not necessarily received yet. \n
+  /**<   Reports whether the Galileo public key and its associated
+ Merkle-tree authentication material have been provisioned and
+ validated. Each bit represents an independent status condition.
+ When all four bits are set, the OSNMA trust material required for
+ processing is available. These bits do not indicate whether
+ navigation data authentication has succeeded; use the
+ navigation-authentication masks for that result. \n
  Valid bitmasks: \n
-      - QMI_LOC_MASK_OSNMA_PUBLIC_KEY_PROVISIONED (0x00000001) --  The public key is installed on the device. \n
-      - QMI_LOC_MASK_OSNMA_PUBLIC_KEY_VERIFIED (0x00000002) --  The public key has been verified against the Merkle tree. \n
-      - QMI_LOC_MASK_OSNMA_MERKLE_TREE_PROVISIONED (0x00000004) --  The Merkle tree is installed on the device.  */
+      - QMI_LOC_MASK_OSNMA_PUBLIC_KEY_PROVISIONED (0x00000001) --  The public key is available for OSNMA processing after a valid
+       provisioning operation. \n
+      - QMI_LOC_MASK_OSNMA_PUBLIC_KEY_VERIFIED (0x00000002) --  The provisioned public key has been verified against its associated
+       Merkle-tree authentication material. \n
+      - QMI_LOC_MASK_OSNMA_MERKLE_TREE_PROVISIONED (0x00000004) --  The Merkle-tree authentication material associated with the
+       provisioned public key is available for OSNMA processing. \n
+      - QMI_LOC_MASK_OSNMA_ACTIVE_PUBLIC_KEY_ID_AVAILABLE (0x00000008) --  The Galileo active public-key ID is available. \n  */
 
   /* Optional */
   /*  Galileo Week Number */
@@ -27111,6 +27132,59 @@ typedef struct {
     @}
   */
 
+typedef uint64_t qmiLocDeleteOsnmaDataMaskT_v02;
+#define QMI_LOC_MASK_DELETE_OSNMA_ALL_V02 ((qmiLocDeleteOsnmaDataMaskT_v02)0x00000001ull) /**<  Delete all provisioned OSNMA public-key and associated
+       Merkle-tree authentication data.  */
+/** @addtogroup loc_qmi_messages
+    @{
+  */
+/** Request Message; Deletes OSNMA provisioning data for internal validation. */
+typedef struct {
+
+  /* Optional */
+  /*  Delete OSNMA Data */
+  uint8_t deleteOsnmaDataMask_valid;  /**< Must be set to true if deleteOsnmaDataMask is being passed */
+  qmiLocDeleteOsnmaDataMaskT_v02 deleteOsnmaDataMask;
+  /**<   Mask specifying OSNMA provisioning data to delete.
+ Valid masks: \n
+      - QMI_LOC_MASK_DELETE_OSNMA_ALL (0x00000001) --  Delete all provisioned OSNMA public-key and associated
+       Merkle-tree authentication data.
+ This command is intended for internal OSNMA validation.
+ */
+}qmiLocDeleteOsnmaDataReqMsgT_v02;  /* Message */
+/**
+    @}
+  */
+
+/** @addtogroup loc_qmi_messages
+    @{
+  */
+/** Indication Message; Deletes OSNMA provisioning data for internal validation. */
+typedef struct {
+
+  /* Mandatory */
+  /*  Delete OSNMA Data Status */
+  qmiLocStatusEnumT_v02 status;
+  /**<   Status of the QMI_LOC_DELETE_OSNMA_DATA_REQ request.
+ Values:
+      - eQMI_LOC_SUCCESS (0) --  Request was completed successfully \n
+      - eQMI_LOC_GENERAL_FAILURE (1) --  Request failed because of a general failure \n
+      - eQMI_LOC_UNSUPPORTED (2) --  Request failed because it is not supported \n
+      - eQMI_LOC_INVALID_PARAMETER (3) --  Request failed because it contained invalid parameters \n
+      - eQMI_LOC_ENGINE_BUSY (4) --  Request failed because the engine is busy \n
+      - eQMI_LOC_PHONE_OFFLINE (5) --  Request failed because the phone is offline \n
+      - eQMI_LOC_TIMEOUT (6) --  Request failed because it has timed out \n
+      - eQMI_LOC_CONFIG_NOT_SUPPORTED (7) --  Request failed because an undefined configuration was requested \n
+      - eQMI_LOC_INSUFFICIENT_MEMORY (8) --  Request failed because the engine could not allocate sufficient memory for the request \n
+      - eQMI_LOC_MAX_GEOFENCE_PROGRAMMED (9) --  Request failed because the maximum number of geofences are already programmed \n
+      - eQMI_LOC_XTRA_VERSION_CHECK_FAILURE (10) --  Location service failed because of an XTRA version-based file format check failure \n
+      - eQMI_LOC_GNSS_DISABLED (11) --  Request failed because the location service is disabled
+ */
+}qmiLocDeleteOsnmaDataIndMsgT_v02;  /* Message */
+/**
+    @}
+  */
+
 /* Conditional compilation tags for message removal */
 //#define REMOVE_QMI_LOC_ADD_CIRCULAR_GEOFENCE_V02
 //#define REMOVE_QMI_LOC_ADD_GEOFENCE_CONTEXT_V02
@@ -27121,6 +27195,7 @@ typedef struct {
 //#define REMOVE_QMI_LOC_DELETE_GEOFENCE_V02
 //#define REMOVE_QMI_LOC_DELETE_GEOFENCE_CONTEXT_V02
 //#define REMOVE_QMI_LOC_DELETE_GNSS_SERVICE_DATA_V02
+//#define REMOVE_QMI_LOC_DELETE_OSNMA_DATA_V02
 //#define REMOVE_QMI_LOC_DELETE_SUPL_CERTIFICATE_V02
 //#define REMOVE_QMI_LOC_EDIT_GEOFENCE_V02
 //#define REMOVE_QMI_LOC_ENABLE_POSITION_ASSISTED_CLOCK_EST_V02
@@ -27838,6 +27913,9 @@ typedef struct {
 #define QMI_LOC_GET_OSNMA_STATE_REQ_V02 0x00F2
 #define QMI_LOC_GET_OSNMA_STATE_RESP_V02 0x00F2
 #define QMI_LOC_GET_OSNMA_STATE_IND_V02 0x00F2
+#define QMI_LOC_DELETE_OSNMA_DATA_REQ_V02 0x00F3
+#define QMI_LOC_DELETE_OSNMA_DATA_RESP_V02 0x00F3
+#define QMI_LOC_DELETE_OSNMA_DATA_IND_V02 0x00F3
 /**
     @}
   */
