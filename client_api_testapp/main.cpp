@@ -36,10 +36,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <errno.h>
 #include <inttypes.h>
 #include <string>
 #include <sstream>
 #include <grp.h>
+#include <signal.h>
+#include <pthread.h>
 #include <sys/types.h>
 #include <sys/prctl.h>
 #include <sys/capability.h>
@@ -53,6 +56,7 @@
 #include <iostream>
 #include <algorithm>
 #include <future>
+#include <atomic>
 
 #include <LocationClientApi.h>
 #include <LocationIntegrationApi.h>
@@ -81,6 +85,7 @@ static sem_t semGfCompleted;
 static sem_t semBatchingCompleted;
 static sem_t semLcaDestroyCompleted;
 static sem_t semLiaDestroyCompleted;
+static std::atomic_bool autoTestShutdownRequested(false);
 
 static int fixCnt = 0x7fffffff;
 static uint64_t autoTestStartTimeMs = 0;
@@ -122,6 +127,7 @@ enum TrackingSessionType {
 #define ENABLE_DETAILED_REPORT_OUTPUT  "enableDetailedReportOutput"
 #define DISABLE_TUNC          "disableTunc"
 #define ENABLE_TUNC           "enableTunc"
+#define START_KEEP_WARM       "startKeepWarm"
 #define DISABLE_PACE          "disablePACE"
 #define ENABLE_PACE           "enablePACE"
 #define RESET_SV_CONFIG       "resetSVConfig"
@@ -234,6 +240,47 @@ static void resetCounters() {
     numNmeaSentencesCb = 0;
 }
 
+static void startAutoTestSignalWaiter(const sigset_t& signalSet) {
+    std::thread([signalSet] {
+        int signal = 0;
+        if (sigwait(&signalSet, &signal) == 0 &&
+                (signal == SIGTERM || signal == SIGINT)) {
+            autoTestShutdownRequested.store(true);
+            sem_post(&semCompleted);
+            sem_post(&semGfCompleted);
+            sem_post(&semBatchingCompleted);
+        }
+    }).detach();
+}
+
+static void waitForKeepWarmCompletion(bool hasTimeout) {
+    if (!hasTimeout) {
+        printf("keep warm running indefinitely; terminate process to stop\n");
+        sem_wait(&semCompleted);
+        return;
+    }
+
+    struct timespec timeout = {};
+    if (clock_gettime(CLOCK_REALTIME, &timeout) != 0) {
+        perror("clock_gettime for keep warm timeout failed");
+        return;
+    }
+    timeout.tv_sec += autoTestTimeoutSec;
+
+    int result;
+    do {
+        result = sem_timedwait(&semCompleted, &timeout);
+    } while (result != 0 && errno == EINTR);
+
+    if (result == 0 && autoTestShutdownRequested.load()) {
+        printf("keep warm stopped by termination signal\n");
+    } else if (result != 0 && errno == ETIMEDOUT) {
+        printf("complete due to keep warm run time exceeded %d sec\n", autoTestTimeoutSec);
+    } else if (result != 0) {
+        perror("sem_timedwait for keep warm completion failed");
+    }
+}
+
 static void cleanupAfterAutoStart() {
     if (pLcaClient) {
         printf("calling stopPosition and delete LCA client\n");
@@ -292,6 +339,7 @@ static void onLocationCb(const location_client::Location& location) {
                    location.altitude,
                    location.horizontalAccuracy);
         }
+        fflush(stdout);
     }
     if (numValidFixes >= fixCnt) {
         printf("<<< onLocationCb: numValidFixes:%u exceeds fixCnt:%u\n", numValidFixes, fixCnt);
@@ -612,6 +660,7 @@ static void printHelp() {
     printf("\n************* options *************\n");
     printf("e reprottype tbf: Concurrent engine report session with 100 ms interval\n");
     printf("g reporttype tbf engmask: Gnss report session with 100 ms interval\n");
+    printf("d intervalMs distanceM: Simple location session with distance trigger\n");
     printf("u: Update a session with 2000 ms interval\n");
     printf("m: Interleaving fix session with 1000 and 2000 ms interval, change every 3 seconds\n");
     printf("s: Stop a session \n");
@@ -622,6 +671,7 @@ static void printHelp() {
     printf("%s: enable detailed output from various reports\n", ENABLE_DETAILED_REPORT_OUTPUT);
     printf("%s tuncThreshold energyBudget: enable tunc\n", ENABLE_TUNC);
     printf("%s: disable tunc\n", DISABLE_TUNC);
+    printf("%s: start/update a keep warm (M5) tracking session\n", START_KEEP_WARM);
     printf("%s: enable PACE\n", ENABLE_PACE);
     printf("%s: disable PACE\n", DISABLE_PACE);
     printf("%s: reset sv config to default\n", RESET_SV_CONFIG);
@@ -1672,15 +1722,28 @@ void removeGeofences(char* buf) {
 }
 
 static bool checkForAutoStart(int argc, char *argv[]) {
+    sigset_t terminationSignalSet;
+    sigemptyset(&terminationSignalSet);
+    sigaddset(&terminationSignalSet, SIGTERM);
+    sigaddset(&terminationSignalSet, SIGINT);
+    int signalMaskResult = pthread_sigmask(SIG_BLOCK, &terminationSignalSet, nullptr);
+    if (signalMaskResult != 0) {
+        printf("failed to block SIGTERM/SIGINT: %d\n", signalMaskResult);
+    }
+
     bool autoRun = false;
     bool deleteAll = false;
     bool addGfs = false;
     string gfStr = "-g";
     uint32_t aidingDataMask = 0;
     int interval = 100;
+    int distance = 0;
     LocReqEngineTypeMask reqEngMask = (LocReqEngineTypeMask) 0x7;
     uint32_t reportType = 0xff;
     TrackingSessionType trackingType = NO_TRACKING;
+    bool startKeepWarm = false;
+    bool keepWarmSessionStarted = false;
+    bool autoTestTimeoutSet = false;
 
     //Specifying the expected options
     //The two options l and b expect numbers as argument
@@ -1698,12 +1761,14 @@ static bool checkForAutoStart(int argc, char *argv[]) {
         {"reportType", required_argument, 0,  'r' },
         {"addgeofences", required_argument, 0,  'g' },
         {"startBatching", required_argument, 0,  'b' },
+        {"distance",      required_argument, 0,  'm' },
+        {"keepwarm",      no_argument,       0,  'k' },
         {0,           0,                 0,   0  }
     };
 
     int long_index =0;
     int opt = -1;
-    while ((opt = getopt_long(argc, argv, "aVNDd:s:e:i:t:l:r:U:z:g:b:",
+    while ((opt = getopt_long(argc, argv, "aVNDd:s:e:i:t:l:r:U:z:g:b:m:k",
                    long_options, &long_index)) != -1) {
         switch (opt) {
              case 'a' :
@@ -1758,6 +1823,18 @@ static bool checkForAutoStart(int argc, char *argv[]) {
                      trackingType = ENGINE_REPORT_TRACKING;
                  }
                  break;
+             // distance-based tracking: trigger a fix after travelling distanceInMeters
+             case 'm':
+                 printf("distance: %s\n", optarg);
+                 distance = atoi(optarg);
+                 if (distance < 0) {
+                     distance = 0;
+                     printf("setting distance to 0");
+                 }
+                 if (trackingType == NO_TRACKING) {
+                     trackingType = SIMPLE_REPORT_TRACKING;
+                 }
+                 break;
              case 't':
                  printf("tiemout: %s\n", optarg);
                  autoTestTimeoutSec = atoi(optarg);
@@ -1765,6 +1842,7 @@ static bool checkForAutoStart(int argc, char *argv[]) {
                      autoTestTimeoutSec = 30;
                      printf("setting autoTestTimeoutSec to %d", autoTestTimeoutSec);
                  }
+                 autoTestTimeoutSet = true;
                  break;
              case 'r' :
                  reportType = atoi(optarg);
@@ -1812,21 +1890,29 @@ static bool checkForAutoStart(int argc, char *argv[]) {
                              sem_post(&semBatchingCompleted);
                              });
                      t.detach();
-                 }
-                 break;
+                  }
+                  break;
+             case 'k' :
+                  printf("keep warm requested\n");
+                  startKeepWarm = true;
+                  break;
              default:
-                 printf("unsupported args provided\n");
-                 break;
+                  printf("unsupported args provided\n");
+                  break;
         }
     }
 
     printf("auto run %d, deleteAll %d, delete mask 0x%x, session type %d,"
-           "outputEnabled %d, detailedOutputEnabled %d routeToNMEAPort %d",
+           "outputEnabled %d, detailedOutputEnabled %d routeToNMEAPort %d startKeepWarm %d",
            autoRun, deleteAll, aidingDataMask, trackingType,
-           outputEnabled, detailedOutputEnabled, routeToNMEAPort);
+           outputEnabled, detailedOutputEnabled, routeToNMEAPort, startKeepWarm);
 
     // check for auto-start option
     if (autoRun) {
+        if (signalMaskResult == 0) {
+            autoTestShutdownRequested.store(false);
+            startAutoTestSignalWaiter(terminationSignalSet);
+        }
         uint32_t pid = (uint32_t)getpid();
         printf("pid: %d\n", pid);
 
@@ -1860,7 +1946,8 @@ static bool checkForAutoStart(int argc, char *argv[]) {
 
             resetCounters();
             if (trackingType == SIMPLE_REPORT_TRACKING) {
-                pLcaClient->startPositionSession(interval, 0, onLocationCb, onResponseCb);
+                pLcaClient->startPositionSession(interval, (uint32_t)distance, onLocationCb,
+                                                 onResponseCb);
             } else if (trackingType == DETAILED_REPORT_TRACKING) {
                 GnssReportCbs reportcbs = {};
                 setupGnssReportCbs(reportType, reportcbs);
@@ -1872,8 +1959,22 @@ static bool checkForAutoStart(int argc, char *argv[]) {
                                                        reportcbs, onResponseCb);
             }
             autoTestStartTimeMs = getTimestampMs();
+        } else if (startKeepWarm) {
+            if (!pLcaClient) {
+                pLcaClient = new LocationClientApi(onCapabilitiesCb);
+                sleep(1); // wait for capability callback
+            }
+            if (nullptr == pLcaClient) {
+                printf("can not create Location client API");
+                exit(1);
+            }
+            resetCounters();
+            pLcaClient->startKeepWarmSession(onResponseCb);
+            keepWarmSessionStarted = true;
         }
 
+    } else if (signalMaskResult == 0) {
+        pthread_sigmask(SIG_UNBLOCK, &terminationSignalSet, nullptr);
     }
     if (addGfs) {
         printf("addGeofence option param %s: \n", gfStr.c_str());
@@ -1887,7 +1988,9 @@ static bool checkForAutoStart(int argc, char *argv[]) {
         t.detach();
     }
     if (pLcaClient || pIntClient) {
-        if (trackingType != NO_TRACKING && autoTestStartTimeMs != 0) {
+        if (keepWarmSessionStarted) {
+            waitForKeepWarmCompletion(autoTestTimeoutSet);
+        } else if (trackingType != NO_TRACKING && autoTestStartTimeMs != 0) {
             sem_wait(&semCompleted);
         }
         if (autoTestStartGfTimeMs != 0) {
@@ -2329,6 +2432,15 @@ int main(int argc, char *argv[]) {
             printf("tuncThreshold %f, energyBudget %d\n", tuncThreshold, energyBudget);
             retVal = pIntClient->configConstrainedTimeUncertainty(
                     true, tuncThreshold, energyBudget);
+        } else if (strncmp(buf, START_KEEP_WARM, strlen(START_KEEP_WARM)) == 0) {
+            if (!pLcaClient) {
+                pLcaClient = new LocationClientApi(onCapabilitiesCb);
+                sleep(1); // wait for capability callback
+            }
+            if (pLcaClient) {
+                resetCounters();
+                retVal = pLcaClient->startKeepWarmSession(onResponseCb);
+            }
         } else if (strncmp(buf, DISABLE_PACE, strlen(DISABLE_TUNC)) == 0) {
             retVal = pIntClient->configPositionAssistedClockEstimator(false);
         } else if (strncmp(buf, ENABLE_PACE, strlen(ENABLE_TUNC)) == 0) {
@@ -2782,6 +2894,33 @@ int main(int argc, char *argv[]) {
         } else {
             int command = buf[0];
             switch(command) {
+            // distance-based tracking: trigger a fix after travelling distanceInMeters
+            case 'd':
+                if (!pLcaClient) {
+                    pLcaClient = new LocationClientApi(onCapabilitiesCb);
+                }
+                if (pLcaClient) {
+                    uint32_t tbfMsec = 1000;
+                    uint32_t distanceMeters = 0;
+                    {
+                        std::istringstream ss(buf);
+                        std::string cmd;
+                        int intervalArg = 1000, distanceArg = 0;
+                        ss >> cmd;  // skip 'd'
+                        if (ss >> intervalArg && intervalArg > 0) {
+                            tbfMsec = (uint32_t)intervalArg;
+                        }
+                        if (ss >> distanceArg && distanceArg > 0) {
+                            distanceMeters = (uint32_t)distanceArg;
+                        }
+                    }
+                    printf("distance-based tracking: interval %u ms, distance %u m\n",
+                           tbfMsec, distanceMeters);
+                    resetCounters();
+                    retVal = pLcaClient->startPositionSession(tbfMsec, distanceMeters,
+                                                              onLocationCb, onResponseCb);
+                }
+                break;
             case 'e':
                 if (!pLcaClient) {
                     pLcaClient = new LocationClientApi(onCapabilitiesCb);
