@@ -453,6 +453,50 @@ bool LocationClientApi::startPositionSession(
     return true;
 }
 
+bool LocationClientApi::startKeepWarmSession(ResponseCb responseCallback) {
+
+    loc_boot_kpi_marker("L - LCA ST-KWS %s", getprogname());
+    LOC_LOGd("Starting keep warm session");
+
+    if (!mApiImpl) {
+        LOC_LOGe ("NULL mApiImpl");
+        return false;
+    }
+
+    // callback masks
+    LocationCallbacks callbacksOption = {};
+    callbacksOption.size = sizeof(LocationCallbacks);
+
+    if (responseCallback) {
+        callbacksOption.responseCb = [responseCallback](::LocationError err, uint32_t id) {
+            LocationResponse response = LocationClientApiImpl::parseLocationError(err);
+            responseCallback(response);
+        };
+    }
+
+    // Keep warm (M5) sessions are data-less by design; this placeholder is only
+    // present to satisfy GnssAdapter's requirement that at least one data
+    // callback be registered to start a tracking session. It is never invoked
+    // with real data for an M5-only client.
+    callbacksOption.trackingCb = [](const ::Location&) {
+        LOC_LOGw("Received location for keep warm client, not expecting to receive location");
+    };
+
+    // options
+    LocationOptions locationOption;
+    locationOption.size = sizeof(locationOption);
+    locationOption.qualityLevelAccepted = QUALITY_ANY_OR_FAILED_FIX;
+
+    TrackingOptions trackingOption(locationOption);
+    trackingOption.powerMode = GNSS_POWER_MODE_M5;
+    // tbm is hard-coded to UINT32_MAX per design; LocApiV02 reads minInterval
+    // (not tbm) when building the modem-facing tracking request, so the
+    // sentinel is carried via minInterval rather than a dedicated wire field.
+    trackingOption.minInterval = UINT32_MAX;
+    mApiImpl->startPositionSession(callbacksOption, trackingOption);
+    return true;
+}
+
 void LocationClientApi::stopPositionSession() {
     if (mApiImpl) {
         mApiImpl->stopTrackingAndClearSubscriptions(0);

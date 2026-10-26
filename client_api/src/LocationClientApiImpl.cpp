@@ -2200,11 +2200,12 @@ uint32_t LocationClientApiImpl::startTrackingSync(const TrackingOptions& option)
             if (msg.serializeToProtobuf(pbStr)) {
                 bool rc = sendMessage(
                    reinterpret_cast<uint8_t *>((uint8_t *)pbStr.c_str()), pbStr.size());
-                LOC_LOGd(">>> StartTrackingReq Interval=%d Distance=%d,"
-                         " locReqEngTypeMask=0x%x rc=%d",
+                LOC_LOGd(">>> StartTrackingReq Interval=%u Distance=%u,"
+                         " locReqEngTypeMask=0x%x powerMode=%d rc=%d",
                          mLocationOptions.minInterval,
                          mLocationOptions.minDistance,
-                         mLocationOptions.locReqEngTypeMask, rc);
+                         mLocationOptions.locReqEngTypeMask,
+                         mLocationOptions.powerMode, rc);
             } else {
                 LOC_LOGe("LocAPIStartTrackingReqMsg serializeToProtobuf failed");
             }
@@ -3298,9 +3299,7 @@ void LocationClientApiImpl::capabilitesCallback(ELocMsgID msgId, const void* msg
         // force mSessionId to invalid so startTracking will start the sesssion
         // if hal deamon crashes and restarts in the middle of a session
         mSessionId = LOCATION_CLIENT_SESSION_ID_INVALID;
-        TrackingOptions trackOption;
-        trackOption.setLocationOptions(mLocationOptions);
-        (void)startTrackingSync(trackOption);
+        (void)startTrackingSync(mLocationOptions);
     } else if (isInBatching()) {
         // force mBatchingId to invalid so startBatching will start the sesssion
         // if hal deamon crashes and restarts in the middle of a session

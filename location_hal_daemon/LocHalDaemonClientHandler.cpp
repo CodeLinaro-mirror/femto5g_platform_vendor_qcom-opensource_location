@@ -228,15 +228,18 @@ void LocHalDaemonClientHandler::updateSubscription(uint32_t mask) {
 // input tbf < 500 msec, round to 200 msec, else
 // input tbf < 1000 msec, round to 500 msec, else
 // round up input tbf to the closet integer seconds
-uint32_t LocHalDaemonClientHandler::startTracking(LocationOptions & locOptions) {
+uint32_t LocHalDaemonClientHandler::startTracking(TrackingOptions & locOptions) {
     LOC_LOGd("internal %d, req mask %x",
              locOptions.minInterval,
              locOptions.locReqEngTypeMask);
     if (mSessionId == 0 && mLocationApi) {
         // update option
-        mOptions.setLocationOptions(locOptions);
-        // set interval to engine supported interval
-        mOptions.minInterval = getSupportedTbf(mOptions.minInterval);
+        mOptions = locOptions;
+        // set interval to engine supported interval; M5 (keep warm) sessions
+        // carry a UINT32_MAX minInterval sentinel that must not be rounded
+        if (GNSS_POWER_MODE_M5 != mOptions.powerMode) {
+            mOptions.minInterval = getSupportedTbf(mOptions.minInterval);
+        }
         mSessionId = mLocationApi->startTracking(mOptions);
         mPendingMessages.push(E_LOCAPI_START_TRACKING_MSG_ID);
         mTracking = true;
@@ -265,15 +268,18 @@ void LocHalDaemonClientHandler::unsubscribeLocationSessionCb() {
     updateSubscription(subscriptionMask);
 }
 
-void LocHalDaemonClientHandler::updateTrackingOptions(LocationOptions & locOptions) {
+void LocHalDaemonClientHandler::updateTrackingOptions(TrackingOptions & locOptions) {
     if (mSessionId != 0 && mLocationApi) {
         LOC_LOGe("internal %d, req mask %x",
              locOptions.minInterval,
              locOptions.locReqEngTypeMask);
 
         TrackingOptions trackingOption(locOptions);
-        // set tbf to device supported tbf
-        trackingOption.minInterval = getSupportedTbf(trackingOption.minInterval);
+        // set tbf to device supported tbf; M5 (keep warm) sessions carry a
+        // UINT32_MAX minInterval sentinel that must not be rounded
+        if (GNSS_POWER_MODE_M5 != trackingOption.powerMode) {
+            trackingOption.minInterval = getSupportedTbf(trackingOption.minInterval);
+        }
         mLocationApi->updateTrackingOptions(mSessionId, trackingOption);
 
         // save the trackingOption: eng req type that will be used in filtering

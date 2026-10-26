@@ -3460,7 +3460,7 @@ void  LocApiV02 :: reportSvPolynomial(const qmiLocEventGnssSvPolyIndMsgT_v02 *gn
     svPolynomial.is_valid = 0;
 
     if (0 != gnss_sv_poly_ptr->gnssSvId) {
-        svPolynomial.gnssSvId       = gnss_sv_poly_ptr->gnssSvId;
+        svPolynomial.gnssSvId = gnss_sv_poly_ptr->gnssSvId;
         svPolynomial.T0             = gnss_sv_poly_ptr->T0;
         svPolynomial.is_valid |= ULP_GNSS_SV_POLY_BIT_T0;
 
@@ -6584,11 +6584,20 @@ bool LocApiV02 :: convertGnssMeasurements(
     }
 
     measurementData.stateMask |= GNSS_MEASUREMENTS_STATE_MSEC_AMBIGUOUS_BIT;
+
+    if ((validMeasStatus & QMI_LOC_MASK_MEAS_STATUS_SV_TIME_SRC_NEWLY_DECODED_V02) ||
+            (validMeasStatus & QMI_LOC_MASK_MEAS_STATUS_SV_TIME_SRC_PREV_DECODED_V02)) {
+        measurementData.stateMask |= GNSS_MEASUREMENTS_STATE_TOW_DECODED_BIT;
+        if (GNSS_SV_TYPE_GLONASS == measurementData.svType &&
+            (bBandNotAvailable || (QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GLONASS_G1_V02 == gnssBand))) {
+            measurementData.stateMask |= GNSS_MEASUREMENTS_STATE_GLO_TOD_DECODED_BIT;
+        }
+    }
+
     if (validMeasStatus & QMI_LOC_MASK_MEAS_STATUS_MS_VALID_V02) {
         measurementData.stateMask &= ~GNSS_MEASUREMENTS_STATE_MSEC_AMBIGUOUS_BIT;
         /* sub-frame decode & TOW decode */
         measurementData.stateMask |= (GNSS_MEASUREMENTS_STATE_SUBFRAME_SYNC_BIT |
-                                      GNSS_MEASUREMENTS_STATE_TOW_DECODED_BIT |
                                       GNSS_MEASUREMENTS_STATE_TOW_KNOWN_BIT |
                                       GNSS_MEASUREMENTS_STATE_BIT_SYNC_BIT |
                                       GNSS_MEASUREMENTS_STATE_CODE_LOCK_BIT);
@@ -6599,7 +6608,6 @@ bool LocApiV02 :: convertGnssMeasurements(
             (QMI_LOC_MASK_GNSS_SIGNAL_TYPE_GLONASS_G1_V02 == gnssBand))) {
 
             measurementData.stateMask |= (GNSS_MEASUREMENTS_STATE_GLO_TOD_KNOWN_BIT |
-                                          GNSS_MEASUREMENTS_STATE_GLO_TOD_DECODED_BIT |
                                           GNSS_MEASUREMENTS_STATE_GLO_STRING_SYNC_BIT);
         }
 
@@ -11527,6 +11535,14 @@ void LocApiV02::onDbtPosReportEvent(
     if (pDbtPosReport->speedUnc_valid) {
         locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_SPEED_UNC;
         locationExtended.speed_unc = pDbtPosReport->speedUnc;
+    }
+
+    if (pDbtPosReport->conformityIndex_valid) {
+        if (pDbtPosReport->conformityIndex >= 0.0f &&
+            pDbtPosReport->conformityIndex <= 1.0f) {
+            locationExtended.flags |= GPS_LOCATION_EXTENDED_HAS_CONFORMITY_INDEX;
+            locationExtended.conformityIndex = pDbtPosReport->conformityIndex;
+        }
     }
 
     LocPosTechMask techMask = LOC_POS_TECH_MASK_DEFAULT;

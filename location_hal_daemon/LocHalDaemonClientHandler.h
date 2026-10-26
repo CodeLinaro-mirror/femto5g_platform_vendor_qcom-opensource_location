@@ -106,9 +106,9 @@ public:
     // when client stops the location session, then all callbacks
     // related to location session need to be unsubscribed
     void unsubscribeLocationSessionCb();
-    uint32_t startTracking(LocationOptions & locOptions);
+    uint32_t startTracking(TrackingOptions & locOptions);
     void stopTracking(bool clientExpectingResp);
-    void updateTrackingOptions(LocationOptions & locOptions);
+    void updateTrackingOptions(TrackingOptions & locOptions);
     void onGnssEnergyConsumedInfoAvailable(LocAPIGnssEnergyConsumedIndMsg &msg);
     void onControlResponseCb(LocationError err, ELocMsgID msgId);
     void onGnssConfigCb(ELocMsgID configMsgId, const GnssConfig & gnssConfig);
