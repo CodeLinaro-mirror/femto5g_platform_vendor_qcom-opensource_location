@@ -680,7 +680,11 @@ typedef std::function<void(
 )> LocConfigGnssSignalTypesCb;
 
 /** Specify the Galileo OSNMA public key provisioning /
- *  verification state. */
+ *  verification state. When all bits are set, the OSNMA
+    trust material required for processing is available.
+    These bits do not indicate whether navigation data
+    authentication has succeeded;
+    use the navigation-authentication masks for that result. */
 using GalOsnmaPublicKeyStatusMask = uint32_t;
 enum GalOsnmaPublicKeyStatusBits : uint32_t {
     /** The public key is installed on the device. When no bits are
@@ -688,6 +692,8 @@ enum GalOsnmaPublicKeyStatusBits : uint32_t {
     GAL_OSNMA_PUBLIC_KEY_PROVISIONED = 1u << 0,
     /** The public key has been verified against the Merkle tree. */
     GAL_OSNMA_PUBLIC_KEY_VERIFIED    = 1u << 1,
+    /** The Galileo active public-key ID is available. */
+    GAL_OSNMA_ACTIVE_PUBLIC_KEY_ID_AVAILABLE = 1u << 2,
 };
 
 /** Specify which fields of GalOsnmaStatus carry a value. The
@@ -2008,16 +2014,24 @@ public:
     bool registerXtraStatusUpdate(bool registerUpdate);
 
     /** @brief
-        Inject Merkle tree configure buffer which reads from a .xml configure file.
-        Configure file contains Merkle Root, Merkle Nodes and information for
-        up to 2 public keys. This merkle tree is used by the standard position
-        engine (SPE).
+        Inject Galileo OSNMA Merkle tree and public key(s) from a .xml configure file
+        into the standard position engine (SPE).
+
+        The XML may contain one Merkle root and up to two public keys associated with
+        that root. Each public key must include the required Merkle authentication data.
+
+        To provision public keys associated with different Merkle roots, use separate
+        XML files and separate configMerkleTree() calls. Wait for LocConfigCb() before
+        issuing the next call.
+
+        Public key only or Merkle root only provisioning will be no-op.
+
         Client should wait for the command to finish, e.g.: via
         LocConfigCb() received before issuing a second configMerkleTree()
         command. Behavior is not defined if client issues a second
         request of configMerkleTree() without waiting for the
         previous configMerkleTree() to finish. <br/>
-        Please note that caller should free the merkleTreeXml. <br/>
+        Please note that caller retains ownership of merkleTreeXml. <br/>
         @param
         merkleTreeXml: char buffer read from Merkle Tree configure file <br/>
 
